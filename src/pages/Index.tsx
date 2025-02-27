@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Edit, Trash, Send, Check, X } from "lucide-react";
@@ -9,7 +8,6 @@ import { extractTextFromImage } from "@/lib/ocrService";
 import { submitTextToApi } from "@/lib/apiService";
 import BackgroundPattern from "@/components/BackgroundPattern";
 
-// Define the image data interface
 interface ImageData {
   id: string;
   file: File;
@@ -65,15 +63,11 @@ const Index = () => {
         status: "processing",
       };
       
-      // Update state immediately to show processing
       setImages(prev => [newImage, ...prev]);
       
-      // Extract text from the image
       try {
-        // In development, we'll use a mock for faster testing
         let result;
         if (process.env.NODE_ENV === 'development') {
-          // Mock result for development
           const mockTexts = [
             "فاتورة رقم: 12345",
             "الاسم: أحمد محمد",
@@ -89,14 +83,12 @@ const Index = () => {
             confidence: Math.random() * 100
           };
 
-          // Parse mock data fields from text
           const code = "CODE" + Math.floor(Math.random() * 10000);
           const senderName = ["أحمد محمد", "سعيد علي", "عمر خالد", "فاطمة أحمد"][Math.floor(Math.random() * 4)];
           const phoneNumber = "05" + Math.floor(Math.random() * 100000000);
           const province = ["الرياض", "جدة", "الدمام", "مكة", "المدينة"][Math.floor(Math.random() * 5)];
           const price = Math.floor(Math.random() * 1000) + " ريال";
 
-          // Update the image with extracted data
           setImages(prev =>
             prev.map(img =>
               img.id === newImage.id
@@ -115,11 +107,7 @@ const Index = () => {
             )
           );
         } else {
-          // Real OCR in production
           result = await extractTextFromImage(file);
-          
-          // Here we would need a proper algorithm to extract structured fields from the text
-          // For production, you might need more sophisticated text parsing or AI analysis
           
           setImages(prev =>
             prev.map(img =>
@@ -246,14 +234,12 @@ const Index = () => {
     }
   };
 
-  // Cleanup object URLs when component unmounts
   useEffect(() => {
     return () => {
       images.forEach(img => URL.revokeObjectURL(img.previewUrl));
     };
   }, [images]);
 
-  // Format date in Gregorian (Miladi) format
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('ar-SA', {
       year: 'numeric',
@@ -275,7 +261,6 @@ const Index = () => {
           </p>
         </header>
 
-        {/* Navigation Menu */}
         <nav className="mb-8 flex justify-end">
           <ul className="flex gap-6">
             <li>
@@ -297,7 +282,6 @@ const Index = () => {
         </nav>
 
         <div className="grid grid-cols-1 gap-8">
-          {/* Upload section - reduced height */}
           <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
             <div
               className={`upload-zone h-40 ${isDragging ? 'active' : ''}`}
@@ -337,7 +321,6 @@ const Index = () => {
             )}
           </section>
 
-          {/* Image previews and extracted text - vertical layout with images stacked */}
           {images.length > 0 && (
             <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <h2 className="text-2xl font-bold text-brand-brown mb-4">معاينة الصور والنصوص المستخرجة</h2>
@@ -347,8 +330,7 @@ const Index = () => {
                   <Card key={img.id} className="p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-transparent border-none backdrop-blur-sm">
                     <div className="flex flex-col gap-4">
                       <div className="flex">
-                        {/* Image preview - small rectangle without white background */}
-                        <div className="relative w-1/3 h-28 rounded-lg overflow-hidden bg-transparent">
+                        <div className="relative w-[300px] h-[200px] rounded-lg overflow-hidden bg-transparent">
                           <img 
                             src={img.previewUrl} 
                             alt="صورة محملة" 
@@ -377,8 +359,7 @@ const Index = () => {
                           )}
                         </div>
                         
-                        {/* Extraction data */}
-                        <div className="w-2/3 pr-4">
+                        <div className="flex-1 pr-4">
                           <div className="flex justify-between items-center mb-2">
                             <p className="text-xs text-muted-foreground">
                               {formatDate(img.date)}
@@ -445,7 +426,6 @@ const Index = () => {
                         </div>
                       </div>
                       
-                      {/* Action buttons - icon only */}
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="ghost"
@@ -481,7 +461,6 @@ const Index = () => {
             </section>
           )}
 
-          {/* Results table */}
           {images.length > 0 && (
             <section className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
               <h2 className="text-2xl font-bold text-brand-brown mb-4">سجل النصوص المستخرجة</h2>
@@ -491,6 +470,7 @@ const Index = () => {
                   <thead className="bg-muted/50">
                     <tr>
                       <th>التاريخ</th>
+                      <th>صورة معاينة</th>
                       <th>الكود</th>
                       <th>اسم المرسل</th>
                       <th>رقم الهاتف</th>
@@ -505,6 +485,16 @@ const Index = () => {
                     {images.map(img => (
                       <tr key={img.id} className="hover:bg-muted/20">
                         <td>{formatDate(img.date)}</td>
+                        <td className="w-24">
+                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-transparent">
+                            <img 
+                              src={img.previewUrl} 
+                              alt="صورة مصغرة" 
+                              className="w-full h-full object-contain"
+                              style={{ mixBlendMode: 'multiply' }}
+                            />
+                          </div>
+                        </td>
                         <td>{img.code || "—"}</td>
                         <td>{img.senderName || "—"}</td>
                         <td>{img.phoneNumber || "—"}</td>
