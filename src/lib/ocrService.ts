@@ -9,11 +9,11 @@ export interface OcrResult {
 export async function extractTextFromImage(file: File): Promise<OcrResult> {
   try {
     // Create worker with proper options for Arabic language
-    const worker = await createWorker({
-      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-      logger: m => console.log(m),
-      lang: 'ara', // Arabic language
-    });
+    const worker = await createWorker();
+    
+    // We need to initialize with Arabic language
+    await worker.loadLanguage('ara');
+    await worker.initialize('ara');
     
     // Convert File to image data
     const imageData = await fileToImageData(file);

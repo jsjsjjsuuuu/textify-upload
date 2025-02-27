@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Edit, Trash, Send, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { extractTextFromImage } from "@/lib/ocrService";
@@ -254,12 +253,14 @@ const Index = () => {
     };
   }, [images]);
 
+  // Format date in Gregorian (Miladi) format
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('ar-SA', {
+    return date.toLocaleDateString('ar-SA', {
       year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }).format(date);
+      month: '2-digit',
+      day: '2-digit',
+      calendar: 'gregory'
+    }).replace(/[\u0660-\u0669]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30));
   };
 
   return (
@@ -336,22 +337,23 @@ const Index = () => {
             )}
           </section>
 
-          {/* Image previews and extracted text - structured with 5 fields */}
+          {/* Image previews and extracted text - vertical layout with images stacked */}
           {images.length > 0 && (
             <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <h2 className="text-2xl font-bold text-brand-brown mb-4">معاينة الصور والنصوص المستخرجة</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
                 {images.map(img => (
-                  <Card key={img.id} className="p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+                  <Card key={img.id} className="p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-transparent border-none backdrop-blur-sm">
                     <div className="flex flex-col gap-4">
                       <div className="flex">
-                        {/* Image preview */}
-                        <div className="relative w-1/3 h-32 rounded-lg overflow-hidden bg-muted">
+                        {/* Image preview - small rectangle without white background */}
+                        <div className="relative w-1/3 h-28 rounded-lg overflow-hidden bg-transparent">
                           <img 
                             src={img.previewUrl} 
                             alt="صورة محملة" 
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain"
+                            style={{ mixBlendMode: 'multiply' }}
                           />
                           {img.status === "processing" && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
@@ -382,8 +384,8 @@ const Index = () => {
                               {formatDate(img.date)}
                             </p>
                             {img.confidence !== undefined && (
-                              <span className="text-xs text-muted-foreground">
-                                الدقة: {Math.round(img.confidence)}%
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                دقة الاستخراج: {Math.round(img.confidence)}%
                               </span>
                             )}
                           </div>
@@ -443,21 +445,6 @@ const Index = () => {
                         </div>
                       </div>
                       
-                      {/* Full extracted text */}
-                      <div>
-                        <label htmlFor={`text-${img.id}`} className="block text-xs font-medium mb-1">
-                          النص المستخرج:
-                        </label>
-                        <Textarea
-                          id={`text-${img.id}`}
-                          value={img.extractedText}
-                          onChange={(e) => handleTextChange(img.id, "extractedText", e.target.value)}
-                          className="rtl-textarea min-h-16 text-xs text-right"
-                          placeholder="النص المستخرج من الصورة..."
-                          dir="rtl"
-                        />
-                      </div>
-                      
                       {/* Action buttons - icon only */}
                       <div className="flex justify-end gap-2">
                         <Button
@@ -509,6 +496,7 @@ const Index = () => {
                       <th>رقم الهاتف</th>
                       <th>المحافظة</th>
                       <th>السعر</th>
+                      <th>دقة الاستخراج</th>
                       <th>الحالة</th>
                       <th>الإجراءات</th>
                     </tr>
@@ -522,6 +510,7 @@ const Index = () => {
                         <td>{img.phoneNumber || "—"}</td>
                         <td>{img.province || "—"}</td>
                         <td>{img.price || "—"}</td>
+                        <td>{img.confidence ? Math.round(img.confidence) + "%" : "—"}</td>
                         <td>
                           {img.status === "processing" && <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">قيد المعالجة</span>}
                           {img.status === "completed" && !img.submitted && <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">تم المعالجة</span>}
