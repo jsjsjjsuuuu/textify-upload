@@ -1,12 +1,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Image, Edit, Trash, Diamond, Check, X, ExternalLink, Send } from "lucide-react";
+import { Upload, Edit, Trash, Send, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
 import { extractTextFromImage } from "@/lib/ocrService";
 import { submitTextToApi } from "@/lib/apiService";
 import BackgroundPattern from "@/components/BackgroundPattern";
@@ -18,6 +17,11 @@ interface ImageData {
   previewUrl: string;
   extractedText: string;
   confidence?: number;
+  code?: string;
+  senderName?: string;
+  phoneNumber?: string;
+  province?: string;
+  price?: string;
   date: Date;
   status: "processing" | "completed" | "error";
   submitted?: boolean;
@@ -28,7 +32,6 @@ const Index = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
-  const [apiKey, setApiKey] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -41,8 +44,6 @@ const Index = () => {
     const fileArray = Array.from(files);
     const totalFiles = fileArray.length;
     let processedFiles = 0;
-    
-    const newImages: ImageData[] = [];
     
     for (const file of fileArray) {
       if (!file.type.startsWith("image/")) {
@@ -64,8 +65,6 @@ const Index = () => {
         date: new Date(),
         status: "processing",
       };
-      
-      newImages.push(newImage);
       
       // Update state immediately to show processing
       setImages(prev => [newImage, ...prev]);
@@ -90,24 +89,52 @@ const Index = () => {
             text: mockTexts[Math.floor(Math.random() * mockTexts.length)],
             confidence: Math.random() * 100
           };
+
+          // Parse mock data fields from text
+          const code = "CODE" + Math.floor(Math.random() * 10000);
+          const senderName = ["أحمد محمد", "سعيد علي", "عمر خالد", "فاطمة أحمد"][Math.floor(Math.random() * 4)];
+          const phoneNumber = "05" + Math.floor(Math.random() * 100000000);
+          const province = ["الرياض", "جدة", "الدمام", "مكة", "المدينة"][Math.floor(Math.random() * 5)];
+          const price = Math.floor(Math.random() * 1000) + " ريال";
+
+          // Update the image with extracted data
+          setImages(prev =>
+            prev.map(img =>
+              img.id === newImage.id
+                ? { 
+                    ...img, 
+                    extractedText: result.text, 
+                    confidence: result.confidence,
+                    code,
+                    senderName,
+                    phoneNumber,
+                    province,
+                    price,
+                    status: "completed" 
+                  }
+                : img
+            )
+          );
         } else {
           // Real OCR in production
           result = await extractTextFromImage(file);
+          
+          // Here we would need a proper algorithm to extract structured fields from the text
+          // For production, you might need more sophisticated text parsing or AI analysis
+          
+          setImages(prev =>
+            prev.map(img =>
+              img.id === newImage.id
+                ? { 
+                    ...img, 
+                    extractedText: result.text, 
+                    confidence: result.confidence,
+                    status: "completed" 
+                  }
+                : img
+            )
+          );
         }
-        
-        // Update the image with extracted text
-        setImages(prev =>
-          prev.map(img =>
-            img.id === newImage.id
-              ? { 
-                  ...img, 
-                  extractedText: result.text, 
-                  confidence: result.confidence,
-                  status: "completed" 
-                }
-              : img
-          )
-        );
       } catch (error) {
         setImages(prev =>
           prev.map(img =>
@@ -154,10 +181,10 @@ const Index = () => {
     setIsDragging(false);
   }, []);
 
-  const handleTextChange = (id: string, text: string) => {
+  const handleTextChange = (id: string, field: string, value: string) => {
     setImages(prev =>
       prev.map(img => 
-        img.id === id ? { ...img, extractedText: text } : img
+        img.id === id ? { ...img, [field]: value } : img
       )
     );
   };
@@ -172,7 +199,7 @@ const Index = () => {
 
   const handleSubmitToApi = async (id: string) => {
     const image = images.find(img => img.id === id);
-    if (!image || image.status !== "completed" || !image.extractedText.trim()) {
+    if (!image || image.status !== "completed") {
       toast({
         title: "خطأ في الإرسال",
         description: "يرجى التأكد من اكتمال معالجة الصورة واستخراج النص",
@@ -240,45 +267,39 @@ const Index = () => {
       <BackgroundPattern />
 
       <div className="container px-4 py-8 mx-auto max-w-6xl">
-        <header className="text-center mb-12 animate-slide-up">
+        <header className="text-center mb-8 animate-slide-up">
           <h1 className="text-4xl font-bold text-brand-brown mb-3">استخراج النص من الصور</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             منصة متطورة لاستخراج النصوص من الصور تلقائيًا وإدخال البيانات بكفاءة عالية
           </p>
         </header>
 
-        <div className="grid grid-cols-1 gap-10">
-          {/* API Settings Section */}
-          <section className="animate-slide-up border rounded-lg p-4 bg-white/50 backdrop-blur-sm">
-            <h2 className="text-xl font-bold text-brand-brown mb-4">إعدادات API</h2>
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <label htmlFor="api-key" className="block text-sm font-medium mb-1">
-                  مفتاح API:
-                </label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="أدخل مفتاح API الخاص بك"
-                  className="rtl-textarea text-right"
-                  dir="rtl"
-                />
-              </div>
-              <div className="self-end">
-                <Button variant="outline" className="w-full md:w-auto">
-                  <Check size={16} className="ml-2" />
-                  تحقق من الاتصال
-                </Button>
-              </div>
-            </div>
-          </section>
+        {/* Navigation Menu */}
+        <nav className="mb-8 flex justify-end">
+          <ul className="flex gap-6">
+            <li>
+              <a href="/" className="text-brand-brown font-medium hover:text-brand-coral transition-colors">
+                الرئيسية
+              </a>
+            </li>
+            <li>
+              <a href="/api" className="text-brand-brown font-medium hover:text-brand-coral transition-colors">
+                API
+              </a>
+            </li>
+            <li>
+              <a href="/records" className="text-brand-brown font-medium hover:text-brand-coral transition-colors">
+                السجلات
+              </a>
+            </li>
+          </ul>
+        </nav>
 
-          {/* Upload section */}
+        <div className="grid grid-cols-1 gap-8">
+          {/* Upload section - reduced height */}
           <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
             <div
-              className={`upload-zone ${isDragging ? 'active' : ''}`}
+              className={`upload-zone h-40 ${isDragging ? 'active' : ''}`}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -292,14 +313,14 @@ const Index = () => {
                 onChange={(e) => handleFileChange(e.target.files)}
                 disabled={isProcessing}
               />
-              <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center">
-                <Upload size={40} className="text-brand-coral mb-3" />
-                <h3 className="text-xl font-semibold mb-2">رفع الصور</h3>
-                <p className="text-muted-foreground">
+              <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center h-full">
+                <Upload size={32} className="text-brand-coral mb-2" />
+                <h3 className="text-lg font-semibold mb-2">رفع الصور</h3>
+                <p className="text-sm text-muted-foreground mb-3">
                   اسحب واسقط الصور هنا أو انقر للاختيار
                 </p>
                 <Button 
-                  className="mt-4 bg-brand-green hover:bg-brand-green/90"
+                  className="bg-brand-brown hover:bg-brand-brown/90"
                   disabled={isProcessing}
                 >
                   رفع الصور
@@ -315,7 +336,7 @@ const Index = () => {
             )}
           </section>
 
-          {/* Image previews and extracted text */}
+          {/* Image previews and extracted text - structured with 5 fields */}
           {images.length > 0 && (
             <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <h2 className="text-2xl font-bold text-brand-brown mb-4">معاينة الصور والنصوص المستخرجة</h2>
@@ -324,92 +345,147 @@ const Index = () => {
                 {images.map(img => (
                   <Card key={img.id} className="p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
                     <div className="flex flex-col gap-4">
-                      <div className="relative rounded-lg overflow-hidden h-48 bg-muted">
-                        <img 
-                          src={img.previewUrl} 
-                          alt="صورة محملة" 
-                          className="w-full h-full object-contain"
-                        />
-                        {img.status === "processing" && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
-                            جاري المعالجة...
-                          </div>
-                        )}
-                        {img.status === "completed" && (
-                          <div className="absolute top-2 left-2 bg-green-500 text-white p-1 rounded-full">
-                            <Check size={16} />
-                          </div>
-                        )}
-                        {img.status === "error" && (
-                          <div className="absolute top-2 left-2 bg-destructive text-white p-1 rounded-full">
-                            <X size={16} />
-                          </div>
-                        )}
-                        {img.submitted && (
-                          <div className="absolute top-2 right-2 bg-brand-green text-white px-2 py-1 rounded-md text-xs">
-                            تم الإرسال
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div>
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm text-muted-foreground">
-                            {formatDate(img.date)}
-                          </p>
-                          {img.confidence !== undefined && (
-                            <span className="text-xs text-muted-foreground">
-                              الدقة: {Math.round(img.confidence)}%
-                            </span>
+                      <div className="flex">
+                        {/* Image preview */}
+                        <div className="relative w-1/3 h-32 rounded-lg overflow-hidden bg-muted">
+                          <img 
+                            src={img.previewUrl} 
+                            alt="صورة محملة" 
+                            className="w-full h-full object-cover"
+                          />
+                          {img.status === "processing" && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
+                              <span className="text-xs">جاري المعالجة...</span>
+                            </div>
+                          )}
+                          {img.status === "completed" && (
+                            <div className="absolute top-1 left-1 bg-green-500 text-white p-1 rounded-full">
+                              <Check size={12} />
+                            </div>
+                          )}
+                          {img.status === "error" && (
+                            <div className="absolute top-1 left-1 bg-destructive text-white p-1 rounded-full">
+                              <X size={12} />
+                            </div>
+                          )}
+                          {img.submitted && (
+                            <div className="absolute top-1 right-1 bg-brand-green text-white px-1.5 py-0.5 rounded-md text-[10px]">
+                              تم الإرسال
+                            </div>
                           )}
                         </div>
                         
-                        <div className="mt-2">
-                          <label htmlFor={`text-${img.id}`} className="block text-sm font-medium mb-1">
-                            النص المستخرج:
-                          </label>
-                          <Textarea
-                            id={`text-${img.id}`}
-                            value={img.extractedText}
-                            onChange={(e) => handleTextChange(img.id, e.target.value)}
-                            className="rtl-textarea min-h-24 text-right"
-                            placeholder="النص المستخرج من الصورة..."
-                            dir="rtl"
-                          />
-                        </div>
-                        
-                        <div className="flex justify-between mt-3">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(img.id)}
-                            className="text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash size={16} className="ml-2" />
-                            حذف
-                          </Button>
+                        {/* Extraction data */}
+                        <div className="w-2/3 pr-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <p className="text-xs text-muted-foreground">
+                              {formatDate(img.date)}
+                            </p>
+                            {img.confidence !== undefined && (
+                              <span className="text-xs text-muted-foreground">
+                                الدقة: {Math.round(img.confidence)}%
+                              </span>
+                            )}
+                          </div>
                           
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                            >
-                              <Edit size={16} className="ml-2" />
-                              تعديل
-                            </Button>
-                            
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="bg-brand-green hover:bg-brand-green/90"
-                              disabled={img.status !== "completed" || isSubmitting || !apiKey || img.submitted}
-                              onClick={() => handleSubmitToApi(img.id)}
-                            >
-                              <Send size={16} className="ml-2" />
-                              إرسال
-                            </Button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="col-span-1">
+                              <label className="block text-xs font-medium mb-1">الكود:</label>
+                              <input
+                                type="text"
+                                value={img.code || ""}
+                                onChange={(e) => handleTextChange(img.id, "code", e.target.value)}
+                                className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
+                                dir="rtl"
+                              />
+                            </div>
+                            <div className="col-span-1">
+                              <label className="block text-xs font-medium mb-1">اسم المرسل:</label>
+                              <input
+                                type="text"
+                                value={img.senderName || ""}
+                                onChange={(e) => handleTextChange(img.id, "senderName", e.target.value)}
+                                className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
+                                dir="rtl"
+                              />
+                            </div>
+                            <div className="col-span-1">
+                              <label className="block text-xs font-medium mb-1">رقم الهاتف:</label>
+                              <input
+                                type="text"
+                                value={img.phoneNumber || ""}
+                                onChange={(e) => handleTextChange(img.id, "phoneNumber", e.target.value)}
+                                className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
+                                dir="rtl"
+                              />
+                            </div>
+                            <div className="col-span-1">
+                              <label className="block text-xs font-medium mb-1">المحافظة:</label>
+                              <input
+                                type="text"
+                                value={img.province || ""}
+                                onChange={(e) => handleTextChange(img.id, "province", e.target.value)}
+                                className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
+                                dir="rtl"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="block text-xs font-medium mb-1">السعر:</label>
+                              <input
+                                type="text"
+                                value={img.price || ""}
+                                onChange={(e) => handleTextChange(img.id, "price", e.target.value)}
+                                className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
+                                dir="rtl"
+                              />
+                            </div>
                           </div>
                         </div>
+                      </div>
+                      
+                      {/* Full extracted text */}
+                      <div>
+                        <label htmlFor={`text-${img.id}`} className="block text-xs font-medium mb-1">
+                          النص المستخرج:
+                        </label>
+                        <Textarea
+                          id={`text-${img.id}`}
+                          value={img.extractedText}
+                          onChange={(e) => handleTextChange(img.id, "extractedText", e.target.value)}
+                          className="rtl-textarea min-h-16 text-xs text-right"
+                          placeholder="النص المستخرج من الصورة..."
+                          dir="rtl"
+                        />
+                      </div>
+                      
+                      {/* Action buttons - icon only */}
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(img.id)}
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash size={16} />
+                        </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:bg-accent/50"
+                        >
+                          <Edit size={16} />
+                        </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-brand-green hover:bg-brand-green/10"
+                          disabled={img.status !== "completed" || isSubmitting || img.submitted}
+                          onClick={() => handleSubmitToApi(img.id)}
+                        >
+                          <Send size={16} />
+                        </Button>
                       </div>
                     </div>
                   </Card>
@@ -428,8 +504,11 @@ const Index = () => {
                   <thead className="bg-muted/50">
                     <tr>
                       <th>التاريخ</th>
-                      <th>الصورة</th>
-                      <th>النص المستخرج</th>
+                      <th>الكود</th>
+                      <th>اسم المرسل</th>
+                      <th>رقم الهاتف</th>
+                      <th>المحافظة</th>
+                      <th>السعر</th>
                       <th>الحالة</th>
                       <th>الإجراءات</th>
                     </tr>
@@ -438,18 +517,11 @@ const Index = () => {
                     {images.map(img => (
                       <tr key={img.id} className="hover:bg-muted/20">
                         <td>{formatDate(img.date)}</td>
-                        <td className="w-24">
-                          <div className="w-16 h-16 rounded overflow-hidden bg-muted">
-                            <img 
-                              src={img.previewUrl} 
-                              alt="صورة مصغرة" 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        </td>
-                        <td className="max-w-xs">
-                          <p className="truncate">{img.extractedText || "—"}</p>
-                        </td>
+                        <td>{img.code || "—"}</td>
+                        <td>{img.senderName || "—"}</td>
+                        <td>{img.phoneNumber || "—"}</td>
+                        <td>{img.province || "—"}</td>
+                        <td>{img.price || "—"}</td>
                         <td>
                           {img.status === "processing" && <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">قيد المعالجة</span>}
                           {img.status === "completed" && !img.submitted && <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">تم المعالجة</span>}
@@ -457,27 +529,27 @@ const Index = () => {
                           {img.submitted && <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">تم الإرسال</span>}
                         </td>
                         <td>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Edit size={16} className="text-muted-foreground" />
+                          <div className="flex gap-2 justify-center">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:bg-accent/50">
+                              <Edit size={14} />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="h-8 w-8 text-destructive" 
+                              className="h-7 w-7 text-destructive hover:bg-destructive/10" 
                               onClick={() => handleDelete(img.id)}
                             >
-                              <Trash size={16} />
+                              <Trash size={14} />
                             </Button>
                             {img.status === "completed" && !img.submitted && (
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-8 w-8 text-brand-green"
-                                disabled={!apiKey || isSubmitting}
+                                className="h-7 w-7 text-brand-green hover:bg-brand-green/10"
+                                disabled={isSubmitting}
                                 onClick={() => handleSubmitToApi(img.id)}
                               >
-                                <Send size={16} />
+                                <Send size={14} />
                               </Button>
                             )}
                           </div>

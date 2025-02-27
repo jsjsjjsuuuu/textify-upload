@@ -1,5 +1,5 @@
 
-import { createWorker } from 'tesseract.js';
+import { createWorker, WorkerOptions } from 'tesseract.js';
 
 export interface OcrResult {
   text: string;
@@ -8,7 +8,12 @@ export interface OcrResult {
 
 export async function extractTextFromImage(file: File): Promise<OcrResult> {
   try {
-    const worker = await createWorker('ara');
+    // Create worker with proper options for Arabic language
+    const worker = await createWorker({
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      logger: m => console.log(m),
+      lang: 'ara', // Arabic language
+    });
     
     // Convert File to image data
     const imageData = await fileToImageData(file);
