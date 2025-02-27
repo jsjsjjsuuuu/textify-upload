@@ -1,9 +1,11 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Edit, Trash, Send, Check, X } from "lucide-react";
+import { Upload, Edit, Trash, Send, Check, X, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { extractTextFromImage } from "@/lib/ocrService";
 import { submitTextToApi } from "@/lib/apiService";
 import BackgroundPattern from "@/components/BackgroundPattern";
@@ -22,6 +24,7 @@ interface ImageData {
   date: Date;
   status: "processing" | "completed" | "error";
   submitted?: boolean;
+  number?: number; // Added sequence number
 }
 
 const Index = () => {
@@ -30,6 +33,8 @@ const Index = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const { toast } = useToast();
 
   const handleFileChange = async (files: FileList | null) => {
@@ -42,7 +47,14 @@ const Index = () => {
     const totalFiles = fileArray.length;
     let processedFiles = 0;
     
-    for (const file of fileArray) {
+    // Calculate the starting sequence number
+    const startingNumber = images.length > 0 
+      ? Math.max(...images.map(img => img.number || 0)) + 1 
+      : 1;
+    
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      
       if (!file.type.startsWith("image/")) {
         toast({
           title: "خطأ في نوع الملف",
@@ -61,6 +73,7 @@ const Index = () => {
         extractedText: "",
         date: new Date(),
         status: "processing",
+        number: startingNumber + i,  // Assign sequence number
       };
       
       setImages(prev => [newImage, ...prev]);
@@ -68,6 +81,7 @@ const Index = () => {
       try {
         let result;
         if (process.env.NODE_ENV === 'development') {
+          // Mock processing for faster development
           const mockTexts = [
             "فاتورة رقم: 12345",
             "الاسم: أحمد محمد",
@@ -77,7 +91,7 @@ const Index = () => {
             "نص عربي للاختبار في هذه الصورة",
             "بيانات مالية للتحليل والمعالجة"
           ];
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          await new Promise(resolve => setTimeout(resolve, 500)); // Reduced wait time for faster processing
           result = {
             text: mockTexts[Math.floor(Math.random() * mockTexts.length)],
             confidence: Math.random() * 100
@@ -174,9 +188,21 @@ const Index = () => {
         img.id === id ? { ...img, [field]: value } : img
       )
     );
+    
+    // Also update the selected image if it's the one being edited
+    if (selectedImage && selectedImage.id === id) {
+      setSelectedImage(prev => 
+        prev ? { ...prev, [field]: value } : null
+      );
+    }
   };
 
   const handleDelete = (id: string) => {
+    // Close dialog if the deleted image is the selected one
+    if (selectedImage && selectedImage.id === id) {
+      setSelectedImage(null);
+    }
+    
     setImages(prev => prev.filter(img => img.id !== id));
     toast({
       title: "تم الحذف",
@@ -206,11 +232,17 @@ const Index = () => {
       });
 
       if (result.success) {
+        const updatedImage = { ...image, submitted: true };
         setImages(prev =>
           prev.map(img =>
-            img.id === id ? { ...img, submitted: true } : img
+            img.id === id ? updatedImage : img
           )
         );
+        
+        // Update selected image if it's the one being submitted
+        if (selectedImage && selectedImage.id === id) {
+          setSelectedImage(updatedImage);
+        }
 
         toast({
           title: "تم الإرسال بنجاح",
@@ -234,12 +266,31 @@ const Index = () => {
     }
   };
 
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.2, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+  };
+
+  const handleResetZoom = () => {
+    setZoomLevel(1);
+  };
+
+  const handleImageClick = (image: ImageData) => {
+    setSelectedImage(image);
+    setZoomLevel(1); // Reset zoom level when opening a new image
+  };
+
+  // Cleanup object URLs when component unmounts
   useEffect(() => {
     return () => {
       images.forEach(img => URL.revokeObjectURL(img.previewUrl));
     };
   }, [images]);
 
+  // Format date in Gregorian (Miladi) format
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('ar-SA', {
       year: 'numeric',
@@ -248,6 +299,13 @@ const Index = () => {
       calendar: 'gregory'
     }).replace(/[\u0660-\u0669]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30));
   };
+
+  // Sort images by their sequence number
+  const sortedImages = [...images].sort((a, b) => {
+    const aNum = a.number || 0;
+    const bNum = b.number || 0;
+    return bNum - aNum; // Descending order
+  });
 
   return (
     <div className="relative min-h-screen pb-20">
@@ -321,42 +379,50 @@ const Index = () => {
             )}
           </section>
 
-          {images.length > 0 && (
+          {sortedImages.length > 0 && (
             <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <h2 className="text-2xl font-bold text-brand-brown mb-4">معاينة الصور والنصوص المستخرجة</h2>
               
               <div className="space-y-4">
-                {images.map(img => (
+                {sortedImages.map(img => (
                   <Card key={img.id} className="p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-transparent border-none backdrop-blur-sm">
                     <div className="flex flex-col gap-4">
                       <div className="flex">
-                        <div className="relative w-[300px] h-[200px] rounded-lg overflow-hidden bg-transparent">
+                        <div className="relative w-[300px] h-[200px] rounded-lg overflow-hidden bg-transparent group cursor-pointer" onClick={() => handleImageClick(img)}>
                           <img 
                             src={img.previewUrl} 
                             alt="صورة محملة" 
                             className="w-full h-full object-contain"
                             style={{ mixBlendMode: 'multiply' }}
                           />
+                          <div className="absolute top-1 left-1 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
+                            صورة {img.number}
+                          </div>
                           {img.status === "processing" && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
                               <span className="text-xs">جاري المعالجة...</span>
                             </div>
                           )}
                           {img.status === "completed" && (
-                            <div className="absolute top-1 left-1 bg-green-500 text-white p-1 rounded-full">
+                            <div className="absolute top-1 right-1 bg-green-500 text-white p-1 rounded-full">
                               <Check size={12} />
                             </div>
                           )}
                           {img.status === "error" && (
-                            <div className="absolute top-1 left-1 bg-destructive text-white p-1 rounded-full">
+                            <div className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full">
                               <X size={12} />
                             </div>
                           )}
                           {img.submitted && (
-                            <div className="absolute top-1 right-1 bg-brand-green text-white px-1.5 py-0.5 rounded-md text-[10px]">
+                            <div className="absolute bottom-1 right-1 bg-brand-green text-white px-1.5 py-0.5 rounded-md text-[10px]">
                               تم الإرسال
                             </div>
                           )}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="bg-white/90 p-1 rounded-full">
+                              <ZoomIn size={20} className="text-brand-brown" />
+                            </div>
+                          </div>
                         </div>
                         
                         <div className="flex-1 pr-4">
@@ -461,7 +527,7 @@ const Index = () => {
             </section>
           )}
 
-          {images.length > 0 && (
+          {sortedImages.length > 0 && (
             <section className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
               <h2 className="text-2xl font-bold text-brand-brown mb-4">سجل النصوص المستخرجة</h2>
               
@@ -469,6 +535,7 @@ const Index = () => {
                 <table className="w-full rtl-table">
                   <thead className="bg-muted/50">
                     <tr>
+                      <th>الرقم</th>
                       <th>التاريخ</th>
                       <th>صورة معاينة</th>
                       <th>الكود</th>
@@ -482,11 +549,12 @@ const Index = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {images.map(img => (
+                    {sortedImages.map(img => (
                       <tr key={img.id} className="hover:bg-muted/20">
+                        <td>{img.number}</td>
                         <td>{formatDate(img.date)}</td>
                         <td className="w-24">
-                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-transparent">
+                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-transparent cursor-pointer" onClick={() => handleImageClick(img)}>
                             <img 
                               src={img.previewUrl} 
                               alt="صورة مصغرة" 
@@ -542,6 +610,160 @@ const Index = () => {
           )}
         </div>
       </div>
+
+      {/* Image Zoom Dialog */}
+      <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent className="max-w-5xl p-0 bg-transparent border-none shadow-none" onInteractOutside={(e) => e.preventDefault()}>
+          <div className="bg-white/95 rounded-lg border p-4 shadow-lg relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Image view with zoom */}
+              <div className="col-span-1 bg-muted/30 rounded-lg p-4 flex flex-col items-center justify-center relative">
+                <div className="overflow-hidden relative h-[400px] w-full flex items-center justify-center">
+                  {selectedImage && (
+                    <img 
+                      src={selectedImage.previewUrl} 
+                      alt="معاينة موسعة" 
+                      className="object-contain transition-transform duration-200"
+                      style={{ 
+                        transform: `scale(${zoomLevel})`,
+                        maxHeight: '100%',
+                        maxWidth: '100%'
+                      }} 
+                    />
+                  )}
+                </div>
+                <div className="absolute top-2 left-2 flex gap-2">
+                  <Button variant="secondary" size="icon" onClick={handleZoomIn} className="h-8 w-8 bg-white/90 hover:bg-white">
+                    <ZoomIn size={16} />
+                  </Button>
+                  <Button variant="secondary" size="icon" onClick={handleZoomOut} className="h-8 w-8 bg-white/90 hover:bg-white">
+                    <ZoomOut size={16} />
+                  </Button>
+                  <Button variant="secondary" size="icon" onClick={handleResetZoom} className="h-8 w-8 bg-white/90 hover:bg-white">
+                    <Maximize2 size={16} />
+                  </Button>
+                </div>
+                {selectedImage && selectedImage.number !== undefined && (
+                  <div className="absolute top-2 right-2 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
+                    صورة {selectedImage.number}
+                  </div>
+                )}
+              </div>
+              
+              {/* Form fields */}
+              <div className="col-span-1">
+                {selectedImage && (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-semibold">تفاصيل الصورة</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(selectedImage.date)}
+                      </p>
+                    </div>
+                    
+                    {selectedImage.confidence !== undefined && (
+                      <div className="bg-blue-50 p-2 rounded-md mb-4">
+                        <p className="text-sm text-blue-800">
+                          دقة الاستخراج: {Math.round(selectedImage.confidence)}%
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-1">
+                        <label className="block text-sm font-medium mb-1">الكود:</label>
+                        <input
+                          type="text"
+                          value={selectedImage.code || ""}
+                          onChange={(e) => handleTextChange(selectedImage.id, "code", e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <label className="block text-sm font-medium mb-1">اسم المرسل:</label>
+                        <input
+                          type="text"
+                          value={selectedImage.senderName || ""}
+                          onChange={(e) => handleTextChange(selectedImage.id, "senderName", e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <label className="block text-sm font-medium mb-1">رقم الهاتف:</label>
+                        <input
+                          type="text"
+                          value={selectedImage.phoneNumber || ""}
+                          onChange={(e) => handleTextChange(selectedImage.id, "phoneNumber", e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <label className="block text-sm font-medium mb-1">المحافظة:</label>
+                        <input
+                          type="text"
+                          value={selectedImage.province || ""}
+                          onChange={(e) => handleTextChange(selectedImage.id, "province", e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium mb-1">السعر:</label>
+                        <input
+                          type="text"
+                          value={selectedImage.price || ""}
+                          onChange={(e) => handleTextChange(selectedImage.id, "price", e.target.value)}
+                          className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
+                          dir="rtl"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+                      <Button
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDelete(selectedImage.id)}
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash size={14} className="ml-1" />
+                        حذف
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Edit size={14} className="ml-1" />
+                        تعديل
+                      </Button>
+                      
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="bg-brand-green hover:bg-brand-green/90 text-white"
+                        disabled={selectedImage.status !== "completed" || isSubmitting || selectedImage.submitted}
+                        onClick={() => handleSubmitToApi(selectedImage.id)}
+                      >
+                        <Send size={14} className="ml-1" />
+                        إرسال
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <DialogClose className="absolute top-2 right-2 rounded-full h-8 w-8 flex items-center justify-center border bg-background">
+              <X size={18} />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
