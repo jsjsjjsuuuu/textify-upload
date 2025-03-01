@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Edit, Trash, Send, Check, X, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -9,7 +8,6 @@ import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { extractTextFromImage } from "@/lib/ocrService";
 import { submitTextToApi } from "@/lib/apiService";
 import BackgroundPattern from "@/components/BackgroundPattern";
-
 interface ImageData {
   id: string;
   file: File;
@@ -26,7 +24,6 @@ interface ImageData {
   submitted?: boolean;
   number?: number; // Added sequence number
 }
-
 const Index = () => {
   const [images, setImages] = useState<ImageData[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -35,37 +32,30 @@ const Index = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const handleFileChange = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    
     setIsProcessing(true);
     setProcessingProgress(0);
-    
     const fileArray = Array.from(files);
     const totalFiles = fileArray.length;
     let processedFiles = 0;
-    
+
     // Calculate the starting sequence number
-    const startingNumber = images.length > 0 
-      ? Math.max(...images.map(img => img.number || 0)) + 1 
-      : 1;
-    
+    const startingNumber = images.length > 0 ? Math.max(...images.map(img => img.number || 0)) + 1 : 1;
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
-      
       if (!file.type.startsWith("image/")) {
         toast({
           title: "خطأ في نوع الملف",
           description: "يرجى تحميل صور فقط",
-          variant: "destructive",
+          variant: "destructive"
         });
         continue;
       }
-      
       const previewUrl = URL.createObjectURL(file);
-      
       const newImage: ImageData = {
         id: crypto.randomUUID(),
         file,
@@ -73,211 +63,163 @@ const Index = () => {
         extractedText: "",
         date: new Date(),
         status: "processing",
-        number: startingNumber + i,  // Assign sequence number
+        number: startingNumber + i // Assign sequence number
       };
-      
       setImages(prev => [newImage, ...prev]);
-      
       try {
         let result;
         if (process.env.NODE_ENV === 'development') {
           // Mock processing for faster development
-          const mockTexts = [
-            "فاتورة رقم: 12345",
-            "الاسم: أحمد محمد",
-            "التاريخ: 15/06/2023",
-            "المبلغ: 500 ريال",
-            "الخدمة: استشارات تقنية",
-            "نص عربي للاختبار في هذه الصورة",
-            "بيانات مالية للتحليل والمعالجة"
-          ];
+          const mockTexts = ["فاتورة رقم: 12345", "الاسم: أحمد محمد", "التاريخ: 15/06/2023", "المبلغ: 500 ريال", "الخدمة: استشارات تقنية", "نص عربي للاختبار في هذه الصورة", "بيانات مالية للتحليل والمعالجة"];
           await new Promise(resolve => setTimeout(resolve, 500)); // Reduced wait time for faster processing
           result = {
             text: mockTexts[Math.floor(Math.random() * mockTexts.length)],
             confidence: Math.random() * 100
           };
-
           const code = "CODE" + Math.floor(Math.random() * 10000);
           const senderName = ["أحمد محمد", "سعيد علي", "عمر خالد", "فاطمة أحمد"][Math.floor(Math.random() * 4)];
           const phoneNumber = "05" + Math.floor(Math.random() * 100000000);
           const province = ["الرياض", "جدة", "الدمام", "مكة", "المدينة"][Math.floor(Math.random() * 5)];
           const price = Math.floor(Math.random() * 1000) + " ريال";
-
-          setImages(prev =>
-            prev.map(img =>
-              img.id === newImage.id
-                ? { 
-                    ...img, 
-                    extractedText: result.text, 
-                    confidence: result.confidence,
-                    code,
-                    senderName,
-                    phoneNumber,
-                    province,
-                    price,
-                    status: "completed" 
-                  }
-                : img
-            )
-          );
+          setImages(prev => prev.map(img => img.id === newImage.id ? {
+            ...img,
+            extractedText: result.text,
+            confidence: result.confidence,
+            code,
+            senderName,
+            phoneNumber,
+            province,
+            price,
+            status: "completed"
+          } : img));
         } else {
           result = await extractTextFromImage(file);
-          
-          setImages(prev =>
-            prev.map(img =>
-              img.id === newImage.id
-                ? { 
-                    ...img, 
-                    extractedText: result.text, 
-                    confidence: result.confidence,
-                    status: "completed" 
-                  }
-                : img
-            )
-          );
+          setImages(prev => prev.map(img => img.id === newImage.id ? {
+            ...img,
+            extractedText: result.text,
+            confidence: result.confidence,
+            status: "completed"
+          } : img));
         }
       } catch (error) {
-        setImages(prev =>
-          prev.map(img =>
-            img.id === newImage.id
-              ? { ...img, status: "error" }
-              : img
-          )
-        );
-        
+        setImages(prev => prev.map(img => img.id === newImage.id ? {
+          ...img,
+          status: "error"
+        } : img));
         toast({
           title: "فشل في استخراج النص",
           description: "حدث خطأ أثناء معالجة الصورة",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
-      
       processedFiles++;
-      setProcessingProgress(Math.round((processedFiles / totalFiles) * 100));
+      setProcessingProgress(Math.round(processedFiles / totalFiles * 100));
     }
-    
     setIsProcessing(false);
-    
     if (processedFiles > 0) {
       toast({
         title: "تم معالجة الصور بنجاح",
         description: `تم معالجة ${processedFiles} صورة`,
-        variant: "default",
+        variant: "default"
       });
     }
   };
-
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     handleFileChange(e.dataTransfer.files);
   }, []);
-
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
   }, []);
-
   const handleDragLeave = useCallback(() => {
     setIsDragging(false);
   }, []);
-
   const handleTextChange = (id: string, field: string, value: string) => {
-    setImages(prev =>
-      prev.map(img => 
-        img.id === id ? { ...img, [field]: value } : img
-      )
-    );
-    
+    setImages(prev => prev.map(img => img.id === id ? {
+      ...img,
+      [field]: value
+    } : img));
+
     // Also update the selected image if it's the one being edited
     if (selectedImage && selectedImage.id === id) {
-      setSelectedImage(prev => 
-        prev ? { ...prev, [field]: value } : null
-      );
+      setSelectedImage(prev => prev ? {
+        ...prev,
+        [field]: value
+      } : null);
     }
   };
-
   const handleDelete = (id: string) => {
     // Close dialog if the deleted image is the selected one
     if (selectedImage && selectedImage.id === id) {
       setSelectedImage(null);
     }
-    
     setImages(prev => prev.filter(img => img.id !== id));
     toast({
       title: "تم الحذف",
-      description: "تم حذف الصورة بنجاح",
+      description: "تم حذف الصورة بنجاح"
     });
   };
-
   const handleSubmitToApi = async (id: string) => {
     const image = images.find(img => img.id === id);
     if (!image || image.status !== "completed") {
       toast({
         title: "خطأ في الإرسال",
         description: "يرجى التأكد من اكتمال معالجة الصورة واستخراج النص",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setIsSubmitting(true);
-
     try {
       const result = await submitTextToApi({
         imageId: id,
         text: image.extractedText,
         source: image.file.name,
-        date: image.date.toISOString(),
+        date: image.date.toISOString()
       });
-
       if (result.success) {
-        const updatedImage = { ...image, submitted: true };
-        setImages(prev =>
-          prev.map(img =>
-            img.id === id ? updatedImage : img
-          )
-        );
-        
+        const updatedImage = {
+          ...image,
+          submitted: true
+        };
+        setImages(prev => prev.map(img => img.id === id ? updatedImage : img));
+
         // Update selected image if it's the one being submitted
         if (selectedImage && selectedImage.id === id) {
           setSelectedImage(updatedImage);
         }
-
         toast({
           title: "تم الإرسال بنجاح",
-          description: result.message,
+          description: result.message
         });
       } else {
         toast({
           title: "فشل في الإرسال",
           description: result.message,
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     } catch (error) {
       toast({
         title: "خطأ في الإرسال",
         description: "حدث خطأ أثناء الاتصال بالخادم",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.2, 3));
   };
-
   const handleZoomOut = () => {
     setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
   };
-
   const handleResetZoom = () => {
     setZoomLevel(1);
   };
-
   const handleImageClick = (image: ImageData) => {
     setSelectedImage(image);
     setZoomLevel(1); // Reset zoom level when opening a new image
@@ -306,23 +248,19 @@ const Index = () => {
     const bNum = b.number || 0;
     return bNum - aNum; // Descending order
   });
-
-  return (
-    <div className="relative min-h-screen pb-20">
+  return <div className="relative min-h-screen pb-20">
       <BackgroundPattern />
 
       <div className="container px-4 py-8 mx-auto max-w-6xl">
         <header className="text-center mb-8 animate-slide-up">
           <h1 className="text-4xl font-bold text-brand-brown mb-3">استخراج النص من الصور</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            منصة متطورة لاستخراج النصوص من الصور تلقائيًا وإدخال البيانات بكفاءة عالية
-          </p>
+          
         </header>
 
         <nav className="mb-8 flex justify-end">
-          <ul className="flex gap-6">
+          <ul className="flex gap-6 py-[3px] my-0 mx-[240px] px-[174px]">
             <li>
-              <a href="/" className="text-brand-brown font-medium hover:text-brand-coral transition-colors">
+              <a href="/" className="text-brand-brown font-medium hover:text-brand-coral transition-colors my-[46px]">
                 الرئيسية
               </a>
             </li>
@@ -340,84 +278,55 @@ const Index = () => {
         </nav>
 
         <div className="grid grid-cols-1 gap-8">
-          <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            <div
-              className={`upload-zone h-40 ${isDragging ? 'active' : ''}`}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-            >
-              <input
-                type="file"
-                id="image-upload"
-                className="hidden"
-                accept="image/*"
-                multiple
-                onChange={(e) => handleFileChange(e.target.files)}
-                disabled={isProcessing}
-              />
+          <section className="animate-slide-up" style={{
+          animationDelay: "0.1s"
+        }}>
+            <div onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave} className="bg-transparent my-0 mx-[79px] px-[17px] py-0 rounded-3xl">
+              <input type="file" id="image-upload" className="hidden" accept="image/*" multiple onChange={e => handleFileChange(e.target.files)} disabled={isProcessing} />
               <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center h-full">
-                <Upload size={32} className="text-brand-coral mb-2" />
-                <h3 className="text-lg font-semibold mb-2">رفع الصور</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  اسحب واسقط الصور هنا أو انقر للاختيار
-                </p>
-                <Button 
-                  className="bg-brand-brown hover:bg-brand-brown/90"
-                  disabled={isProcessing}
-                >
+                
+                
+                
+                <Button className="bg-brand-brown hover:bg-brand-brown/90" disabled={isProcessing}>
                   رفع الصور
                 </Button>
               </label>
             </div>
             
-            {isProcessing && (
-              <div className="mt-4">
+            {isProcessing && <div className="mt-4">
                 <p className="text-sm text-muted-foreground mb-2">جاري معالجة الصور...</p>
                 <Progress value={processingProgress} className="h-2" />
-              </div>
-            )}
+              </div>}
           </section>
 
-          {sortedImages.length > 0 && (
-            <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
+          {sortedImages.length > 0 && <section className="animate-slide-up" style={{
+          animationDelay: "0.2s"
+        }}>
               <h2 className="text-2xl font-bold text-brand-brown mb-4">معاينة الصور والنصوص المستخرجة</h2>
               
               <div className="space-y-4">
-                {sortedImages.map(img => (
-                  <Card key={img.id} className="p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-transparent border-none backdrop-blur-sm">
+                {sortedImages.map(img => <Card key={img.id} className="p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-transparent border-none backdrop-blur-sm">
                     <div className="flex flex-col gap-4">
                       <div className="flex">
                         <div className="relative w-[300px] h-[200px] rounded-lg overflow-hidden bg-transparent group cursor-pointer" onClick={() => handleImageClick(img)}>
-                          <img 
-                            src={img.previewUrl} 
-                            alt="صورة محملة" 
-                            className="w-full h-full object-contain"
-                            style={{ mixBlendMode: 'multiply' }}
-                          />
+                          <img src={img.previewUrl} alt="صورة محملة" className="w-full h-full object-contain" style={{
+                      mixBlendMode: 'multiply'
+                    }} />
                           <div className="absolute top-1 left-1 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
                             صورة {img.number}
                           </div>
-                          {img.status === "processing" && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
+                          {img.status === "processing" && <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
                               <span className="text-xs">جاري المعالجة...</span>
-                            </div>
-                          )}
-                          {img.status === "completed" && (
-                            <div className="absolute top-1 right-1 bg-green-500 text-white p-1 rounded-full">
+                            </div>}
+                          {img.status === "completed" && <div className="absolute top-1 right-1 bg-green-500 text-white p-1 rounded-full">
                               <Check size={12} />
-                            </div>
-                          )}
-                          {img.status === "error" && (
-                            <div className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full">
+                            </div>}
+                          {img.status === "error" && <div className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full">
                               <X size={12} />
-                            </div>
-                          )}
-                          {img.submitted && (
-                            <div className="absolute bottom-1 right-1 bg-brand-green text-white px-1.5 py-0.5 rounded-md text-[10px]">
+                            </div>}
+                          {img.submitted && <div className="absolute bottom-1 right-1 bg-brand-green text-white px-1.5 py-0.5 rounded-md text-[10px]">
                               تم الإرسال
-                            </div>
-                          )}
+                            </div>}
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                             <div className="bg-white/90 p-1 rounded-full">
                               <ZoomIn size={20} className="text-brand-brown" />
@@ -430,105 +339,57 @@ const Index = () => {
                             <p className="text-xs text-muted-foreground">
                               {formatDate(img.date)}
                             </p>
-                            {img.confidence !== undefined && (
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                            {img.confidence !== undefined && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                                 دقة الاستخراج: {Math.round(img.confidence)}%
-                              </span>
-                            )}
+                              </span>}
                           </div>
                           
                           <div className="grid grid-cols-2 gap-2">
                             <div className="col-span-1">
                               <label className="block text-xs font-medium mb-1">الكود:</label>
-                              <input
-                                type="text"
-                                value={img.code || ""}
-                                onChange={(e) => handleTextChange(img.id, "code", e.target.value)}
-                                className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
-                                dir="rtl"
-                              />
+                              <input type="text" value={img.code || ""} onChange={e => handleTextChange(img.id, "code", e.target.value)} className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" dir="rtl" />
                             </div>
                             <div className="col-span-1">
                               <label className="block text-xs font-medium mb-1">اسم المرسل:</label>
-                              <input
-                                type="text"
-                                value={img.senderName || ""}
-                                onChange={(e) => handleTextChange(img.id, "senderName", e.target.value)}
-                                className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
-                                dir="rtl"
-                              />
+                              <input type="text" value={img.senderName || ""} onChange={e => handleTextChange(img.id, "senderName", e.target.value)} className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" dir="rtl" />
                             </div>
                             <div className="col-span-1">
                               <label className="block text-xs font-medium mb-1">رقم الهاتف:</label>
-                              <input
-                                type="text"
-                                value={img.phoneNumber || ""}
-                                onChange={(e) => handleTextChange(img.id, "phoneNumber", e.target.value)}
-                                className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
-                                dir="rtl"
-                              />
+                              <input type="text" value={img.phoneNumber || ""} onChange={e => handleTextChange(img.id, "phoneNumber", e.target.value)} className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" dir="rtl" />
                             </div>
                             <div className="col-span-1">
                               <label className="block text-xs font-medium mb-1">المحافظة:</label>
-                              <input
-                                type="text"
-                                value={img.province || ""}
-                                onChange={(e) => handleTextChange(img.id, "province", e.target.value)}
-                                className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
-                                dir="rtl"
-                              />
+                              <input type="text" value={img.province || ""} onChange={e => handleTextChange(img.id, "province", e.target.value)} className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" dir="rtl" />
                             </div>
                             <div className="col-span-2">
                               <label className="block text-xs font-medium mb-1">السعر:</label>
-                              <input
-                                type="text"
-                                value={img.price || ""}
-                                onChange={(e) => handleTextChange(img.id, "price", e.target.value)}
-                                className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
-                                dir="rtl"
-                              />
+                              <input type="text" value={img.price || ""} onChange={e => handleTextChange(img.id, "price", e.target.value)} className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" dir="rtl" />
                             </div>
                           </div>
                         </div>
                       </div>
                       
                       <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(img.id)}
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(img.id)} className="h-8 w-8 text-destructive hover:bg-destructive/10">
                           <Trash size={16} />
                         </Button>
                         
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:bg-accent/50"
-                        >
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-accent/50">
                           <Edit size={16} />
                         </Button>
                         
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-brand-green hover:bg-brand-green/10"
-                          disabled={img.status !== "completed" || isSubmitting || img.submitted}
-                          onClick={() => handleSubmitToApi(img.id)}
-                        >
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-brand-green hover:bg-brand-green/10" disabled={img.status !== "completed" || isSubmitting || img.submitted} onClick={() => handleSubmitToApi(img.id)}>
                           <Send size={16} />
                         </Button>
                       </div>
                     </div>
-                  </Card>
-                ))}
+                  </Card>)}
               </div>
-            </section>
-          )}
+            </section>}
 
-          {sortedImages.length > 0 && (
-            <section className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
+          {sortedImages.length > 0 && <section className="animate-slide-up" style={{
+          animationDelay: "0.3s"
+        }}>
               <h2 className="text-2xl font-bold text-brand-brown mb-4">سجل النصوص المستخرجة</h2>
               
               <div className="overflow-x-auto rounded-lg border">
@@ -549,18 +410,14 @@ const Index = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedImages.map(img => (
-                      <tr key={img.id} className="hover:bg-muted/20">
+                    {sortedImages.map(img => <tr key={img.id} className="hover:bg-muted/20">
                         <td>{img.number}</td>
                         <td>{formatDate(img.date)}</td>
                         <td className="w-24">
                           <div className="w-20 h-20 rounded-lg overflow-hidden bg-transparent cursor-pointer" onClick={() => handleImageClick(img)}>
-                            <img 
-                              src={img.previewUrl} 
-                              alt="صورة مصغرة" 
-                              className="w-full h-full object-contain"
-                              style={{ mixBlendMode: 'multiply' }}
-                            />
+                            <img src={img.previewUrl} alt="صورة مصغرة" className="w-full h-full object-contain" style={{
+                        mixBlendMode: 'multiply'
+                      }} />
                           </div>
                         </td>
                         <td>{img.code || "—"}</td>
@@ -580,57 +437,35 @@ const Index = () => {
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:bg-accent/50">
                               <Edit size={14} />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-7 w-7 text-destructive hover:bg-destructive/10" 
-                              onClick={() => handleDelete(img.id)}
-                            >
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(img.id)}>
                               <Trash size={14} />
                             </Button>
-                            {img.status === "completed" && !img.submitted && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-7 w-7 text-brand-green hover:bg-brand-green/10"
-                                disabled={isSubmitting}
-                                onClick={() => handleSubmitToApi(img.id)}
-                              >
+                            {img.status === "completed" && !img.submitted && <Button variant="ghost" size="icon" className="h-7 w-7 text-brand-green hover:bg-brand-green/10" disabled={isSubmitting} onClick={() => handleSubmitToApi(img.id)}>
                                 <Send size={14} />
-                              </Button>
-                            )}
+                              </Button>}
                           </div>
                         </td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
               </div>
-            </section>
-          )}
+            </section>}
         </div>
       </div>
 
       {/* Image Zoom Dialog */}
-      <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
-        <DialogContent className="max-w-5xl p-0 bg-transparent border-none shadow-none" onInteractOutside={(e) => e.preventDefault()}>
+      <Dialog open={!!selectedImage} onOpenChange={open => !open && setSelectedImage(null)}>
+        <DialogContent className="max-w-5xl p-0 bg-transparent border-none shadow-none" onInteractOutside={e => e.preventDefault()}>
           <div className="bg-white/95 rounded-lg border p-4 shadow-lg relative">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Image view with zoom */}
               <div className="col-span-1 bg-muted/30 rounded-lg p-4 flex flex-col items-center justify-center relative">
                 <div className="overflow-hidden relative h-[400px] w-full flex items-center justify-center">
-                  {selectedImage && (
-                    <img 
-                      src={selectedImage.previewUrl} 
-                      alt="معاينة موسعة" 
-                      className="object-contain transition-transform duration-200"
-                      style={{ 
-                        transform: `scale(${zoomLevel})`,
-                        maxHeight: '100%',
-                        maxWidth: '100%'
-                      }} 
-                    />
-                  )}
+                  {selectedImage && <img src={selectedImage.previewUrl} alt="معاينة موسعة" className="object-contain transition-transform duration-200" style={{
+                  transform: `scale(${zoomLevel})`,
+                  maxHeight: '100%',
+                  maxWidth: '100%'
+                }} />}
                 </div>
                 <div className="absolute top-2 left-2 flex gap-2">
                   <Button variant="secondary" size="icon" onClick={handleZoomIn} className="h-8 w-8 bg-white/90 hover:bg-white">
@@ -643,17 +478,14 @@ const Index = () => {
                     <Maximize2 size={16} />
                   </Button>
                 </div>
-                {selectedImage && selectedImage.number !== undefined && (
-                  <div className="absolute top-2 right-2 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
+                {selectedImage && selectedImage.number !== undefined && <div className="absolute top-2 right-2 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
                     صورة {selectedImage.number}
-                  </div>
-                )}
+                  </div>}
               </div>
               
               {/* Form fields */}
               <div className="col-span-1">
-                {selectedImage && (
-                  <div className="space-y-4">
+                {selectedImage && <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <h3 className="text-lg font-semibold">تفاصيل الصورة</h3>
                       <p className="text-xs text-muted-foreground">
@@ -661,99 +493,52 @@ const Index = () => {
                       </p>
                     </div>
                     
-                    {selectedImage.confidence !== undefined && (
-                      <div className="bg-blue-50 p-2 rounded-md mb-4">
+                    {selectedImage.confidence !== undefined && <div className="bg-blue-50 p-2 rounded-md mb-4">
                         <p className="text-sm text-blue-800">
                           دقة الاستخراج: {Math.round(selectedImage.confidence)}%
                         </p>
-                      </div>
-                    )}
+                      </div>}
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-1">
                         <label className="block text-sm font-medium mb-1">الكود:</label>
-                        <input
-                          type="text"
-                          value={selectedImage.code || ""}
-                          onChange={(e) => handleTextChange(selectedImage.id, "code", e.target.value)}
-                          className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
-                          dir="rtl"
-                        />
+                        <input type="text" value={selectedImage.code || ""} onChange={e => handleTextChange(selectedImage.id, "code", e.target.value)} className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" dir="rtl" />
                       </div>
                       <div className="col-span-1">
                         <label className="block text-sm font-medium mb-1">اسم المرسل:</label>
-                        <input
-                          type="text"
-                          value={selectedImage.senderName || ""}
-                          onChange={(e) => handleTextChange(selectedImage.id, "senderName", e.target.value)}
-                          className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
-                          dir="rtl"
-                        />
+                        <input type="text" value={selectedImage.senderName || ""} onChange={e => handleTextChange(selectedImage.id, "senderName", e.target.value)} className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" dir="rtl" />
                       </div>
                       <div className="col-span-1">
                         <label className="block text-sm font-medium mb-1">رقم الهاتف:</label>
-                        <input
-                          type="text"
-                          value={selectedImage.phoneNumber || ""}
-                          onChange={(e) => handleTextChange(selectedImage.id, "phoneNumber", e.target.value)}
-                          className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
-                          dir="rtl"
-                        />
+                        <input type="text" value={selectedImage.phoneNumber || ""} onChange={e => handleTextChange(selectedImage.id, "phoneNumber", e.target.value)} className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" dir="rtl" />
                       </div>
                       <div className="col-span-1">
                         <label className="block text-sm font-medium mb-1">المحافظة:</label>
-                        <input
-                          type="text"
-                          value={selectedImage.province || ""}
-                          onChange={(e) => handleTextChange(selectedImage.id, "province", e.target.value)}
-                          className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
-                          dir="rtl"
-                        />
+                        <input type="text" value={selectedImage.province || ""} onChange={e => handleTextChange(selectedImage.id, "province", e.target.value)} className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" dir="rtl" />
                       </div>
                       <div className="col-span-2">
                         <label className="block text-sm font-medium mb-1">السعر:</label>
-                        <input
-                          type="text"
-                          value={selectedImage.price || ""}
-                          onChange={(e) => handleTextChange(selectedImage.id, "price", e.target.value)}
-                          className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea"
-                          dir="rtl"
-                        />
+                        <input type="text" value={selectedImage.price || ""} onChange={e => handleTextChange(selectedImage.id, "price", e.target.value)} className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" dir="rtl" />
                       </div>
                     </div>
                     
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-                      <Button
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleDelete(selectedImage.id)}
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      >
+                      <Button variant="outline" size="sm" onClick={() => handleDelete(selectedImage.id)} className="text-destructive hover:bg-destructive/10 hover:text-destructive">
                         <Trash size={14} className="ml-1" />
                         حذف
                       </Button>
                       
-                      <Button
-                        variant="outline"
-                        size="sm"
-                      >
+                      <Button variant="outline" size="sm">
                         <Edit size={14} className="ml-1" />
                         تعديل
                       </Button>
                       
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="bg-brand-green hover:bg-brand-green/90 text-white"
-                        disabled={selectedImage.status !== "completed" || isSubmitting || selectedImage.submitted}
-                        onClick={() => handleSubmitToApi(selectedImage.id)}
-                      >
+                      <Button variant="default" size="sm" className="bg-brand-green hover:bg-brand-green/90 text-white" disabled={selectedImage.status !== "completed" || isSubmitting || selectedImage.submitted} onClick={() => handleSubmitToApi(selectedImage.id)}>
                         <Send size={14} className="ml-1" />
                         إرسال
                       </Button>
                     </div>
-                  </div>
-                )}
+                  </div>}
               </div>
             </div>
             
@@ -764,8 +549,6 @@ const Index = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
