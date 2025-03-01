@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Edit, Trash, Send, Check, X, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -9,6 +8,7 @@ import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { extractTextFromImage } from "@/lib/ocrService";
 import { submitTextToApi } from "@/lib/apiService";
 import BackgroundPattern from "@/components/BackgroundPattern";
+import AnimatedBackground from "@/components/AnimatedBackground";
 
 interface ImageData {
   id: string;
@@ -310,6 +310,7 @@ const Index = () => {
   return (
     <div className="relative min-h-screen pb-20">
       <BackgroundPattern />
+      <AnimatedBackground />
 
       <div className="container px-4 py-8 mx-auto max-w-6xl">
         <header className="text-center mb-8 animate-slide-up">
