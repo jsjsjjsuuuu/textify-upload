@@ -12,7 +12,7 @@ const AnimatedBackground = () => {
       setIsActive(true);
       const timeout = setTimeout(() => {
         setIsActive(false);
-      }, 2000);
+      }, 1000); // Reduced from 2000ms to 1000ms for faster fade-out
       return () => clearTimeout(timeout);
     };
 
@@ -24,7 +24,7 @@ const AnimatedBackground = () => {
 
   return (
     <canvas
-      className={`pointer-events-none absolute inset-0 -z-10 mx-auto transition-opacity duration-1000 ${
+      className={`pointer-events-none absolute inset-0 -z-10 mx-auto transition-opacity duration-500 ${
         isActive ? "opacity-70" : "opacity-30"
       }`}
       id="canvas"

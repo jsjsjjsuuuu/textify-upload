@@ -117,8 +117,26 @@ Line.prototype = {
   },
 };
 
+// Track mouse movement frequency
+let mouseMovements = 0;
+let lastMouseMoveTime = 0;
+const THROTTLE_THRESHOLD = 10; // Number of movements in short time to trigger throttling
+
 // @ts-ignore
 function onMousemove(e) {
+  // Track mouse movement frequency for performance throttling
+  const now = Date.now();
+  if (now - lastMouseMoveTime < 100) {
+    mouseMovements++;
+    if (mouseMovements > THROTTLE_THRESHOLD) {
+      // If too many movements, throttle by skipping this update
+      if (Math.random() > 0.3) return; // 70% chance to skip update
+    }
+  } else {
+    mouseMovements = 0;
+    lastMouseMoveTime = now;
+  }
+
   function o() {
     lines = [];
     for (let e = 0; e < E.trails; e++)
