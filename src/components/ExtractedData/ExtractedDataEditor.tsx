@@ -7,6 +7,7 @@ import RawTextViewer from "./RawTextViewer";
 import LearningNotifications from "./LearningNotifications";
 import ExtractedDataFields from "./ExtractedDataFields";
 import { useDataExtraction } from "@/hooks/useDataExtraction";
+import { motion } from "framer-motion";
 
 interface ExtractedDataEditorProps {
   image: ImageData;
@@ -39,31 +40,44 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
   }, [image.id, setTempData]);
 
   return (
-    <Card className="bg-white/95 dark:bg-gray-800/95 shadow-sm border-brand-beige dark:border-gray-700">
-      <CardContent className="p-4">
-        <ExtractedDataActions 
-          editMode={editMode}
-          onEditToggle={handleEditToggle}
-          onCancel={handleCancel}
-          onCopyText={handleCopyText}
-          onAutoExtract={handleAutoExtract}
-          hasExtractedText={!!image.extractedText}
-        />
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className="bg-white/95 dark:bg-gray-800/95 shadow-sm border-brand-beige dark:border-gray-700 hover:shadow-md transition-shadow">
+        <CardContent className="p-4">
+          <ExtractedDataActions 
+            editMode={editMode}
+            onEditToggle={handleEditToggle}
+            onCancel={handleCancel}
+            onCopyText={handleCopyText}
+            onAutoExtract={handleAutoExtract}
+            hasExtractedText={!!image.extractedText}
+          />
 
-        <LearningNotifications 
-          correctionsMade={correctionsMade} 
-          isLearningActive={isLearningActive} 
-        />
+          <LearningNotifications 
+            correctionsMade={correctionsMade} 
+            isLearningActive={isLearningActive} 
+          />
 
-        <ExtractedDataFields
-          tempData={tempData}
-          editMode={editMode}
-          onTempChange={handleTempChange}
-        />
+          <motion.div
+            initial={false}
+            animate={{ scale: editMode ? 1.01 : 1 }}
+            transition={{ duration: 0.2 }}
+            className={`p-4 rounded-lg transition-colors ${editMode ? 'bg-secondary/50' : ''}`}
+          >
+            <ExtractedDataFields
+              tempData={tempData}
+              editMode={editMode}
+              onTempChange={handleTempChange}
+            />
+          </motion.div>
 
-        <RawTextViewer text={image.extractedText} />
-      </CardContent>
-    </Card>
+          <RawTextViewer text={image.extractedText} />
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 

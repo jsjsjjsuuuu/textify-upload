@@ -1,6 +1,8 @@
 
 import { Button } from "@/components/ui/button";
-import { Check, Edit2, X, Copy } from "lucide-react";
+import { Check, Edit2, X, Copy, Wand2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
 
 interface ExtractedDataActionsProps {
   editMode: boolean;
@@ -19,10 +21,33 @@ const ExtractedDataActions = ({
   onAutoExtract,
   hasExtractedText
 }: ExtractedDataActionsProps) => {
+  const { toast } = useToast();
+
+  const handleCopy = () => {
+    onCopyText();
+    toast({
+      title: "تم نسخ البيانات",
+      description: "تم نسخ جميع البيانات المستخرجة إلى الحافظة"
+    });
+  };
+
+  const handleAutoExtract = () => {
+    onAutoExtract();
+    toast({
+      title: "إعادة استخراج البيانات",
+      description: "جاري محاولة استخراج البيانات بشكل تلقائي"
+    });
+  };
+
   return (
     <div className="flex justify-between items-center mb-4">
-      <h3 className="text-lg font-semibold text-brand-brown">البيانات المستخرجة</h3>
-      <div className="flex gap-2">
+      <h3 className="text-lg font-semibold text-brand-brown dark:text-brand-beige">البيانات المستخرجة</h3>
+      <motion.div 
+        className="flex gap-2"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
+      >
         {editMode ? (
           <>
             <Button 
@@ -49,7 +74,7 @@ const ExtractedDataActions = ({
             <Button 
               size="sm" 
               variant="outline" 
-              onClick={onCopyText}
+              onClick={handleCopy}
               className="h-8"
             >
               <Copy size={16} className="ml-1" />
@@ -58,10 +83,11 @@ const ExtractedDataActions = ({
             <Button 
               size="sm" 
               variant="outline" 
-              onClick={onAutoExtract}
+              onClick={handleAutoExtract}
               className="h-8"
               disabled={!hasExtractedText}
             >
+              <Wand2 size={16} className="ml-1" />
               إعادة استخراج
             </Button>
             <Button 
@@ -75,7 +101,7 @@ const ExtractedDataActions = ({
             </Button>
           </>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };

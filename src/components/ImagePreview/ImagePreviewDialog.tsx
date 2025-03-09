@@ -6,6 +6,7 @@ import { ImageData } from "@/types/ImageData";
 import { ExtractedDataEditor } from "@/components/ExtractedData";
 import { ImageViewer } from "@/components/ImagePreview";
 import { ImageActions } from "@/components/ImagePreview";
+import { motion } from "framer-motion";
 
 interface ImagePreviewDialogProps {
   selectedImage: ImageData | null;
@@ -39,7 +40,12 @@ const ImagePreviewDialog = ({
       <DialogTitle className="sr-only">معاينة الصورة</DialogTitle>
       <DialogDescription className="sr-only">مشاهدة وتحرير بيانات الصورة</DialogDescription>
       
-      <div className="bg-white/95 rounded-lg border p-4 shadow-lg relative">
+      <motion.div 
+        className="bg-white/95 dark:bg-gray-800/90 rounded-lg border p-4 shadow-lg relative"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: "spring", duration: 0.4 }}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ImageViewer 
             selectedImage={selectedImage}
@@ -69,11 +75,11 @@ const ImagePreviewDialog = ({
           />
         </div>
         
-        <DialogClose className="absolute top-2 right-2 rounded-full h-8 w-8 flex items-center justify-center border bg-background">
+        <DialogClose className="absolute top-2 right-2 rounded-full h-8 w-8 flex items-center justify-center border bg-background hover:bg-muted transition-colors">
           <X size={18} />
           <span className="sr-only">Close</span>
         </DialogClose>
-      </div>
+      </motion.div>
     </DialogContent>
   );
 };
