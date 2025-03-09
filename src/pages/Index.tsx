@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui/dialog";
@@ -88,33 +89,7 @@ const Index = () => {
       console.log("Added new image to state with ID:", newImage.id);
       
       try {
-        if (process.env.NODE_ENV === 'development' && !geminiApiKey) {
-          const mockTexts = ["فاتورة رقم: 12345", "الاسم: أحمد محمد", "التاريخ: 15/06/2023", "المبلغ: 500 ريال", "الخدمة: استشارات تقنية", "نص عربي للاختبار في هذه الصورة", "بيانات مالية للتحليل والمعالجة"];
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          const result = {
-            text: mockTexts[Math.floor(Math.random() * mockTexts.length)],
-            confidence: Math.random() * 100
-          };
-          
-          const code = "CODE" + Math.floor(Math.random() * 10000);
-          const senderName = ["أحمد محمد", "سعيد علي", "عمر خالد", "فاطمة أحمد"][Math.floor(Math.random() * 4)];
-          const phoneNumber = "05" + Math.floor(Math.random() * 100000000);
-          const province = ["الرياض", "جدة", "الدمام", "مكة", "المدينة"][Math.floor(Math.random() * 5)];
-          const price = Math.floor(Math.random() * 1000) + " ريال";
-          
-          setImages(prev => prev.map(img => img.id === newImage.id ? {
-            ...img,
-            extractedText: result.text,
-            confidence: result.confidence,
-            code,
-            senderName,
-            phoneNumber,
-            province,
-            price,
-            status: "completed"
-          } : img));
-        } else if (geminiApiKey) {
+        if (geminiApiKey) {
           console.log("Using Gemini API for extraction");
           try {
             console.log("Converting file to base64");
@@ -131,8 +106,9 @@ const Index = () => {
             if (extractionResult.success && extractionResult.data) {
               const { parsedData, extractedText } = extractionResult.data;
               
-              setImages(prev => prev.map(img => img.id === newImage.id ? {
-                ...img,
+              // Ensure the data is properly formatted before updating state
+              const updatedImage = {
+                ...newImage,
                 extractedText: extractedText || "",
                 confidence: 95,
                 code: parsedData?.code || "",
@@ -140,8 +116,14 @@ const Index = () => {
                 phoneNumber: parsedData?.phoneNumber || "",
                 province: parsedData?.province || "",
                 price: parsedData?.price || "",
-                status: "completed"
-              } : img));
+                status: "completed" as const
+              };
+              
+              console.log("Updating image with extracted data:", updatedImage);
+              
+              setImages(prev => 
+                prev.map(img => img.id === newImage.id ? updatedImage : img)
+              );
 
               toast({
                 title: "تم الاستخراج بنجاح",
@@ -149,16 +131,7 @@ const Index = () => {
               });
             } else {
               console.log("Gemini extraction failed, falling back to OCR");
-              console.log("Calling extractTextFromImage for OCR");
-              const result = await extractTextFromImage(file);
-              console.log("OCR result:", result);
-              
-              setImages(prev => prev.map(img => img.id === newImage.id ? {
-                ...img,
-                extractedText: result.text,
-                confidence: result.confidence,
-                status: "completed"
-              } : img));
+              await fallbackToOCR(file, newImage);
               
               toast({
                 title: "تنبيه",
@@ -169,62 +142,17 @@ const Index = () => {
           } catch (geminiError) {
             console.error("Error in Gemini processing:", geminiError);
             console.log("Falling back to OCR due to Gemini error");
+            await fallbackToOCR(file, newImage);
             
-            try {
-              const result = await extractTextFromImage(file);
-              console.log("OCR result after Gemini error:", result);
-              
-              setImages(prev => prev.map(img => img.id === newImage.id ? {
-                ...img,
-                extractedText: result.text,
-                confidence: result.confidence,
-                status: "completed"
-              } : img));
-              
-              toast({
-                title: "تنبيه",
-                description: "تم استخدام OCR التقليدي بسبب خطأ في Gemini",
-                variant: "default"
-              });
-            } catch (ocrError) {
-              console.error("OCR fallback also failed:", ocrError);
-              setImages(prev => prev.map(img => img.id === newImage.id ? {
-                ...img,
-                status: "error"
-              } : img));
-              
-              toast({
-                title: "فشل في استخراج النص",
-                description: "حدث خطأ أثناء معالجة الصورة",
-                variant: "destructive"
-              });
-            }
+            toast({
+              title: "تنبيه",
+              description: "تم استخدام OCR التقليدي بسبب خطأ في Gemini",
+              variant: "default"
+            });
           }
         } else {
           console.log("No Gemini API key, using OCR directly");
-          try {
-            const result = await extractTextFromImage(file);
-            console.log("OCR result:", result);
-            
-            setImages(prev => prev.map(img => img.id === newImage.id ? {
-              ...img,
-              extractedText: result.text,
-              confidence: result.confidence,
-              status: "completed"
-            } : img));
-          } catch (error) {
-            console.error("OCR processing error:", error);
-            setImages(prev => prev.map(img => img.id === newImage.id ? {
-              ...img,
-              status: "error"
-            } : img));
-            
-            toast({
-              title: "فشل في استخراج النص",
-              description: "حدث خطأ أثناء معالجة الصورة",
-              variant: "destructive"
-            });
-          }
+          await fallbackToOCR(file, newImage);
         }
       } catch (error) {
         console.error("General error in image processing:", error);
@@ -258,7 +186,94 @@ const Index = () => {
     }
   };
 
+  // OCR fallback function
+  const fallbackToOCR = async (file: File, newImage: ImageData) => {
+    try {
+      console.log("Calling extractTextFromImage for OCR");
+      const result = await extractTextFromImage(file);
+      console.log("OCR result:", result);
+      
+      // Try to parse data from OCR text
+      const extractedData = parseDataFromOCRText(result.text);
+      console.log("Parsed data from OCR text:", extractedData);
+      
+      setImages(prev => prev.map(img => img.id === newImage.id ? {
+        ...img,
+        extractedText: result.text,
+        confidence: result.confidence,
+        code: extractedData.code || "",
+        senderName: extractedData.senderName || "",
+        phoneNumber: extractedData.phoneNumber || "",
+        province: extractedData.province || "",
+        price: extractedData.price || "",
+        status: "completed"
+      } : img));
+    } catch (ocrError) {
+      console.error("OCR processing error:", ocrError);
+      setImages(prev => prev.map(img => img.id === newImage.id ? {
+        ...img,
+        status: "error"
+      } : img));
+      
+      toast({
+        title: "فشل في استخراج النص",
+        description: "حدث خطأ أثناء معالجة الصورة",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Function to try to parse data from OCR text
+  const parseDataFromOCRText = (text: string) => {
+    console.log("Parsing data from OCR text:", text);
+    const result: Record<string, string> = {};
+    
+    // Common patterns for data extraction
+    const patterns = {
+      code: [/كود[:\s]+([0-9]+)/i, /code[:\s]+([0-9]+)/i, /رقم[:\s]+([0-9]+)/i],
+      senderName: [/اسم المرسل[:\s]+(.+?)(?:\n|\r|$)/i, /sender[:\s]+(.+?)(?:\n|\r|$)/i, /الاسم[:\s]+(.+?)(?:\n|\r|$)/i],
+      phoneNumber: [/هاتف[:\s]+([0-9\-]+)/i, /phone[:\s]+([0-9\-]+)/i, /جوال[:\s]+([0-9\-]+)/i, /رقم الهاتف[:\s]+([0-9\-]+)/i],
+      province: [/محافظة[:\s]+(.+?)(?:\n|\r|$)/i, /province[:\s]+(.+?)(?:\n|\r|$)/i, /المدينة[:\s]+(.+?)(?:\n|\r|$)/i],
+      price: [/سعر[:\s]+(.+?)(?:\n|\r|$)/i, /price[:\s]+(.+?)(?:\n|\r|$)/i, /المبلغ[:\s]+(.+?)(?:\n|\r|$)/i]
+    };
+    
+    // Try to match each field
+    for (const [field, fieldPatterns] of Object.entries(patterns)) {
+      for (const pattern of fieldPatterns) {
+        const match = text.match(pattern);
+        if (match && match[1]) {
+          result[field] = match[1].trim();
+          break;
+        }
+      }
+    }
+    
+    // Also try to look for JSON in the text
+    try {
+      const jsonMatch = text.match(/{[\s\S]*?}/);
+      if (jsonMatch) {
+        try {
+          const jsonData = JSON.parse(jsonMatch[0]);
+          // Merge any valid data from JSON with existing results
+          if (jsonData.code) result.code = jsonData.code;
+          if (jsonData.senderName) result.senderName = jsonData.senderName;
+          if (jsonData.phoneNumber) result.phoneNumber = jsonData.phoneNumber;
+          if (jsonData.province) result.province = jsonData.province;
+          if (jsonData.price) result.price = jsonData.price;
+        } catch (e) {
+          console.log("Failed to parse JSON from text:", e);
+        }
+      }
+    } catch (e) {
+      console.log("Error looking for JSON in text:", e);
+    }
+    
+    return result;
+  };
+
   const handleTextChange = (id: string, field: string, value: string) => {
+    console.log(`Updating ${field} to "${value}" for image ${id}`);
+    
     setImages(prev => prev.map(img => img.id === id ? {
       ...img,
       [field]: value
