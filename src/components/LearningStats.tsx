@@ -5,18 +5,27 @@ import { getLearningStats } from "@/utils/learningSystem";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from 'date-fns';
 import { arEG } from 'date-fns/locale';
-import { Brain } from 'lucide-react';
+import { Brain, ArrowUpCircle } from 'lucide-react';
 
 const LearningStats = () => {
   const [stats, setStats] = useState<ReturnType<typeof getLearningStats> | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
 
   useEffect(() => {
     setStats(getLearningStats());
     
     // تحديث الإحصائيات كل 30 ثانية
     const interval = setInterval(() => {
-      setStats(getLearningStats());
+      const newStats = getLearningStats();
+      setStats(prev => {
+        // إظهار تأثير بصري عند تغير الإحصائيات
+        if (prev && newStats.totalCorrections > prev.totalCorrections) {
+          setShowAnimation(true);
+          setTimeout(() => setShowAnimation(false), 3000);
+        }
+        return newStats;
+      });
     }, 30000);
     
     return () => clearInterval(interval);
@@ -42,7 +51,7 @@ const LearningStats = () => {
   };
 
   return (
-    <Card className="bg-white/90 dark:bg-gray-800/90 shadow-sm border-brand-beige dark:border-gray-700">
+    <Card className={`bg-white/90 dark:bg-gray-800/90 shadow-sm border-brand-beige dark:border-gray-700 transition-all duration-300 ${showAnimation ? 'ring-2 ring-brand-green' : ''}`}>
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-medium flex items-center gap-2">
           <Brain size={18} className="text-brand-green" />
@@ -50,6 +59,9 @@ const LearningStats = () => {
           <Badge className="mr-2 bg-brand-brown dark:bg-amber-700">
             {stats.totalCorrections} تصحيح
           </Badge>
+          {showAnimation && (
+            <ArrowUpCircle size={16} className="text-green-500 animate-bounce ml-1" />
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -66,6 +78,12 @@ const LearningStats = () => {
               </Badge>
             ))}
           </div>
+        </div>
+        
+        <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+          <p className="text-xs text-muted-foreground">
+            يمكنك تعديل البيانات المستخرجة وسيتعلم النظام منها لتحسين دقة الاستخراج في المستقبل.
+          </p>
         </div>
       </CardContent>
     </Card>
