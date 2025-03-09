@@ -1,5 +1,5 @@
 
-import { DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
+import { DialogContent, DialogClose, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, ZoomIn, ZoomOut, Maximize2, RefreshCw } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
@@ -48,24 +48,29 @@ const ImagePreviewDialog = ({
   return (
     <DialogContent className="max-w-5xl p-0 bg-transparent border-none shadow-none" onInteractOutside={e => e.preventDefault()}>
       <DialogTitle className="sr-only">معاينة الصورة</DialogTitle>
+      <DialogDescription className="sr-only">مشاهدة وتحرير بيانات الصورة</DialogDescription>
       
       <div className="bg-white/95 rounded-lg border p-4 shadow-lg relative">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="col-span-1 bg-muted/30 rounded-lg p-4 flex flex-col items-center justify-center relative">
             <div className="overflow-hidden relative h-[400px] w-full flex items-center justify-center bg-white/50 rounded-md">
               {selectedImage.previewUrl && (
-                <img 
-                  src={selectedImage.previewUrl} 
-                  alt="معاينة موسعة" 
-                  className="transition-transform duration-200"
-                  style={{ 
-                    transform: `scale(${zoomLevel})`,
-                    maxHeight: '380px',
-                    maxWidth: '100%',
-                    objectFit: 'contain',
-                    display: 'block'
-                  }} 
-                />
+                <div className="w-full h-full flex items-center justify-center">
+                  <img 
+                    src={selectedImage.previewUrl} 
+                    alt="معاينة موسعة" 
+                    className="transition-transform duration-200"
+                    style={{ 
+                      transform: `scale(${zoomLevel})`,
+                      maxHeight: '100%',
+                      maxWidth: '100%',
+                      height: 'auto',
+                      width: 'auto',
+                      objectFit: 'contain',
+                      display: 'block'
+                    }} 
+                  />
+                </div>
               )}
             </div>
             
