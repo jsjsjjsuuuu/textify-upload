@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { addCorrection } from "@/utils/learningSystem";
@@ -9,6 +8,7 @@ interface TempData {
   phoneNumber: string;
   province: string;
   price: string;
+  [key: string]: string; // Add index signature to allow string indexing
 }
 
 export const useDataExtraction = (
@@ -110,7 +110,6 @@ export const useDataExtraction = (
     }));
   };
 
-  // Extract known fields from text based on patterns
   const tryExtractField = (text: string, patterns: RegExp[]): string => {
     for (const pattern of patterns) {
       const match = text.match(pattern);
@@ -158,13 +157,11 @@ export const useDataExtraction = (
       ])
     };
 
-    // Update temp data with extracted values
     setTempData(prev => ({
       ...prev,
       ...extractedData
     }));
 
-    // If in normal mode, apply changes directly
     if (!editMode) {
       Object.entries(extractedData).forEach(([field, value]) => {
         if (value) onTextChange(image.id, field, value);
