@@ -1,8 +1,9 @@
 
 import { DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check, X, Edit, Trash, Send, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { X, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
+import ExtractedDataEditor from "./ExtractedDataEditor";
 
 interface ImagePreviewDialogProps {
   selectedImage: ImageData | null;
@@ -64,111 +65,47 @@ const ImagePreviewDialog = ({
                 صورة {selectedImage.number}
               </div>
             )}
-          </div>
-          
-          <div className="col-span-1">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">تفاصيل الصورة</h3>
-                <p className="text-xs text-muted-foreground">
-                  {formatDate(selectedImage.date)}
-                </p>
-              </div>
-              
+            
+            <div className="flex items-center justify-between w-full mt-4">
+              <p className="text-xs text-muted-foreground">
+                {formatDate(selectedImage.date)}
+              </p>
               {selectedImage.confidence !== undefined && (
-                <div className="bg-blue-50 p-2 rounded-md mb-4">
-                  <p className="text-sm text-blue-800">
-                    دقة الاستخراج: {Math.round(selectedImage.confidence)}%
-                  </p>
-                </div>
+                <span className="text-xs bg-blue-50 p-1.5 rounded text-blue-800">
+                  دقة الاستخراج: {Math.round(selectedImage.confidence)}%
+                </span>
               )}
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium mb-1">الكود:</label>
-                  <input 
-                    type="text" 
-                    value={selectedImage.code || ""} 
-                    onChange={e => onTextChange(selectedImage.id, "code", e.target.value)} 
-                    className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
-                    dir="rtl" 
-                    placeholder="أدخل الكود"
-                  />
-                </div>
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium mb-1">اسم المرسل:</label>
-                  <input 
-                    type="text" 
-                    value={selectedImage.senderName || ""} 
-                    onChange={e => onTextChange(selectedImage.id, "senderName", e.target.value)} 
-                    className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
-                    dir="rtl" 
-                    placeholder="أدخل اسم المرسل"
-                  />
-                </div>
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium mb-1">رقم الهاتف:</label>
-                  <input 
-                    type="text" 
-                    value={selectedImage.phoneNumber || ""} 
-                    onChange={e => onTextChange(selectedImage.id, "phoneNumber", e.target.value)} 
-                    className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
-                    dir="rtl" 
-                    placeholder="أدخل رقم الهاتف"
-                  />
-                </div>
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium mb-1">المحافظة:</label>
-                  <input 
-                    type="text" 
-                    value={selectedImage.province || ""} 
-                    onChange={e => onTextChange(selectedImage.id, "province", e.target.value)} 
-                    className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
-                    dir="rtl" 
-                    placeholder="أدخل المحافظة"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium mb-1">السعر:</label>
-                  <input 
-                    type="text" 
-                    value={selectedImage.price || ""} 
-                    onChange={e => onTextChange(selectedImage.id, "price", e.target.value)} 
-                    className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
-                    dir="rtl" 
-                    placeholder="أدخل السعر"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+            </div>
+            
+            <div className="flex justify-between w-full mt-4 pt-2 border-t">
+              <div className="flex gap-2">
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => onDelete(selectedImage.id)} 
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
-                  <Trash size={14} className="ml-1" />
                   حذف
                 </Button>
-                
-                <Button variant="outline" size="sm">
-                  <Edit size={14} className="ml-1" />
-                  تعديل
-                </Button>
-                
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="bg-brand-green hover:bg-brand-green/90 text-white" 
-                  disabled={selectedImage.status !== "completed" || isSubmitting || selectedImage.submitted} 
-                  onClick={() => onSubmit(selectedImage.id)}
-                >
-                  <Send size={14} className="ml-1" />
-                  إرسال
-                </Button>
               </div>
+              
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="bg-brand-green hover:bg-brand-green/90 text-white" 
+                disabled={selectedImage.status !== "completed" || isSubmitting || selectedImage.submitted} 
+                onClick={() => onSubmit(selectedImage.id)}
+              >
+                {selectedImage.submitted ? "تم الإرسال" : "إرسال"}
+              </Button>
             </div>
+          </div>
+          
+          <div className="col-span-1">
+            <ExtractedDataEditor 
+              image={selectedImage}
+              onTextChange={onTextChange}
+            />
           </div>
         </div>
         

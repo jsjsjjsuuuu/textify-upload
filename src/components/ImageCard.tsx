@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, X, Edit, Trash, Send, ZoomIn } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
+import ExtractedDataEditor from "./ExtractedDataEditor";
 
 interface ImageCardProps {
   image: ImageData;
@@ -24,7 +25,8 @@ const ImageCard = ({
   onSubmit, 
   formatDate 
 }: ImageCardProps) => {
-  // Add debug logging to check what data we have
+  const [showFullData, setShowFullData] = useState(false);
+
   console.log("ImageCard rendering with data:", image);
 
   return (
@@ -83,73 +85,60 @@ const ImageCard = ({
               )}
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <div className="col-span-1">
-                <label className="block text-xs font-medium mb-1">الكود:</label>
-                <input 
-                  type="text" 
-                  value={image.code || ""} 
-                  onChange={e => onTextChange(image.id, "code", e.target.value)} 
-                  className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
-                  dir="rtl" 
-                  placeholder="أدخل الكود"
+            {showFullData ? (
+              <div className="mb-2">
+                <ExtractedDataEditor 
+                  image={image}
+                  onTextChange={onTextChange}
                 />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFullData(false)}
+                  className="mt-2 text-xs w-full"
+                >
+                  عرض ملخص البيانات ↑
+                </Button>
               </div>
-              <div className="col-span-1">
-                <label className="block text-xs font-medium mb-1">اسم المرسل:</label>
-                <input 
-                  type="text" 
-                  value={image.senderName || ""} 
-                  onChange={e => onTextChange(image.id, "senderName", e.target.value)} 
-                  className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
-                  dir="rtl" 
-                  placeholder="أدخل اسم المرسل"
-                />
-              </div>
-              <div className="col-span-1">
-                <label className="block text-xs font-medium mb-1">رقم الهاتف:</label>
-                <input 
-                  type="text" 
-                  value={image.phoneNumber || ""} 
-                  onChange={e => onTextChange(image.id, "phoneNumber", e.target.value)} 
-                  className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
-                  dir="rtl" 
-                  placeholder="أدخل رقم الهاتف"
-                />
-              </div>
-              <div className="col-span-1">
-                <label className="block text-xs font-medium mb-1">المحافظة:</label>
-                <input 
-                  type="text" 
-                  value={image.province || ""} 
-                  onChange={e => onTextChange(image.id, "province", e.target.value)} 
-                  className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
-                  dir="rtl" 
-                  placeholder="أدخل المحافظة"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-medium mb-1">السعر:</label>
-                <input 
-                  type="text" 
-                  value={image.price || ""} 
-                  onChange={e => onTextChange(image.id, "price", e.target.value)} 
-                  className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
-                  dir="rtl" 
-                  placeholder="أدخل السعر"
-                />
-              </div>
-            </div>
-
-            {/* Add debug display to show raw extracted text */}
-            <div className="mt-2 text-xs bg-gray-50 p-2 rounded">
-              <details>
-                <summary className="font-medium cursor-pointer">النص المستخرج</summary>
-                <pre className="whitespace-pre-wrap max-h-20 overflow-y-auto mt-1 rtl-text bg-gray-100 p-1 rounded">
-                  {image.extractedText || "لا يوجد نص مستخرج"}
-                </pre>
-              </details>
-            </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                  <div className="col-span-1">
+                    <label className="block text-xs font-medium mb-1">الكود:</label>
+                    <div className="bg-gray-50 rounded p-1.5 text-sm border min-h-[34px]">
+                      {image.code || <span className="text-gray-400 text-xs">غير متوفر</span>}
+                    </div>
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-xs font-medium mb-1">اسم المرسل:</label>
+                    <div className="bg-gray-50 rounded p-1.5 text-sm border min-h-[34px]">
+                      {image.senderName || <span className="text-gray-400 text-xs">غير متوفر</span>}
+                    </div>
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-xs font-medium mb-1">رقم الهاتف:</label>
+                    <div className="bg-gray-50 rounded p-1.5 text-sm border min-h-[34px]">
+                      {image.phoneNumber || <span className="text-gray-400 text-xs">غير متوفر</span>}
+                    </div>
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-xs font-medium mb-1">المحافظة:</label>
+                    <div className="bg-gray-50 rounded p-1.5 text-sm border min-h-[34px]">
+                      {image.province || <span className="text-gray-400 text-xs">غير متوفر</span>}
+                    </div>
+                  </div>
+                </div>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFullData(true)}
+                  className="text-xs w-full"
+                >
+                  عرض جميع البيانات والتحرير ↓
+                </Button>
+              </>
+            )}
           </div>
         </div>
         
@@ -166,6 +155,7 @@ const ImageCard = ({
           <Button 
             variant="ghost" 
             size="icon" 
+            onClick={() => setShowFullData(!showFullData)}
             className="h-8 w-8 text-muted-foreground hover:bg-accent/50"
           >
             <Edit size={16} />
