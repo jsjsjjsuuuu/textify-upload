@@ -1,5 +1,4 @@
 
-import { useEffect } from "react";
 import BackgroundPattern from "@/components/BackgroundPattern";
 import ImageUploader from "@/components/ImageUploader";
 import AppHeader from "@/components/AppHeader";
