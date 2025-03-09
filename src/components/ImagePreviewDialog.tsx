@@ -1,12 +1,13 @@
 
 import { DialogContent, DialogClose, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, ZoomIn, ZoomOut, Maximize2, RefreshCw } from "lucide-react";
+import { X, ZoomIn, ZoomOut, Maximize2, RefreshCw, ImageOff } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 import { ExtractedDataEditor } from "@/components/ExtractedData";
 import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { isValidBlobUrl } from "@/lib/gemini/utils";
 
 interface ImagePreviewDialogProps {
   selectedImage: ImageData | null;
@@ -42,7 +43,17 @@ const ImagePreviewDialog = ({
   useEffect(() => {
     setImageLoaded(false);
     setImgError(false);
-  }, [selectedImage?.id]);
+    
+    // Validate blob URL
+    if (selectedImage?.previewUrl) {
+      isValidBlobUrl(selectedImage.previewUrl).then(isValid => {
+        if (!isValid) {
+          console.error("Invalid blob URL detected:", selectedImage.previewUrl);
+          setImgError(true);
+        }
+      });
+    }
+  }, [selectedImage?.id, selectedImage?.previewUrl]);
   
   if (!selectedImage) return null;
   
@@ -52,6 +63,14 @@ const ImagePreviewDialog = ({
     if (confidence >= 70) return "bg-emerald-500";
     if (confidence >= 50) return "bg-amber-500";
     return "bg-red-500";
+  };
+
+  // Get safe image URL or fallback
+  const getImageUrl = () => {
+    if (!selectedImage.previewUrl || imgError) {
+      return null;
+    }
+    return selectedImage.previewUrl;
   };
 
   return (
@@ -66,27 +85,16 @@ const ImagePreviewDialog = ({
               ref={imageContainerRef}
               className="overflow-hidden relative h-[400px] w-full flex items-center justify-center bg-white/50 rounded-md"
             >
-              {selectedImage.previewUrl && (
+              {selectedImage.previewUrl && !imgError && (
                 <div className="relative w-full h-full flex items-center justify-center">
-                  {!imageLoaded && !imgError && (
+                  {!imageLoaded && (
                     <div className="absolute inset-0 flex items-center justify-center z-10">
                       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-green"></div>
                     </div>
                   )}
                   
-                  {imgError && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 text-red-500">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="15" y1="9" x2="9" y2="15" />
-                        <line x1="9" y1="9" x2="15" y2="15" />
-                      </svg>
-                      <p className="mt-2">فشل تحميل الصورة</p>
-                    </div>
-                  )}
-                  
                   <img 
-                    src={selectedImage.previewUrl} 
+                    src={getImageUrl() || ''}
                     alt="معاينة موسعة" 
                     className="transition-all duration-200"
                     style={{ 
@@ -95,15 +103,25 @@ const ImagePreviewDialog = ({
                       maxHeight: '100%',
                       maxWidth: '100%',
                       objectFit: 'contain',
-                      display: imageLoaded ? 'block' : 'none',
                     }}
-                    onLoad={() => setImageLoaded(true)}
-                    onError={() => {
-                      console.error("Error loading image:", selectedImage.previewUrl);
-                      setImageLoaded(true); // Mark as loaded even on error to remove spinner
+                    onLoad={() => {
+                      console.log("Image loaded successfully:", selectedImage.id);
+                      setImageLoaded(true);
+                    }}
+                    onError={(e) => {
+                      console.error("Error loading image:", selectedImage.previewUrl, e);
+                      setImageLoaded(false);
                       setImgError(true);
                     }}
                   />
+                </div>
+              )}
+              
+              {imgError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500">
+                  <ImageOff size={48} />
+                  <p className="mt-2 text-center font-medium">فشل تحميل الصورة</p>
+                  <p className="text-sm text-muted-foreground mt-1">قد تكون الصورة غير صالحة أو تم حذفها</p>
                 </div>
               )}
             </div>
@@ -125,7 +143,7 @@ const ImagePreviewDialog = ({
                     <Button 
                       variant="secondary" 
                       size="icon" 
-                      disabled={isAnalyzing}
+                      disabled={isAnalyzing || imgError}
                       onClick={() => {
                         setIsAnalyzing(true);
                         // هنا يمكن إضافة رمز التحليل المتقدم في المستقبل

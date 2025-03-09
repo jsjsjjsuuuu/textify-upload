@@ -6,6 +6,7 @@ import { useImageState } from "@/hooks/useImageState";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useSubmitToApi } from "@/hooks/useSubmitToApi";
+import { createReliableBlobUrl } from "@/lib/gemini/utils";
 
 export const useImageProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -50,8 +51,18 @@ export const useImageProcessing = () => {
         continue;
       }
       
-      const previewUrl = URL.createObjectURL(file);
+      // Create a more reliable blob URL
+      const previewUrl = createReliableBlobUrl(file);
       console.log("Created preview URL:", previewUrl);
+      
+      if (!previewUrl) {
+        toast({
+          title: "خطأ في تحميل الصورة",
+          description: "فشل في إنشاء معاينة للصورة",
+          variant: "destructive"
+        });
+        continue;
+      }
       
       const newImage: ImageData = {
         id: crypto.randomUUID(),

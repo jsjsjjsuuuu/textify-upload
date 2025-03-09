@@ -1,13 +1,27 @@
-
 /**
  * تحويل ملف صورة إلى Base64
  */
 export function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
+        const base64String = reader.result.split(',')[1];
+        console.log("Successfully converted file to base64");
+        resolve(base64String);
+      } else {
+        reject(new Error('FileReader did not return a string'));
+      }
+    };
+    
+    reader.onerror = (error) => {
+      console.error("Error reading file:", error);
+      reject(error);
+    };
+    
     reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
   });
 }
 
@@ -86,7 +100,7 @@ export function enhanceExtractedData(parsedData: any, fullText: string): any {
 }
 
 /**
- * حساب نتيجة الثقة في البيانات المستخرجة
+ * حساب نتيجة الثق�� في البيانات المستخرجة
  */
 export function calculateConfidenceScore(data: any): number {
   let score = 0;
@@ -138,3 +152,29 @@ export function calculateConfidenceScore(data: any): number {
   
   return score;
 }
+
+// Utility to check if a blob URL is valid
+export const isValidBlobUrl = async (url: string): Promise<boolean> => {
+  if (!url || !url.startsWith('blob:')) return false;
+  
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    return response.ok;
+  } catch (error) {
+    console.error("Error validating blob URL:", url, error);
+    return false;
+  }
+};
+
+// Function to create a more reliable blob URL from a file
+export const createReliableBlobUrl = (file: File): string => {
+  try {
+    // Revoke any existing blob URL first to prevent memory leaks
+    const url = URL.createObjectURL(file);
+    console.log("Created reliable blob URL:", url);
+    return url;
+  } catch (error) {
+    console.error("Error creating blob URL:", error);
+    return '';
+  }
+};

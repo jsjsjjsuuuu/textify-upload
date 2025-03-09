@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { ImageData } from "@/types/ImageData";
 import ImagePreviewDialog from "@/components/ImagePreviewDialog";
+import { isValidBlobUrl } from "@/lib/gemini/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -24,11 +26,21 @@ const ImagePreviewContainer = ({
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   // Set dialog open state when an image is selected
   useEffect(() => {
     if (selectedImage) {
       setDialogOpen(true);
+      
+      // Validate the blob URL of the selected image
+      if (selectedImage.previewUrl) {
+        isValidBlobUrl(selectedImage.previewUrl).then(isValid => {
+          if (!isValid) {
+            console.warn("Selected image has an invalid blob URL:", selectedImage.id);
+          }
+        });
+      }
     }
   }, [selectedImage]);
 
@@ -41,8 +53,22 @@ const ImagePreviewContainer = ({
     }
   };
 
-  const handleImageClick = (image: ImageData) => {
+  const handleImageClick = async (image: ImageData) => {
     console.log("Image clicked:", image.id, image.previewUrl);
+    
+    // Validate URL before opening dialog
+    if (image.previewUrl) {
+      const isValid = await isValidBlobUrl(image.previewUrl);
+      if (!isValid) {
+        console.error("Cannot open image - invalid blob URL:", image.previewUrl);
+        toast({
+          title: "خطأ في تحميل الصورة",
+          description: "تعذر فتح الصورة. يرجى إعادة تحميلها.",
+          variant: "destructive"
+        });
+      }
+    }
+    
     setSelectedImage(image);
     setZoomLevel(1);
   };
