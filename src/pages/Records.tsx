@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BackgroundPattern from "@/components/BackgroundPattern";
 import { Upload, PictureInPicture, Save, Brain } from "lucide-react";
-import { testGeminiConnection } from "@/lib/geminiService";
+import { testGeminiConnection } from "@/lib/gemini";
 
 const Records = () => {
   const [savedApiKey, setSavedApiKey] = useState<string>("");
@@ -15,7 +14,6 @@ const Records = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // استرجاع مفتاح API من التخزين المحلي عند تحميل الصفحة
     const storedApiKey = localStorage.getItem("geminiApiKey") || "";
     setSavedApiKey(storedApiKey);
     setApiKey(storedApiKey);
@@ -31,7 +29,6 @@ const Records = () => {
       return;
     }
 
-    // قبل الحفظ، نختبر الاتصال بـ Gemini API
     setIsTestingConnection(true);
     try {
       const testResult = await testGeminiConnection(apiKey);
@@ -61,7 +58,6 @@ const Records = () => {
     }
   };
 
-  // تعبئة مفتاح API تلقائيًا
   useEffect(() => {
     if (!apiKey && !savedApiKey) {
       const defaultApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";

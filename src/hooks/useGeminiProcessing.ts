@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
-import { extractDataWithGemini, fileToBase64 } from "@/lib/apiService";
+import { extractDataWithGemini, fileToBase64 } from "@/lib/gemini";
 import { useToast } from "@/hooks/use-toast";
 import { updateImageWithExtractedData } from "@/utils/imageDataParser";
 
