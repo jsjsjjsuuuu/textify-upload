@@ -1,8 +1,9 @@
+
 import { DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, ZoomIn, ZoomOut, Maximize2, RefreshCw } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
-import ExtractedDataEditor from "./ExtractedDataEditor";
+import { ExtractedDataEditor } from "@/components/ExtractedData";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";

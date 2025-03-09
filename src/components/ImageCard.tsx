@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, X, Edit, Trash, Send, ZoomIn } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
-import ExtractedDataEditor from "./ExtractedDataEditor";
+import { ExtractedDataEditor } from "@/components/ExtractedData";
 
 interface ImageCardProps {
   image: ImageData;
