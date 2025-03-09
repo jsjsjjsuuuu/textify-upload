@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { Card, CardContent } from "@/components/ui/card";
-import ExtractedDataField from "./ExtractedDataField";
 import ExtractedDataActions from "./ExtractedDataActions";
 import RawTextViewer from "./RawTextViewer";
 import LearningNotifications from "./LearningNotifications";
