@@ -24,6 +24,9 @@ const ImageCard = ({
   onSubmit, 
   formatDate 
 }: ImageCardProps) => {
+  // Add debug logging to check what data we have
+  console.log("ImageCard rendering with data:", image);
+
   return (
     <Card className="p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-transparent border-none backdrop-blur-sm">
       <div className="flex flex-col gap-4">
@@ -136,6 +139,16 @@ const ImageCard = ({
                   placeholder="أدخل السعر"
                 />
               </div>
+            </div>
+
+            {/* Add debug display to show raw extracted text */}
+            <div className="mt-2 text-xs bg-gray-50 p-2 rounded">
+              <details>
+                <summary className="font-medium cursor-pointer">النص المستخرج</summary>
+                <pre className="whitespace-pre-wrap max-h-20 overflow-y-auto mt-1 rtl-text bg-gray-100 p-1 rounded">
+                  {image.extractedText || "لا يوجد نص مستخرج"}
+                </pre>
+              </details>
             </div>
           </div>
         </div>
