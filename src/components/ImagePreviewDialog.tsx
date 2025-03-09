@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { X, ZoomIn, ZoomOut, Maximize2, RefreshCw } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 import { ExtractedDataEditor } from "@/components/ExtractedData";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -34,6 +34,13 @@ const ImagePreviewDialog = ({
   formatDate
 }: ImagePreviewDialogProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
+  
+  useEffect(() => {
+    // Reset image loaded state when selected image changes
+    setImageLoaded(false);
+  }, [selectedImage?.id]);
   
   if (!selectedImage) return null;
   
@@ -55,21 +62,26 @@ const ImagePreviewDialog = ({
           <div className="col-span-1 bg-muted/30 rounded-lg p-4 flex flex-col items-center justify-center relative">
             <div className="overflow-hidden relative h-[400px] w-full flex items-center justify-center bg-white/50 rounded-md">
               {selectedImage.previewUrl && (
-                <div className="w-full h-full flex items-center justify-center">
+                <div className="flex items-center justify-center w-full h-full">
                   <img 
+                    ref={imageRef}
                     src={selectedImage.previewUrl} 
                     alt="معاينة موسعة" 
-                    className="transition-transform duration-200"
+                    className={`transition-transform duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                     style={{ 
                       transform: `scale(${zoomLevel})`,
                       maxHeight: '100%',
                       maxWidth: '100%',
-                      height: 'auto',
-                      width: 'auto',
-                      objectFit: 'contain',
-                      display: 'block'
-                    }} 
+                      objectFit: 'contain'
+                    }}
+                    onLoad={() => setImageLoaded(true)}
+                    onError={(e) => console.error("Error loading image:", e)}
                   />
+                  {!imageLoaded && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-green"></div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
