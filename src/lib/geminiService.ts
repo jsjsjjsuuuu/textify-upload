@@ -40,6 +40,9 @@ export interface GeminiExtractParams {
   apiKey: string;
   imageBase64: string;
   extractionPrompt?: string;
+  temperature?: number;
+  modelVersion?: string;
+  enhancedExtraction?: boolean;
 }
 
 /**
@@ -48,7 +51,10 @@ export interface GeminiExtractParams {
 export async function extractDataWithGemini({
   apiKey,
   imageBase64,
-  extractionPrompt
+  extractionPrompt,
+  temperature = 0.2,
+  modelVersion = 'gemini-2.0-flash',
+  enhancedExtraction = true
 }: GeminiExtractParams): Promise<ApiResult> {
   if (!apiKey) {
     console.error("Gemini API Key is missing");
@@ -58,17 +64,52 @@ export async function extractDataWithGemini({
     };
   }
 
-  const prompt = extractionPrompt || 
-    "استخرج البيانات التالية من هذه الصورة: الكود، اسم المرسل، رقم الهاتف، المحافظة، السعر. قم بتنسيق المخرجات بتنسيق JSON مع المفاتيح التالية باللغة الإنجليزية: code, senderName, phoneNumber, province, price";
+  // إذا تم تفعيل الاستخراج المحسن، استخدم مطالبة أكثر دقة وتوجيهًا
+  let prompt = extractionPrompt;
+  
+  if (!prompt) {
+    if (enhancedExtraction) {
+      prompt = `انت خبير في استخراج البيانات من الصور التي تحتوي على معلومات للشحنات والطرود.
+      
+قم بتحليل هذه الصورة بدقة واستخرج القيم التالية:
+1. الكود: (رقم تعريف الشحنة، عادة ما يكون رقم من 6-10 أرقام)
+2. اسم المرسل: (اسم الشخص أو الشركة المرسلة)
+3. رقم الهاتف: (رقم هاتف المرسل، قد يكون بتنسيق مختلف)
+4. المحافظة: (اسم المحافظة أو المدينة)
+5. السعر: (قيمة الشحنة، قد تكون بالدينار العراقي أو الدولار)
+
+قواعد مهمة:
+- استخرج البيانات كما هي في الصورة تمامًا، حتى لو كانت باللغة العربية أو الإنجليزية
+- إذا لم تجد قيمة لأي حقل، اتركه فارغًا (null)
+- حاول التقاط أي أرقام أو نصوص حتى لو كانت غير واضحة تمامًا
+- قم بإرجاع النتائج بتنسيق JSON فقط بالمفاتيح التالية: code, senderName, phoneNumber, province, price
+- تأكد من أن النتيجة صالحة بتنسيق JSON
+
+مثال للمخرجات:
+\`\`\`json
+{
+  "code": "123456",
+  "senderName": "محمد علي",
+  "phoneNumber": "07701234567",
+  "province": "بغداد",
+  "price": "25000"
+}
+\`\`\``;
+    } else {
+      prompt = "استخرج البيانات التالية من هذه الصورة: الكود، اسم المرسل، رقم الهاتف، المحافظة، السعر. قم بتنسيق المخرجات بتنسيق JSON مع المفاتيح التالية باللغة الإنجليزية: code, senderName, phoneNumber, province, price";
+    }
+  }
 
   try {
     console.log("جاري إرسال الطلب إلى Gemini API...");
     console.log("API Key length:", apiKey.length);
     console.log("First 5 characters of API Key:", apiKey.substring(0, 5));
     console.log("Image Base64 length:", imageBase64.length);
+    console.log("Using model version:", modelVersion);
+    console.log("Using temperature:", temperature);
     
-    // استخدام نموذج Gemini 2.0-flash بدلاً من gemini-pro-vision
-    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    // استخدام إصدار النموذج المحدد
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent`;
     
     const requestBody = {
       contents: [
@@ -85,8 +126,10 @@ export async function extractDataWithGemini({
         }
       ],
       generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 1024
+        temperature: temperature,
+        maxOutputTokens: 1024,
+        topK: 40,
+        topP: 0.95
       }
     };
     
@@ -160,28 +203,31 @@ export async function extractDataWithGemini({
         }
       }
       
+      // تحسين استخراج البيانات بعد الحصول على JSON
+      const enhancedData = enhanceExtractedData(parsedData, extractedText);
+      
       // تحويل البيانات العربية إلى مفاتيح إنجليزية
       const mappedData: any = {};
       
       // تحقق من وجود أي من الحقول في parsedData وتعيينها للمفاتيح الإنجليزية
-      if (parsedData.code || parsedData["الكود"] || parsedData["كود"]) {
-        mappedData.code = parsedData.code || parsedData["الكود"] || parsedData["كود"];
+      if (enhancedData.code || enhancedData["الكود"] || enhancedData["كود"]) {
+        mappedData.code = enhancedData.code || enhancedData["الكود"] || enhancedData["كود"];
       }
       
-      if (parsedData.senderName || parsedData["اسم المرسل"] || parsedData["الاسم"]) {
-        mappedData.senderName = parsedData.senderName || parsedData["اسم المرسل"] || parsedData["الاسم"];
+      if (enhancedData.senderName || enhancedData["اسم المرسل"] || enhancedData["الاسم"]) {
+        mappedData.senderName = enhancedData.senderName || enhancedData["اسم المرسل"] || enhancedData["الاسم"];
       }
       
-      if (parsedData.phoneNumber || parsedData["رقم الهاتف"] || parsedData["الهاتف"]) {
-        mappedData.phoneNumber = parsedData.phoneNumber || parsedData["رقم الهاتف"] || parsedData["الهاتف"];
+      if (enhancedData.phoneNumber || enhancedData["رقم الهاتف"] || enhancedData["الهاتف"]) {
+        mappedData.phoneNumber = enhancedData.phoneNumber || enhancedData["رقم الهاتف"] || enhancedData["الهاتف"];
       }
       
-      if (parsedData.province || parsedData["المحافظة"] || parsedData["محافظة"]) {
-        mappedData.province = parsedData.province || parsedData["المحافظة"] || parsedData["محافظة"];
+      if (enhancedData.province || enhancedData["المحافظة"] || enhancedData["محافظة"]) {
+        mappedData.province = enhancedData.province || enhancedData["المحافظة"] || enhancedData["محافظة"];
       }
       
-      if (parsedData.price || parsedData["السعر"] || parsedData["سعر"]) {
-        mappedData.price = parsedData.price || parsedData["السعر"] || parsedData["سعر"];
+      if (enhancedData.price || enhancedData["السعر"] || enhancedData["سعر"]) {
+        mappedData.price = enhancedData.price || enhancedData["السعر"] || enhancedData["سعر"];
       }
       
       // إذا لم نتمكن من استخراج البيانات من JSON، نحاول استخراجها من النص مباشرة
@@ -212,12 +258,16 @@ export async function extractDataWithGemini({
       }
       
       console.log("Final mapped data:", mappedData);
+      // تقييم جودة البيانات المستخرجة
+      const confidenceScore = calculateConfidenceScore(mappedData);
+      
       return {
         success: true,
         message: "تم استخراج البيانات بنجاح",
         data: {
           extractedText,
-          parsedData: mappedData
+          parsedData: mappedData,
+          confidence: confidenceScore
         }
       };
     } catch (parseError) {
@@ -238,6 +288,130 @@ export async function extractDataWithGemini({
       message: `حدث خطأ أثناء معالجة الطلب: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`
     };
   }
+}
+
+// تحسين البيانات المستخرجة عن طريق تنظيفها وتحليل النص الكامل للاستدلال على البيانات المفقودة
+function enhanceExtractedData(parsedData: any, fullText: string): any {
+  const enhancedData = { ...parsedData };
+  
+  // تنظيف الكود (حذف أي أحرف غير رقمية)
+  if (enhancedData.code) {
+    // تنظيف الكود من الأحرف غير الرقمية (مع مراعاة الأرقام العربية)
+    enhancedData.code = enhancedData.code.toString().replace(/[^\d٠-٩]/g, '');
+    
+    // تحويل الأرقام العربية إلى أرقام إنجليزية
+    enhancedData.code = enhancedData.code.replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30));
+  } else {
+    // محاولة استخراج الكود من النص إذا لم يتم العثور عليه
+    const codeMatch = fullText.match(/كود[:\s]+([0-9]+)/i) || 
+                      fullText.match(/code[:\s]+([0-9]+)/i) || 
+                      fullText.match(/رقم[:\s]+([0-9]+)/i) ||
+                      fullText.match(/رمز[:\s]+([0-9]+)/i) ||
+                      fullText.match(/\b\d{6,9}\b/g); // البحث عن أي رقم من 6 إلى 9 أرقام
+                      
+    if (codeMatch && codeMatch[1]) {
+      enhancedData.code = codeMatch[1].trim();
+    } else if (codeMatch && Array.isArray(codeMatch)) {
+      enhancedData.code = codeMatch[0].trim();
+    }
+  }
+  
+  // تنظيف رقم الهاتف (تنسيق أرقام الهاتف العراقية)
+  if (enhancedData.phoneNumber) {
+    // إزالة الأحرف غير الرقمية
+    enhancedData.phoneNumber = enhancedData.phoneNumber.toString()
+      .replace(/[^\d٠-٩\+\-]/g, '')
+      .replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30));
+    
+    // إذا كان الرقم لا يبدأ بـ "07" أو "+964"، نحاول إصلاحه
+    if (!enhancedData.phoneNumber.match(/^(\+?964|0)7/)) {
+      // إذا كان الرقم يبدأ بـ "7" فقط، نضيف "0" قبله
+      if (enhancedData.phoneNumber.match(/^7/)) {
+        enhancedData.phoneNumber = "0" + enhancedData.phoneNumber;
+      }
+    }
+  } else {
+    // محاولة استخراج رقم الهاتف من النص
+    const phoneMatch = fullText.match(/هاتف[:\s]+([0-9\-\+\s]+)/i) || 
+                       fullText.match(/phone[:\s]+([0-9\-\+\s]+)/i) || 
+                       fullText.match(/جوال[:\s]+([0-9\-\+\s]+)/i) || 
+                       fullText.match(/رقم الهاتف[:\s]+([0-9\-\+\s]+)/i) ||
+                       fullText.match(/\b(07\d{8,9}|\+964\d{8,9})\b/g);
+                       
+    if (phoneMatch && phoneMatch[1]) {
+      enhancedData.phoneNumber = phoneMatch[1].trim();
+    } else if (phoneMatch && Array.isArray(phoneMatch)) {
+      enhancedData.phoneNumber = phoneMatch[0].trim();
+    }
+  }
+  
+  // محاولة تنظيف السعر من أي أحرف غير ضرورية
+  if (enhancedData.price) {
+    let priceValue = enhancedData.price.toString()
+      .replace(/[^\d٠-٩\.,]/g, '')
+      .replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30));
+    
+    // تحويل الفاصلة إلى نقطة للأرقام العشرية
+    priceValue = priceValue.replace(/,/g, '.');
+    
+    if (priceValue) {
+      enhancedData.price = priceValue;
+    }
+  }
+  
+  return enhancedData;
+}
+
+// حساب نتيجة الثقة في البيانات المستخرجة
+function calculateConfidenceScore(data: any): number {
+  let score = 0;
+  const fields = ['code', 'senderName', 'phoneNumber', 'province', 'price'];
+  const weights = {
+    code: 25,
+    senderName: 20,
+    phoneNumber: 20,
+    province: 15,
+    price: 20
+  };
+  
+  for (const field of fields) {
+    if (data[field] && data[field].toString().trim() !== '') {
+      // للكود، نتحقق من أنه رقم فعلًا
+      if (field === 'code') {
+        if (/^\d+$/.test(data[field].toString())) {
+          score += weights[field];
+        } else {
+          score += weights[field] * 0.5; // نصف الدرجة إذا كان الكود غير رقمي
+        }
+      } 
+      // لرقم الهاتف، نتحقق من أنه بالتنسيق الصحيح
+      else if (field === 'phoneNumber') {
+        if (/^(\+?964|0)7\d{8,9}$/.test(data[field].toString().replace(/\D/g, ''))) {
+          score += weights[field];
+        } else {
+          score += weights[field] * 0.5; // نصف الدرجة إذا كان رقم الهاتف بتنسيق غير صحيح
+        }
+      } 
+      // للسعر، نتحقق من أنه رقم
+      else if (field === 'price') {
+        if (/^\d+(\.\d+)?$/.test(data[field].toString().replace(/[^\d.]/g, ''))) {
+          score += weights[field];
+        } else {
+          score += weights[field] * 0.5; // نصف الدرجة إذا كان السعر بتنسيق غير صحيح
+        }
+      } 
+      // للحقول النصية، نتحقق من أنها ليست قصيرة جدًا
+      else {
+        if (data[field].toString().length > 2) {
+          score += weights[field];
+        } else {
+          score += weights[field] * 0.7; // 70% من الدرجة إذا كان النص قصيرًا
+        }
+      }
+    }
+  }
+  
+  return score;
 }
 
 /**
@@ -303,4 +477,60 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
       message: `حدث خطأ أثناء اختبار اتصال Gemini API: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`
     };
   }
+}
+
+// وظيفة لاختبار نماذج Gemini المختلفة ومقارنة النتائج
+export async function testGeminiModels(
+  apiKey: string, 
+  imageBase64: string, 
+  models: string[] = ['gemini-2.0-flash', 'gemini-2.0-pro', 'gemini-1.5-flash']
+): Promise<{
+  results: Array<{
+    model: string;
+    success: boolean;
+    data?: any;
+    confidence?: number;
+    error?: string;
+  }>;
+  bestModel: string;
+}> {
+  const results = [];
+  
+  for (const model of models) {
+    try {
+      console.log(`Testing Gemini model: ${model}`);
+      const result = await extractDataWithGemini({
+        apiKey,
+        imageBase64,
+        modelVersion: model,
+        enhancedExtraction: true
+      });
+      
+      results.push({
+        model,
+        success: result.success,
+        data: result.data,
+        confidence: result.data?.confidence || 0,
+        error: result.success ? undefined : result.message
+      });
+    } catch (error) {
+      console.error(`Error testing model ${model}:`, error);
+      results.push({
+        model,
+        success: false,
+        error: error instanceof Error ? error.message : 'خطأ غير معروف'
+      });
+    }
+  }
+  
+  // ترتيب النتائج حسب نسبة الثقة
+  results.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+  
+  // اختيار أفضل نموذج (النموذج بأعلى نسبة ثقة)
+  const bestModel = results.length > 0 && results[0].success ? results[0].model : models[0];
+  
+  return {
+    results,
+    bestModel
+  };
 }

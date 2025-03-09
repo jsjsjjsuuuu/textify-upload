@@ -1,9 +1,12 @@
 
 import { DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { X, ZoomIn, ZoomOut, Maximize2, RefreshCw } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 import ExtractedDataEditor from "./ExtractedDataEditor";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ImagePreviewDialogProps {
   selectedImage: ImageData | null;
@@ -30,7 +33,17 @@ const ImagePreviewDialog = ({
   onSubmit,
   formatDate
 }: ImagePreviewDialogProps) => {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
   if (!selectedImage) return null;
+  
+  // تقييم دقة الاستخراج
+  const getAccuracyColor = (confidence: number = 0) => {
+    if (confidence >= 90) return "bg-green-500";
+    if (confidence >= 70) return "bg-emerald-500";
+    if (confidence >= 50) return "bg-amber-500";
+    return "bg-red-500";
+  };
 
   return (
     <DialogContent className="max-w-5xl p-0 bg-transparent border-none shadow-none" onInteractOutside={e => e.preventDefault()}>
@@ -59,6 +72,35 @@ const ImagePreviewDialog = ({
               <Button variant="secondary" size="icon" onClick={onResetZoom} className="h-8 w-8 bg-white/90 hover:bg-white">
                 <Maximize2 size={16} />
               </Button>
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="secondary" 
+                      size="icon" 
+                      disabled={isAnalyzing}
+                      onClick={() => {
+                        setIsAnalyzing(true);
+                        // هنا يمكن إضافة رمز التحليل المتقدم في المستقبل
+                        setTimeout(() => {
+                          setIsAnalyzing(false);
+                        }, 1500);
+                      }} 
+                      className="h-8 w-8 bg-white/90 hover:bg-white"
+                    >
+                      {isAnalyzing ? (
+                        <RefreshCw size={16} className="animate-spin" />
+                      ) : (
+                        <RefreshCw size={16} />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>تحليل متقدم للصورة</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             {selectedImage.number !== undefined && (
               <div className="absolute top-2 right-2 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
@@ -70,11 +112,20 @@ const ImagePreviewDialog = ({
               <p className="text-xs text-muted-foreground">
                 {formatDate(selectedImage.date)}
               </p>
-              {selectedImage.confidence !== undefined && (
-                <span className="text-xs bg-blue-50 p-1.5 rounded text-blue-800">
-                  دقة الاستخراج: {Math.round(selectedImage.confidence)}%
-                </span>
-              )}
+              
+              <div className="flex items-center gap-2">
+                {selectedImage.extractionMethod && (
+                  <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700">
+                    {selectedImage.extractionMethod === "gemini" ? "Gemini AI" : "OCR"}
+                  </Badge>
+                )}
+                
+                {selectedImage.confidence !== undefined && (
+                  <Badge className={`text-xs ${getAccuracyColor(selectedImage.confidence)} text-white`}>
+                    دقة الاستخراج: {Math.round(selectedImage.confidence)}%
+                  </Badge>
+                )}
+              </div>
             </div>
             
             <div className="flex justify-between w-full mt-4 pt-2 border-t">
