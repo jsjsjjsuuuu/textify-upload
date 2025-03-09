@@ -35,11 +35,13 @@ const ImagePreviewDialog = ({
 }: ImagePreviewDialogProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   
   // Reset image loaded state when selected image changes
   useEffect(() => {
     setImageLoaded(false);
+    setImgError(false);
   }, [selectedImage?.id]);
   
   if (!selectedImage) return null;
@@ -66,26 +68,40 @@ const ImagePreviewDialog = ({
             >
               {selectedImage.previewUrl && (
                 <div className="relative w-full h-full flex items-center justify-center">
-                  {!imageLoaded && (
+                  {!imageLoaded && !imgError && (
                     <div className="absolute inset-0 flex items-center justify-center z-10">
                       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-green"></div>
                     </div>
                   )}
+                  
+                  {imgError && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 text-red-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                      </svg>
+                      <p className="mt-2">فشل تحميل الصورة</p>
+                    </div>
+                  )}
+                  
                   <img 
                     src={selectedImage.previewUrl} 
                     alt="معاينة موسعة" 
-                    className="absolute transform transition-transform duration-200"
+                    className="transition-all duration-200"
                     style={{ 
                       transform: `scale(${zoomLevel})`,
                       opacity: imageLoaded ? 1 : 0,
                       maxHeight: '100%',
                       maxWidth: '100%',
                       objectFit: 'contain',
+                      display: imageLoaded ? 'block' : 'none',
                     }}
                     onLoad={() => setImageLoaded(true)}
-                    onError={(e) => {
-                      console.error("Error loading image:", e);
+                    onError={() => {
+                      console.error("Error loading image:", selectedImage.previewUrl);
                       setImageLoaded(true); // Mark as loaded even on error to remove spinner
+                      setImgError(true);
                     }}
                   />
                 </div>

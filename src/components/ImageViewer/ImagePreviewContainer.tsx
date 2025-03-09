@@ -42,6 +42,7 @@ const ImagePreviewContainer = ({
   };
 
   const handleImageClick = (image: ImageData) => {
+    console.log("Image clicked:", image.id, image.previewUrl);
     setSelectedImage(image);
     setZoomLevel(1);
   };

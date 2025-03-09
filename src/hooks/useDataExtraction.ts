@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { addCorrection } from "@/utils/learningSystem";
@@ -31,7 +32,7 @@ export const useDataExtraction = (
   const handleEditToggle = () => {
     if (editMode) {
       // حفظ التغييرات وإضافتها إلى نظام التعلم إذا تم تغيير البيانات
-      const originalData = {
+      const originalData: Record<string, string> = {
         code: image.code || "",
         senderName: image.senderName || "",
         phoneNumber: image.phoneNumber || "",
@@ -47,7 +48,7 @@ export const useDataExtraction = (
       // التحقق من وجود تغييرات
       let changesDetected = false;
       for (const [field, value] of Object.entries(tempData)) {
-        if (originalData[field as keyof typeof originalData] !== value) {
+        if (originalData[field] !== value) {
           changesDetected = true;
           break;
         }
