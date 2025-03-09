@@ -50,16 +50,12 @@ const ImagePreviewDialog = ({
       <div className="bg-white/95 rounded-lg border p-4 shadow-lg relative">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="col-span-1 bg-muted/30 rounded-lg p-4 flex flex-col items-center justify-center relative">
-            <div className="overflow-hidden relative h-[400px] w-full flex items-center justify-center">
+            <div className="overflow-hidden relative h-[400px] w-full flex items-center justify-center bg-white/50 rounded-md">
               <img 
                 src={selectedImage.previewUrl} 
                 alt="معاينة موسعة" 
-                className="object-contain transition-transform duration-200" 
-                style={{
-                  transform: `scale(${zoomLevel})`,
-                  maxHeight: '100%',
-                  maxWidth: '100%'
-                }} 
+                className="object-contain transition-transform duration-200 max-h-full max-w-full h-auto w-auto"
+                style={{ transform: `scale(${zoomLevel})` }} 
               />
             </div>
             <div className="absolute top-2 left-2 flex gap-2">
