@@ -1,58 +1,66 @@
 
-import React from "react";
-import { Diamond } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
-const BackgroundPattern: React.FC = () => {
+const BackgroundPattern = () => {
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-[-1]">
-      {/* Top right diamond */}
-      <div className="absolute -top-10 -right-10 transform rotate-45 opacity-10">
-        <Diamond size={200} className="text-brand-coral" />
-      </div>
-
-      {/* Bottom left diamond */}
-      <div className="absolute -bottom-20 -left-20 transform rotate-12 opacity-10">
-        <Diamond size={300} className="text-brand-coral" />
-      </div>
-
-      {/* Multiple floating diamonds */}
-      {Array.from({ length: 8 }).map((_, index) => (
-        <div
-          key={index}
-          className="absolute opacity-5"
-          style={{
-            top: `${Math.random() * 100}%`,
-            left: `${Math.random() * 100}%`,
-            transform: `rotate(${Math.random() * 360}deg)`,
-            animation: `float ${5 + Math.random() * 10}s ease-in-out infinite`,
-            animationDelay: `${Math.random() * 5}s`,
-          }}
-        >
-          <Diamond size={20 + Math.random() * 60} className="text-brand-brown" />
-        </div>
-      ))}
-
-      {/* Curved lines */}
-      <svg
-        className="absolute inset-0 w-full h-full opacity-5"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-      >
-        <path
-          d="M0,50 C30,30 70,70 100,50"
-          stroke="currentColor"
-          strokeWidth="0.5"
-          fill="none"
-          className="text-brand-brown"
-        />
-        <path
-          d="M0,70 C20,50 80,50 100,30"
-          stroke="currentColor"
-          strokeWidth="0.5"
-          fill="none"
-          className="text-brand-coral"
-        />
-      </svg>
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+      {/* Top right circles */}
+      <div 
+        className={`design-element top-0 right-0 w-96 h-96 rounded-full ${
+          theme === "dark" ? "bg-brand-green/5" : "bg-brand-coral/5"
+        }`} 
+        style={{ transform: "translate(30%, -30%)" }}
+      />
+      <div 
+        className={`design-element top-0 right-0 w-64 h-64 rounded-full ${
+          theme === "dark" ? "bg-brand-green/10" : "bg-brand-coral/10"
+        }`} 
+        style={{ transform: "translate(10%, -10%)" }}
+      />
+      
+      {/* Bottom left circles */}
+      <div 
+        className={`design-element bottom-0 left-0 w-96 h-96 rounded-full ${
+          theme === "dark" ? "bg-brand-green/5" : "bg-brand-brown/5"
+        }`} 
+        style={{ transform: "translate(-30%, 30%)" }}
+      />
+      <div 
+        className={`design-element bottom-0 left-0 w-64 h-64 rounded-full ${
+          theme === "dark" ? "bg-brand-green/10" : "bg-brand-brown/10"
+        }`} 
+        style={{ transform: "translate(-10%, 10%)" }}
+      />
+      
+      {/* Scattered small circles */}
+      <div 
+        className={`floating-element top-1/4 left-1/3 w-12 h-12 rounded-full ${
+          theme === "dark" ? "bg-brand-green/10" : "bg-brand-beige"
+        }`} 
+      />
+      <div 
+        className={`floating-element top-2/3 right-1/4 w-8 h-8 rounded-full ${
+          theme === "dark" ? "bg-brand-green/15" : "bg-brand-beige"
+        }`} 
+        style={{ animationDelay: "1s" }}
+      />
+      <div 
+        className={`floating-element top-1/2 right-1/3 w-16 h-16 rounded-full ${
+          theme === "dark" ? "bg-brand-green/5" : "bg-brand-beige"
+        }`} 
+        style={{ animationDelay: "2s" }}
+      />
     </div>
   );
 };

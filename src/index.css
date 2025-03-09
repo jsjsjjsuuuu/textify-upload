@@ -109,7 +109,7 @@
   }
   
   .image-preview-card {
-    @apply relative rounded-xl overflow-hidden bg-white shadow-lg transition-all hover:shadow-xl;
+    @apply relative rounded-xl overflow-hidden bg-white dark:bg-card shadow-lg transition-all hover:shadow-xl;
   }
   
   .floating-element {
@@ -122,7 +122,7 @@
   }
   
   .rtl-table th {
-    @apply font-bold text-brand-brown py-3 px-4;
+    @apply font-bold text-brand-brown dark:text-brand-beige py-3 px-4;
   }
   
   .rtl-table td {
@@ -132,5 +132,14 @@
   .rtl-textarea {
     direction: rtl;
     text-align: right;
+  }
+
+  /* Dark mode specific styles */
+  .dark .image-preview-card {
+    @apply bg-card border border-border;
+  }
+  
+  .dark .upload-zone:hover, .dark .upload-zone.active {
+    @apply border-brand-coral/50 bg-brand-coral/10;
   }
 }
