@@ -1,5 +1,6 @@
 
 import { ImageData } from "@/types/ImageData";
+import { enhanceWithLearning } from "./learningSystem";
 
 /**
  * Attempts to parse structured data from OCR text
@@ -48,7 +49,11 @@ export const parseDataFromOCRText = (text: string) => {
     console.log("Error looking for JSON in text:", e);
   }
   
-  return result;
+  // تعزيز البيانات المستخرجة من خلال نظام التعلم
+  const enhancedResult = enhanceWithLearning(text, result);
+  console.log("Enhanced data with learning system:", enhancedResult);
+  
+  return enhancedResult;
 };
 
 /**

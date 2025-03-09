@@ -3,6 +3,7 @@ import BackgroundPattern from "@/components/BackgroundPattern";
 import ImageUploader from "@/components/ImageUploader";
 import AppHeader from "@/components/AppHeader";
 import ImagePreviewContainer from "@/components/ImageViewer/ImagePreviewContainer";
+import LearningStats from "@/components/LearningStats";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 
@@ -27,12 +28,19 @@ const Index = () => {
         <AppHeader />
 
         <div className="grid grid-cols-1 gap-6 sm:gap-8">
-          <ImageUploader 
-            isProcessing={isProcessing}
-            processingProgress={processingProgress}
-            useGemini={useGemini}
-            onFileChange={handleFileChange}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <ImageUploader 
+                isProcessing={isProcessing}
+                processingProgress={processingProgress}
+                useGemini={useGemini}
+                onFileChange={handleFileChange}
+              />
+            </div>
+            <div className="lg:col-span-1">
+              <LearningStats />
+            </div>
+          </div>
 
           <ImagePreviewContainer 
             images={images}

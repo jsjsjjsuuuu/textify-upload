@@ -1,10 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { Card, CardContent } from "@/components/ui/card";
 import ExtractedDataField from "./ExtractedDataField";
 import ExtractedDataActions from "./ExtractedDataActions";
 import RawTextViewer from "./RawTextViewer";
+import { addCorrection } from "@/utils/learningSystem";
+import { Badge } from "@/components/ui/badge";
 
 interface ExtractedDataEditorProps {
   image: ImageData;
@@ -20,15 +22,63 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
     province: image.province || "",
     price: image.price || ""
   });
+  
+  const [correctionsMade, setCorrectionsMade] = useState(false);
+  const [isLearningActive, setIsLearningActive] = useState(false);
+
+  // تحديث البيانات المؤقتة عند تغيير الصورة
+  useEffect(() => {
+    setTempData({
+      code: image.code || "",
+      senderName: image.senderName || "",
+      phoneNumber: image.phoneNumber || "",
+      province: image.province || "",
+      price: image.price || ""
+    });
+    setCorrectionsMade(false);
+  }, [image.id]);
 
   const handleEditToggle = () => {
     if (editMode) {
-      // Save changes
+      // حفظ التغييرات وإضافتها إلى نظام التعلم إذا تم تغيير البيانات
+      const originalData = {
+        code: image.code || "",
+        senderName: image.senderName || "",
+        phoneNumber: image.phoneNumber || "",
+        province: image.province || "",
+        price: image.price || ""
+      };
+      
+      // حفظ التغييرات
       Object.entries(tempData).forEach(([field, value]) => {
         onTextChange(image.id, field, value);
       });
+      
+      // التحقق من وجود تغييرات
+      let changesDetected = false;
+      for (const [field, value] of Object.entries(tempData)) {
+        if (originalData[field as keyof typeof originalData] !== value) {
+          changesDetected = true;
+          break;
+        }
+      }
+      
+      // إذا كانت هناك تغييرات، أضف إلى نظام التعلم
+      if (changesDetected && image.extractedText) {
+        setIsLearningActive(true);
+        // تأخير إظهار مؤشر التعلم
+        setTimeout(() => {
+          addCorrection(
+            image.extractedText,
+            originalData,
+            tempData
+          );
+          setCorrectionsMade(true);
+          setIsLearningActive(false);
+        }, 800);
+      }
     } else {
-      // Enter edit mode
+      // الدخول إلى وضع التحرير
       setTempData({
         code: image.code || "",
         senderName: image.senderName || "",
@@ -42,6 +92,13 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
 
   const handleCancel = () => {
     setEditMode(false);
+    setTempData({
+      code: image.code || "",
+      senderName: image.senderName || "",
+      phoneNumber: image.phoneNumber || "",
+      province: image.province || "",
+      price: image.price || ""
+    });
   };
 
   const handleCopyText = () => {
@@ -126,7 +183,7 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
   };
 
   return (
-    <Card className="bg-white/95 shadow-sm border-brand-beige">
+    <Card className="bg-white/95 dark:bg-gray-800/95 shadow-sm border-brand-beige dark:border-gray-700">
       <CardContent className="p-4">
         <ExtractedDataActions 
           editMode={editMode}
@@ -136,6 +193,26 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
           onAutoExtract={handleAutoExtract}
           hasExtractedText={!!image.extractedText}
         />
+
+        {correctionsMade && (
+          <div className="mb-4 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+            <Badge variant="outline" className="text-xs border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400">
+              تم حفظ التصحيحات للتعلم
+            </Badge>
+            <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+              سيتم استخدام هذه التصحيحات لتحسين دقة الاستخراج في المرات القادمة
+            </p>
+          </div>
+        )}
+
+        {isLearningActive && (
+          <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md flex items-center">
+            <div className="animate-pulse mr-2 w-2 h-2 bg-blue-500 rounded-full"></div>
+            <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+              جاري التعلم من التصحيحات...
+            </Badge>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ExtractedDataField 
