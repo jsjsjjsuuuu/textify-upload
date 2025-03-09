@@ -19,6 +19,7 @@ const ImageUploader = ({
   onFileChange 
 }: ImageUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
+  const { toast } = useToast();
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -34,6 +35,25 @@ const ImageUploader = ({
   const handleDragLeave = useCallback(() => {
     setIsDragging(false);
   }, []);
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("File input change detected", e.target.files);
+    onFileChange(e.target.files);
+  };
+
+  const handleButtonClick = () => {
+    // Programmatically click the file input
+    const fileInput = document.getElementById("image-upload") as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    } else {
+      toast({
+        title: "خطأ",
+        description: "لم يتم العثور على عنصر إدخال الملف",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
@@ -70,20 +90,21 @@ const ImageUploader = ({
           className="hidden" 
           accept="image/*" 
           multiple 
-          onChange={e => onFileChange(e.target.files)} 
+          onChange={handleFileInputChange} 
           disabled={isProcessing} 
         />
-        <label 
-          htmlFor="image-upload" 
-          className="cursor-pointer flex flex-col items-center justify-center h-full"
-        >
+        <div className="cursor-pointer flex flex-col items-center justify-center h-full">
           <Upload size={36} className="text-brand-brown/70 mb-2" />
           <p className="text-brand-brown font-medium mb-2">اسحب وأفلت الصور هنا</p>
-          <Button className="bg-brand-brown hover:bg-brand-brown/90" disabled={isProcessing}>
+          <Button 
+            className="bg-brand-brown hover:bg-brand-brown/90" 
+            disabled={isProcessing}
+            onClick={handleButtonClick}
+          >
             <Upload size={16} className="mr-2" />
             رفع الصور
           </Button>
-        </label>
+        </div>
       </div>
       
       {isProcessing && (

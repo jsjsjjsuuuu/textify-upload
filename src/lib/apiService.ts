@@ -13,6 +13,29 @@ export interface TextSubmission {
 }
 
 /**
+ * Convert a file to base64 encoded string
+ */
+export async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        console.log("File converted to base64 successfully, length:", reader.result.length);
+        resolve(reader.result);
+      } else {
+        console.error("FileReader did not return a string");
+        reject(new Error("FileReader did not return a string"));
+      }
+    };
+    reader.onerror = () => {
+      console.error("FileReader error:", reader.error);
+      reject(reader.error);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
  * Mock function to simulate sending data to an external API
  * In a real application, this would make an actual HTTP request to your backend
  */

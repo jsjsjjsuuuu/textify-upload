@@ -23,39 +23,58 @@ const Index = () => {
 
   useEffect(() => {
     const geminiApiKey = localStorage.getItem("geminiApiKey");
-    setUseGemini(!!geminiApiKey);
     
+    // Always set a default API key if none exists
     if (!geminiApiKey) {
       const defaultApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
       localStorage.setItem("geminiApiKey", defaultApiKey);
+      console.log("Set default Gemini API key:", defaultApiKey);
+      setUseGemini(true);
+    } else {
+      console.log("Using existing Gemini API key of length:", geminiApiKey.length);
       setUseGemini(true);
     }
   }, []);
 
   const handleFileChange = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+    console.log("handleFileChange called with files:", files);
+    if (!files || files.length === 0) {
+      console.log("No files selected");
+      return;
+    }
+    
     setIsProcessing(true);
     setProcessingProgress(0);
+    
     const fileArray = Array.from(files);
+    console.log("Processing", fileArray.length, "files");
+    
     const totalFiles = fileArray.length;
     let processedFiles = 0;
     
-    const geminiApiKey = localStorage.getItem("geminiApiKey") || "";
+    const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
+    console.log("Using Gemini API key of length:", geminiApiKey.length);
 
     const startingNumber = images.length > 0 ? Math.max(...images.map(img => img.number || 0)) + 1 : 1;
+    console.log("Starting number for new images:", startingNumber);
     
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
+      console.log("Processing file:", file.name, "type:", file.type);
+      
       if (!file.type.startsWith("image/")) {
         toast({
           title: "خطأ في نوع الملف",
           description: "يرجى تحميل صور فقط",
           variant: "destructive"
         });
+        console.log("File is not an image, skipping");
         continue;
       }
       
       const previewUrl = URL.createObjectURL(file);
+      console.log("Created preview URL:", previewUrl);
+      
       const newImage: ImageData = {
         id: crypto.randomUUID(),
         file,
@@ -67,6 +86,7 @@ const Index = () => {
       };
       
       setImages(prev => [newImage, ...prev]);
+      console.log("Added new image to state with ID:", newImage.id);
       
       try {
         if (process.env.NODE_ENV === 'development' && !geminiApiKey) {
@@ -96,34 +116,96 @@ const Index = () => {
             status: "completed"
           } : img));
         } else if (geminiApiKey) {
-          const imageBase64 = await fileToBase64(file);
-          
-          const extractionResult = await extractDataWithGemini({
-            apiKey: geminiApiKey,
-            imageBase64
-          });
-          
-          if (extractionResult.success && extractionResult.data) {
-            const { parsedData, extractedText } = extractionResult.data;
+          console.log("Using Gemini API for extraction");
+          try {
+            console.log("Converting file to base64");
+            const imageBase64 = await fileToBase64(file);
+            console.log("File converted to base64, length:", imageBase64.length);
             
-            setImages(prev => prev.map(img => img.id === newImage.id ? {
-              ...img,
-              extractedText: extractedText || "",
-              confidence: 95,
-              code: parsedData?.code || "",
-              senderName: parsedData?.senderName || "",
-              phoneNumber: parsedData?.phoneNumber || "",
-              province: parsedData?.province || "",
-              price: parsedData?.price || "",
-              status: "completed"
-            } : img));
-
-            toast({
-              title: "تم الاستخراج بنجاح",
-              description: "تم استخراج البيانات باستخدام Gemini AI",
+            console.log("Calling extractDataWithGemini");
+            const extractionResult = await extractDataWithGemini({
+              apiKey: geminiApiKey,
+              imageBase64
             });
-          } else {
+            console.log("Gemini extraction result:", extractionResult);
+            
+            if (extractionResult.success && extractionResult.data) {
+              const { parsedData, extractedText } = extractionResult.data;
+              
+              setImages(prev => prev.map(img => img.id === newImage.id ? {
+                ...img,
+                extractedText: extractedText || "",
+                confidence: 95,
+                code: parsedData?.code || "",
+                senderName: parsedData?.senderName || "",
+                phoneNumber: parsedData?.phoneNumber || "",
+                province: parsedData?.province || "",
+                price: parsedData?.price || "",
+                status: "completed"
+              } : img));
+
+              toast({
+                title: "تم الاستخراج بنجاح",
+                description: "تم استخراج البيانات باستخدام Gemini AI",
+              });
+            } else {
+              console.log("Gemini extraction failed, falling back to OCR");
+              console.log("Calling extractTextFromImage for OCR");
+              const result = await extractTextFromImage(file);
+              console.log("OCR result:", result);
+              
+              setImages(prev => prev.map(img => img.id === newImage.id ? {
+                ...img,
+                extractedText: result.text,
+                confidence: result.confidence,
+                status: "completed"
+              } : img));
+              
+              toast({
+                title: "تنبيه",
+                description: "تم استخدام OCR التقليدي بسبب: " + extractionResult.message,
+                variant: "default"
+              });
+            }
+          } catch (geminiError) {
+            console.error("Error in Gemini processing:", geminiError);
+            console.log("Falling back to OCR due to Gemini error");
+            
+            try {
+              const result = await extractTextFromImage(file);
+              console.log("OCR result after Gemini error:", result);
+              
+              setImages(prev => prev.map(img => img.id === newImage.id ? {
+                ...img,
+                extractedText: result.text,
+                confidence: result.confidence,
+                status: "completed"
+              } : img));
+              
+              toast({
+                title: "تنبيه",
+                description: "تم استخدام OCR التقليدي بسبب خطأ في Gemini",
+                variant: "default"
+              });
+            } catch (ocrError) {
+              console.error("OCR fallback also failed:", ocrError);
+              setImages(prev => prev.map(img => img.id === newImage.id ? {
+                ...img,
+                status: "error"
+              } : img));
+              
+              toast({
+                title: "فشل في استخراج النص",
+                description: "حدث خطأ أثناء معالجة الصورة",
+                variant: "destructive"
+              });
+            }
+          }
+        } else {
+          console.log("No Gemini API key, using OCR directly");
+          try {
             const result = await extractTextFromImage(file);
+            console.log("OCR result:", result);
             
             setImages(prev => prev.map(img => img.id === newImage.id ? {
               ...img,
@@ -131,24 +213,22 @@ const Index = () => {
               confidence: result.confidence,
               status: "completed"
             } : img));
+          } catch (error) {
+            console.error("OCR processing error:", error);
+            setImages(prev => prev.map(img => img.id === newImage.id ? {
+              ...img,
+              status: "error"
+            } : img));
             
             toast({
-              title: "تنبيه",
-              description: "تم استخدام OCR التقليدي بسبب: " + extractionResult.message,
-              variant: "default"
+              title: "فشل في استخراج النص",
+              description: "حدث خطأ أثناء معالجة الصورة",
+              variant: "destructive"
             });
           }
-        } else {
-          const result = await extractTextFromImage(file);
-          
-          setImages(prev => prev.map(img => img.id === newImage.id ? {
-            ...img,
-            extractedText: result.text,
-            confidence: result.confidence,
-            status: "completed"
-          } : img));
         }
       } catch (error) {
+        console.error("General error in image processing:", error);
         setImages(prev => prev.map(img => img.id === newImage.id ? {
           ...img,
           status: "error"
@@ -162,10 +242,13 @@ const Index = () => {
       }
       
       processedFiles++;
-      setProcessingProgress(Math.round(processedFiles / totalFiles * 100));
+      const progress = Math.round(processedFiles / totalFiles * 100);
+      console.log("Processing progress:", progress + "%");
+      setProcessingProgress(progress);
     }
     
     setIsProcessing(false);
+    console.log("Image processing completed");
     
     if (processedFiles > 0) {
       toast({

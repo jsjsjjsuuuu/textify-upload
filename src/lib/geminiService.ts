@@ -51,6 +51,7 @@ export async function extractDataWithGemini({
   extractionPrompt
 }: GeminiExtractParams): Promise<ApiResult> {
   if (!apiKey) {
+    console.error("Gemini API Key is missing");
     return {
       success: false,
       message: "يرجى توفير مفتاح API صالح"
@@ -62,35 +63,45 @@ export async function extractDataWithGemini({
 
   try {
     console.log("جاري إرسال الطلب إلى Gemini API...");
+    console.log("API Key length:", apiKey.length);
+    console.log("First 5 characters of API Key:", apiKey.substring(0, 5));
+    console.log("Image Base64 length:", imageBase64.length);
     
     // استخدام نموذج Gemini 2.0-flash بدلاً من gemini-pro-vision
     const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            { text: prompt },
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: imageBase64.replace(/^data:image\/\w+;base64,/, "")
+              }
+            }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 1024
+      }
+    };
+    
+    console.log("Sending request to Gemini API endpoint:", endpoint);
+    
     const response = await fetch(`${endpoint}?key=${apiKey}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              {
-                inline_data: {
-                  mime_type: "image/jpeg",
-                  data: imageBase64.replace(/^data:image\/\w+;base64,/, "")
-                }
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 1024
-        }
-      })
+      body: JSON.stringify(requestBody)
     });
 
+    console.log("Gemini API Response status:", response.status);
+    
     if (!response.ok) {
       const errorData = await response.json();
       console.error("خطأ في استجابة Gemini API:", errorData);
@@ -101,6 +112,7 @@ export async function extractDataWithGemini({
     }
 
     const data: GeminiResponse = await response.json();
+    console.log("Gemini API Response data:", JSON.stringify(data).substring(0, 200) + "...");
     
     if (data.promptFeedback?.blockReason) {
       return {
@@ -117,6 +129,7 @@ export async function extractDataWithGemini({
     }
 
     const extractedText = data.candidates[0].content.parts[0].text;
+    console.log("Extracted text from Gemini:", extractedText);
     
     // محاولة استخراج JSON من النص
     try {
@@ -128,9 +141,11 @@ export async function extractDataWithGemini({
       
       if (jsonMatch) {
         const jsonText = jsonMatch[0].replace(/```json|```/g, '').trim();
+        console.log("Found JSON in response:", jsonText);
         parsedData = JSON.parse(jsonText);
       } else {
         // إذا لم نجد JSON، نقوم بتحليل النص بطريقة يدوية
+        console.log("No JSON found, parsing text manually");
         const lines = extractedText.split('\n');
         const dataFields = {
           "الكود": "code",
@@ -156,6 +171,7 @@ export async function extractDataWithGemini({
         });
       }
       
+      console.log("Parsed data:", parsedData);
       return {
         success: true,
         message: "تم استخراج البيانات بنجاح",
