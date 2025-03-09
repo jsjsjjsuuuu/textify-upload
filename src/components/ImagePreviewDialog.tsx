@@ -1,5 +1,5 @@
 
-import { DialogContent, DialogClose } from "@/components/ui/dialog";
+import { DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, ZoomIn, ZoomOut, Maximize2, RefreshCw } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
@@ -47,17 +47,28 @@ const ImagePreviewDialog = ({
 
   return (
     <DialogContent className="max-w-5xl p-0 bg-transparent border-none shadow-none" onInteractOutside={e => e.preventDefault()}>
+      <DialogTitle className="sr-only">معاينة الصورة</DialogTitle>
+      
       <div className="bg-white/95 rounded-lg border p-4 shadow-lg relative">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="col-span-1 bg-muted/30 rounded-lg p-4 flex flex-col items-center justify-center relative">
             <div className="overflow-hidden relative h-[400px] w-full flex items-center justify-center bg-white/50 rounded-md">
-              <img 
-                src={selectedImage.previewUrl} 
-                alt="معاينة موسعة" 
-                className="object-contain transition-transform duration-200 max-h-full max-w-full h-auto w-auto"
-                style={{ transform: `scale(${zoomLevel})` }} 
-              />
+              {selectedImage.previewUrl && (
+                <img 
+                  src={selectedImage.previewUrl} 
+                  alt="معاينة موسعة" 
+                  className="transition-transform duration-200"
+                  style={{ 
+                    transform: `scale(${zoomLevel})`,
+                    maxHeight: '380px',
+                    maxWidth: '100%',
+                    objectFit: 'contain',
+                    display: 'block'
+                  }} 
+                />
+              )}
             </div>
+            
             <div className="absolute top-2 left-2 flex gap-2">
               <Button variant="secondary" size="icon" onClick={onZoomIn} className="h-8 w-8 bg-white/90 hover:bg-white">
                 <ZoomIn size={16} />
@@ -98,6 +109,7 @@ const ImagePreviewDialog = ({
                 </Tooltip>
               </TooltipProvider>
             </div>
+            
             {selectedImage.number !== undefined && (
               <div className="absolute top-2 right-2 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
                 صورة {selectedImage.number}
