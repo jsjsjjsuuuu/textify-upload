@@ -35,13 +35,17 @@ const Index = () => {
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [useGemini, setUseGemini] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   useEffect(() => {
     const geminiApiKey = localStorage.getItem("geminiApiKey");
     setUseGemini(!!geminiApiKey);
+    
+    if (!geminiApiKey) {
+      const defaultApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
+      localStorage.setItem("geminiApiKey", defaultApiKey);
+      setUseGemini(true);
+    }
   }, []);
 
   const handleFileChange = async (files: FileList | null) => {
@@ -52,7 +56,7 @@ const Index = () => {
     const totalFiles = fileArray.length;
     let processedFiles = 0;
     
-    const geminiApiKey = useGemini ? localStorage.getItem("geminiApiKey") : null;
+    const geminiApiKey = localStorage.getItem("geminiApiKey") || "";
 
     const startingNumber = images.length > 0 ? Math.max(...images.map(img => img.number || 0)) + 1 : 1;
     
@@ -129,6 +133,11 @@ const Index = () => {
               price: parsedData?.price || "",
               status: "completed"
             } : img));
+
+            toast({
+              title: "تم الاستخراج بنجاح",
+              description: "تم استخراج البيانات باستخدام Gemini AI",
+            });
           } else {
             const result = await extractTextFromImage(file);
             
@@ -317,7 +326,6 @@ const Index = () => {
       <div className="container px-4 py-8 mx-auto max-w-6xl">
         <header className="text-center mb-8 animate-slide-up">
           <h1 className="text-4xl font-bold text-brand-brown mb-3">استخراج النص من الصور</h1>
-          
         </header>
 
         <nav className="mb-8 flex justify-end">
@@ -341,9 +349,7 @@ const Index = () => {
         </nav>
 
         <div className="grid grid-cols-1 gap-8">
-          <section className="animate-slide-up" style={{
-          animationDelay: "0.1s"
-        }}>
+          <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
                 {useGemini && (
@@ -363,24 +369,43 @@ const Index = () => {
               </Button>
             </div>
             
-            <div onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave} className="bg-transparent my-0 mx-[79px] px-[17px] py-0 rounded-3xl">
-              <input type="file" id="image-upload" className="hidden" accept="image/*" multiple onChange={e => handleFileChange(e.target.files)} disabled={isProcessing} />
-              <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center h-full">
+            <div 
+              onDrop={handleDrop} 
+              onDragOver={handleDragOver} 
+              onDragLeave={handleDragLeave} 
+              className="bg-transparent my-0 mx-[79px] px-[17px] py-6 rounded-3xl border-2 border-dashed border-brand-brown/30 hover:border-brand-brown/50 transition-colors"
+            >
+              <input 
+                type="file" 
+                id="image-upload" 
+                className="hidden" 
+                accept="image/*" 
+                multiple 
+                onChange={e => handleFileChange(e.target.files)} 
+                disabled={isProcessing} 
+              />
+              <label 
+                htmlFor="image-upload" 
+                className="cursor-pointer flex flex-col items-center justify-center h-full"
+              >
+                <Upload size={36} className="text-brand-brown/70 mb-2" />
+                <p className="text-brand-brown font-medium mb-2">اسحب وأفلت الصور هنا</p>
                 <Button className="bg-brand-brown hover:bg-brand-brown/90" disabled={isProcessing}>
+                  <Upload size={16} className="mr-2" />
                   رفع الصور
                 </Button>
               </label>
             </div>
             
-            {isProcessing && <div className="mt-4">
+            {isProcessing && (
+              <div className="mt-4">
                 <p className="text-sm text-muted-foreground mb-2">جاري معالجة الصور...</p>
                 <Progress value={processingProgress} className="h-2" />
-              </div>}
+              </div>
+            )}
           </section>
 
-          {sortedImages.length > 0 && <section className="animate-slide-up" style={{
-          animationDelay: "0.2s"
-        }}>
+          {sortedImages.length > 0 && <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <h2 className="text-2xl font-bold text-brand-brown mb-4">معاينة الصور والنصوص المستخرجة</h2>
               
               <div className="space-y-4">
@@ -466,9 +491,7 @@ const Index = () => {
               </div>
             </section>}
 
-          {sortedImages.length > 0 && <section className="animate-slide-up" style={{
-          animationDelay: "0.3s"
-        }}>
+          {sortedImages.length > 0 && <section className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
               <h2 className="text-2xl font-bold text-brand-brown mb-4">سجل النصوص المستخرجة</h2>
               
               <div className="overflow-x-auto rounded-lg border">
@@ -629,4 +652,3 @@ const Index = () => {
 };
 
 export default Index;
-

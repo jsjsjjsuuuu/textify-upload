@@ -4,7 +4,11 @@ import { ApiResult } from "./apiService";
 interface GeminiRequest {
   contents: {
     parts: {
-      text: string;
+      text?: string;
+      inline_data?: {
+        mime_type: string;
+        data: string;
+      }
     }[];
     role?: string;
   }[];
@@ -59,7 +63,8 @@ export async function extractDataWithGemini({
   try {
     console.log("جاري إرسال الطلب إلى Gemini API...");
     
-    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent";
+    // استخدام نموذج Gemini 2.0-flash بدلاً من gemini-pro-vision
+    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
     const response = await fetch(`${endpoint}?key=${apiKey}`, {
       method: "POST",
       headers: {
@@ -189,4 +194,57 @@ export function fileToBase64(file: File): Promise<string> {
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = error => reject(error);
   });
+}
+
+// إضافة دالة لاختبار الاتصال بـ Gemini API
+export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
+  if (!apiKey) {
+    return {
+      success: false,
+      message: "يرجى توفير مفتاح API صالح"
+    };
+  }
+
+  try {
+    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    const response = await fetch(`${endpoint}?key=${apiKey}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: "مرحبا" }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 128
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("خطأ في اختبار اتصال Gemini API:", errorData);
+      return {
+        success: false,
+        message: `فشل في الاتصال بـ Gemini API: ${errorData.error?.message || response.statusText}`
+      };
+    }
+
+    return {
+      success: true,
+      message: "تم الاتصال بـ Gemini API بنجاح"
+    };
+  } catch (error) {
+    console.error("خطأ عند اختبار اتصال Gemini API:", error);
+    return {
+      success: false,
+      message: `حدث خطأ أثناء اختبار اتصال Gemini API: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`
+    };
+  }
 }

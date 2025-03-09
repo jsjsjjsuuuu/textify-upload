@@ -5,11 +5,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BackgroundPattern from "@/components/BackgroundPattern";
-import { Upload, PictureInPicture, Save } from "lucide-react";
+import { Upload, PictureInPicture, Save, Brain } from "lucide-react";
+import { testGeminiConnection } from "@/lib/geminiService";
 
 const Records = () => {
   const [savedApiKey, setSavedApiKey] = useState<string>("");
   const [apiKey, setApiKey] = useState<string>("");
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -19,7 +21,7 @@ const Records = () => {
     setApiKey(storedApiKey);
   }, []);
 
-  const handleSaveApiKey = () => {
+  const handleSaveApiKey = async () => {
     if (!apiKey) {
       toast({
         title: "خطأ",
@@ -29,14 +31,49 @@ const Records = () => {
       return;
     }
 
-    localStorage.setItem("geminiApiKey", apiKey);
-    setSavedApiKey(apiKey);
-    
-    toast({
-      title: "تم الحفظ",
-      description: "تم حفظ مفتاح API بنجاح",
-    });
+    // قبل الحفظ، نختبر الاتصال بـ Gemini API
+    setIsTestingConnection(true);
+    try {
+      const testResult = await testGeminiConnection(apiKey);
+      if (testResult.success) {
+        localStorage.setItem("geminiApiKey", apiKey);
+        setSavedApiKey(apiKey);
+        
+        toast({
+          title: "تم الحفظ",
+          description: "تم حفظ مفتاح API بنجاح واختبار الاتصال",
+        });
+      } else {
+        toast({
+          title: "خطأ في الاتصال",
+          description: testResult.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء اختبار الاتصال",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingConnection(false);
+    }
   };
+
+  // تعبئة مفتاح API تلقائيًا
+  useEffect(() => {
+    if (!apiKey && !savedApiKey) {
+      const defaultApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
+      setApiKey(defaultApiKey);
+      setSavedApiKey(defaultApiKey);
+      localStorage.setItem("geminiApiKey", defaultApiKey);
+      toast({
+        title: "تم تعيين المفتاح الافتراضي",
+        description: "تم تعيين مفتاح API الافتراضي بنجاح",
+      });
+    }
+  }, [apiKey, savedApiKey, toast]);
 
   return (
     <div className="relative min-h-screen pb-20">
@@ -84,24 +121,29 @@ const Records = () => {
                     className="flex-1"
                     dir="ltr"
                   />
-                  <Button onClick={handleSaveApiKey} className="bg-brand-brown hover:bg-brand-brown/90">
-                    <Save className="h-4 w-4 ml-1" />
-                    حفظ
+                  <Button 
+                    onClick={handleSaveApiKey} 
+                    className="bg-brand-brown hover:bg-brand-brown/90"
+                    disabled={isTestingConnection}
+                  >
+                    {isTestingConnection ? (
+                      <span className="flex items-center">
+                        <Brain className="h-4 w-4 ml-1 animate-pulse" />
+                        جاري الاختبار...
+                      </span>
+                    ) : (
+                      <span className="flex items-center">
+                        <Save className="h-4 w-4 ml-1" />
+                        حفظ واختبار
+                      </span>
+                    )}
                   </Button>
                 </div>
                 {savedApiKey && (
                   <p className="text-xs text-green-600 mt-1">تم تكوين مفتاح API بنجاح!</p>
                 )}
                 <p className="text-xs text-muted-foreground mt-2">
-                  يمكنك الحصول على مفتاح API لـ Gemini من{" "}
-                  <a 
-                    href="https://aistudio.google.com/app/apikey" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-brand-coral hover:underline"
-                  >
-                    لوحة تحكم Google AI Studio
-                  </a>
+                  تم تعيين مفتاح API تلقائيًا: AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8
                 </p>
               </div>
 
