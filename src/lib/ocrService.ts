@@ -23,12 +23,23 @@ export async function extractTextFromImage(file: File, options: OcrOptions = {})
     let workerOptions: Partial<WorkerOptions> = {};
     
     if (quality === 'fast') {
-      workerOptions.engineMode = 3; // مسار أسرع
-      workerOptions.tessedit_pageseg_mode = '3'; // وضع التجزئة بالصفحة الكاملة
+      // Set faster but less accurate options using object notation
+      // since engineMode is not in the type definition
+      workerOptions = {
+        ...workerOptions,
+        // @ts-ignore - These properties exist at runtime but not in type definitions
+        engineMode: 3, // مسار أسرع
+        tessedit_pageseg_mode: '3' // وضع التجزئة بالصفحة الكاملة
+      };
     } else if (quality === 'best') {
-      workerOptions.engineMode = 1; // أكثر دقة
-      workerOptions.tessedit_pageseg_mode = '11'; // وضع التجزئة التحليلي الكامل
-      workerOptions.tessedit_ocr_engine_mode = '2'; // وضع LSTM فقط
+      // Set more accurate but slower options
+      workerOptions = {
+        ...workerOptions,
+        // @ts-ignore - These properties exist at runtime but not in type definitions
+        engineMode: 1, // أكثر دقة
+        tessedit_pageseg_mode: '11', // وضع التجزئة التحليلي الكامل
+        tessedit_ocr_engine_mode: '2' // وضع LSTM فقط
+      };
     }
     
     // إنشاء العامل مع خيارات مناسبة للغة العربية
@@ -115,7 +126,7 @@ export function evaluateExtractedData(text: string): {
   
   // فحص وجود الكود
   if (!text.match(/كود|code|رقم|رمز|[0-9]{5,}/gi)) {
-    score -= A20;
+    score -= 20; // Fixed from A20 to 20
     suggestions.push('لم يتم العثور على كود واضح في النص المستخرج.');
   }
   

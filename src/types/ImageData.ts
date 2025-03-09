@@ -14,4 +14,5 @@ export interface ImageData {
   status: "processing" | "completed" | "error";
   submitted?: boolean;
   number?: number;
+  extractionMethod?: "ocr" | "gemini";
 }

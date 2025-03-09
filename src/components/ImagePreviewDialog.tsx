@@ -1,4 +1,3 @@
-
 import { DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, ZoomIn, ZoomOut, Maximize2, RefreshCw } from "lucide-react";
