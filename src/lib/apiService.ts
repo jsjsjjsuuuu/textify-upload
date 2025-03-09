@@ -69,3 +69,6 @@ export async function authenticateWithExternalApi(apiKey: string): Promise<ApiRe
     }, 1000);
   });
 }
+
+// تصدير الدوال من geminiService
+export * from './geminiService';

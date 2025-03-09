@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Edit, Trash, Send, Check, X, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Upload, Edit, Trash, Send, Check, X, ZoomIn, ZoomOut, Maximize2, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { extractTextFromImage } from "@/lib/ocrService";
-import { submitTextToApi } from "@/lib/apiService";
+import { submitTextToApi, extractDataWithGemini, fileToBase64 } from "@/lib/apiService";
 import BackgroundPattern from "@/components/BackgroundPattern";
+
 interface ImageData {
   id: string;
   file: File;
@@ -22,8 +23,9 @@ interface ImageData {
   date: Date;
   status: "processing" | "completed" | "error";
   submitted?: boolean;
-  number?: number; // Added sequence number
+  number?: number;
 }
+
 const Index = () => {
   const [images, setImages] = useState<ImageData[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -32,9 +34,16 @@ const Index = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [useGemini, setUseGemini] = useState(false);
   const {
     toast
   } = useToast();
+
+  useEffect(() => {
+    const geminiApiKey = localStorage.getItem("geminiApiKey");
+    setUseGemini(!!geminiApiKey);
+  }, []);
+
   const handleFileChange = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setIsProcessing(true);
@@ -42,9 +51,11 @@ const Index = () => {
     const fileArray = Array.from(files);
     const totalFiles = fileArray.length;
     let processedFiles = 0;
+    
+    const geminiApiKey = useGemini ? localStorage.getItem("geminiApiKey") : null;
 
-    // Calculate the starting sequence number
     const startingNumber = images.length > 0 ? Math.max(...images.map(img => img.number || 0)) + 1 : 1;
+    
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
       if (!file.type.startsWith("image/")) {
@@ -55,6 +66,7 @@ const Index = () => {
         });
         continue;
       }
+      
       const previewUrl = URL.createObjectURL(file);
       const newImage: ImageData = {
         id: crypto.randomUUID(),
@@ -63,24 +75,27 @@ const Index = () => {
         extractedText: "",
         date: new Date(),
         status: "processing",
-        number: startingNumber + i // Assign sequence number
+        number: startingNumber + i
       };
+      
       setImages(prev => [newImage, ...prev]);
+      
       try {
-        let result;
-        if (process.env.NODE_ENV === 'development') {
-          // Mock processing for faster development
+        if (process.env.NODE_ENV === 'development' && !geminiApiKey) {
           const mockTexts = ["فاتورة رقم: 12345", "الاسم: أحمد محمد", "التاريخ: 15/06/2023", "المبلغ: 500 ريال", "الخدمة: استشارات تقنية", "نص عربي للاختبار في هذه الصورة", "بيانات مالية للتحليل والمعالجة"];
-          await new Promise(resolve => setTimeout(resolve, 500)); // Reduced wait time for faster processing
-          result = {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const result = {
             text: mockTexts[Math.floor(Math.random() * mockTexts.length)],
             confidence: Math.random() * 100
           };
+          
           const code = "CODE" + Math.floor(Math.random() * 10000);
           const senderName = ["أحمد محمد", "سعيد علي", "عمر خالد", "فاطمة أحمد"][Math.floor(Math.random() * 4)];
           const phoneNumber = "05" + Math.floor(Math.random() * 100000000);
           const province = ["الرياض", "جدة", "الدمام", "مكة", "المدينة"][Math.floor(Math.random() * 5)];
           const price = Math.floor(Math.random() * 1000) + " ريال";
+          
           setImages(prev => prev.map(img => img.id === newImage.id ? {
             ...img,
             extractedText: result.text,
@@ -92,8 +107,47 @@ const Index = () => {
             price,
             status: "completed"
           } : img));
+        } else if (geminiApiKey) {
+          const imageBase64 = await fileToBase64(file);
+          
+          const extractionResult = await extractDataWithGemini({
+            apiKey: geminiApiKey,
+            imageBase64
+          });
+          
+          if (extractionResult.success && extractionResult.data) {
+            const { parsedData, extractedText } = extractionResult.data;
+            
+            setImages(prev => prev.map(img => img.id === newImage.id ? {
+              ...img,
+              extractedText: extractedText || "",
+              confidence: 95,
+              code: parsedData?.code || "",
+              senderName: parsedData?.senderName || "",
+              phoneNumber: parsedData?.phoneNumber || "",
+              province: parsedData?.province || "",
+              price: parsedData?.price || "",
+              status: "completed"
+            } : img));
+          } else {
+            const result = await extractTextFromImage(file);
+            
+            setImages(prev => prev.map(img => img.id === newImage.id ? {
+              ...img,
+              extractedText: result.text,
+              confidence: result.confidence,
+              status: "completed"
+            } : img));
+            
+            toast({
+              title: "تنبيه",
+              description: "تم استخدام OCR التقليدي بسبب: " + extractionResult.message,
+              variant: "default"
+            });
+          }
         } else {
-          result = await extractTextFromImage(file);
+          const result = await extractTextFromImage(file);
+          
           setImages(prev => prev.map(img => img.id === newImage.id ? {
             ...img,
             extractedText: result.text,
@@ -106,43 +160,50 @@ const Index = () => {
           ...img,
           status: "error"
         } : img));
+        
         toast({
           title: "فشل في استخراج النص",
           description: "حدث خطأ أثناء معالجة الصورة",
           variant: "destructive"
         });
       }
+      
       processedFiles++;
       setProcessingProgress(Math.round(processedFiles / totalFiles * 100));
     }
+    
     setIsProcessing(false);
+    
     if (processedFiles > 0) {
       toast({
         title: "تم معالجة الصور بنجاح",
-        description: `تم معالجة ${processedFiles} صورة`,
+        description: `تم معالجة ${processedFiles} صورة${geminiApiKey ? " باستخدام Gemini AI" : ""}`,
         variant: "default"
       });
     }
   };
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     handleFileChange(e.dataTransfer.files);
   }, []);
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
   }, []);
+
   const handleDragLeave = useCallback(() => {
     setIsDragging(false);
   }, []);
+
   const handleTextChange = (id: string, field: string, value: string) => {
     setImages(prev => prev.map(img => img.id === id ? {
       ...img,
       [field]: value
     } : img));
 
-    // Also update the selected image if it's the one being edited
     if (selectedImage && selectedImage.id === id) {
       setSelectedImage(prev => prev ? {
         ...prev,
@@ -150,8 +211,8 @@ const Index = () => {
       } : null);
     }
   };
+
   const handleDelete = (id: string) => {
-    // Close dialog if the deleted image is the selected one
     if (selectedImage && selectedImage.id === id) {
       setSelectedImage(null);
     }
@@ -161,6 +222,7 @@ const Index = () => {
       description: "تم حذف الصورة بنجاح"
     });
   };
+
   const handleSubmitToApi = async (id: string) => {
     const image = images.find(img => img.id === id);
     if (!image || image.status !== "completed") {
@@ -186,7 +248,6 @@ const Index = () => {
         };
         setImages(prev => prev.map(img => img.id === id ? updatedImage : img));
 
-        // Update selected image if it's the one being submitted
         if (selectedImage && selectedImage.id === id) {
           setSelectedImage(updatedImage);
         }
@@ -204,35 +265,37 @@ const Index = () => {
     } catch (error) {
       toast({
         title: "خطأ في الإرسال",
-        description: "حدث خطأ أثناء الاتصال بالخادم",
+        description: "حدث خطأ أثناء ��لاتصال بالخادم",
         variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
     }
   };
+
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.2, 3));
   };
+
   const handleZoomOut = () => {
     setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
   };
+
   const handleResetZoom = () => {
     setZoomLevel(1);
   };
+
   const handleImageClick = (image: ImageData) => {
     setSelectedImage(image);
-    setZoomLevel(1); // Reset zoom level when opening a new image
+    setZoomLevel(1);
   };
 
-  // Cleanup object URLs when component unmounts
   useEffect(() => {
     return () => {
       images.forEach(img => URL.revokeObjectURL(img.previewUrl));
     };
   }, [images]);
 
-  // Format date in Gregorian (Miladi) format
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('ar-SA', {
       year: 'numeric',
@@ -242,12 +305,12 @@ const Index = () => {
     }).replace(/[\u0660-\u0669]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30));
   };
 
-  // Sort images by their sequence number
   const sortedImages = [...images].sort((a, b) => {
     const aNum = a.number || 0;
     const bNum = b.number || 0;
-    return bNum - aNum; // Descending order
+    return bNum - aNum;
   });
+
   return <div className="relative min-h-screen pb-20">
       <BackgroundPattern />
 
@@ -281,12 +344,28 @@ const Index = () => {
           <section className="animate-slide-up" style={{
           animationDelay: "0.1s"
         }}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                {useGemini && (
+                  <div className="flex items-center bg-brand-brown/10 text-brand-brown px-3 py-1 rounded-full text-sm ml-2">
+                    <Brain size={16} className="mr-1" />
+                    تمكين Gemini AI
+                  </div>
+                )}
+              </div>
+              
+              <Button
+                onClick={() => window.location.href = '/records'}
+                variant="outline"
+                className="text-sm"
+              >
+                إعدادات استخراج البيانات
+              </Button>
+            </div>
+            
             <div onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave} className="bg-transparent my-0 mx-[79px] px-[17px] py-0 rounded-3xl">
               <input type="file" id="image-upload" className="hidden" accept="image/*" multiple onChange={e => handleFileChange(e.target.files)} disabled={isProcessing} />
               <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center h-full">
-                
-                
-                
                 <Button className="bg-brand-brown hover:bg-brand-brown/90" disabled={isProcessing}>
                   رفع الصور
                 </Button>
@@ -415,7 +494,7 @@ const Index = () => {
                         <td>{formatDate(img.date)}</td>
                         <td className="w-24">
                           <div className="w-20 h-20 rounded-lg overflow-hidden bg-transparent cursor-pointer" onClick={() => handleImageClick(img)}>
-                            <img src={img.previewUrl} alt="صورة مصغرة" className="w-full h-full object-contain" style={{
+                            <img src={img.previewUrl} alt="صورة مصغرة" className="object-contain transition-transform duration-200" style={{
                         mixBlendMode: 'multiply'
                       }} />
                           </div>
@@ -453,12 +532,10 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Image Zoom Dialog */}
       <Dialog open={!!selectedImage} onOpenChange={open => !open && setSelectedImage(null)}>
         <DialogContent className="max-w-5xl p-0 bg-transparent border-none shadow-none" onInteractOutside={e => e.preventDefault()}>
           <div className="bg-white/95 rounded-lg border p-4 shadow-lg relative">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Image view with zoom */}
               <div className="col-span-1 bg-muted/30 rounded-lg p-4 flex flex-col items-center justify-center relative">
                 <div className="overflow-hidden relative h-[400px] w-full flex items-center justify-center">
                   {selectedImage && <img src={selectedImage.previewUrl} alt="معاينة موسعة" className="object-contain transition-transform duration-200" style={{
@@ -483,7 +560,6 @@ const Index = () => {
                   </div>}
               </div>
               
-              {/* Form fields */}
               <div className="col-span-1">
                 {selectedImage && <div className="space-y-4">
                     <div className="flex justify-between items-center">
@@ -551,4 +627,6 @@ const Index = () => {
       </Dialog>
     </div>;
 };
+
 export default Index;
+
