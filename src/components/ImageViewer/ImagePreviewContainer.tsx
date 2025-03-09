@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { ImageData } from "@/types/ImageData";
-import ImagePreviewDialog from "@/components/ImagePreviewDialog";
+import { ImagePreviewDialog } from "@/components/ImagePreview";
 import { isValidBlobUrl } from "@/lib/gemini/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,12 +27,10 @@ const ImagePreviewContainer = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  // Set dialog open state when an image is selected
   useEffect(() => {
     if (selectedImage) {
       setDialogOpen(true);
       
-      // Validate the blob URL of the selected image
       if (selectedImage.previewUrl) {
         isValidBlobUrl(selectedImage.previewUrl).then(isValid => {
           if (!isValid) {
@@ -44,7 +41,6 @@ const ImagePreviewContainer = ({
     }
   }, [selectedImage]);
 
-  // Reset selected image when dialog is closed
   const handleOpenChange = (open: boolean) => {
     setDialogOpen(open);
     if (!open) {
@@ -56,7 +52,6 @@ const ImagePreviewContainer = ({
   const handleImageClick = async (image: ImageData) => {
     console.log("Image clicked:", image.id, image.previewUrl);
     
-    // Validate URL before opening dialog
     if (image.previewUrl) {
       const isValid = await isValidBlobUrl(image.previewUrl);
       if (!isValid) {
@@ -85,7 +80,6 @@ const ImagePreviewContainer = ({
     setZoomLevel(1);
   };
 
-  // Handle delete with selected image state management
   const handleDeleteWithState = (id: string) => {
     if (selectedImage && selectedImage.id === id) {
       setSelectedImage(null);
@@ -94,11 +88,9 @@ const ImagePreviewContainer = ({
     onDelete(id);
   };
 
-  // Handle submit with selected image state management
   const handleSubmitWithState = async (id: string) => {
     await onSubmit(id);
     
-    // Update the selected image if it's the one being submitted
     if (selectedImage && selectedImage.id === id) {
       const updatedImage = images.find(img => img.id === id);
       if (updatedImage) {
@@ -107,11 +99,9 @@ const ImagePreviewContainer = ({
     }
   };
 
-  // Handle text change with selected image state management
   const handleTextChangeWithState = (id: string, field: string, value: string) => {
     onTextChange(id, field, value);
     
-    // Update the selected image if it's the one being edited
     if (selectedImage && selectedImage.id === id) {
       setSelectedImage(prev => prev ? {
         ...prev,
@@ -122,7 +112,6 @@ const ImagePreviewContainer = ({
 
   return (
     <>
-      {/* Display image list and table with click handlers */}
       <div className="grid grid-cols-1 gap-8">
         <ImageList 
           images={images}
@@ -144,7 +133,6 @@ const ImagePreviewContainer = ({
         />
       </div>
 
-      {/* Preview dialog for selected image */}
       <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
         <ImagePreviewDialog 
           selectedImage={selectedImage}
@@ -163,7 +151,6 @@ const ImagePreviewContainer = ({
   );
 };
 
-// We need these import statements at the top of the file
 import ImageList from "@/components/ImageList";
 import ImageTable from "@/components/ImageTable";
 
