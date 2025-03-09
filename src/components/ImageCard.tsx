@@ -27,9 +27,9 @@ const ImageCard = ({
   return (
     <Card className="p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-transparent border-none backdrop-blur-sm">
       <div className="flex flex-col gap-4">
-        <div className="flex">
+        <div className="flex flex-col md:flex-row gap-4">
           <div 
-            className="relative w-[300px] h-[200px] rounded-lg overflow-hidden bg-transparent group cursor-pointer" 
+            className="relative w-full md:w-[300px] h-[200px] rounded-lg overflow-hidden bg-transparent group cursor-pointer" 
             onClick={() => onImageClick(image)}
           >
             <img 
@@ -68,7 +68,7 @@ const ImageCard = ({
             </div>
           </div>
           
-          <div className="flex-1 pr-4">
+          <div className="flex-1">
             <div className="flex justify-between items-center mb-2">
               <p className="text-xs text-muted-foreground">
                 {formatDate(image.date)}
@@ -80,7 +80,7 @@ const ImageCard = ({
               )}
             </div>
             
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div className="col-span-1">
                 <label className="block text-xs font-medium mb-1">الكود:</label>
                 <input 
@@ -89,6 +89,7 @@ const ImageCard = ({
                   onChange={e => onTextChange(image.id, "code", e.target.value)} 
                   className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
                   dir="rtl" 
+                  placeholder="أدخل الكود"
                 />
               </div>
               <div className="col-span-1">
@@ -99,6 +100,7 @@ const ImageCard = ({
                   onChange={e => onTextChange(image.id, "senderName", e.target.value)} 
                   className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
                   dir="rtl" 
+                  placeholder="أدخل اسم المرسل"
                 />
               </div>
               <div className="col-span-1">
@@ -109,6 +111,7 @@ const ImageCard = ({
                   onChange={e => onTextChange(image.id, "phoneNumber", e.target.value)} 
                   className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
                   dir="rtl" 
+                  placeholder="أدخل رقم الهاتف"
                 />
               </div>
               <div className="col-span-1">
@@ -119,6 +122,7 @@ const ImageCard = ({
                   onChange={e => onTextChange(image.id, "province", e.target.value)} 
                   className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
                   dir="rtl" 
+                  placeholder="أدخل المحافظة"
                 />
               </div>
               <div className="col-span-2">
@@ -129,6 +133,7 @@ const ImageCard = ({
                   onChange={e => onTextChange(image.id, "price", e.target.value)} 
                   className="w-full px-2 py-1 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
                   dir="rtl" 
+                  placeholder="أدخل السعر"
                 />
               </div>
             </div>

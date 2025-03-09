@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog } from "@/components/ui/dialog";
@@ -326,7 +325,7 @@ const Index = () => {
     } catch (error) {
       toast({
         title: "خطأ في الإرسال",
-        description: "حدث خطأ أثناء ��لاتصال بالخادم",
+        description: "حدث خطأ أثناء الاتصال بالخادم",
         variant: "destructive"
       });
     } finally {

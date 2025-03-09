@@ -59,7 +59,7 @@ export async function extractDataWithGemini({
   }
 
   const prompt = extractionPrompt || 
-    "استخرج البيانات التالية من هذه الصورة: الكود، اسم المرسل، رقم الهاتف، المحافظة، السعر. قم بتنسيق المخرجات بتنسيق JSON.";
+    "استخرج البيانات التالية من هذه الصورة: الكود، اسم المرسل، رقم الهاتف، المحافظة، السعر. قم بتنسيق المخرجات بتنسيق JSON مع المفاتيح التالية باللغة الإنجليزية: code, senderName, phoneNumber, province, price";
 
   try {
     console.log("جاري إرسال الطلب إلى Gemini API...");
@@ -137,17 +137,58 @@ export async function extractDataWithGemini({
       const jsonMatch = extractedText.match(/```json\s*([\s\S]*?)\s*```/) || 
                         extractedText.match(/{[\s\S]*?}/);
       
-      let parsedData = {};
+      let parsedData: any = {};
       
       if (jsonMatch) {
         const jsonText = jsonMatch[0].replace(/```json|```/g, '').trim();
         console.log("Found JSON in response:", jsonText);
-        parsedData = JSON.parse(jsonText);
-      } else {
-        // إذا لم نجد JSON، نقوم بتحليل النص بطريقة يدوية
-        console.log("No JSON found, parsing text manually");
+        try {
+          parsedData = JSON.parse(jsonText);
+          console.log("Successfully parsed JSON:", parsedData);
+        } catch (jsonError) {
+          console.error("Error parsing JSON:", jsonError);
+          // إذا فشل تحليل JSON، نحاول إصلاحه
+          const cleanJsonText = jsonText.replace(/[\u0600-\u06FF]+\s*:\s*/g, (match) => {
+            return `"${match.trim().slice(0, -1)}": `;
+          }).replace(/'/g, '"');
+          try {
+            parsedData = JSON.parse(cleanJsonText);
+            console.log("Successfully parsed cleaned JSON:", parsedData);
+          } catch (cleanJsonError) {
+            console.error("Error parsing cleaned JSON:", cleanJsonError);
+          }
+        }
+      }
+      
+      // تحويل البيانات العربية إلى مفاتيح إنجليزية
+      const mappedData: any = {};
+      
+      // تحقق من وجود أي من الحقول في parsedData وتعيينها للمفاتيح الإنجليزية
+      if (parsedData.code || parsedData["الكود"] || parsedData["كود"]) {
+        mappedData.code = parsedData.code || parsedData["الكود"] || parsedData["كود"];
+      }
+      
+      if (parsedData.senderName || parsedData["اسم المرسل"] || parsedData["الاسم"]) {
+        mappedData.senderName = parsedData.senderName || parsedData["اسم المرسل"] || parsedData["الاسم"];
+      }
+      
+      if (parsedData.phoneNumber || parsedData["رقم الهاتف"] || parsedData["الهاتف"]) {
+        mappedData.phoneNumber = parsedData.phoneNumber || parsedData["رقم الهاتف"] || parsedData["الهاتف"];
+      }
+      
+      if (parsedData.province || parsedData["المحافظة"] || parsedData["محافظة"]) {
+        mappedData.province = parsedData.province || parsedData["المحافظة"] || parsedData["محافظة"];
+      }
+      
+      if (parsedData.price || parsedData["السعر"] || parsedData["سعر"]) {
+        mappedData.price = parsedData.price || parsedData["السعر"] || parsedData["سعر"];
+      }
+      
+      // إذا لم نتمكن من استخراج البيانات من JSON، نحاول استخراجها من النص مباشرة
+      if (Object.keys(mappedData).length === 0) {
+        console.log("No JSON data found, parsing text manually");
         const lines = extractedText.split('\n');
-        const dataFields = {
+        const dataFields: Record<string, string> = {
           "الكود": "code",
           "كود": "code",
           "اسم المرسل": "senderName",
@@ -164,20 +205,19 @@ export async function extractDataWithGemini({
           for (const [arabicKey, englishKey] of Object.entries(dataFields)) {
             if (line.includes(arabicKey)) {
               const value = line.split(':')[1]?.trim() || line.split('،')[1]?.trim() || "";
-              // @ts-ignore
-              parsedData[englishKey] = value;
+              mappedData[englishKey] = value;
             }
           }
         });
       }
       
-      console.log("Parsed data:", parsedData);
+      console.log("Final mapped data:", mappedData);
       return {
         success: true,
         message: "تم استخراج البيانات بنجاح",
         data: {
           extractedText,
-          parsedData
+          parsedData: mappedData
         }
       };
     } catch (parseError) {

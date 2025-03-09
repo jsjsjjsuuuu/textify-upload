@@ -92,6 +92,7 @@ const ImagePreviewDialog = ({
                     onChange={e => onTextChange(selectedImage.id, "code", e.target.value)} 
                     className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
                     dir="rtl" 
+                    placeholder="أدخل الكود"
                   />
                 </div>
                 <div className="col-span-1">
@@ -102,6 +103,7 @@ const ImagePreviewDialog = ({
                     onChange={e => onTextChange(selectedImage.id, "senderName", e.target.value)} 
                     className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
                     dir="rtl" 
+                    placeholder="أدخل اسم المرسل"
                   />
                 </div>
                 <div className="col-span-1">
@@ -112,6 +114,7 @@ const ImagePreviewDialog = ({
                     onChange={e => onTextChange(selectedImage.id, "phoneNumber", e.target.value)} 
                     className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
                     dir="rtl" 
+                    placeholder="أدخل رقم الهاتف"
                   />
                 </div>
                 <div className="col-span-1">
@@ -122,6 +125,7 @@ const ImagePreviewDialog = ({
                     onChange={e => onTextChange(selectedImage.id, "province", e.target.value)} 
                     className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
                     dir="rtl" 
+                    placeholder="أدخل المحافظة"
                   />
                 </div>
                 <div className="col-span-2">
@@ -132,6 +136,7 @@ const ImagePreviewDialog = ({
                     onChange={e => onTextChange(selectedImage.id, "price", e.target.value)} 
                     className="w-full px-3 py-2 text-sm rounded border border-input focus:outline-none focus:ring-1 focus:ring-brand-coral rtl-textarea" 
                     dir="rtl" 
+                    placeholder="أدخل السعر"
                   />
                 </div>
               </div>
