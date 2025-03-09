@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { ImageData } from "@/types/ImageData";
 import ImagePreviewDialog from "@/components/ImagePreviewDialog";
@@ -23,6 +23,23 @@ const ImagePreviewContainer = ({
 }: ImagePreviewContainerProps) => {
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Set dialog open state when an image is selected
+  useEffect(() => {
+    if (selectedImage) {
+      setDialogOpen(true);
+    }
+  }, [selectedImage]);
+
+  // Reset selected image when dialog is closed
+  const handleOpenChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setSelectedImage(null);
+      setZoomLevel(1);
+    }
+  };
 
   const handleImageClick = (image: ImageData) => {
     setSelectedImage(image);
@@ -45,6 +62,7 @@ const ImagePreviewContainer = ({
   const handleDeleteWithState = (id: string) => {
     if (selectedImage && selectedImage.id === id) {
       setSelectedImage(null);
+      setDialogOpen(false);
     }
     onDelete(id);
   };
@@ -100,7 +118,7 @@ const ImagePreviewContainer = ({
       </div>
 
       {/* Preview dialog for selected image */}
-      <Dialog open={!!selectedImage} onOpenChange={open => !open && setSelectedImage(null)}>
+      <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
         <ImagePreviewDialog 
           selectedImage={selectedImage}
           zoomLevel={zoomLevel}
