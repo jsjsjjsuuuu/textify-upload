@@ -62,13 +62,13 @@ const ImageUploader = ({
         onClick={handleContainerClick}
         className={`
           max-w-full w-full mx-auto h-11
-          bg-gradient-to-r from-brand-beige/20 via-brand-coral/10 to-brand-green/10 
-          dark:from-brand-green/5 dark:via-brand-coral/10 dark:to-brand-beige/5
+          bg-gradient-to-r from-brand-beige/30 via-brand-coral/20 to-brand-green/20 
+          dark:from-brand-green/10 dark:via-brand-coral/15 dark:to-brand-beige/10
           backdrop-blur-sm rounded-3xl
-          shadow-lg shadow-brand-coral/10 hover:shadow-xl transition-all duration-300
+          shadow-xl shadow-brand-coral/15 hover:shadow-2xl transition-all duration-300
           ${isDragging 
             ? 'scale-[1.02] border-2 border-brand-coral' 
-            : 'border border-brand-coral/20 hover:border-brand-coral/50'
+            : 'border border-brand-coral/30 hover:border-brand-coral/60'
           }
           p-4 my-6 cursor-pointer
         `}
@@ -86,7 +86,7 @@ const ImageUploader = ({
         <div className="flex items-center justify-center w-full h-full">
           {!isProcessing ? (
             <div className="flex items-center justify-center space-x-3 space-x-reverse">
-              <p className="text-xs text-muted-foreground">ارفع الصور</p>
+              <p className="text-xs text-muted-foreground font-medium">ارفع الصور</p>
               <UploadIcon 
                 size={18} 
                 className="text-brand-coral hover:text-brand-green dark:text-brand-beige transition-colors duration-300" 
@@ -94,9 +94,9 @@ const ImageUploader = ({
             </div>
           ) : (
             <div className="flex items-center w-full">
-              <div className="h-5 w-5 mr-2 rounded-full border-2 border-brand-coral/30 border-t-brand-coral animate-spin"></div>
+              <div className="h-5 w-5 mr-2 rounded-full border-2 border-brand-coral/40 border-t-brand-coral animate-spin"></div>
               <div className="flex-1">
-                <Progress value={processingProgress} className="h-1 bg-brand-beige/20" />
+                <Progress value={processingProgress} className="h-1 bg-brand-beige/30" />
                 <p className="text-xs text-muted-foreground mt-0.5">جاري معالجة الصور... {processingProgress}%</p>
               </div>
             </div>

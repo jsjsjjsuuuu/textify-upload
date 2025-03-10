@@ -55,4 +55,14 @@
   .dark .modern-card {
     @apply bg-gradient-to-br from-card to-brand-brown/10 border-brand-brown/20;
   }
+  
+  /* Elegant upload container styles */
+  .elegant-upload {
+    @apply bg-gradient-to-r from-brand-beige/30 via-brand-coral/20 to-brand-green/20 
+           backdrop-blur-sm rounded-3xl shadow-xl transition-all duration-300;
+  }
+  
+  .dark .elegant-upload {
+    @apply from-brand-green/10 via-brand-coral/15 to-brand-beige/10;
+  }
 }
