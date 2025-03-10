@@ -28,7 +28,7 @@ const Index = () => {
         <AppHeader />
 
         <div className="flex flex-col items-center justify-center pt-4">
-          <div className="w-full max-w-3xl mx-auto">
+          <div className="w-full flex justify-center mx-auto">
             <ImageUploader 
               isProcessing={isProcessing}
               processingProgress={processingProgress}
