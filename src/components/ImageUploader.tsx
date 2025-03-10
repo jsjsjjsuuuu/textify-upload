@@ -61,7 +61,7 @@ const ImageUploader = ({
         onDragLeave={handleDragLeave}
         onClick={handleContainerClick}
         className={`
-          max-w-md w-3/4 mx-auto h-48
+          max-w-full w-full mx-auto h-48
           bg-gradient-to-r from-brand-beige/20 via-brand-coral/10 to-brand-green/10 
           dark:from-brand-green/5 dark:via-brand-coral/10 dark:to-brand-beige/5
           backdrop-blur-sm rounded-lg
