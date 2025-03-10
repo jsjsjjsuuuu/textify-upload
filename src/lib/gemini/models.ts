@@ -1,7 +1,6 @@
 
 import { GeminiExtractParams } from "./types";
-import { ApiResult } from "../apiService";
-import { extractDataWithGemini } from "./api";
+import { extractDataWithGemini } from "./extraction";
 
 /**
  * وظيفة لاختبار نماذج Gemini المختلفة ومقارنة النتائج
@@ -60,3 +59,4 @@ export async function testGeminiModels(
     bestModel
   };
 }
+
