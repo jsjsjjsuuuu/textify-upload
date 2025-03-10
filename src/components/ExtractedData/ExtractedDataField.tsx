@@ -1,5 +1,6 @@
 
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 
@@ -9,6 +10,7 @@ interface ExtractedDataFieldProps {
   editMode: boolean;
   placeholder: string;
   onChange?: (value: string) => void;
+  options?: string[]; // Added options array for dropdowns like provinces
 }
 
 const ExtractedDataField = ({ 
@@ -16,7 +18,8 @@ const ExtractedDataField = ({
   value, 
   editMode, 
   placeholder,
-  onChange 
+  onChange,
+  options
 }: ExtractedDataFieldProps) => {
   return (
     <div className="space-y-2">
@@ -38,13 +41,34 @@ const ExtractedDataField = ({
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2 }}
         >
-          <Input 
-            value={value} 
-            onChange={e => onChange?.(e.target.value)} 
-            className="rtl-textarea bg-white dark:bg-gray-900" 
-            dir="rtl" 
-            placeholder={placeholder}
-          />
+          {options ? (
+            // Use Select component for dropdown options
+            <Select
+              value={value}
+              onValueChange={onChange}
+              dir="rtl"
+            >
+              <SelectTrigger className="bg-white dark:bg-gray-900">
+                <SelectValue placeholder={placeholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            // Regular input for other fields
+            <Input 
+              value={value} 
+              onChange={e => onChange?.(e.target.value)} 
+              className="rtl-textarea bg-white dark:bg-gray-900" 
+              dir="rtl" 
+              placeholder={placeholder}
+            />
+          )}
         </motion.div>
       ) : (
         <motion.div 

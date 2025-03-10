@@ -1,7 +1,7 @@
 
 import { ImageData } from "@/types/ImageData";
 import { enhanceWithLearning } from "./learningSystem";
-import { correctProvinceName } from "./provinceCorrection";
+import { correctProvinceName, IRAQ_PROVINCES } from "./provinceCorrection";
 
 /**
  * Attempts to parse structured data from OCR text
@@ -53,6 +53,39 @@ export const parseDataFromOCRText = (text: string) => {
   // تصحيح اسم المحافظة
   if (result.province) {
     result.province = correctProvinceName(result.province);
+  }
+  
+  // إذا لم يتم العثور على المحافظة، ابحث في النص الكامل عن أي محافظة عراقية
+  if (!result.province) {
+    // البحث عن محافظات مباشرة في النص
+    for (const province of IRAQ_PROVINCES) {
+      if (text.includes(province)) {
+        result.province = province;
+        break;
+      }
+    }
+    
+    // إذا لم نجد، ابحث عن أسماء المدن الرئيسية
+    if (!result.province) {
+      const cityProvinceMap: Record<string, string> = {
+        'الموصل': 'نينوى',
+        'الرمادي': 'الأنبار',
+        'بعقوبة': 'ديالى',
+        'السماوة': 'المثنى',
+        'الديوانية': 'القادسية',
+        'العمارة': 'ميسان',
+        'الكوت': 'واسط',
+        'تكريت': 'صلاح الدين',
+        'الحلة': 'بابل'
+      };
+      
+      for (const [city, province] of Object.entries(cityProvinceMap)) {
+        if (text.includes(city)) {
+          result.province = province;
+          break;
+        }
+      }
+    }
   }
   
   // Also try to look for JSON in the text

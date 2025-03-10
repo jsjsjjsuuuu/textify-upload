@@ -4,7 +4,7 @@
  */
 
 import { enhanceExtractedData, calculateConfidenceScore } from "./utils";
-import { correctProvinceName } from "@/utils/provinceCorrection";
+import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinceCorrection";
 
 /**
  * استخراج JSON من نص الاستجابة ومعالجته
@@ -91,6 +91,14 @@ export function parseGeminiResponse(extractedText: string): {
       let province = enhancedData.province || enhancedData["المحافظة"] || enhancedData["محافظة"];
       // تصحيح اسم المحافظة
       mappedData.province = correctProvinceName(province);
+    } else {
+      // البحث في النص كاملاً عن أي اسم محافظة عراقية
+      for (const province of IRAQ_PROVINCES) {
+        if (extractedText.includes(province)) {
+          mappedData.province = province;
+          break;
+        }
+      }
     }
     
     if (enhancedData.price || enhancedData["السعر"] || enhancedData["سعر"]) {
@@ -129,6 +137,37 @@ export function parseGeminiResponse(extractedText: string): {
     // تصحيح اسم المحافظة في النهاية
     if (mappedData.province) {
       mappedData.province = correctProvinceName(mappedData.province);
+    }
+    
+    // البحث عن أسماء المدن الرئيسية العراقية في النص إذا لم نجد المحافظة بعد
+    if (!mappedData.province) {
+      const cityProvinceMap: Record<string, string> = {
+        'بغداد': 'بغداد',
+        'البصرة': 'البصرة',
+        'الموصل': 'نينوى',
+        'أربيل': 'أربيل',
+        'النجف': 'النجف',
+        'الناصرية': 'ذي قار',
+        'كركوك': 'كركوك',
+        'الرمادي': 'الأنبار',
+        'بعقوبة': 'ديالى',
+        'السماوة': 'المثنى',
+        'الديوانية': 'القادسية',
+        'العمارة': 'ميسان',
+        'الكوت': 'واسط',
+        'تكريت': 'صلاح الدين',
+        'الحلة': 'بابل',
+        'كربلاء': 'كربلاء',
+        'دهوك': 'دهوك',
+        'السليمانية': 'السليمانية'
+      };
+      
+      for (const [city, province] of Object.entries(cityProvinceMap)) {
+        if (extractedText.includes(city)) {
+          mappedData.province = province;
+          break;
+        }
+      }
     }
     
     console.log("Final mapped data:", mappedData);

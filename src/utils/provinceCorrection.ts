@@ -28,6 +28,8 @@ const PROVINCE_CORRECTIONS: Record<string, string> = {
   'بقداد': 'بغداد',
   'بعداد': 'بغداد',
   'baghdad': 'بغداد',
+  'بغدا': 'بغداد',
+  'بغداة': 'بغداد',
   
   // البصرة
   'بصره': 'البصرة',
@@ -42,6 +44,7 @@ const PROVINCE_CORRECTIONS: Record<string, string> = {
   'موصل': 'نينوى',
   'nineveh': 'نينوى',
   'mosul': 'نينوى',
+  'نينوه': 'نينوى',
   
   // أربيل
   'اربيل': 'أربيل',
@@ -49,6 +52,7 @@ const PROVINCE_CORRECTIONS: Record<string, string> = {
   'اربل': 'أربيل',
   'erbil': 'أربيل',
   'irbil': 'أربيل',
+  'هولير': 'أربيل',
   
   // النجف
   'نجف': 'النجف',
@@ -60,6 +64,7 @@ const PROVINCE_CORRECTIONS: Record<string, string> = {
   'ذى قار': 'ذي قار',
   'الناصرية': 'ذي قار', // اسم المدينة الرئيسية
   'ناصريه': 'ذي قار',
+  'ناصرية': 'ذي قار',
   'dhi qar': 'ذي قار',
   'thi qar': 'ذي قار',
   
@@ -116,12 +121,14 @@ const PROVINCE_CORRECTIONS: Record<string, string> = {
   'تكريت': 'صلاح الدين', // اسم المدينة الرئيسية
   'salahuddin': 'صلاح الدين',
   'salah al-din': 'صلاح الدين',
+  'صلاة الدين': 'صلاح الدين',
   
   // بابل
   'بابيل': 'بابل',
   'الحلة': 'بابل', // اسم المدينة الرئيسية
   'حلة': 'بابل',
   'babylon': 'بابل',
+  'حله': 'بابل',
   
   // كربلاء
   'كربله': 'كربلاء',
@@ -169,14 +176,30 @@ export function correctProvinceName(provinceName: string): string {
     }
   }
   
-  // البحث عن محافظة تبدأ بنفس الحروف (على الأقل 3 حروف مشتركة)
-  if (normalizedName.length >= 3) {
+  // البحث عن محافظة تبدأ بنفس الحروف (على الأقل 2 حروف مشتركة)
+  if (normalizedName.length >= 2) {
     for (const province of IRAQ_PROVINCES) {
-      if (province.startsWith(normalizedName.substring(0, 3)) || 
-          normalizedName.startsWith(province.substring(0, 3))) {
+      if (province.startsWith(normalizedName.substring(0, 2)) || 
+          normalizedName.startsWith(province.substring(0, 2))) {
         return province;
       }
     }
+  }
+  
+  // استخدام حساب درجة التشابه إذا لم نجد تطابقًا بالطرق السابقة
+  let bestMatch = '';
+  let highestSimilarity = 0;
+  
+  for (const province of IRAQ_PROVINCES) {
+    const similarity = calculateStringSimilarity(normalizedName, province);
+    if (similarity > highestSimilarity && similarity > 0.6) { // الحد الأدنى للتشابه 60%
+      highestSimilarity = similarity;
+      bestMatch = province;
+    }
+  }
+  
+  if (bestMatch) {
+    return bestMatch;
   }
   
   // إذا لم يتم العثور على تطابق، إرجاع الاسم الأصلي

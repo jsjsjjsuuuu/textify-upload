@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { addCorrection } from "@/utils/learningSystem";
-import { correctProvinceName } from "@/utils/provinceCorrection";
+import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinceCorrection";
 
 interface TempData {
   code: string;
@@ -116,7 +116,7 @@ export const useDataExtraction = (
       const newData = { ...prev, [field]: value };
       
       // تصحيح اسم المحافظة إذا تم تغييره
-      if (field === 'province') {
+      if (field === 'province' && value) {
         newData.province = correctProvinceName(value);
       }
       
@@ -184,9 +184,19 @@ export const useDataExtraction = (
       ])
     };
 
-    // تصحيح اسم المحافظة
+    // تصحيح اسم المحافظة - مهم جدًا للتأكد من أنها محافظة عراقية صحيحة
     if (extractedData.province) {
       extractedData.province = correctProvinceName(extractedData.province);
+    }
+
+    // البحث في النص كاملاً عن أي محافظة عراقية إذا لم نجد المحافظة
+    if (!extractedData.province) {
+      for (const province of IRAQ_PROVINCES) {
+        if (image.extractedText.includes(province)) {
+          extractedData.province = province;
+          break;
+        }
+      }
     }
 
     setTempData(prev => ({

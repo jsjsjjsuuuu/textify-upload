@@ -1,5 +1,6 @@
 
 import ExtractedDataField from "./ExtractedDataField";
+import { IRAQ_PROVINCES } from "@/utils/provinceCorrection";
 
 interface ExtractedDataFieldsProps {
   tempData: {
@@ -57,8 +58,9 @@ const ExtractedDataFields = ({
         label="المحافظة"
         value={tempData.province}
         editMode={editMode}
-        placeholder="أدخل المحافظة"
+        placeholder="اختر المحافظة"
         onChange={(value) => onTempChange("province", value)}
+        options={IRAQ_PROVINCES}
       />
 
       <div className="col-span-2">
