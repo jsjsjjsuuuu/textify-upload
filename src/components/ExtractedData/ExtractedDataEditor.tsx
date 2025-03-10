@@ -35,7 +35,8 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
       senderName: image.senderName || "",
       phoneNumber: image.phoneNumber || "",
       province: image.province || "",
-      price: image.price || ""
+      price: image.price || "",
+      companyName: image.companyName || ""
     });
   }, [image.id, setTempData]);
 
