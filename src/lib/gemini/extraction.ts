@@ -4,8 +4,8 @@ import { ApiResult } from "../apiService";
 import { parseGeminiResponse } from "./parsers";
 import { getBasicExtractionPrompt, getEnhancedExtractionPrompt } from "./prompts";
 import { makeGeminiRequest, validateGeminiResponse } from "./apiClient";
-import { handleRateLimiting } from "./networkUtils";
 import { MAX_RETRIES, DEFAULT_TEMPERATURE, DEFAULT_MODEL_VERSION } from "./config";
+import { createGeminiError, handleGeminiError, getRetryConfiguration } from "./errorHandler";
 
 /**
  * Core function to extract data from images using Gemini API
@@ -65,29 +65,23 @@ export async function extractDataWithGemini({
       
       const { response, data } = await makeGeminiRequest(apiKey, requestBody, modelVersion);
       
-      // Handle rate limiting
-      if (response.status === 429) {
-        console.log("Rate limit exceeded, retrying after delay");
-        retryCount = await handleRateLimiting(retryCount);
-        if (retryCount === -1) {
-          return {
-            success: false,
-            message: "تم تجاوز حد معدل الطلبات، يرجى المحاولة مرة أخرى لاحقًا"
-          };
-        }
-        continue;
-      }
-      
-      // Handle server errors
+      // Handle unsuccessful responses
       if (!response.ok) {
         const errorData = await response.json();
         console.error("خطأ في استجابة Gemini API:", errorData);
-        lastError = errorData;
         
-        // Retry for temporary errors
-        if ((response.status >= 500 || response.status === 400) && retryCount < MAX_RETRIES) {
-          retryCount = await handleRateLimiting(retryCount);
-          if (retryCount === -1) break;
+        const geminiError = createGeminiError(response, errorData);
+        const { shouldRetry, newRetryCount, apiResult } = await handleGeminiError(geminiError, retryCount);
+        
+        if (apiResult) return apiResult;
+        
+        if (shouldRetry) {
+          retryCount = newRetryCount;
+          
+          // Update request configuration based on error type
+          const newConfig = getRetryConfiguration(geminiError, retryCount, requestBody.generationConfig);
+          requestBody.generationConfig = newConfig;
+          
           continue;
         }
         
@@ -103,21 +97,26 @@ export async function extractDataWithGemini({
       
       // Check for blocked content
       if (data.promptFeedback?.blockReason) {
+        const geminiError = createGeminiError(response, data);
         return {
           success: false,
-          message: `تم حظر الاستعلام: ${data.promptFeedback.blockReason}`
+          message: `تم حظر الاستعلام: ${data.promptFeedback.blockReason}. ${geminiError.recommendedAction}`
         };
       }
 
       // Validate response content
       if (!validateGeminiResponse(data)) {
-        // Retry if no valid results and under retry limit
-        if (retryCount < MAX_RETRIES) {
-          console.log("Empty or invalid response received, retrying...");
-          retryCount += 1;
+        // Empty response error handling
+        const geminiError = createGeminiError(null, { message: "Empty response" });
+        const { shouldRetry, newRetryCount } = await handleGeminiError(geminiError, retryCount);
+        
+        if (shouldRetry) {
+          retryCount = newRetryCount;
+          
           // Gradually increase temperature with each retry
-          requestBody.generationConfig.temperature = Math.min(0.9, temperature + (retryCount * 0.15));
-          await handleRateLimiting(retryCount - 1);
+          const newConfig = getRetryConfiguration(geminiError, retryCount, requestBody.generationConfig);
+          requestBody.generationConfig = newConfig;
+          
           continue;
         }
         
@@ -146,10 +145,16 @@ export async function extractDataWithGemini({
       } catch (parseError) {
         console.error("خطأ في تحليل البيانات المستخرجة:", parseError);
         
-        // Retry if parsing failed and under retry limit
-        if (retryCount < MAX_RETRIES) {
-          retryCount = await handleRateLimiting(retryCount);
-          if (retryCount === -1) break;
+        // Parsing error handling
+        const geminiError = createGeminiError(null, { 
+          message: "Parsing error", 
+          originalError: parseError 
+        });
+        
+        const { shouldRetry, newRetryCount } = await handleGeminiError(geminiError, retryCount);
+        
+        if (shouldRetry) {
+          retryCount = newRetryCount;
           continue;
         }
         
@@ -167,10 +172,14 @@ export async function extractDataWithGemini({
       console.error("خطأ عند استخدام Gemini API:", error);
       lastError = error;
       
-      // Retry for unexpected errors
-      if (retryCount < MAX_RETRIES) {
-        retryCount = await handleRateLimiting(retryCount);
-        if (retryCount === -1) break;
+      // General error handling
+      const geminiError = createGeminiError(null, error);
+      const { shouldRetry, newRetryCount, apiResult } = await handleGeminiError(geminiError, retryCount);
+      
+      if (apiResult) return apiResult;
+      
+      if (shouldRetry) {
+        retryCount = newRetryCount;
         continue;
       }
       
@@ -184,4 +193,3 @@ export async function extractDataWithGemini({
     message: `فشلت جميع المحاولات (${MAX_RETRIES + 1}): ${lastError?.message || 'خطأ غير معروف'}`
   };
 }
-

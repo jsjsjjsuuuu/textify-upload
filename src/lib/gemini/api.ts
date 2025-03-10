@@ -9,3 +9,13 @@ export { extractDataWithGemini } from './extraction';
 // Export connection testing
 export { testGeminiConnection } from './connectionTest';
 
+// Export error handling utilities
+export { 
+  GeminiErrorType,
+  createGeminiError,
+  handleGeminiError,
+  getRetryConfiguration
+} from './errorHandler';
+
+// Export types
+export type { GeminiError } from './errorHandler';

@@ -2,6 +2,7 @@
 import { ApiResult } from "../apiService";
 import { makeGeminiRequest } from "./apiClient";
 import { DEFAULT_MODEL_VERSION } from "./config";
+import { createGeminiError } from "./errorHandler";
 
 /**
  * Simple function to test Gemini API connection
@@ -34,9 +35,11 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
     if (!response.ok) {
       const errorData = await response.json();
       console.error("خطأ في اختبار اتصال Gemini API:", errorData);
+      
+      const geminiError = createGeminiError(response, errorData);
       return {
         success: false,
-        message: `فشل في الاتصال بـ Gemini API: ${errorData.error?.message || response.statusText}`
+        message: `فشل في الاتصال بـ Gemini API: ${geminiError.message}. ${geminiError.recommendedAction || ''}`
       };
     }
 
@@ -46,10 +49,10 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
     };
   } catch (error) {
     console.error("خطأ عند اختبار اتصال Gemini API:", error);
+    const geminiError = createGeminiError(null, error);
     return {
       success: false,
-      message: `حدث خطأ أثناء اختبار اتصال Gemini API: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`
+      message: `حدث خطأ أثناء اختبار اتصال Gemini API: ${geminiError.message}. ${geminiError.recommendedAction || ''}`
     };
   }
 }
-
