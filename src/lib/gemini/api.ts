@@ -1,11 +1,12 @@
+
 import { GeminiExtractParams, GeminiRequest, GeminiResponse } from "./types";
 import { ApiResult } from "../apiService";
 import { parseGeminiResponse } from "./parsers";
 import { getEnhancedExtractionPrompt, getBasicExtractionPrompt } from "./prompts";
 
 // Rate limiting constants
-const MAX_RETRIES = 5; // Increased from 3 to 5
-const RETRY_DELAY = 1500; // Increased from 1000 to 1500ms
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // ms
 
 /**
  * استخراج البيانات من الصور باستخدام Gemini API
@@ -63,14 +64,20 @@ export async function extractDataWithGemini({
 
   let retryCount = 0;
   let lastError: any = null;
-  let backoffDelay = RETRY_DELAY; // Initial delay
 
   while (retryCount <= MAX_RETRIES) {
     try {
       console.log(`محاولة استدعاء Gemini API (${retryCount + 1}/${MAX_RETRIES + 1})...`);
+      console.log("API Key length:", apiKey.length);
+      console.log("First 5 characters of API Key:", apiKey.substring(0, 5));
+      console.log("Image Base64 length:", imageBase64.length);
+      console.log("Using model version:", modelVersion);
+      console.log("Using temperature:", temperature);
       
       // استخدام إصدار النموذج المحدد
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent`;
+      
+      console.log("Sending request to Gemini API endpoint:", endpoint);
       
       // إضافة timeout للطلب لتجنب التعليق
       const controller = new AbortController();
@@ -94,10 +101,8 @@ export async function extractDataWithGemini({
         console.log("Rate limit exceeded, retrying after delay");
         retryCount++;
         if (retryCount <= MAX_RETRIES) {
-          // Exponential backoff strategy: increase delay with each retry
-          backoffDelay = RETRY_DELAY * Math.pow(2, retryCount - 1);
-          console.log(`Waiting ${backoffDelay}ms before next attempt`);
-          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          // انتظار مع زيادة فترة التأخير تدريجيًا
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * retryCount));
           continue;
         } else {
           return {
@@ -113,10 +118,9 @@ export async function extractDataWithGemini({
         lastError = errorData;
         
         // إعادة المحاولة للأخطاء المؤقتة
-        if ((response.status >= 500 || response.status === 400) && retryCount < MAX_RETRIES) {
+        if (response.status >= 500 && retryCount < MAX_RETRIES) {
           retryCount++;
-          backoffDelay = RETRY_DELAY * Math.pow(1.5, retryCount - 1); 
-          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * retryCount));
           continue;
         }
         
@@ -127,6 +131,7 @@ export async function extractDataWithGemini({
       }
 
       const data: GeminiResponse = await response.json();
+      console.log("Gemini API Response data:", JSON.stringify(data).substring(0, 200) + "...");
       
       if (data.promptFeedback?.blockReason) {
         return {
@@ -139,8 +144,7 @@ export async function extractDataWithGemini({
         // إعادة المحاولة إذا لم تكن هناك نتائج
         if (retryCount < MAX_RETRIES) {
           retryCount++;
-          backoffDelay = RETRY_DELAY * Math.pow(1.5, retryCount - 1);
-          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * retryCount));
           continue;
         }
         
@@ -157,9 +161,8 @@ export async function extractDataWithGemini({
           console.log("Empty response received, retrying...");
           retryCount++;
           // زيادة درجة الحرارة قليلاً مع كل محاولة للحصول على نتائج مختلفة
-          requestBody.generationConfig.temperature = Math.min(0.9, temperature + (retryCount * 0.15));
-          backoffDelay = RETRY_DELAY * Math.pow(1.5, retryCount - 1);
-          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          requestBody.generationConfig.temperature = Math.min(0.9, temperature + (retryCount * 0.1));
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * retryCount));
           continue;
         }
         
@@ -190,8 +193,7 @@ export async function extractDataWithGemini({
         // محاولة أخرى إذا فشل التحليل والعودة إلى النص الخام
         if (retryCount < MAX_RETRIES) {
           retryCount++;
-          backoffDelay = RETRY_DELAY * Math.pow(1.5, retryCount - 1);
-          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * retryCount));
           continue;
         }
         
@@ -211,8 +213,7 @@ export async function extractDataWithGemini({
       // إعادة المحاولة للأخطاء غير المتوقعة
       if (retryCount < MAX_RETRIES) {
         retryCount++;
-        backoffDelay = RETRY_DELAY * Math.pow(2, retryCount - 1);
-        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * retryCount));
         continue;
       }
       
