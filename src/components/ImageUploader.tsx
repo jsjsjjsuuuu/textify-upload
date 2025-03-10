@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from "react";
-import { ImageIcon } from "lucide-react";
+import { UploadIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 
@@ -86,11 +86,11 @@ const ImageUploader = ({
         <div className="flex items-center justify-center w-full h-full">
           {!isProcessing ? (
             <div className="flex items-center justify-center space-x-3 space-x-reverse">
-              <ImageIcon 
+              <p className="text-xs text-muted-foreground">ارفع الصور</p>
+              <UploadIcon 
                 size={18} 
                 className="text-brand-coral hover:text-brand-green dark:text-brand-beige transition-colors duration-300" 
               />
-              <p className="text-xs text-muted-foreground">ارفع الصور</p>
             </div>
           ) : (
             <div className="flex items-center w-full">
