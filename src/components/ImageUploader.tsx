@@ -4,6 +4,7 @@ import { ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { RainbowButton } from "@/components/ui/rainbow-button";
 
 interface ImageUploaderProps {
   isProcessing: boolean;
@@ -56,23 +57,22 @@ const ImageUploader = ({
   };
 
   return (
-    <section className="animate-slide-up flex justify-center" style={{ animationDelay: "0.1s" }}>
+    <section className="animate-slide-up flex justify-center items-center w-full" style={{ animationDelay: "0.1s" }}>
       <div 
         onDrop={handleDrop} 
         onDragOver={handleDragOver} 
         onDragLeave={handleDragLeave} 
         className={`
-          max-w-xl w-full mx-auto
-          bg-gradient-to-r from-brand-beige/10 to-brand-coral/10 dark:from-brand-beige/5 dark:to-brand-coral/5
-          backdrop-blur-sm rounded-2xl 
-          shadow-lg shadow-brand-coral/5 dark:shadow-brand-coral/10
-          border transition-all duration-300 
+          max-w-md w-full mx-auto
+          bg-gradient-to-r from-brand-beige/20 via-brand-coral/10 to-brand-green/10 
+          dark:from-brand-green/5 dark:via-brand-coral/10 dark:to-brand-beige/5
+          backdrop-blur-sm rounded-2xl
+          shadow-lg shadow-brand-coral/10 hover:shadow-xl transition-all duration-300
           ${isDragging 
-            ? 'border-brand-coral scale-[1.01] shadow-xl' 
-            : 'border-brand-coral/30 hover:border-brand-coral/70'
+            ? 'scale-[1.03] border-2 border-brand-coral' 
+            : 'border border-brand-coral/20 hover:border-brand-coral/50'
           }
-          overflow-hidden
-          py-6 px-4
+          p-10 my-8
         `}
       >
         <input 
@@ -86,35 +86,44 @@ const ImageUploader = ({
         />
         
         <div className="flex flex-col items-center justify-center w-full gap-4">
-          <div 
-            className={`
-              w-20 h-20 rounded-full flex items-center justify-center
-              bg-gradient-to-br from-brand-coral/20 to-brand-brown/20
-              dark:from-brand-coral/30 dark:to-brand-brown/30
-              cursor-pointer transform transition-all duration-300
-              ${isDragging ? 'scale-110' : 'hover:scale-105'}
-            `}
-            onClick={handleButtonClick}
-          >
-            <ImageIcon 
-              size={32} 
-              className="text-brand-brown dark:text-brand-beige opacity-80" 
-            />
-          </div>
-          
-          {!isProcessing && (
-            <div className="flex gap-1 items-center justify-center mt-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-brand-coral/50 animate-pulse" style={{ animationDelay: "0s" }}></div>
-              <div className="h-1.5 w-1.5 rounded-full bg-brand-coral/50 animate-pulse" style={{ animationDelay: "0.2s" }}></div>
-              <div className="h-1.5 w-1.5 rounded-full bg-brand-coral/50 animate-pulse" style={{ animationDelay: "0.4s" }}></div>
+          {!isProcessing ? (
+            <div 
+              onClick={handleButtonClick}
+              className={`
+                group
+                w-24 h-24 rounded-full flex items-center justify-center
+                bg-gradient-to-br from-brand-beige/30 via-brand-coral/30 to-brand-green/30
+                dark:from-brand-beige/20 dark:via-brand-coral/20 dark:to-brand-green/20
+                cursor-pointer transform transition-all duration-500
+                hover:shadow-[0_0_25px_rgba(227,95,82,0.5)]
+                ${isDragging ? 'scale-110 pulse-icon' : 'hover:scale-105'}
+              `}
+            >
+              <ImageIcon 
+                size={40} 
+                className="text-brand-coral group-hover:text-brand-green dark:text-brand-beige transition-colors duration-300" 
+              />
+            </div>
+          ) : (
+            <div className="pulse-icon w-24 h-24 rounded-full flex items-center justify-center bg-gradient-to-br from-brand-beige/20 via-brand-coral/30 to-brand-green/20">
+              <div className="h-12 w-12 rounded-full border-4 border-brand-coral/30 border-t-brand-coral animate-spin"></div>
             </div>
           )}
           
           {isProcessing && (
-            <div className="w-full mt-2 px-4">
-              <Progress value={processingProgress} className="h-1.5 bg-brand-brown/20 dark:bg-brand-beige/20" />
-              <p className="text-xs text-muted-foreground mt-1 text-center">جاري معالجة الصور... {processingProgress}%</p>
+            <div className="w-full mt-6 px-2">
+              <Progress value={processingProgress} className="h-2 bg-brand-beige/20" />
+              <p className="text-xs text-muted-foreground mt-2 text-center">جاري معالجة الصور... {processingProgress}%</p>
             </div>
+          )}
+          
+          {!isProcessing && (
+            <RainbowButton 
+              onClick={handleButtonClick}
+              className="mt-6 text-sm px-6 py-2 h-10"
+            >
+              اختر صورة
+            </RainbowButton>
           )}
         </div>
       </div>
