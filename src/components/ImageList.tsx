@@ -4,9 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Trash, Send, ZoomIn } from "lucide-react";
+import { Trash, Send, ZoomIn, ZoomOut, RefreshCw, Maximize2 } from "lucide-react";
 import { IRAQ_PROVINCES } from "@/utils/provinces";
 import { motion } from "framer-motion";
+import { useState } from "react";
 
 interface ImageListProps {
   images: ImageData[];
@@ -70,6 +71,24 @@ const CardItem = ({
 }) => {
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+  
+  // إضافة التحكم في التكبير والتصغير
+  const [zoomLevel, setZoomLevel] = useState(1);
+  
+  const handleZoomIn = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setZoomLevel(prev => Math.min(prev + 0.2, 3));
+  };
+  
+  const handleZoomOut = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+  };
+  
+  const handleResetZoom = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setZoomLevel(1);
+  };
 
   return (
     <motion.div
@@ -80,25 +99,52 @@ const CardItem = ({
       <Card className="overflow-hidden bg-white/95 dark:bg-gray-800/95 shadow-lg hover:shadow-xl transition-shadow border-brand-beige dark:border-gray-700">
         <CardContent className="p-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
-            {/* صورة العنصر (1/3 العرض) */}
+            {/* صورة العنصر (1/3 العرض) - تم تعديلها لعرض أكبر مع التكبير/التصغير */}
             <div className="p-4 bg-secondary/20 relative">
+              <div className="flex justify-end gap-2 mb-2 absolute top-2 left-2 z-10">
+                <Button 
+                  variant="secondary" 
+                  size="icon" 
+                  onClick={handleZoomIn} 
+                  className="h-8 w-8 bg-white/90 hover:bg-white"
+                >
+                  <ZoomIn size={16} />
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="icon" 
+                  onClick={handleZoomOut} 
+                  className="h-8 w-8 bg-white/90 hover:bg-white"
+                >
+                  <ZoomOut size={16} />
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="icon" 
+                  onClick={handleResetZoom} 
+                  className="h-8 w-8 bg-white/90 hover:bg-white"
+                >
+                  <Maximize2 size={16} />
+                </Button>
+              </div>
+              
               <div 
-                className="relative w-full h-[280px] rounded-lg overflow-hidden bg-transparent group cursor-pointer" 
+                className="relative w-full h-[380px] rounded-lg overflow-hidden bg-transparent cursor-pointer flex items-center justify-center" 
                 onClick={() => onImageClick(image)}
               >
                 <img 
                   src={image.previewUrl} 
                   alt="صورة محملة" 
-                  className="w-full h-full object-contain" 
-                  style={{ mixBlendMode: 'multiply' }} 
+                  className="w-full h-full object-contain transition-transform duration-200" 
+                  style={{ 
+                    mixBlendMode: 'multiply',
+                    transform: `scale(${zoomLevel})`,
+                    maxHeight: '100%',
+                    maxWidth: '100%'
+                  }} 
                 />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <div className="bg-white/90 p-1 rounded-full">
-                    <ZoomIn size={20} className="text-brand-brown" />
-                  </div>
-                </div>
                 
-                <div className="absolute top-1 left-1 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
+                <div className="absolute top-1 right-1 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
                   صورة {image.number}
                 </div>
                 
@@ -109,13 +155,13 @@ const CardItem = ({
                 )}
                 
                 {image.status === "completed" && (
-                  <div className="absolute top-1 right-1 bg-green-500 text-white p-1 rounded-full">
+                  <div className="absolute top-1 left-1 bg-green-500 text-white p-1 rounded-full">
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   </div>
                 )}
                 
                 {image.status === "error" && (
-                  <div className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full">
+                  <div className="absolute top-1 left-1 bg-destructive text-white p-1 rounded-full">
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </div>
                 )}

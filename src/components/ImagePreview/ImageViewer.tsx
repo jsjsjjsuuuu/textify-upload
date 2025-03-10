@@ -65,7 +65,7 @@ const ImageViewer = ({
     <div className="col-span-1 bg-muted/30 rounded-lg p-4 flex flex-col items-center justify-center relative">
       <div 
         ref={imageContainerRef}
-        className="overflow-hidden relative h-[400px] w-full flex items-center justify-center bg-white/50 rounded-md"
+        className="overflow-hidden relative h-[500px] w-full flex items-center justify-center bg-white/50 rounded-md"
       >
         {selectedImage.previewUrl && !imgError && (
           <div className="relative w-full h-full flex items-center justify-center">
