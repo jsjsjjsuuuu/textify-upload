@@ -1,10 +1,9 @@
 
 import { useState, useCallback } from "react";
-import { Upload, Search, Image as ImageIcon } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
 
 interface ImageUploaderProps {
   isProcessing: boolean;
@@ -57,22 +56,23 @@ const ImageUploader = ({
   };
 
   return (
-    <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+    <section className="animate-slide-up flex justify-center" style={{ animationDelay: "0.1s" }}>
       <div 
         onDrop={handleDrop} 
         onDragOver={handleDragOver} 
         onDragLeave={handleDragLeave} 
         className={`
-          bg-gradient-to-r from-brand-beige/5 to-brand-brown/5 dark:from-brand-beige/10 dark:to-brand-brown/10
+          max-w-xl w-full mx-auto
+          bg-gradient-to-r from-brand-beige/10 to-brand-coral/10 dark:from-brand-beige/5 dark:to-brand-coral/5
           backdrop-blur-sm rounded-2xl 
-          shadow-lg dark:shadow-brand-brown/10
-          border-2 transition-all duration-300 
+          shadow-lg shadow-brand-coral/5 dark:shadow-brand-coral/10
+          border transition-all duration-300 
           ${isDragging 
-            ? 'border-brand-brown dark:border-brand-beige scale-[1.01] shadow-xl' 
-            : 'border-brand-brown/30 dark:border-brand-beige/30 hover:border-brand-brown/50 dark:hover:border-brand-beige/50'
+            ? 'border-brand-coral scale-[1.01] shadow-xl' 
+            : 'border-brand-coral/30 hover:border-brand-coral/70'
           }
           overflow-hidden
-          py-2 px-4 mx-4 sm:mx-6 md:mx-8 lg:mx-12
+          py-6 px-4
         `}
       >
         <input 
@@ -85,43 +85,38 @@ const ImageUploader = ({
           disabled={isProcessing} 
         />
         
-        <div className="flex items-center w-full">
-          <div className="flex-shrink-0 p-2">
-            <Search className="h-6 w-6 text-brand-brown dark:text-brand-beige opacity-70" />
-          </div>
-          
-          <div className="flex-grow mx-2 text-right cursor-pointer" onClick={handleButtonClick}>
-            <p className="text-brand-brown dark:text-brand-beige opacity-70 text-sm sm:text-base">
-              {isProcessing ? "جاري معالجة الصور..." : "اضغط هنا لاختيار الصور أو اسحبها وأفلتها"}
-            </p>
-          </div>
-          
-          <Button 
-            className="flex-shrink-0 bg-brand-brown/90 hover:bg-brand-brown dark:bg-brand-beige dark:text-brand-brown dark:hover:bg-brand-beige/90 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 min-w-24"
-            disabled={isProcessing}
+        <div className="flex flex-col items-center justify-center w-full gap-4">
+          <div 
+            className={`
+              w-20 h-20 rounded-full flex items-center justify-center
+              bg-gradient-to-br from-brand-coral/20 to-brand-brown/20
+              dark:from-brand-coral/30 dark:to-brand-brown/30
+              cursor-pointer transform transition-all duration-300
+              ${isDragging ? 'scale-110' : 'hover:scale-105'}
+            `}
             onClick={handleButtonClick}
           >
-            <ImageIcon size={16} className="ml-2" />
-            رفع الصور
-          </Button>
-        </div>
-        
-        {!isProcessing && (
-          <div className="mt-2 flex items-center justify-center">
-            <div className="flex gap-1 items-center justify-center">
-              <div className="h-1.5 w-1.5 rounded-full bg-brand-brown/50 dark:bg-brand-beige/50 animate-pulse" style={{ animationDelay: "0s" }}></div>
-              <div className="h-1.5 w-1.5 rounded-full bg-brand-brown/50 dark:bg-brand-beige/50 animate-pulse" style={{ animationDelay: "0.2s" }}></div>
-              <div className="h-1.5 w-1.5 rounded-full bg-brand-brown/50 dark:bg-brand-beige/50 animate-pulse" style={{ animationDelay: "0.4s" }}></div>
+            <ImageIcon 
+              size={32} 
+              className="text-brand-brown dark:text-brand-beige opacity-80" 
+            />
+          </div>
+          
+          {!isProcessing && (
+            <div className="flex gap-1 items-center justify-center mt-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-brand-coral/50 animate-pulse" style={{ animationDelay: "0s" }}></div>
+              <div className="h-1.5 w-1.5 rounded-full bg-brand-coral/50 animate-pulse" style={{ animationDelay: "0.2s" }}></div>
+              <div className="h-1.5 w-1.5 rounded-full bg-brand-coral/50 animate-pulse" style={{ animationDelay: "0.4s" }}></div>
             </div>
-          </div>
-        )}
-        
-        {isProcessing && (
-          <div className="mt-2">
-            <Progress value={processingProgress} className="h-1.5 bg-brand-brown/20 dark:bg-brand-beige/20" />
-            <p className="text-xs text-muted-foreground mt-1 text-center">جاري معالجة الصور... {processingProgress}%</p>
-          </div>
-        )}
+          )}
+          
+          {isProcessing && (
+            <div className="w-full mt-2 px-4">
+              <Progress value={processingProgress} className="h-1.5 bg-brand-brown/20 dark:bg-brand-beige/20" />
+              <p className="text-xs text-muted-foreground mt-1 text-center">جاري معالجة الصور... {processingProgress}%</p>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

@@ -24,11 +24,11 @@ const Index = () => {
     <div className="relative min-h-screen pb-20">
       <BackgroundPattern />
 
-      <div className="container px-4 sm:px-6 py-4 sm:py-8 mx-auto max-w-6xl">
+      <div className="container px-4 sm:px-6 py-4 sm:py-6 mx-auto max-w-6xl">
         <AppHeader />
 
-        <div className="grid grid-cols-1 gap-6 sm:gap-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="flex flex-col items-center justify-center gap-8 pt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
             <div className="lg:col-span-2">
               <ImageUploader 
                 isProcessing={isProcessing}

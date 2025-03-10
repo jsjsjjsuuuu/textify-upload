@@ -154,6 +154,26 @@
     animation-timing-function: linear;
   }
 
+  /* Animation for the uploader icon */
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(227, 95, 82, 0.2);
+    }
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 10px rgba(227, 95, 82, 0);
+    }
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(227, 95, 82, 0);
+    }
+  }
+
+  .pulse-icon {
+    animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+  }
+
   /* Dark mode specific styles */
   .dark .image-preview-card {
     @apply bg-card border border-border;
@@ -161,5 +181,14 @@
   
   .dark .upload-zone:hover, .dark .upload-zone.active {
     @apply border-brand-coral/50 bg-brand-coral/10;
+  }
+
+  /* Modern card styles */
+  .modern-card {
+    @apply rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-white to-brand-beige/10 backdrop-blur-sm border border-brand-beige/20 transition-all duration-300 hover:shadow-xl;
+  }
+
+  .dark .modern-card {
+    @apply bg-gradient-to-br from-card to-brand-brown/10 border-brand-brown/20;
   }
 }
