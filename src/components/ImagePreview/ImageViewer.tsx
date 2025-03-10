@@ -27,12 +27,17 @@ const ImageViewer = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   
   // Reset image loaded state when selected image changes
   useEffect(() => {
     setImageLoaded(false);
     setImgError(false);
+    setPosition({ x: 0, y: 0 }); // Reset position when image changes
     
     // Validate blob URL
     if (selectedImage?.previewUrl) {
@@ -44,6 +49,13 @@ const ImageViewer = ({
       });
     }
   }, [selectedImage.id, selectedImage.previewUrl]);
+  
+  useEffect(() => {
+    // Reset position when zoom level changes
+    if (zoomLevel === 1) {
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [zoomLevel]);
   
   // Get safe image URL or fallback
   const getImageUrl = () => {
@@ -60,12 +72,58 @@ const ImageViewer = ({
     if (confidence >= 50) return "bg-amber-500";
     return "bg-red-500";
   };
+  
+  // Mouse drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoomLevel > 1) {
+      setIsDragging(true);
+      setStartPos({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y
+      });
+    }
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && zoomLevel > 1) {
+      const newX = e.clientX - startPos.x;
+      const newY = e.clientY - startPos.y;
+      
+      // Calculate bounds to prevent dragging image completely out of view
+      const containerWidth = imageContainerRef.current?.clientWidth || 0;
+      const containerHeight = imageContainerRef.current?.clientHeight || 0;
+      const imageWidth = (imageRef.current?.naturalWidth || 0) * zoomLevel;
+      const imageHeight = (imageRef.current?.naturalHeight || 0) * zoomLevel;
+      
+      const maxX = Math.max(0, (imageWidth - containerWidth) / 2);
+      const maxY = Math.max(0, (imageHeight - containerHeight) / 2);
+      
+      // Bound the position
+      const boundedX = Math.min(Math.max(newX, -maxX), maxX);
+      const boundedY = Math.min(Math.max(newY, -maxY), maxY);
+      
+      setPosition({ x: boundedX, y: boundedY });
+    }
+  };
+  
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+  
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
 
   return (
     <div className="col-span-1 bg-muted/30 rounded-lg p-4 flex flex-col items-center justify-center relative">
       <div 
         ref={imageContainerRef}
         className="overflow-hidden relative h-[500px] w-full flex items-center justify-center bg-white/50 rounded-md"
+        style={{ cursor: zoomLevel > 1 ? "move" : "default" }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
       >
         {selectedImage.previewUrl && !imgError && (
           <div className="relative w-full h-full flex items-center justify-center">
@@ -76,15 +134,18 @@ const ImageViewer = ({
             )}
             
             <img 
+              ref={imageRef}
               src={getImageUrl() || ''}
               alt="معاينة موسعة" 
               className="transition-all duration-200"
               style={{ 
-                transform: `scale(${zoomLevel})`,
+                transform: `scale(${zoomLevel}) translate(${position.x / zoomLevel}px, ${position.y / zoomLevel}px)`,
                 opacity: imageLoaded ? 1 : 0,
                 maxHeight: '100%',
                 maxWidth: '100%',
                 objectFit: 'contain',
+                transformOrigin: 'center',
+                pointerEvents: 'none', // Prevents image from capturing mouse events
               }}
               onLoad={() => {
                 console.log("Image loaded successfully:", selectedImage.id);

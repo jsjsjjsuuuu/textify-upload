@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Trash, Send, ZoomIn, ZoomOut, RefreshCw, Maximize2 } from "lucide-react";
 import { IRAQ_PROVINCES } from "@/utils/provinces";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 interface ImageListProps {
   images: ImageData[];
@@ -74,6 +74,11 @@ const CardItem = ({
   
   // إضافة التحكم في التكبير والتصغير
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -88,6 +93,58 @@ const CardItem = ({
   const handleResetZoom = (e: React.MouseEvent) => {
     e.stopPropagation();
     setZoomLevel(1);
+    setPosition({ x: 0, y: 0 });
+  };
+  
+  // Mouse drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (zoomLevel > 1) {
+      setIsDragging(true);
+      setStartPos({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y
+      });
+    }
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isDragging && zoomLevel > 1) {
+      const newX = e.clientX - startPos.x;
+      const newY = e.clientY - startPos.y;
+      
+      // Calculate bounds to prevent dragging image completely out of view
+      const containerWidth = imageContainerRef.current?.clientWidth || 0;
+      const containerHeight = imageContainerRef.current?.clientHeight || 0;
+      const imageWidth = (imageRef.current?.naturalWidth || 0) * zoomLevel;
+      const imageHeight = (imageRef.current?.naturalHeight || 0) * zoomLevel;
+      
+      const maxX = Math.max(0, (imageWidth - containerWidth) / 2);
+      const maxY = Math.max(0, (imageHeight - containerHeight) / 2);
+      
+      // Bound the position
+      const boundedX = Math.min(Math.max(newX, -maxX), maxX);
+      const boundedY = Math.min(Math.max(newY, -maxY), maxY);
+      
+      setPosition({ x: boundedX, y: boundedY });
+    }
+  };
+  
+  const handleMouseUp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+  
+  const handleImageClick = () => {
+    // Only trigger image click if not dragging
+    if (!isDragging) {
+      onImageClick(image);
+    }
   };
 
   return (
@@ -129,18 +186,27 @@ const CardItem = ({
               </div>
               
               <div 
+                ref={imageContainerRef}
                 className="relative w-full h-[380px] rounded-lg overflow-hidden bg-transparent cursor-pointer flex items-center justify-center" 
-                onClick={() => onImageClick(image)}
+                onClick={handleImageClick}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
+                style={{ cursor: zoomLevel > 1 ? 'move' : 'pointer' }}
               >
                 <img 
+                  ref={imageRef}
                   src={image.previewUrl} 
                   alt="صورة محملة" 
                   className="w-full h-full object-contain transition-transform duration-200" 
                   style={{ 
                     mixBlendMode: 'multiply',
-                    transform: `scale(${zoomLevel})`,
+                    transform: `scale(${zoomLevel}) translate(${position.x / zoomLevel}px, ${position.y / zoomLevel}px)`,
                     maxHeight: '100%',
-                    maxWidth: '100%'
+                    maxWidth: '100%',
+                    transformOrigin: 'center',
+                    pointerEvents: 'none', // Prevents image from capturing mouse events
                   }} 
                 />
                 
