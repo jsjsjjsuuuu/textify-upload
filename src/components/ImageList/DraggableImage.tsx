@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import ZoomControls from "./ZoomControls";
@@ -9,6 +10,7 @@ interface DraggableImageProps {
 }
 
 const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps) => {
+  // State for zoom and dragging
   const [zoomLevel, setZoomLevel] = useState(1.5); // تكبير تلقائي بنسبة 50%
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -22,6 +24,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
     setPosition({ x: 0, y: 0 });
   }, []);
   
+  // Zoom control handlers
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
     setZoomLevel(prev => Math.min(prev + 0.2, 3));
@@ -38,7 +41,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
     setPosition({ x: 0, y: 0 });
   };
   
-  // Mouse drag handlers - improved for performance
+  // Mouse drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsDragging(true);

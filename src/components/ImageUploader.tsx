@@ -20,6 +20,7 @@ const ImageUploader = ({
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
 
+  // Handle drag events
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -35,11 +36,13 @@ const ImageUploader = ({
     setIsDragging(false);
   }, []);
 
+  // Handle file input changes
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log("File input change detected", e.target.files);
     onFileChange(e.target.files);
   };
 
+  // Handle container click to trigger file input
   const handleContainerClick = () => {
     const fileInput = document.getElementById("image-upload") as HTMLInputElement;
     if (fileInput) {
