@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from "react";
-import { Upload, Brain } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -59,12 +59,7 @@ const ImageUploader = ({
     <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
         <div className="flex items-center">
-          {useGemini && (
-            <div className="flex items-center bg-brand-brown/10 dark:bg-brand-brown/30 text-brand-brown dark:text-brand-beige px-3 py-1 rounded-full text-sm ml-2">
-              <Brain size={16} className="mr-1" />
-              تمكين Gemini AI
-            </div>
-          )}
+          {/* Gemini AI badge removed as requested */}
         </div>
       </div>
       
