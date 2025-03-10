@@ -22,25 +22,25 @@ const ActionButtons = ({
   onSubmit 
 }: ActionButtonsProps) => {
   return (
-    <div className="flex justify-end gap-2 mt-6">
+    <div className="flex justify-end gap-2 mt-3">
       <Button 
         variant="ghost" 
         size="sm" 
         onClick={() => onDelete(imageId)} 
-        className="text-destructive hover:bg-destructive/10"
+        className="text-destructive hover:bg-destructive/10 h-8 text-xs"
       >
-        <Trash size={16} className="ml-1" />
+        <Trash size={14} className="ml-1" />
         حذف
       </Button>
       
       <Button 
         variant="default" 
         size="sm" 
-        className="bg-brand-green hover:bg-brand-green/90" 
+        className="bg-brand-green hover:bg-brand-green/90 h-8 text-xs" 
         disabled={!isCompleted || isSubmitting || isSubmitted || !isPhoneNumberValid} 
         onClick={() => onSubmit(imageId)}
       >
-        <Send size={16} className="ml-1" />
+        <Send size={14} className="ml-1" />
         {isSubmitting ? "جاري الإرسال..." : "إرسال البيانات"}
       </Button>
     </div>

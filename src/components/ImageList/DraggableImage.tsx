@@ -94,7 +94,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
   };
 
   return (
-    <div className="p-4 bg-transparent relative">
+    <div className="p-3 bg-transparent relative">
       <ZoomControls 
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
@@ -103,7 +103,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
       
       <div 
         ref={imageContainerRef}
-        className="relative w-full h-[450px] overflow-hidden bg-transparent cursor-move flex items-center justify-center" 
+        className="relative w-full h-[420px] overflow-hidden bg-transparent cursor-move flex items-center justify-center" 
         onClick={handleImageClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -162,13 +162,13 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
         )}
       </div>
       
-      <div className="text-xs text-muted-foreground mt-2 text-center">
+      <div className="text-xs text-muted-foreground mt-1 text-center">
         {formatDate(image.date)}
       </div>
       
       {image.confidence !== undefined && (
-        <div className="mt-2 text-center">
-          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+        <div className="mt-1 text-center">
+          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
             دقة الاستخراج: {Math.round(image.confidence)}%
           </span>
         </div>

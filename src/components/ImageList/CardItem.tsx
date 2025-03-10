@@ -33,8 +33,9 @@ const CardItem = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      className="max-w-5xl mx-auto"
     >
-      <Card className="overflow-hidden bg-white/95 dark:bg-gray-800/95 shadow-lg hover:shadow-xl transition-shadow border-brand-beige dark:border-gray-700">
+      <Card className="overflow-hidden bg-white/95 dark:bg-gray-800/95 shadow-md hover:shadow-lg transition-shadow border-brand-beige dark:border-gray-700">
         <CardContent className="p-0">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-0">
             {/* صورة العنصر (55% العرض) */}
@@ -55,7 +56,7 @@ const CardItem = ({
             </div>
           </div>
           
-          <div className="px-6 pb-6">
+          <div className="px-4 pb-4">
             <ActionButtons 
               imageId={image.id}
               isSubmitting={isSubmitting}
