@@ -36,19 +36,23 @@ const CardItem = ({
     >
       <Card className="overflow-hidden bg-white/95 dark:bg-gray-800/95 shadow-lg hover:shadow-xl transition-shadow border-brand-beige dark:border-gray-700">
         <CardContent className="p-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
-            {/* صورة العنصر (1/3 العرض) */}
-            <DraggableImage 
-              image={image} 
-              onImageClick={onImageClick} 
-              formatDate={formatDate} 
-            />
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-0">
+            {/* صورة العنصر (55% العرض) */}
+            <div className="md:col-span-7">
+              <DraggableImage 
+                image={image} 
+                onImageClick={onImageClick} 
+                formatDate={formatDate} 
+              />
+            </div>
             
-            {/* بيانات العنصر (2/3 العرض) */}
-            <ImageDataForm 
-              image={image} 
-              onTextChange={onTextChange} 
-            />
+            {/* بيانات العنصر (45% العرض) */}
+            <div className="md:col-span-5">
+              <ImageDataForm 
+                image={image} 
+                onTextChange={onTextChange} 
+              />
+            </div>
           </div>
           
           <div className="px-6 pb-6">

@@ -46,17 +46,19 @@ const ImagePreviewDialog = ({
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", duration: 0.4 }}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ImageViewer 
-            selectedImage={selectedImage}
-            zoomLevel={zoomLevel}
-            onZoomIn={onZoomIn}
-            onZoomOut={onZoomOut}
-            onResetZoom={onResetZoom}
-            formatDate={formatDate}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div className="md:col-span-7">
+            <ImageViewer 
+              selectedImage={selectedImage}
+              zoomLevel={zoomLevel}
+              onZoomIn={onZoomIn}
+              onZoomOut={onZoomOut}
+              onResetZoom={onResetZoom}
+              formatDate={formatDate}
+            />
+          </div>
           
-          <div className="col-span-1">
+          <div className="md:col-span-5">
             <ExtractedDataEditor 
               image={selectedImage}
               onTextChange={onTextChange}
