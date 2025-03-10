@@ -1,9 +1,10 @@
 
 import { useState, useCallback } from "react";
-import { Upload } from "lucide-react";
+import { Upload, Search, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 
 interface ImageUploaderProps {
   isProcessing: boolean;
@@ -57,19 +58,22 @@ const ImageUploader = ({
 
   return (
     <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-        <div className="flex items-center">
-          {/* Gemini AI badge removed as requested */}
-        </div>
-      </div>
-      
       <div 
         onDrop={handleDrop} 
         onDragOver={handleDragOver} 
         onDragLeave={handleDragLeave} 
-        className={`bg-transparent my-0 mx-0 sm:mx-[40px] md:mx-[60px] lg:mx-[79px] px-4 sm:px-[17px] py-6 rounded-3xl border-2 border-dashed ${
-          isDragging ? 'border-brand-brown dark:border-brand-beige' : 'border-brand-brown/30 dark:border-brand-beige/30 hover:border-brand-brown/50 dark:hover:border-brand-beige/50'
-        } transition-colors`}
+        className={`
+          bg-gradient-to-r from-brand-beige/5 to-brand-brown/5 dark:from-brand-beige/10 dark:to-brand-brown/10
+          backdrop-blur-sm rounded-2xl 
+          shadow-lg dark:shadow-brand-brown/10
+          border-2 transition-all duration-300 
+          ${isDragging 
+            ? 'border-brand-brown dark:border-brand-beige scale-[1.01] shadow-xl' 
+            : 'border-brand-brown/30 dark:border-brand-beige/30 hover:border-brand-brown/50 dark:hover:border-brand-beige/50'
+          }
+          overflow-hidden
+          py-2 px-4 mx-4 sm:mx-6 md:mx-8 lg:mx-12
+        `}
       >
         <input 
           type="file" 
@@ -80,26 +84,45 @@ const ImageUploader = ({
           onChange={handleFileInputChange} 
           disabled={isProcessing} 
         />
-        <div className="cursor-pointer flex flex-col items-center justify-center h-full py-6 sm:py-8">
-          <Upload size={28} className="text-brand-brown/70 dark:text-brand-beige/70 mb-2 sm:mb-4 sm:text-[36px]" />
-          <p className="text-brand-brown dark:text-brand-beige font-medium mb-2 sm:mb-4">اسحب وأفلت الصور هنا</p>
+        
+        <div className="flex items-center w-full">
+          <div className="flex-shrink-0 p-2">
+            <Search className="h-6 w-6 text-brand-brown dark:text-brand-beige opacity-70" />
+          </div>
+          
+          <div className="flex-grow mx-2 text-right cursor-pointer" onClick={handleButtonClick}>
+            <p className="text-brand-brown dark:text-brand-beige opacity-70 text-sm sm:text-base">
+              {isProcessing ? "جاري معالجة الصور..." : "اضغط هنا لاختيار الصور أو اسحبها وأفلتها"}
+            </p>
+          </div>
+          
           <Button 
-            className="bg-brand-brown hover:bg-brand-brown/90 dark:bg-brand-beige dark:text-brand-brown dark:hover:bg-brand-beige/90" 
+            className="flex-shrink-0 bg-brand-brown/90 hover:bg-brand-brown dark:bg-brand-beige dark:text-brand-brown dark:hover:bg-brand-beige/90 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 min-w-24"
             disabled={isProcessing}
             onClick={handleButtonClick}
           >
-            <Upload size={16} className="mr-2" />
+            <ImageIcon size={16} className="ml-2" />
             رفع الصور
           </Button>
         </div>
+        
+        {!isProcessing && (
+          <div className="mt-2 flex items-center justify-center">
+            <div className="flex gap-1 items-center justify-center">
+              <div className="h-1.5 w-1.5 rounded-full bg-brand-brown/50 dark:bg-brand-beige/50 animate-pulse" style={{ animationDelay: "0s" }}></div>
+              <div className="h-1.5 w-1.5 rounded-full bg-brand-brown/50 dark:bg-brand-beige/50 animate-pulse" style={{ animationDelay: "0.2s" }}></div>
+              <div className="h-1.5 w-1.5 rounded-full bg-brand-brown/50 dark:bg-brand-beige/50 animate-pulse" style={{ animationDelay: "0.4s" }}></div>
+            </div>
+          </div>
+        )}
+        
+        {isProcessing && (
+          <div className="mt-2">
+            <Progress value={processingProgress} className="h-1.5 bg-brand-brown/20 dark:bg-brand-beige/20" />
+            <p className="text-xs text-muted-foreground mt-1 text-center">جاري معالجة الصور... {processingProgress}%</p>
+          </div>
+        )}
       </div>
-      
-      {isProcessing && (
-        <div className="mt-4">
-          <p className="text-sm text-muted-foreground mb-2">جاري معالجة الصور...</p>
-          <Progress value={processingProgress} className="h-2" />
-        </div>
-      )}
     </section>
   );
 };
