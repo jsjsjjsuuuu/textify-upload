@@ -1,5 +1,5 @@
 
-import { correctProvinceName } from "./provinceCorrection";
+import { correctProvinceName } from "./provinces";
 
 /**
  * Attempts to extract a field from text based on various patterns

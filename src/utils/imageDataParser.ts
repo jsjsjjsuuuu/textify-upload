@@ -1,7 +1,7 @@
 
 import { ImageData } from "@/types/ImageData";
 import { enhanceWithLearning } from "./learningSystem";
-import { correctProvinceName, IRAQ_PROVINCES } from "./provinceCorrection";
+import { correctProvinceName, IRAQ_PROVINCES, CITY_PROVINCE_MAP } from "./provinces";
 
 /**
  * Attempts to parse structured data from OCR text
@@ -67,19 +67,7 @@ export const parseDataFromOCRText = (text: string) => {
     
     // إذا لم نجد، ابحث عن أسماء المدن الرئيسية
     if (!result.province) {
-      const cityProvinceMap: Record<string, string> = {
-        'الموصل': 'نينوى',
-        'الرمادي': 'الأنبار',
-        'بعقوبة': 'ديالى',
-        'السماوة': 'المثنى',
-        'الديوانية': 'القادسية',
-        'العمارة': 'ميسان',
-        'الكوت': 'واسط',
-        'تكريت': 'صلاح الدين',
-        'الحلة': 'بابل'
-      };
-      
-      for (const [city, province] of Object.entries(cityProvinceMap)) {
+      for (const [city, province] of Object.entries(CITY_PROVINCE_MAP)) {
         if (text.includes(city)) {
           result.province = province;
           break;

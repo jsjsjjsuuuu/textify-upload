@@ -1,6 +1,6 @@
 
 import ExtractedDataField from "./ExtractedDataField";
-import { IRAQ_PROVINCES } from "@/utils/provinceCorrection";
+import { IRAQ_PROVINCES } from "@/utils/provinces";
 
 interface ExtractedDataFieldsProps {
   tempData: {

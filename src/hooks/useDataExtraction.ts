@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
-import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinceCorrection";
+import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinces";
 import { handleCorrections, generateCopyText } from "@/utils/correctionHandlers";
 import { autoExtractData } from "@/utils/extractionUtils";
 
@@ -35,7 +34,6 @@ export const useDataExtraction = (
 
   const handleEditToggle = () => {
     if (editMode) {
-      // حفظ التغييرات وإضافتها إلى نظام التعلم إذا تم تغيير البيانات
       const originalData: Record<string, string> = {
         code: image.code || "",
         senderName: image.senderName || "",
@@ -45,12 +43,10 @@ export const useDataExtraction = (
         companyName: image.companyName || ""
       };
       
-      // حفظ التغييرات
       Object.entries(tempData).forEach(([field, value]) => {
         onTextChange(image.id, field, value);
       });
       
-      // إضافة التصحيحات إلى نظام التعلم إذا كانت هناك تغييرات
       setIsLearningActive(true);
       handleCorrections(image.extractedText, originalData, tempData)
         .then(() => {
@@ -58,7 +54,6 @@ export const useDataExtraction = (
           setIsLearningActive(false);
         });
     } else {
-      // الدخول إلى وضع التحرير
       setTempData({
         code: image.code || "",
         senderName: image.senderName || "",
@@ -94,7 +89,6 @@ export const useDataExtraction = (
     setTempData(prev => {
       const newData = { ...prev, [field]: value };
       
-      // تصحيح اسم المحافظة إذا تم تغييره
       if (field === 'province' && value) {
         newData.province = correctProvinceName(value);
       }
@@ -108,9 +102,7 @@ export const useDataExtraction = (
     
     const extractedData = autoExtractData(image.extractedText);
 
-    // البحث في النص كاملاً عن أي محافظة عراقية إذا لم نجد المحافظة
     if (!extractedData.province) {
-      // البحث عن محافظات مباشرة في النص
       for (const province of IRAQ_PROVINCES) {
         if (image.extractedText.includes(province)) {
           extractedData.province = province;
@@ -118,25 +110,22 @@ export const useDataExtraction = (
         }
       }
       
-      // إذا لم نجد، ابحث عن أسماء المدن الرئيسية
-      if (!extractedData.province) {
-        const cityProvinceMap: Record<string, string> = {
-          'الموصل': 'نينوى',
-          'الرمادي': 'الأنبار',
-          'بعقوبة': 'ديالى',
-          'السماوة': 'المثنى',
-          'الديوانية': 'القادسية',
-          'العمارة': 'ميسان',
-          'الكوت': 'واسط',
-          'تكريت': 'صلاح الدين',
-          'الحلة': 'بابل'
-        };
-        
-        for (const [city, province] of Object.entries(cityProvinceMap)) {
-          if (image.extractedText.includes(city)) {
-            extractedData.province = province;
-            break;
-          }
+      const cityProvinceMap: Record<string, string> = {
+        'الموصل': 'نينوى',
+        'الرمادي': 'الأنبار',
+        'بعقوبة': 'ديالى',
+        'السماوة': 'المثنى',
+        'الديوانية': 'القادسية',
+        'العمارة': 'ميسان',
+        'الكوت': 'واسط',
+        'تكريت': 'صلاح الدين',
+        'الحلة': 'بابل'
+      };
+      
+      for (const [city, province] of Object.entries(cityProvinceMap)) {
+        if (image.extractedText.includes(city)) {
+          extractedData.province = province;
+          break;
         }
       }
     }
