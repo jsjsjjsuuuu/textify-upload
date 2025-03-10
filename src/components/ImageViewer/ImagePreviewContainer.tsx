@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from "react";
-import { Dialog } from "@/components/ui/dialog";
 import { ImageData } from "@/types/ImageData";
-import { ImagePreviewDialog } from "@/components/ImagePreview";
 import { isValidBlobUrl } from "@/lib/gemini/utils";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
+import { ExtractedDataEditor } from "@/components/ExtractedData";
+import { ImageViewer, ImageActions } from "@/components/ImagePreview";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -24,30 +26,7 @@ const ImagePreviewContainer = ({
 }: ImagePreviewContainerProps) => {
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (selectedImage) {
-      setDialogOpen(true);
-      
-      if (selectedImage.previewUrl) {
-        isValidBlobUrl(selectedImage.previewUrl).then(isValid => {
-          if (!isValid) {
-            console.warn("Selected image has an invalid blob URL:", selectedImage.id);
-          }
-        });
-      }
-    }
-  }, [selectedImage]);
-
-  const handleOpenChange = (open: boolean) => {
-    setDialogOpen(open);
-    if (!open) {
-      setSelectedImage(null);
-      setZoomLevel(1);
-    }
-  };
 
   const handleImageClick = async (image: ImageData) => {
     console.log("Image clicked:", image.id, image.previewUrl);
@@ -61,10 +40,12 @@ const ImagePreviewContainer = ({
           description: "تعذر فتح الصورة. يرجى إعادة تحميلها.",
           variant: "destructive"
         });
+        return;
       }
     }
     
-    setSelectedImage(image);
+    // Toggle image selection
+    setSelectedImage(prev => prev?.id === image.id ? null : image);
     setZoomLevel(1);
   };
 
@@ -83,7 +64,6 @@ const ImagePreviewContainer = ({
   const handleDeleteWithState = (id: string) => {
     if (selectedImage && selectedImage.id === id) {
       setSelectedImage(null);
-      setDialogOpen(false);
     }
     onDelete(id);
   };
@@ -113,6 +93,53 @@ const ImagePreviewContainer = ({
   return (
     <>
       <div className="grid grid-cols-1 gap-8">
+        {/* Render expanded image preview if an image is selected */}
+        {selectedImage && (
+          <motion.div 
+            className="bg-white/95 dark:bg-gray-800/90 rounded-lg border p-4 shadow-lg relative animate-slide-up"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", duration: 0.4 }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ImageViewer 
+                selectedImage={selectedImage}
+                zoomLevel={zoomLevel}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onResetZoom={handleResetZoom}
+                formatDate={formatDate}
+              />
+              
+              <div className="col-span-1">
+                <ExtractedDataEditor 
+                  image={selectedImage}
+                  onTextChange={handleTextChangeWithState}
+                />
+              </div>
+            </div>
+            
+            <div className="mt-4 px-4">
+              <ImageActions 
+                imageId={selectedImage.id}
+                isSubmitting={isSubmitting}
+                isSubmitted={!!selectedImage.submitted}
+                isCompleted={selectedImage.status === "completed"}
+                onDelete={handleDeleteWithState}
+                onSubmit={handleSubmitWithState}
+              />
+            </div>
+            
+            <button 
+              className="absolute top-2 right-2 rounded-full h-8 w-8 flex items-center justify-center border bg-background hover:bg-muted transition-colors"
+              onClick={() => setSelectedImage(null)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <span className="sr-only">إغلاق</span>
+            </button>
+          </motion.div>
+        )}
+
         <ImageList 
           images={images}
           isSubmitting={isSubmitting}
@@ -132,21 +159,6 @@ const ImagePreviewContainer = ({
           formatDate={formatDate}
         />
       </div>
-
-      <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
-        <ImagePreviewDialog 
-          selectedImage={selectedImage}
-          zoomLevel={zoomLevel}
-          isSubmitting={isSubmitting}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onResetZoom={handleResetZoom}
-          onTextChange={handleTextChangeWithState}
-          onDelete={handleDeleteWithState}
-          onSubmit={handleSubmitWithState}
-          formatDate={formatDate}
-        />
-      </Dialog>
     </>
   );
 };
