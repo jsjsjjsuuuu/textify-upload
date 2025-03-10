@@ -66,14 +66,6 @@ const ImageUploader = ({
             </div>
           )}
         </div>
-        
-        <Button
-          onClick={() => window.location.href = '/records'}
-          variant="outline"
-          className="text-sm self-start sm:self-auto"
-        >
-          إعدادات استخراج البيانات
-        </Button>
       </div>
       
       <div 

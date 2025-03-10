@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Settings } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState } from "react";
 
@@ -34,13 +34,11 @@ const AppHeader = () => {
               </Link>
             </li>
             <li>
-              <Link to="/api" className="text-brand-brown dark:text-brand-beige font-medium hover:text-brand-coral transition-colors">
-                API
-              </Link>
-            </li>
-            <li>
               <Link to="/records" className="text-brand-brown dark:text-brand-beige font-medium hover:text-brand-coral transition-colors">
-                السجلات
+                <span className="flex items-center">
+                  <Settings size={16} className="ml-1.5" />
+                  إعدادات استخراج البيانات
+                </span>
               </Link>
             </li>
           </ul>
@@ -65,20 +63,14 @@ const AppHeader = () => {
             </li>
             <li>
               <Link 
-                to="/api" 
-                className="text-brand-brown dark:text-brand-beige font-medium hover:text-brand-coral transition-colors block py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                API
-              </Link>
-            </li>
-            <li>
-              <Link 
                 to="/records" 
                 className="text-brand-brown dark:text-brand-beige font-medium hover:text-brand-coral transition-colors block py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                السجلات
+                <span className="flex items-center">
+                  <Settings size={16} className="ml-1.5" />
+                  إعدادات استخراج البيانات
+                </span>
               </Link>
             </li>
           </ul>
