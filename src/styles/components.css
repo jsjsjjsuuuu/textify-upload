@@ -58,11 +58,11 @@
   
   /* Elegant upload container styles */
   .elegant-upload {
-    @apply bg-gradient-to-r from-brand-beige/30 via-brand-coral/20 to-brand-green/20 
-           backdrop-blur-sm rounded-3xl shadow-xl transition-all duration-300;
+    @apply bg-gradient-to-r from-brand-coral/20 via-brand-beige/30 to-brand-green/20 
+           backdrop-blur-sm rounded-3xl shadow-xl shadow-brand-coral/15 hover:shadow-2xl transition-all duration-300;
   }
   
   .dark .elegant-upload {
-    @apply from-brand-green/10 via-brand-coral/15 to-brand-beige/10;
+    @apply from-brand-coral/15 via-brand-beige/10 to-brand-green/10;
   }
 }

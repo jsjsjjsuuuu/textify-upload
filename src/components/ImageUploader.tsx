@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from "react";
-import { UploadIcon } from "lucide-react";
+import { UploadCloud } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 
@@ -61,16 +61,12 @@ const ImageUploader = ({
         onDragLeave={handleDragLeave}
         onClick={handleContainerClick}
         className={`
-          max-w-full w-full mx-auto h-11
-          bg-gradient-to-r from-brand-beige/30 via-brand-coral/20 to-brand-green/20 
-          dark:from-brand-green/10 dark:via-brand-coral/15 dark:to-brand-beige/10
-          backdrop-blur-sm rounded-3xl
-          shadow-xl shadow-brand-coral/15 hover:shadow-2xl transition-all duration-300
+          elegant-upload max-w-full w-full mx-auto h-11
           ${isDragging 
             ? 'scale-[1.02] border-2 border-brand-coral' 
             : 'border border-brand-coral/30 hover:border-brand-coral/60'
           }
-          p-4 my-6 cursor-pointer
+          p-4 my-6 cursor-pointer relative overflow-hidden
         `}
       >
         <input 
@@ -86,10 +82,10 @@ const ImageUploader = ({
         <div className="flex items-center justify-center w-full h-full">
           {!isProcessing ? (
             <div className="flex items-center justify-center space-x-3 space-x-reverse">
-              <p className="text-xs text-muted-foreground font-medium">ارفع الصور</p>
-              <UploadIcon 
+              <p className="text-xs font-medium text-brand-brown dark:text-brand-beige/90 upload-text">ارفع الصور</p>
+              <UploadCloud 
                 size={18} 
-                className="text-brand-coral hover:text-brand-green dark:text-brand-beige transition-colors duration-300" 
+                className="text-brand-coral hover:text-brand-green dark:text-brand-beige upload-icon-animate" 
               />
             </div>
           ) : (
@@ -102,6 +98,9 @@ const ImageUploader = ({
             </div>
           )}
         </div>
+        
+        {/* Animated background effect */}
+        <div className="absolute inset-0 -z-10 bg-shimmer"></div>
       </div>
     </section>
   );
