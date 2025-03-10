@@ -64,18 +64,16 @@ const ImageViewer = ({
   
   // Mouse drag handlers - improved for better performance
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (zoomLevel > 1) {
-      setIsDragging(true);
-      setStartPos({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y
-      });
-      e.preventDefault(); // Prevent default behavior
-    }
+    setIsDragging(true);
+    setStartPos({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
+    e.preventDefault(); // Prevent default behavior
   };
   
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging && zoomLevel > 1) {
+    if (isDragging) {
       const newX = e.clientX - startPos.x;
       const newY = e.clientY - startPos.y;
       
@@ -114,11 +112,10 @@ const ImageViewer = ({
   };
 
   return (
-    <div className="col-span-1 bg-muted/30 rounded-lg p-4 flex flex-col items-center justify-center relative">
+    <div className="col-span-1 bg-transparent rounded-lg p-4 flex flex-col items-center justify-center relative">
       <div 
         ref={imageContainerRef}
-        className="overflow-hidden relative h-[500px] w-full flex items-center justify-center bg-white/50 rounded-md"
-        style={{ cursor: zoomLevel > 1 ? "move" : "default" }}
+        className="overflow-hidden relative h-[550px] w-full flex items-center justify-center bg-transparent rounded-md cursor-move"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

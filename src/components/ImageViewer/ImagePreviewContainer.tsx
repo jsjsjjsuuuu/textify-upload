@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -26,15 +26,22 @@ const ImagePreviewContainer = ({
   formatDate
 }: ImagePreviewContainerProps) => {
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(1.4); // Initial zoom level of 40%
   const { toast } = useToast();
+
+  // Reset zoom level when a new image is selected
+  useEffect(() => {
+    if (selectedImage) {
+      setZoomLevel(1.4); // Reset to 40% zoom when image changes
+    }
+  }, [selectedImage?.id]);
 
   const handleImageClick = async (image: ImageData) => {
     console.log("Image clicked:", image.id, image.previewUrl);
     
     // Toggle image selection without attempting to validate the URL
     setSelectedImage(prev => prev?.id === image.id ? null : image);
-    setZoomLevel(1);
+    setZoomLevel(1.4); // Set to 40% zoom when selecting image
   };
 
   const handleZoomIn = () => {
@@ -46,7 +53,7 @@ const ImagePreviewContainer = ({
   };
 
   const handleResetZoom = () => {
-    setZoomLevel(1);
+    setZoomLevel(1.4); // Reset to 40% zoom
   };
 
   const handleDeleteWithState = (id: string) => {

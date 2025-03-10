@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import ZoomControls from "./ZoomControls";
 
@@ -10,13 +10,18 @@ interface DraggableImageProps {
 }
 
 const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps) => {
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(1.4); // Auto zoom 40% larger
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [imgError, setImgError] = useState(false);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  
+  // Reset position when component mounts
+  useEffect(() => {
+    setPosition({ x: 0, y: 0 });
+  }, []);
   
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -30,26 +35,24 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
   
   const handleResetZoom = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoomLevel(1);
+    setZoomLevel(1.4); // Reset to 40% zoom
     setPosition({ x: 0, y: 0 });
   };
   
   // Mouse drag handlers - improved for performance
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (zoomLevel > 1) {
-      setIsDragging(true);
-      setStartPos({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y
-      });
-      e.preventDefault();
-    }
+    setIsDragging(true);
+    setStartPos({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
+    e.preventDefault();
   };
   
   const handleMouseMove = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isDragging && zoomLevel > 1) {
+    if (isDragging) {
       const newX = e.clientX - startPos.x;
       const newY = e.clientY - startPos.y;
       
@@ -92,7 +95,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
   };
 
   return (
-    <div className="p-4 bg-secondary/20 relative">
+    <div className="p-4 bg-transparent relative">
       <ZoomControls 
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
@@ -101,13 +104,12 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
       
       <div 
         ref={imageContainerRef}
-        className="relative w-full h-[380px] rounded-lg overflow-hidden bg-transparent cursor-pointer flex items-center justify-center" 
+        className="relative w-full h-[420px] overflow-hidden bg-transparent cursor-move flex items-center justify-center" 
         onClick={handleImageClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
-        style={{ cursor: zoomLevel > 1 ? 'move' : 'pointer' }}
       >
         <img 
           ref={imageRef}
@@ -115,7 +117,6 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
           alt="صورة محملة" 
           className="w-full h-full object-contain transition-transform duration-150" 
           style={{ 
-            mixBlendMode: 'multiply',
             transform: `scale(${zoomLevel}) translate(${position.x / zoomLevel}px, ${position.y / zoomLevel}px)`,
             maxHeight: '100%',
             maxWidth: '100%',

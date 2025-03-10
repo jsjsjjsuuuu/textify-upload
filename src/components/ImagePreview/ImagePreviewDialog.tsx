@@ -7,6 +7,7 @@ import { ExtractedDataEditor } from "@/components/ExtractedData";
 import { ImageViewer } from "@/components/ImagePreview";
 import { ImageActions } from "@/components/ImagePreview";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
 
 interface ImagePreviewDialogProps {
   selectedImage: ImageData | null;
@@ -35,13 +36,18 @@ const ImagePreviewDialog = ({
 }: ImagePreviewDialogProps) => {
   if (!selectedImage) return null;
   
+  // Use useEffect to force reset zoom when component mounts
+  useEffect(() => {
+    onResetZoom();
+  }, [selectedImage.id, onResetZoom]);
+  
   return (
     <DialogContent className="max-w-5xl p-0 bg-transparent border-none shadow-none" onInteractOutside={e => e.preventDefault()}>
       <DialogTitle className="sr-only">معاينة الصورة</DialogTitle>
       <DialogDescription className="sr-only">مشاهدة وتحرير بيانات الصورة</DialogDescription>
       
       <motion.div 
-        className="bg-white/95 dark:bg-gray-800/90 rounded-lg border p-4 shadow-lg relative"
+        className="bg-white/95 dark:bg-gray-800/90 rounded-lg p-4 shadow-lg relative"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", duration: 0.4 }}
