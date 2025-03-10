@@ -36,6 +36,7 @@ const ExtractedDataFields = ({
         editMode={editMode}
         placeholder="أدخل الكود"
         onChange={(value) => onTempChange("code", value)}
+        fieldType="code"
       />
 
       <ExtractedDataField 
@@ -52,6 +53,7 @@ const ExtractedDataFields = ({
         editMode={editMode}
         placeholder="أدخل رقم الهاتف"
         onChange={(value) => onTempChange("phoneNumber", value)}
+        fieldType="phone"
       />
 
       <ExtractedDataField 
@@ -70,6 +72,7 @@ const ExtractedDataFields = ({
           editMode={editMode}
           placeholder="أدخل السعر"
           onChange={(value) => onTempChange("price", value)}
+          fieldType="price"
         />
       </div>
     </div>

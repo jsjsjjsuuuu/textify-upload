@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Trash, Send } from "lucide-react";
+import { Edit, Trash, Send, AlertCircle } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 
 interface ImageTableProps {
@@ -44,71 +44,87 @@ const ImageTable = ({
             </tr>
           </thead>
           <tbody>
-            {images.map(image => (
-              <tr key={image.id} className="hover:bg-muted/20">
-                <td>{image.number}</td>
-                <td>{formatDate(image.date)}</td>
-                <td className="w-24">
-                  <div 
-                    className="w-20 h-20 rounded-lg overflow-hidden bg-transparent cursor-pointer" 
-                    onClick={() => onImageClick(image)}
-                  >
-                    <img 
-                      src={image.previewUrl} 
-                      alt="صورة مصغرة" 
-                      className="object-contain transition-transform duration-200" 
-                      style={{ mixBlendMode: 'multiply' }} 
-                    />
-                  </div>
-                </td>
-                <td>{image.code || "—"}</td>
-                <td>{image.senderName || "—"}</td>
-                <td>{image.phoneNumber || "—"}</td>
-                <td>{image.province || "—"}</td>
-                <td>{image.price || "—"}</td>
-                <td>{image.confidence ? Math.round(image.confidence) + "%" : "—"}</td>
-                <td>
-                  {image.status === "processing" && (
-                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">قيد المعالجة</span>
-                  )}
-                  {image.status === "completed" && !image.submitted && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">تم المعالجة</span>
-                  )}
-                  {image.status === "error" && (
-                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">فشل</span>
-                  )}
-                  {image.submitted && (
-                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">تم الإرسال</span>
-                  )}
-                </td>
-                <td>
-                  <div className="flex gap-2 justify-center">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:bg-accent/50">
-                      <Edit size={14} />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 text-destructive hover:bg-destructive/10" 
-                      onClick={() => onDelete(image.id)}
+            {images.map(image => {
+              // التحقق من صحة رقم الهاتف
+              const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+              
+              return (
+                <tr key={image.id} className="hover:bg-muted/20">
+                  <td>{image.number}</td>
+                  <td>{formatDate(image.date)}</td>
+                  <td className="w-24">
+                    <div 
+                      className="w-20 h-20 rounded-lg overflow-hidden bg-transparent cursor-pointer" 
+                      onClick={() => onImageClick(image)}
                     >
-                      <Trash size={14} />
-                    </Button>
+                      <img 
+                        src={image.previewUrl} 
+                        alt="صورة مصغرة" 
+                        className="object-contain transition-transform duration-200" 
+                        style={{ mixBlendMode: 'multiply' }} 
+                      />
+                    </div>
+                  </td>
+                  <td>{image.code || "—"}</td>
+                  <td>{image.senderName || "—"}</td>
+                  <td className="relative">
+                    <div className="flex items-center">
+                      <span className={image.phoneNumber && !isPhoneNumberValid ? "text-destructive" : ""}>
+                        {image.phoneNumber || "—"}
+                      </span>
+                      {image.phoneNumber && !isPhoneNumberValid && (
+                        <span className="mr-1 text-destructive">
+                          <AlertCircle size={14} />
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td>{image.province || "—"}</td>
+                  <td>{image.price || "—"}</td>
+                  <td>{image.confidence ? Math.round(image.confidence) + "%" : "—"}</td>
+                  <td>
+                    {image.status === "processing" && (
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">قيد المعالجة</span>
+                    )}
                     {image.status === "completed" && !image.submitted && (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">تم المعالجة</span>
+                    )}
+                    {image.status === "error" && (
+                      <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">فشل</span>
+                    )}
+                    {image.submitted && (
+                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">تم الإرسال</span>
+                    )}
+                  </td>
+                  <td>
+                    <div className="flex gap-2 justify-center">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:bg-accent/50">
+                        <Edit size={14} />
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-7 w-7 text-brand-green hover:bg-brand-green/10" 
-                        disabled={isSubmitting} 
-                        onClick={() => onSubmit(image.id)}
+                        className="h-7 w-7 text-destructive hover:bg-destructive/10" 
+                        onClick={() => onDelete(image.id)}
                       >
-                        <Send size={14} />
+                        <Trash size={14} />
                       </Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                      {image.status === "completed" && !image.submitted && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-brand-green hover:bg-brand-green/10" 
+                          disabled={isSubmitting || (image.phoneNumber && !isPhoneNumberValid)} 
+                          onClick={() => onSubmit(image.id)}
+                        >
+                          <Send size={14} />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

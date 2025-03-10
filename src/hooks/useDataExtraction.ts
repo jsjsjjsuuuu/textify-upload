@@ -4,6 +4,7 @@ import { ImageData } from "@/types/ImageData";
 import { correctProvinceName, IRAQ_PROVINCES, CITY_PROVINCE_MAP } from "@/utils/provinces";
 import { handleCorrections, generateCopyText } from "@/utils/correctionHandlers";
 import { autoExtractData } from "@/utils/extractionUtils";
+import { useToast } from "@/hooks/use-toast";
 
 interface TempData {
   code: string;
@@ -43,6 +44,7 @@ export const useDataExtraction = (
   
   const [correctionsMade, setCorrectionsMade] = useState(false);
   const [isLearningActive, setIsLearningActive] = useState(false);
+  const { toast } = useToast();
 
   const handleEditToggle = () => {
     if (editMode) {
@@ -54,6 +56,17 @@ export const useDataExtraction = (
         price: image.price || "",
         companyName: image.companyName || ""
       };
+      
+      // التحقق من صحة رقم الهاتف قبل الحفظ
+      const phoneDigits = tempData.phoneNumber.replace(/[^\d]/g, '');
+      if (tempData.phoneNumber && phoneDigits.length !== 11) {
+        toast({
+          title: "تنبيه",
+          description: "رقم الهاتف يجب أن يكون 11 رقم بالضبط",
+          variant: "destructive"
+        });
+        return; // منع الحفظ في حالة عدم صحة رقم الهاتف
+      }
       
       Object.entries(tempData).forEach(([field, value]) => {
         onTextChange(image.id, field, value);

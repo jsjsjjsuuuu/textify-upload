@@ -1,7 +1,8 @@
+
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, X, Edit, Trash, Send, ZoomIn } from "lucide-react";
+import { Check, X, Edit, Trash, Send, ZoomIn, AlertCircle } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 import { ExtractedDataEditor } from "@/components/ExtractedData";
 
@@ -25,6 +26,9 @@ const ImageCard = ({
   formatDate 
 }: ImageCardProps) => {
   const [showFullData, setShowFullData] = useState(false);
+
+  // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
+  const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
 
   console.log("ImageCard rendering with data:", image);
 
@@ -115,8 +119,15 @@ const ImageCard = ({
                     </div>
                   </div>
                   <div className="col-span-1">
-                    <label className="block text-xs font-medium mb-1">رقم الهاتف:</label>
-                    <div className="bg-gray-50 rounded p-1.5 text-sm border min-h-[34px]">
+                    <label className="block text-xs font-medium mb-1 flex items-center justify-between">
+                      <span>رقم الهاتف:</span>
+                      {image.phoneNumber && !isPhoneNumberValid && (
+                        <span className="text-xs text-destructive font-normal flex items-center">
+                          <AlertCircle size={12} className="mr-1" /> رقم غير صحيح
+                        </span>
+                      )}
+                    </label>
+                    <div className={`rounded p-1.5 text-sm border min-h-[34px] ${image.phoneNumber && !isPhoneNumberValid ? 'bg-red-50 border-destructive/30' : 'bg-gray-50'}`}>
                       {image.phoneNumber || <span className="text-gray-400 text-xs">غير متوفر</span>}
                     </div>
                   </div>
@@ -164,7 +175,7 @@ const ImageCard = ({
             variant="ghost" 
             size="icon" 
             className="h-8 w-8 text-brand-green hover:bg-brand-green/10" 
-            disabled={image.status !== "completed" || isSubmitting || image.submitted} 
+            disabled={image.status !== "completed" || isSubmitting || image.submitted || (image.phoneNumber && !isPhoneNumberValid)} 
             onClick={() => onSubmit(image.id)}
           >
             <Send size={16} />
