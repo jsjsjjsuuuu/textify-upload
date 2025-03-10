@@ -17,12 +17,20 @@ export const useImageProcessing = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingQueue, setProcessingQueue] = useState<File[]>([]);
   const [queueTotal, setQueueTotal] = useState(0);
+  const [processedFileHashes, setProcessedFileHashes] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   
   const { images, addImage, updateImage, deleteImage, handleTextChange } = useImageState();
   const { processWithOcr } = useOcrProcessing();
   const { useGemini, processWithGemini } = useGeminiProcessing();
   const { isSubmitting, handleSubmitToApi: submitToApi } = useSubmitToApi(updateImage);
+
+  /**
+   * Create a simple hash for a file to prevent duplicate processing
+   */
+  const createFileHash = useCallback((file: File): string => {
+    return `${file.name}-${file.size}-${file.lastModified}`;
+  }, []);
 
   /**
    * Process images in batches to avoid overwhelming the system
@@ -167,11 +175,41 @@ export const useImageProcessing = () => {
     }
     
     const fileArray = Array.from(files);
-    console.log("Adding", fileArray.length, "files to processing queue");
+    console.log("Checking for duplicate files from", fileArray.length, "selected files");
+    
+    // Filter out any duplicate files using our hash function
+    const uniqueFiles = fileArray.filter(file => {
+      const fileHash = createFileHash(file);
+      if (processedFileHashes.has(fileHash)) {
+        console.log(`Skipping duplicate file: ${file.name}`);
+        return false;
+      }
+      
+      // Add to processed set to prevent future duplicates
+      setProcessedFileHashes(prev => {
+        const newSet = new Set(prev);
+        newSet.add(fileHash);
+        return newSet;
+      });
+      
+      return true;
+    });
+    
+    if (uniqueFiles.length === 0) {
+      console.log("All selected files are duplicates, nothing to process");
+      toast({
+        title: "ملفات مكررة",
+        description: "تم تجاهل الملفات المكررة",
+        variant: "default"
+      });
+      return;
+    }
+    
+    console.log("Adding", uniqueFiles.length, "unique files to processing queue");
     
     // Add files to queue and start processing if not already processing
-    setProcessingQueue(prevQueue => [...prevQueue, ...fileArray]);
-    setQueueTotal(prevTotal => prevTotal + fileArray.length);
+    setProcessingQueue(prevQueue => [...prevQueue, ...uniqueFiles]);
+    setQueueTotal(prevTotal => prevTotal + uniqueFiles.length);
     setProcessingProgress(0);
     
     if (!isProcessing) {
@@ -179,9 +217,9 @@ export const useImageProcessing = () => {
       // Use setTimeout to allow the state update to complete first
       setTimeout(() => {
         processBatch();
-      }, 0);
+      }, 100);
     }
-  }, [isProcessing, processBatch]);
+  }, [isProcessing, processBatch, processedFileHashes, createFileHash, toast]);
 
   const handleSubmitToApi = useCallback((id: string) => {
     const image = images.find(img => img.id === id);

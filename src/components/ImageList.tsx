@@ -1,6 +1,7 @@
 
 import { ImageData } from "@/types/ImageData";
 import ImageCard from "./ImageCard";
+import { memo } from "react";
 
 interface ImageListProps {
   images: ImageData[];
@@ -12,7 +13,8 @@ interface ImageListProps {
   formatDate: (date: Date) => string;
 }
 
-const ImageList = ({
+// Memoize the component to prevent unnecessary re-renders
+const ImageList = memo(({
   images,
   isSubmitting,
   onImageClick,
@@ -43,6 +45,8 @@ const ImageList = ({
       </div>
     </section>
   );
-};
+});
+
+ImageList.displayName = "ImageList";
 
 export default ImageList;
