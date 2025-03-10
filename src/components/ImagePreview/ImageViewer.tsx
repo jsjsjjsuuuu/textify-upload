@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { ImageData } from "@/types/ImageData";
-import { isValidBlobUrl } from "@/lib/gemini/utils";
 
 interface ImageViewerProps {
   selectedImage: ImageData;
@@ -38,16 +37,6 @@ const ImageViewer = ({
     setImageLoaded(false);
     setImgError(false);
     setPosition({ x: 0, y: 0 }); // Reset position when image changes
-    
-    // Validate blob URL
-    if (selectedImage?.previewUrl) {
-      isValidBlobUrl(selectedImage.previewUrl).then(isValid => {
-        if (!isValid) {
-          console.error("Invalid blob URL detected:", selectedImage.previewUrl);
-          setImgError(true);
-        }
-      });
-    }
   }, [selectedImage.id, selectedImage.previewUrl]);
   
   useEffect(() => {
@@ -73,7 +62,7 @@ const ImageViewer = ({
     return "bg-red-500";
   };
   
-  // Mouse drag handlers
+  // Mouse drag handlers - improved for better performance
   const handleMouseDown = (e: React.MouseEvent) => {
     if (zoomLevel > 1) {
       setIsDragging(true);
@@ -81,6 +70,7 @@ const ImageViewer = ({
         x: e.clientX - position.x,
         y: e.clientY - position.y
       });
+      e.preventDefault(); // Prevent default behavior
     }
   };
   
@@ -102,16 +92,25 @@ const ImageViewer = ({
       const boundedX = Math.min(Math.max(newX, -maxX), maxX);
       const boundedY = Math.min(Math.max(newY, -maxY), maxY);
       
-      setPosition({ x: boundedX, y: boundedY });
+      // Use requestAnimationFrame for smoother updates
+      requestAnimationFrame(() => {
+        setPosition({ x: boundedX, y: boundedY });
+      });
+      
+      e.preventDefault(); // Prevent default behavior
     }
   };
   
   const handleMouseUp = () => {
-    setIsDragging(false);
+    if (isDragging) {
+      setIsDragging(false);
+    }
   };
   
   const handleMouseLeave = () => {
-    setIsDragging(false);
+    if (isDragging) {
+      setIsDragging(false);
+    }
   };
 
   return (
@@ -137,7 +136,7 @@ const ImageViewer = ({
               ref={imageRef}
               src={getImageUrl() || ''}
               alt="معاينة موسعة" 
-              className="transition-all duration-200"
+              className="transition-all duration-150"
               style={{ 
                 transform: `scale(${zoomLevel}) translate(${position.x / zoomLevel}px, ${position.y / zoomLevel}px)`,
                 opacity: imageLoaded ? 1 : 0,
@@ -146,13 +145,12 @@ const ImageViewer = ({
                 objectFit: 'contain',
                 transformOrigin: 'center',
                 pointerEvents: 'none', // Prevents image from capturing mouse events
+                willChange: 'transform', // Optimize for transforms
               }}
               onLoad={() => {
-                console.log("Image loaded successfully:", selectedImage.id);
                 setImageLoaded(true);
               }}
-              onError={(e) => {
-                console.error("Error loading image:", selectedImage.previewUrl, e);
+              onError={() => {
                 setImageLoaded(false);
                 setImgError(true);
               }}
@@ -164,7 +162,7 @@ const ImageViewer = ({
           <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500">
             <ImageOff size={48} />
             <p className="mt-2 text-center font-medium">فشل تحميل الصورة</p>
-            <p className="text-sm text-muted-foreground mt-1">قد تكون الصورة غير صالحة أو تم حذفها</p>
+            <p className="text-sm text-muted-foreground mt-1">يمكنك محاولة تحميلها مرة أخرى</p>
           </div>
         )}
       </div>

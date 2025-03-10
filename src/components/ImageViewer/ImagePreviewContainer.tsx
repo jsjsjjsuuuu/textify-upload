@@ -1,11 +1,12 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
-import { isValidBlobUrl } from "@/lib/gemini/utils";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { ExtractedDataEditor } from "@/components/ExtractedData";
 import { ImageViewer, ImageActions } from "@/components/ImagePreview";
+import ImageList from "@/components/ImageList";
+import ImageTable from "@/components/ImageTable";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -31,20 +32,7 @@ const ImagePreviewContainer = ({
   const handleImageClick = async (image: ImageData) => {
     console.log("Image clicked:", image.id, image.previewUrl);
     
-    if (image.previewUrl) {
-      const isValid = await isValidBlobUrl(image.previewUrl);
-      if (!isValid) {
-        console.error("Cannot open image - invalid blob URL:", image.previewUrl);
-        toast({
-          title: "خطأ في تحميل الصورة",
-          description: "تعذر فتح الصورة. يرجى إعادة تحميلها.",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-    
-    // Toggle image selection
+    // Toggle image selection without attempting to validate the URL
     setSelectedImage(prev => prev?.id === image.id ? null : image);
     setZoomLevel(1);
   };
@@ -162,8 +150,5 @@ const ImagePreviewContainer = ({
     </>
   );
 };
-
-import ImageList from "@/components/ImageList";
-import ImageTable from "@/components/ImageTable";
 
 export default ImagePreviewContainer;

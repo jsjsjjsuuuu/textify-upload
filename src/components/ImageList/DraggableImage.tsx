@@ -14,6 +14,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [imgError, setImgError] = useState(false);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   
@@ -33,7 +34,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
     setPosition({ x: 0, y: 0 });
   };
   
-  // Mouse drag handlers
+  // Mouse drag handlers - improved for performance
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (zoomLevel > 1) {
@@ -42,6 +43,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
         x: e.clientX - position.x,
         y: e.clientY - position.y
       });
+      e.preventDefault();
     }
   };
   
@@ -64,7 +66,12 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
       const boundedX = Math.min(Math.max(newX, -maxX), maxX);
       const boundedY = Math.min(Math.max(newY, -maxY), maxY);
       
-      setPosition({ x: boundedX, y: boundedY });
+      // Use requestAnimationFrame for smoother updates
+      requestAnimationFrame(() => {
+        setPosition({ x: boundedX, y: boundedY });
+      });
+      
+      e.preventDefault();
     }
   };
   
@@ -106,7 +113,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
           ref={imageRef}
           src={image.previewUrl} 
           alt="صورة محملة" 
-          className="w-full h-full object-contain transition-transform duration-200" 
+          className="w-full h-full object-contain transition-transform duration-150" 
           style={{ 
             mixBlendMode: 'multiply',
             transform: `scale(${zoomLevel}) translate(${position.x / zoomLevel}px, ${position.y / zoomLevel}px)`,
@@ -114,8 +121,17 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
             maxWidth: '100%',
             transformOrigin: 'center',
             pointerEvents: 'none', // Prevents image from capturing mouse events
+            willChange: 'transform', // Optimize for transforms
           }} 
+          onError={() => setImgError(true)}
         />
+        
+        {imgError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="M17.5 5c-2.6-2.4-6.8-2.4-9.3 0m11.3 4c-3.3-3-8.2-3-11.5 0m13.3 4c-4-3.6-9.6-3.6-13.5 0"/></svg>
+            <p className="mt-2 text-xs text-center text-muted-foreground">الصورة غير متاحة حاليًا</p>
+          </div>
+        )}
         
         <div className="absolute top-1 right-1 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
           صورة {image.number}
