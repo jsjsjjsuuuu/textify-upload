@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, Trash, Send, AlertCircle } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 import { motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 
 interface ImageTableProps {
   images: ImageData[];
@@ -109,28 +110,28 @@ const ImageTable = ({
                     </td>
                     <td className="py-3 px-4 text-sm">
                       {image.status === "processing" && (
-                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 rounded-full text-xs inline-flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse"></span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal bg-yellow-100/50 border-yellow-200 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-800/40 dark:text-yellow-300">
+                          <span className="w-1 h-1 bg-yellow-500 rounded-full animate-pulse mr-1"></span>
                           قيد المعالجة
-                        </span>
+                        </Badge>
                       )}
                       {image.status === "completed" && !image.submitted && (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200 rounded-full text-xs inline-flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal bg-blue-100/50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800/40 dark:text-blue-300">
+                          <span className="w-1 h-1 bg-blue-500 rounded-full mr-1"></span>
                           تم المعالجة
-                        </span>
+                        </Badge>
                       )}
                       {image.status === "error" && (
-                        <span className="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200 rounded-full text-xs inline-flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal bg-red-100/50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800/40 dark:text-red-300">
+                          <span className="w-1 h-1 bg-red-500 rounded-full mr-1"></span>
                           فشل
-                        </span>
+                        </Badge>
                       )}
                       {image.submitted && (
-                        <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 rounded-full text-xs inline-flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal bg-green-100/50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800/40 dark:text-green-300">
+                          <span className="w-1 h-1 bg-green-500 rounded-full mr-1"></span>
                           تم الإرسال
-                        </span>
+                        </Badge>
                       )}
                     </td>
                     <td className="py-3 px-4">
