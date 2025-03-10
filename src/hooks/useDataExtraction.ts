@@ -1,8 +1,9 @@
 
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
-import { addCorrection } from "@/utils/learningSystem";
 import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinceCorrection";
+import { handleCorrections, generateCopyText } from "@/utils/correctionHandlers";
+import { autoExtractData } from "@/utils/extractionUtils";
 
 interface TempData {
   code: string;
@@ -49,29 +50,13 @@ export const useDataExtraction = (
         onTextChange(image.id, field, value);
       });
       
-      // التحقق من وجود تغييرات
-      let changesDetected = false;
-      for (const [field, value] of Object.entries(tempData)) {
-        if (originalData[field] !== value) {
-          changesDetected = true;
-          break;
-        }
-      }
-      
-      // إذا كانت هناك تغييرات، أضف إلى نظام التعلم
-      if (changesDetected && image.extractedText) {
-        setIsLearningActive(true);
-        // تأخير إظهار مؤشر التعلم
-        setTimeout(() => {
-          addCorrection(
-            image.extractedText,
-            originalData,
-            tempData
-          );
+      // إضافة التصحيحات إلى نظام التعلم إذا كانت هناك تغييرات
+      setIsLearningActive(true);
+      handleCorrections(image.extractedText, originalData, tempData)
+        .then(() => {
           setCorrectionsMade(true);
           setIsLearningActive(false);
-        }, 800);
-      }
+        });
     } else {
       // الدخول إلى وضع التحرير
       setTempData({
@@ -99,13 +84,7 @@ export const useDataExtraction = (
   };
 
   const handleCopyText = () => {
-    const textToCopy = `اسم الشركة: ${image.companyName || "غير متوفر"}
-الكود: ${image.code || "غير متوفر"}
-اسم المرسل: ${image.senderName || "غير متوفر"}
-رقم الهاتف: ${image.phoneNumber || "غير متوفر"}
-المحافظة: ${image.province || "غير متوفر"}
-السعر: ${image.price || "غير متوفر"}`;
-
+    const textToCopy = generateCopyText(image);
     navigator.clipboard.writeText(textToCopy).then(() => {
       console.log("نسخ البيانات إلى الحافظة");
     });
@@ -124,77 +103,40 @@ export const useDataExtraction = (
     });
   };
 
-  const tryExtractField = (text: string, patterns: RegExp[]): string => {
-    for (const pattern of patterns) {
-      const match = text.match(pattern);
-      if (match && match[1]) {
-        return match[1].trim();
-      }
-    }
-    return "";
-  };
-
   const handleAutoExtract = () => {
     if (!image.extractedText) return;
     
-    // استخراج اسم الشركة (يكون عادة في أعلى اليسار بخط كبير)
-    const companyNamePatterns = [
-      // البحث عن نص في بداية النص المستخرج (يكون غالبًا في الأعلى)
-      /^([^:\n\r]+?)(?:\n|\r|$)/i,
-      // البحث عن "شركة" أو "مؤسسة" أو "مجموعة"
-      /شركة\s+(.+?)(?:\n|\r|$)/i,
-      /مؤسسة\s+(.+?)(?:\n|\r|$)/i,
-      /مجموعة\s+(.+?)(?:\n|\r|$)/i,
-      // البحث عن "company" باللغة الإنجليزية
-      /company[:\s]+(.+?)(?:\n|\r|$)/i
-    ];
-    
-    const extractedData = {
-      companyName: tryExtractField(image.extractedText, companyNamePatterns),
-      code: tryExtractField(image.extractedText, [
-        /كود[:\s]+([0-9]+)/i, 
-        /code[:\s]+([0-9]+)/i, 
-        /رقم[:\s]+([0-9]+)/i,
-        /رمز[:\s]+([0-9]+)/i
-      ]),
-      senderName: tryExtractField(image.extractedText, [
-        /اسم المرسل[:\s]+(.+?)(?:\n|\r|$)/i, 
-        /sender[:\s]+(.+?)(?:\n|\r|$)/i, 
-        /الاسم[:\s]+(.+?)(?:\n|\r|$)/i,
-        /الراسل[:\s]+(.+?)(?:\n|\r|$)/i
-      ]),
-      phoneNumber: tryExtractField(image.extractedText, [
-        /هاتف[:\s]+([0-9\-\s]+)/i, 
-        /phone[:\s]+([0-9\-\s]+)/i, 
-        /جوال[:\s]+([0-9\-\s]+)/i, 
-        /رقم الهاتف[:\s]+([0-9\-\s]+)/i,
-        /رقم[:\s]+([0-9\-\s]+)/i
-      ]),
-      province: tryExtractField(image.extractedText, [
-        /محافظة[:\s]+(.+?)(?:\n|\r|$)/i, 
-        /province[:\s]+(.+?)(?:\n|\r|$)/i, 
-        /المدينة[:\s]+(.+?)(?:\n|\r|$)/i,
-        /المنطقة[:\s]+(.+?)(?:\n|\r|$)/i
-      ]),
-      price: tryExtractField(image.extractedText, [
-        /سعر[:\s]+(.+?)(?:\n|\r|$)/i, 
-        /price[:\s]+(.+?)(?:\n|\r|$)/i, 
-        /المبلغ[:\s]+(.+?)(?:\n|\r|$)/i,
-        /قيمة[:\s]+(.+?)(?:\n|\r|$)/i
-      ])
-    };
-
-    // تصحيح اسم المحافظة - مهم جدًا للتأكد من أنها محافظة عراقية صحيحة
-    if (extractedData.province) {
-      extractedData.province = correctProvinceName(extractedData.province);
-    }
+    const extractedData = autoExtractData(image.extractedText);
 
     // البحث في النص كاملاً عن أي محافظة عراقية إذا لم نجد المحافظة
     if (!extractedData.province) {
+      // البحث عن محافظات مباشرة في النص
       for (const province of IRAQ_PROVINCES) {
         if (image.extractedText.includes(province)) {
           extractedData.province = province;
           break;
+        }
+      }
+      
+      // إذا لم نجد، ابحث عن أسماء المدن الرئيسية
+      if (!extractedData.province) {
+        const cityProvinceMap: Record<string, string> = {
+          'الموصل': 'نينوى',
+          'الرمادي': 'الأنبار',
+          'بعقوبة': 'ديالى',
+          'السماوة': 'المثنى',
+          'الديوانية': 'القادسية',
+          'العمارة': 'ميسان',
+          'الكوت': 'واسط',
+          'تكريت': 'صلاح الدين',
+          'الحلة': 'بابل'
+        };
+        
+        for (const [city, province] of Object.entries(cityProvinceMap)) {
+          if (image.extractedText.includes(city)) {
+            extractedData.province = province;
+            break;
+          }
         }
       }
     }
