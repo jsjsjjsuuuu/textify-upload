@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
-import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinces";
+import { correctProvinceName, IRAQ_PROVINCES, CITY_PROVINCE_MAP } from "@/utils/provinces";
 import { handleCorrections, generateCopyText } from "@/utils/correctionHandlers";
 import { autoExtractData } from "@/utils/extractionUtils";
 
@@ -12,6 +13,17 @@ interface TempData {
   price: string;
   companyName: string;
   [key: string]: string; // Add index signature to allow string indexing
+}
+
+// Define a type for extracted data from autoExtractData
+interface ExtractedData {
+  code?: string;
+  senderName?: string;
+  phoneNumber?: string;
+  province?: string;
+  price?: string;
+  companyName?: string;
+  [key: string]: string | undefined;
 }
 
 export const useDataExtraction = (
@@ -100,7 +112,7 @@ export const useDataExtraction = (
   const handleAutoExtract = () => {
     if (!image.extractedText) return;
     
-    const extractedData = autoExtractData(image.extractedText);
+    const extractedData: ExtractedData = autoExtractData(image.extractedText);
 
     if (!extractedData.province) {
       for (const province of IRAQ_PROVINCES) {
@@ -110,7 +122,8 @@ export const useDataExtraction = (
         }
       }
       
-      const cityProvinceMap: Record<string, string> = {
+      // Make sure CITY_PROVINCE_MAP is properly typed
+      const cityProvinceMap: Record<string, string> = CITY_PROVINCE_MAP || {
         'الموصل': 'نينوى',
         'الرمادي': 'الأنبار',
         'بعقوبة': 'ديالى',
@@ -132,7 +145,12 @@ export const useDataExtraction = (
 
     setTempData(prev => ({
       ...prev,
-      ...extractedData
+      code: extractedData.code || prev.code,
+      senderName: extractedData.senderName || prev.senderName,
+      phoneNumber: extractedData.phoneNumber || prev.phoneNumber,
+      province: extractedData.province || prev.province,
+      price: extractedData.price || prev.price,
+      companyName: extractedData.companyName || prev.companyName
     }));
 
     if (!editMode) {

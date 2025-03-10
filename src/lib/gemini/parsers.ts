@@ -4,7 +4,7 @@
  */
 
 import { enhanceExtractedData, calculateConfidenceScore } from "./utils";
-import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinceCorrection";
+import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinces";
 
 /**
  * استخراج JSON من نص الاستجابة ومعالجته
