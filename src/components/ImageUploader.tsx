@@ -61,7 +61,7 @@ const ImageUploader = ({
         onDragLeave={handleDragLeave}
         onClick={handleContainerClick}
         className={`
-          max-w-xs w-1/4 mx-auto h-96
+          max-w-md w-3/4 mx-auto h-48
           bg-gradient-to-r from-brand-beige/20 via-brand-coral/10 to-brand-green/10 
           dark:from-brand-green/5 dark:via-brand-coral/10 dark:to-brand-beige/5
           backdrop-blur-sm rounded-lg
@@ -85,7 +85,7 @@ const ImageUploader = ({
         
         <div className="flex items-center justify-center w-full h-full">
           {!isProcessing ? (
-            <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="flex items-center justify-center space-x-3 space-x-reverse">
               <ImageIcon 
                 size={28} 
                 className="text-brand-coral hover:text-brand-green dark:text-brand-beige transition-colors duration-300" 
@@ -93,9 +93,9 @@ const ImageUploader = ({
               <p className="text-sm text-muted-foreground">اسحب صورة هنا أو انقر للاختيار</p>
             </div>
           ) : (
-            <div className="flex flex-col items-center w-full space-y-4">
-              <div className="h-8 w-8 rounded-full border-3 border-brand-coral/30 border-t-brand-coral animate-spin"></div>
-              <div className="w-full">
+            <div className="flex items-center w-full">
+              <div className="h-8 w-8 mr-3 rounded-full border-3 border-brand-coral/30 border-t-brand-coral animate-spin"></div>
+              <div className="flex-1">
                 <Progress value={processingProgress} className="h-2 bg-brand-beige/20" />
                 <p className="text-xs text-muted-foreground mt-1">جاري معالجة الصور... {processingProgress}%</p>
               </div>
