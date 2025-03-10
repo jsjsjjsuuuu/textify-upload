@@ -14,6 +14,14 @@ export type { GeminiError } from "./api";
 export { testGeminiModels } from "./models";
 export { fileToBase64 } from "./utils";
 
+// Export parser functions
+export { parseGeminiResponse } from "./parsers";
+export { 
+  extractJsonFromText,
+  extractFieldsFromText,
+  mapArabicToEnglishFields
+} from "./parsers/index";
+
 // Export types
 export type { GeminiExtractParams, GeminiRequest, GeminiResponse } from "./types";
 
