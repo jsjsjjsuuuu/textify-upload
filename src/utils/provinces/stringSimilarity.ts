@@ -35,28 +35,3 @@ export function calculateStringSimilarity(str1: string, str2: string): number {
   
   return 1 - dp[m][n] / maxLength;
 }
-
-/**
- * البحث عن أقرب تطابق لنص في قائمة من النصوص
- * باستخدام خوارزمية التشابه النصي
- */
-export function findClosestMatch(text: string, options: string[]): string {
-  if (!text || !options || options.length === 0) return "";
-  
-  let bestMatch = "";
-  let highestSimilarity = 0;
-  
-  // البحث عن أعلى معدل تشابه
-  for (const option of options) {
-    const similarity = calculateStringSimilarity(text, option);
-    
-    // تحديث أفضل تطابق إذا كان معدل التشابه أعلى
-    // نستخدم عتبة 0.6 للتأكد من وجود تشابه كافٍ
-    if (similarity > highestSimilarity && similarity > 0.6) {
-      highestSimilarity = similarity;
-      bestMatch = option;
-    }
-  }
-  
-  return bestMatch;
-}
