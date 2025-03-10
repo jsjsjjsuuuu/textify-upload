@@ -1,4 +1,3 @@
-
 import { DialogContent, DialogClose, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
@@ -7,7 +6,6 @@ import { ExtractedDataEditor } from "@/components/ExtractedData";
 import { ImageViewer } from "@/components/ImagePreview";
 import { ImageActions } from "@/components/ImagePreview";
 import { motion } from "framer-motion";
-
 interface ImagePreviewDialogProps {
   selectedImage: ImageData | null;
   zoomLevel: number;
@@ -20,7 +18,6 @@ interface ImagePreviewDialogProps {
   onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
 }
-
 const ImagePreviewDialog = ({
   selectedImage,
   zoomLevel,
@@ -34,54 +31,11 @@ const ImagePreviewDialog = ({
   formatDate
 }: ImagePreviewDialogProps) => {
   if (!selectedImage) return null;
-
-  return (
-    <DialogContent className="max-w-5xl p-0 bg-transparent border-none shadow-none" onInteractOutside={e => e.preventDefault()}>
+  return <DialogContent className="max-w-5xl p-0 bg-transparent border-none shadow-none" onInteractOutside={e => e.preventDefault()}>
       <DialogTitle className="sr-only">معاينة الصورة</DialogTitle>
       <DialogDescription className="sr-only">مشاهدة وتحرير بيانات الصورة</DialogDescription>
       
-      <motion.div 
-        className="bg-white/95 dark:bg-gray-800/90 rounded-lg border p-4 shadow-lg relative"
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: "spring", duration: 0.4 }}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ImageViewer 
-            selectedImage={selectedImage}
-            zoomLevel={zoomLevel}
-            onZoomIn={onZoomIn}
-            onZoomOut={onZoomOut}
-            onResetZoom={onResetZoom}
-            formatDate={formatDate}
-          />
-          
-          <div className="col-span-1">
-            <ExtractedDataEditor 
-              image={selectedImage}
-              onTextChange={onTextChange}
-            />
-          </div>
-        </div>
-        
-        <div className="mt-4 px-4">
-          <ImageActions 
-            imageId={selectedImage.id}
-            isSubmitting={isSubmitting}
-            isSubmitted={!!selectedImage.submitted}
-            isCompleted={selectedImage.status === "completed"}
-            onDelete={onDelete}
-            onSubmit={onSubmit}
-          />
-        </div>
-        
-        <DialogClose className="absolute top-2 right-2 rounded-full h-8 w-8 flex items-center justify-center border bg-background hover:bg-muted transition-colors">
-          <X size={18} />
-          <span className="sr-only">Close</span>
-        </DialogClose>
-      </motion.div>
-    </DialogContent>
-  );
+      
+    </DialogContent>;
 };
-
 export default ImagePreviewDialog;
