@@ -26,22 +26,22 @@ const ImagePreviewContainer = ({
   formatDate
 }: ImagePreviewContainerProps) => {
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1.4); // Initial zoom level of 40%
+  const [zoomLevel, setZoomLevel] = useState(1.4); // معامل التكبير الافتراضي 140%
   const { toast } = useToast();
 
-  // Reset zoom level when a new image is selected
+  // إعادة تعيين مستوى التكبير عند اختيار صورة جديدة
   useEffect(() => {
     if (selectedImage) {
-      setZoomLevel(1.4); // Reset to 40% zoom when image changes
+      setZoomLevel(1.4); // إعادة التعيين إلى 140% عند تغيير الصورة
     }
   }, [selectedImage?.id]);
 
   const handleImageClick = async (image: ImageData) => {
     console.log("Image clicked:", image.id, image.previewUrl);
     
-    // Toggle image selection without attempting to validate the URL
+    // تبديل اختيار الصورة بدون محاولة التحقق من صحة الرابط
     setSelectedImage(prev => prev?.id === image.id ? null : image);
-    setZoomLevel(1.4); // Set to 40% zoom when selecting image
+    setZoomLevel(1.4); // تعيين مستوى التكبير إلى 140% عند اختيار صورة
   };
 
   const handleZoomIn = () => {
@@ -53,7 +53,7 @@ const ImagePreviewContainer = ({
   };
 
   const handleResetZoom = () => {
-    setZoomLevel(1.4); // Reset to 40% zoom
+    setZoomLevel(1.4); // إعادة التعيين إلى 140%
   };
 
   const handleDeleteWithState = (id: string) => {
@@ -88,10 +88,10 @@ const ImagePreviewContainer = ({
   return (
     <>
       <div className="grid grid-cols-1 gap-8">
-        {/* Render expanded image preview if an image is selected */}
+        {/* عرض معاينة الصورة الموسعة عند اختيار صورة */}
         {selectedImage && (
           <motion.div 
-            className="bg-white/95 dark:bg-gray-800/90 rounded-lg border p-4 shadow-lg relative animate-slide-up"
+            className="bg-white/95 dark:bg-gray-800/90 rounded-lg p-4 shadow-lg relative animate-slide-up"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: "spring", duration: 0.4 }}
