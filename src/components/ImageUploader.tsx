@@ -90,7 +90,7 @@ const ImageUploader = ({
                 size={18} 
                 className="text-brand-coral hover:text-brand-green dark:text-brand-beige transition-colors duration-300" 
               />
-              <p className="text-xs text-muted-foreground">اسحب صورة هنا أو انقر للاختيار</p>
+              <p className="text-xs text-muted-foreground">ارفع الصور</p>
             </div>
           ) : (
             <div className="flex items-center w-full">
