@@ -10,6 +10,7 @@ export interface ImageData {
   phoneNumber?: string;
   province?: string;
   price?: string;
+  companyName?: string;
   date: Date;
   status: "processing" | "completed" | "error";
   submitted?: boolean;

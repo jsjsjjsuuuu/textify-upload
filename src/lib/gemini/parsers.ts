@@ -4,6 +4,7 @@
  */
 
 import { enhanceExtractedData, calculateConfidenceScore } from "./utils";
+import { correctProvinceName } from "@/utils/provinceCorrection";
 
 /**
  * استخراج JSON من نص الاستجابة ومعالجته
@@ -47,7 +48,33 @@ export function parseGeminiResponse(extractedText: string): {
     // تحويل البيانات العربية إلى مفاتيح إنجليزية
     const mappedData: Record<string, string> = {};
     
+    // استخراج اسم الشركة (يكون عادة في أعلى اليسار بخط كبير)
+    if (!enhancedData.companyName) {
+      const companyNamePatterns = [
+        // البحث عن نص في بداية النص المستخرج (يكون غالبًا في الأعلى)
+        /^([^:\n\r]+?)(?:\n|\r|$)/i,
+        // البحث عن "شركة" أو "مؤسسة" أو "مجموعة"
+        /شركة\s+(.+?)(?:\n|\r|$)/i,
+        /مؤسسة\s+(.+?)(?:\n|\r|$)/i,
+        /مجموعة\s+(.+?)(?:\n|\r|$)/i,
+        // البحث عن "company" باللغة الإنجليزية
+        /company[:\s]+(.+?)(?:\n|\r|$)/i
+      ];
+      
+      for (const pattern of companyNamePatterns) {
+        const match = extractedText.match(pattern);
+        if (match && match[1]) {
+          enhancedData.companyName = match[1].trim();
+          break;
+        }
+      }
+    }
+    
     // تحقق من وجود أي من الحقول في parsedData وتعيينها للمفاتيح الإنجليزية
+    if (enhancedData.companyName || enhancedData["اسم الشركة"] || enhancedData["الشركة"]) {
+      mappedData.companyName = enhancedData.companyName || enhancedData["اسم الشركة"] || enhancedData["الشركة"];
+    }
+    
     if (enhancedData.code || enhancedData["الكود"] || enhancedData["كود"]) {
       mappedData.code = enhancedData.code || enhancedData["الكود"] || enhancedData["كود"];
     }
@@ -61,7 +88,9 @@ export function parseGeminiResponse(extractedText: string): {
     }
     
     if (enhancedData.province || enhancedData["المحافظة"] || enhancedData["محافظة"]) {
-      mappedData.province = enhancedData.province || enhancedData["المحافظة"] || enhancedData["محافظة"];
+      let province = enhancedData.province || enhancedData["المحافظة"] || enhancedData["محافظة"];
+      // تصحيح اسم المحافظة
+      mappedData.province = correctProvinceName(province);
     }
     
     if (enhancedData.price || enhancedData["السعر"] || enhancedData["سعر"]) {
@@ -73,6 +102,8 @@ export function parseGeminiResponse(extractedText: string): {
       console.log("No JSON data found, parsing text manually");
       const lines = extractedText.split('\n');
       const dataFields: Record<string, string> = {
+        "اسم الشركة": "companyName",
+        "الشركة": "companyName",
         "الكود": "code",
         "كود": "code",
         "اسم المرسل": "senderName",
@@ -93,6 +124,11 @@ export function parseGeminiResponse(extractedText: string): {
           }
         }
       });
+    }
+    
+    // تصحيح اسم المحافظة في النهاية
+    if (mappedData.province) {
+      mappedData.province = correctProvinceName(mappedData.province);
     }
     
     console.log("Final mapped data:", mappedData);

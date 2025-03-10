@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { addCorrection } from "@/utils/learningSystem";
+import { correctProvinceName } from "@/utils/provinceCorrection";
 
 interface TempData {
   code: string;
@@ -9,6 +10,7 @@ interface TempData {
   phoneNumber: string;
   province: string;
   price: string;
+  companyName: string;
   [key: string]: string; // Add index signature to allow string indexing
 }
 
@@ -23,7 +25,8 @@ export const useDataExtraction = (
     senderName: image.senderName || "",
     phoneNumber: image.phoneNumber || "",
     province: image.province || "",
-    price: image.price || ""
+    price: image.price || "",
+    companyName: image.companyName || ""
   });
   
   const [correctionsMade, setCorrectionsMade] = useState(false);
@@ -37,7 +40,8 @@ export const useDataExtraction = (
         senderName: image.senderName || "",
         phoneNumber: image.phoneNumber || "",
         province: image.province || "",
-        price: image.price || ""
+        price: image.price || "",
+        companyName: image.companyName || ""
       };
       
       // حفظ التغييرات
@@ -75,7 +79,8 @@ export const useDataExtraction = (
         senderName: image.senderName || "",
         phoneNumber: image.phoneNumber || "",
         province: image.province || "",
-        price: image.price || ""
+        price: image.price || "",
+        companyName: image.companyName || ""
       });
     }
     setEditMode(!editMode);
@@ -88,12 +93,14 @@ export const useDataExtraction = (
       senderName: image.senderName || "",
       phoneNumber: image.phoneNumber || "",
       province: image.province || "",
-      price: image.price || ""
+      price: image.price || "",
+      companyName: image.companyName || ""
     });
   };
 
   const handleCopyText = () => {
-    const textToCopy = `الكود: ${image.code || "غير متوفر"}
+    const textToCopy = `اسم الشركة: ${image.companyName || "غير متوفر"}
+الكود: ${image.code || "غير متوفر"}
 اسم المرسل: ${image.senderName || "غير متوفر"}
 رقم الهاتف: ${image.phoneNumber || "غير متوفر"}
 المحافظة: ${image.province || "غير متوفر"}
@@ -105,10 +112,16 @@ export const useDataExtraction = (
   };
 
   const handleTempChange = (field: string, value: string) => {
-    setTempData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setTempData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      // تصحيح اسم المحافظة إذا تم تغييره
+      if (field === 'province') {
+        newData.province = correctProvinceName(value);
+      }
+      
+      return newData;
+    });
   };
 
   const tryExtractField = (text: string, patterns: RegExp[]): string => {
@@ -124,7 +137,20 @@ export const useDataExtraction = (
   const handleAutoExtract = () => {
     if (!image.extractedText) return;
     
+    // استخراج اسم الشركة (يكون عادة في أعلى اليسار بخط كبير)
+    const companyNamePatterns = [
+      // البحث عن نص في بداية النص المستخرج (يكون غالبًا في الأعلى)
+      /^([^:\n\r]+?)(?:\n|\r|$)/i,
+      // البحث عن "شركة" أو "مؤسسة" أو "مجموعة"
+      /شركة\s+(.+?)(?:\n|\r|$)/i,
+      /مؤسسة\s+(.+?)(?:\n|\r|$)/i,
+      /مجموعة\s+(.+?)(?:\n|\r|$)/i,
+      // البحث عن "company" باللغة الإنجليزية
+      /company[:\s]+(.+?)(?:\n|\r|$)/i
+    ];
+    
     const extractedData = {
+      companyName: tryExtractField(image.extractedText, companyNamePatterns),
       code: tryExtractField(image.extractedText, [
         /كود[:\s]+([0-9]+)/i, 
         /code[:\s]+([0-9]+)/i, 
@@ -157,6 +183,11 @@ export const useDataExtraction = (
         /قيمة[:\s]+(.+?)(?:\n|\r|$)/i
       ])
     };
+
+    // تصحيح اسم المحافظة
+    if (extractedData.province) {
+      extractedData.province = correctProvinceName(extractedData.province);
+    }
 
     setTempData(prev => ({
       ...prev,

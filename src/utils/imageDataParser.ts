@@ -1,6 +1,7 @@
 
 import { ImageData } from "@/types/ImageData";
 import { enhanceWithLearning } from "./learningSystem";
+import { correctProvinceName } from "./provinceCorrection";
 
 /**
  * Attempts to parse structured data from OCR text
@@ -8,6 +9,26 @@ import { enhanceWithLearning } from "./learningSystem";
 export const parseDataFromOCRText = (text: string) => {
   console.log("Parsing data from OCR text:", text);
   const result: Record<string, string> = {};
+  
+  // استخراج اسم الشركة (يكون عادة في أعلى اليسار بخط كبير)
+  const companyNamePatterns = [
+    // البحث عن نص في بداية النص المستخرج (يكون غالبًا في الأعلى)
+    /^([^:\n\r]+?)(?:\n|\r|$)/i,
+    // البحث عن "شركة" أو "مؤسسة" أو "مجموعة"
+    /شركة\s+(.+?)(?:\n|\r|$)/i,
+    /مؤسسة\s+(.+?)(?:\n|\r|$)/i,
+    /مجموعة\s+(.+?)(?:\n|\r|$)/i,
+    // البحث عن "company" باللغة الإنجليزية
+    /company[:\s]+(.+?)(?:\n|\r|$)/i
+  ];
+  
+  for (const pattern of companyNamePatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      result.companyName = match[1].trim();
+      break;
+    }
+  }
   
   // Common patterns for data extraction
   const patterns = {
@@ -29,6 +50,11 @@ export const parseDataFromOCRText = (text: string) => {
     }
   }
   
+  // تصحيح اسم المحافظة
+  if (result.province) {
+    result.province = correctProvinceName(result.province);
+  }
+  
   // Also try to look for JSON in the text
   try {
     const jsonMatch = text.match(/{[\s\S]*?}/);
@@ -39,8 +65,12 @@ export const parseDataFromOCRText = (text: string) => {
         if (jsonData.code) result.code = jsonData.code;
         if (jsonData.senderName) result.senderName = jsonData.senderName;
         if (jsonData.phoneNumber) result.phoneNumber = jsonData.phoneNumber;
-        if (jsonData.province) result.province = jsonData.province;
+        if (jsonData.province) {
+          // تصحيح اسم المحافظة من JSON
+          result.province = correctProvinceName(jsonData.province);
+        }
         if (jsonData.price) result.price = jsonData.price;
+        if (jsonData.companyName) result.companyName = jsonData.companyName;
       } catch (e) {
         console.log("Failed to parse JSON from text:", e);
       }
@@ -75,6 +105,7 @@ export const updateImageWithExtractedData = (
     phoneNumber: parsedData.phoneNumber || "",
     province: parsedData.province || "",
     price: parsedData.price || "",
+    companyName: parsedData.companyName || "",
     status: "completed",
     extractionMethod: method
   };

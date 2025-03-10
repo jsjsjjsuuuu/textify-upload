@@ -8,6 +8,7 @@ interface ExtractedDataFieldsProps {
     phoneNumber: string;
     province: string;
     price: string;
+    companyName: string;
   };
   editMode: boolean;
   onTempChange: (field: string, value: string) => void;
@@ -20,6 +21,14 @@ const ExtractedDataFields = ({
 }: ExtractedDataFieldsProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <ExtractedDataField 
+        label="اسم الشركة"
+        value={tempData.companyName}
+        editMode={editMode}
+        placeholder="أدخل اسم الشركة"
+        onChange={(value) => onTempChange("companyName", value)}
+      />
+
       <ExtractedDataField 
         label="الكود"
         value={tempData.code}
