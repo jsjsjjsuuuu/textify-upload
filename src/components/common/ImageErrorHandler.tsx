@@ -14,6 +14,7 @@ interface ImageErrorHandlerProps {
   loadingMessage?: string;
   errorType?: "network" | "format" | "access" | "general";
   fadeIn?: boolean;
+  number?: number;
 }
 
 const ImageErrorHandler = ({
@@ -27,7 +28,8 @@ const ImageErrorHandler = ({
   retryMessage = "إعادة المحاولة",
   loadingMessage = "جاري إعادة التحميل...",
   errorType = "general",
-  fadeIn = true
+  fadeIn = true,
+  number
 }: ImageErrorHandlerProps) => {
   const [error, setError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(!fadeIn);
@@ -82,6 +84,12 @@ const ImageErrorHandler = ({
     <div 
       className={`absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80 ${className} ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`}
     >
+      {number && (
+        <div className="absolute top-1 right-1 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
+          صورة {number}
+        </div>
+      )}
+      
       {isLoading ? (
         <>
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mb-2"></div>
@@ -117,6 +125,10 @@ const ImageErrorHandler = ({
               <span className="mr-2 text-xs text-blue-500">{loadingMessage}</span>
             </div>
           )}
+          
+          <div className="mt-4 text-xs text-amber-500">
+            تعذر الوصول للصورة، يرجى التحقق من الإذن
+          </div>
         </>
       )}
     </div>

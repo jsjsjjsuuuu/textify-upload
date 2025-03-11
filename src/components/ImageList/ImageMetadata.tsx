@@ -4,9 +4,15 @@ import { ImageData } from "@/types/ImageData";
 interface ImageMetadataProps {
   image: ImageData;
   formatDate: (date: Date) => string;
+  hasError?: boolean;
 }
 
-const ImageMetadata = ({ image, formatDate }: ImageMetadataProps) => {
+const ImageMetadata = ({ image, formatDate, hasError = false }: ImageMetadataProps) => {
+  // في حالة وجود خطأ، لا نعرض بيانات وصفية للصورة
+  if (hasError) {
+    return null;
+  }
+
   return (
     <>
       <div className="text-xs text-muted-foreground mt-1 text-center">

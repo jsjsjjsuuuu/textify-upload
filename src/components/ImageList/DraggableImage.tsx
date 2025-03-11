@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import ImageErrorHandler from "@/components/common/ImageErrorHandler";
@@ -201,6 +200,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
       <ImageMetadata
         image={image}
         formatDate={formatDate}
+        hasError={imgError}
       />
     </div>
   );
