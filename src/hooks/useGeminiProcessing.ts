@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { extractDataWithGemini, fileToBase64 } from "@/lib/gemini";
 import { useToast } from "@/hooks/use-toast";
-import { updateImageWithExtractedData } from "@/utils/imageDataParser";
+import { updateImageWithExtractedData } from "@/utils/parsers";
 
 export const useGeminiProcessing = () => {
   const [useGemini, setUseGemini] = useState(false);
