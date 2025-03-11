@@ -1,10 +1,11 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Trash, Send, AlertCircle, FileText, Search, RefreshCw } from "lucide-react";
+import { Edit, Trash, Send, AlertCircle, FileText, Search } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import ImageErrorHandler from "@/components/common/ImageErrorHandler";
 
 interface ImageTableProps {
   images: ImageData[];
@@ -24,17 +25,43 @@ const ImageTable = ({
   formatDate
 }: ImageTableProps) => {
   const [imgErrorMap, setImgErrorMap] = useState<Record<string, boolean>>({});
+  const [retryCountMap, setRetryCountMap] = useState<Record<string, number>>({});
+  const [isRetryingMap, setIsRetryingMap] = useState<Record<string, boolean>>({});
 
   if (images.length === 0) return null;
 
   const handleImageError = (imageId: string) => {
     setImgErrorMap(prev => ({ ...prev, [imageId]: true }));
+    
+    // تحديث عداد المحاولات
+    const currentRetryCount = retryCountMap[imageId] || 0;
+    if (currentRetryCount < 2) {
+      // محاولة إعادة التحميل تلقائيًا
+      handleRetryImage(null, imageId);
+    } else {
+      setIsRetryingMap(prev => ({ ...prev, [imageId]: false }));
+    }
   };
 
-  const handleRetryImage = (e: React.MouseEvent, imageId: string) => {
-    e.stopPropagation();
-    setImgErrorMap(prev => ({ ...prev, [imageId]: false }));
-    // سيتم إعادة تحميل الصورة تلقائيًا عند تغيير خاصية الخطأ
+  const handleRetryImage = (e: React.MouseEvent | null, imageId: string) => {
+    if (e) e.stopPropagation();
+    
+    // تحديث عداد المحاولات
+    const newRetryCount = (retryCountMap[imageId] || 0) + 1;
+    setRetryCountMap(prev => ({ ...prev, [imageId]: newRetryCount }));
+    
+    // تعيين حالة المحاولة
+    setIsRetryingMap(prev => ({ ...prev, [imageId]: true }));
+    
+    // إعادة المحاولة بعد تأخير قصير
+    setTimeout(() => {
+      setImgErrorMap(prev => ({ ...prev, [imageId]: false }));
+      
+      // إعادة تعيين حالة المحاولة بعد فترة زمنية في حالة فشل التحميل
+      setTimeout(() => {
+        setIsRetryingMap(prev => ({ ...prev, [imageId]: false }));
+      }, 5000); // انتظر 5 ثوانٍ كحد أقصى
+    }, 100);
   };
 
   return (
@@ -76,6 +103,8 @@ const ImageTable = ({
                 // التحقق من صحة رقم الهاتف
                 const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
                 const hasImgError = imgErrorMap[image.id] === true;
+                const retryCount = retryCountMap[image.id] || 0;
+                const isRetrying = isRetryingMap[image.id] || false;
                 
                 return (
                   <tr 
@@ -97,23 +126,23 @@ const ImageTable = ({
                               className="object-contain h-full w-full transition-transform duration-200 group-hover:scale-110" 
                               style={{ mixBlendMode: 'multiply' }} 
                               onError={() => handleImageError(image.id)}
+                              crossOrigin="anonymous"
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                               <Search className="w-5 h-5 text-white drop-shadow-md" />
                             </div>
                           </>
                         ) : (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="M17.5 5c-2.6-2.4-6.8-2.4-9.3 0m11.3 4c-3.3-3-8.2-3-11.5 0m13.3 4c-4-3.6-9.6-3.6-13.5 0"/></svg>
-                            <p className="mt-1 text-[10px] text-center text-muted-foreground">الصورة غير متاحة</p>
-                            <button 
-                              onClick={(e) => handleRetryImage(e, image.id)} 
-                              className="mt-1 p-1 text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded flex items-center"
-                            >
-                              <RefreshCw size={10} className="mr-1" />
-                              إعادة
-                            </button>
-                          </div>
+                          <ImageErrorHandler 
+                            imageId={image.id}
+                            onRetry={() => handleRetryImage(null, image.id)}
+                            retryCount={retryCount}
+                            maxRetries={2}
+                            isLoading={isRetrying}
+                            className="rounded-lg"
+                            errorMessage="الصورة غير متاحة"
+                            retryMessage="إعادة"
+                          />
                         )}
                       </div>
                     </td>

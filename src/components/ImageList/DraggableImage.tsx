@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import ZoomControls from "./ZoomControls";
+import ImageErrorHandler from "@/components/common/ImageErrorHandler";
 
 interface DraggableImageProps {
   image: ImageData;
@@ -17,6 +18,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [imgError, setImgError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   
@@ -25,6 +27,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
     setPosition({ x: 0, y: 0 });
     setImgError(false);
     setRetryCount(0);
+    setIsRetrying(false);
   }, [image.id]);
   
   // Zoom control handlers
@@ -104,15 +107,17 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
     console.log(`فشل تحميل الصورة: ${image.id}, محاولة: ${retryCount + 1}`);
     setImgError(true);
     
-    // محاولة إعادة التحميل مرتين على الأكثر
+    // محاولة إعادة التحميل تلقائيًا إذا لم يتم تجاوز الحد الأقصى
     if (retryCount < 2) {
       handleRetryLoadImage();
+    } else {
+      setIsRetrying(false);
     }
   };
 
-  // محاولة تحميل الصورة مرة أخرى إذا فشلت
+  // محاولة تحميل الصورة مرة أخرى
   const handleRetryLoadImage = () => {
-    setImgError(false);
+    setIsRetrying(true);
     setRetryCount(prev => prev + 1);
     
     if (imageRef.current) {
@@ -130,13 +135,18 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
           // إضافة معلمة الوقت لتجنب التخزين المؤقت
           imageRef.current.src = `${originalSrc}?t=${timestamp}`;
           console.log(`إعادة محاولة تحميل الصورة: ${originalSrc}?t=${timestamp}`);
+          
+          // تعيين حالة الخطأ إلى false ليتم إعادة عرض الصورة
+          setImgError(false);
+          
+          // إعادة تعيين حالة المحاولة بعد فترة زمنية في حالة فشل التحميل
+          setTimeout(() => {
+            setIsRetrying(false);
+          }, 5000); // انتظر 5 ثوانٍ كحد أقصى
         }
       }, 100);
     }
   };
-
-  // تحديد ما إذا كان يجب عرض زر إعادة المحاولة (فقط بعد فشل محاولتين)
-  const shouldShowRetryButton = imgError && retryCount >= 2;
 
   return (
     <div className="p-3 bg-transparent relative">
@@ -174,26 +184,13 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
         />
         
         {imgError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 mb-2"><path d="M10 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"></path><path d="M17 14v-3a2 2 0 0 0-2-2H8"></path><path d="M4 11h7"></path></svg>
-            <p className="mt-1 text-sm text-center text-muted-foreground">الصورة غير متاحة حاليًا</p>
-            <p className="text-xs text-center text-muted-foreground mb-2">
-              {retryCount > 0 ? `عدد المحاولات: ${retryCount}` : 'فشل التحميل'}
-            </p>
-            {shouldShowRetryButton ? (
-              <button 
-                onClick={handleRetryLoadImage} 
-                className="mt-1 px-4 py-1.5 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
-              >
-                إعادة المحاولة
-              </button>
-            ) : (
-              <div className="flex items-center justify-center mt-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
-                <span className="ml-2 text-xs text-blue-500">جاري إعادة التحميل...</span>
-              </div>
-            )}
-          </div>
+          <ImageErrorHandler 
+            imageId={image.id}
+            onRetry={handleRetryLoadImage}
+            retryCount={retryCount}
+            maxRetries={2}
+            isLoading={isRetrying}
+          />
         )}
         
         <div className="absolute top-1 right-1 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
