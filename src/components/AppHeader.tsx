@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import UserMenu from './UserMenu';
 import { useAuth } from '@/hooks/useAuth';
+import LearningStats from './LearningStats'; // نستمر في استيراد المكون ولكن لن نعرضه
 
 const AppHeader = () => {
   const navigate = useNavigate();
@@ -16,6 +17,9 @@ const AppHeader = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
+      {/* نستدعي المكون بشكل غير مرئي للحفاظ على وظائفه الداخلية */}
+      <LearningStats />
+      
       <div className="flex items-center">
         <h1 className="text-3xl font-bold text-brand-brown dark:text-brand-beige">
           نظام استخراج البيانات
