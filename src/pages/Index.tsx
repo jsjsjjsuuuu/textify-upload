@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import BackgroundPattern from "@/components/BackgroundPattern";
 import ImageUploader from "@/components/ImageUploader";
 import AppHeader from "@/components/AppHeader";
@@ -6,8 +7,11 @@ import ImagePreviewContainer from "@/components/ImageViewer/ImagePreviewContaine
 import LearningStats from "@/components/LearningStats";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
+import { useAuth } from "@/hooks/useAuth";
+import { motion } from "framer-motion";
 
 const Index = () => {
+  const { user } = useAuth();
   const {
     images,
     isProcessing,
@@ -27,7 +31,23 @@ const Index = () => {
       <div className="container px-4 sm:px-6 py-4 sm:py-6 mx-auto max-w-5xl">
         <AppHeader />
 
-        <div className="flex flex-col items-center justify-center pt-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center justify-center pt-4"
+        >
+          {user && (
+            <div className="w-full text-right mb-6">
+              <h2 className="text-2xl font-semibold text-brand-brown dark:text-brand-beige">
+                مرحباً {user.username}!
+              </h2>
+              <p className="text-muted-foreground">
+                {user.role === "admin" ? "مدير النظام" : user.role === "agent" ? "وكيل" : "مستخدم"}
+              </p>
+            </div>
+          )}
+
           <div className="w-full flex justify-center mx-auto">
             <ImageUploader 
               isProcessing={isProcessing}
@@ -53,7 +73,7 @@ const Index = () => {
               formatDate={formatDate}
             />
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

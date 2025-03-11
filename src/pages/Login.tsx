@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,16 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const location = useLocation();
+  const { login, isAuthenticated } = useAuth();
+
+  // إذا كان المستخدم مسجل الدخول بالفعل، إعادة توجيهه إلى الصفحة الرئيسية
+  if (isAuthenticated) {
+    const { state } = location;
+    const destination = state && state.from ? state.from : "/";
+    navigate(destination, { replace: true });
+    return null;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,9 +39,8 @@ const Login = () => {
           title: "تم تسجيل الدخول بنجاح",
           description: `مرحباً ${username}!`,
         });
-
-        // توجيه المستخدم إلى الصفحة الرئيسية
-        navigate("/");
+        
+        // useAuth سيقوم بالتوجيه إلى الصفحة المناسبة
       } else {
         toast({
           title: "فشل تسجيل الدخول",
@@ -116,6 +124,7 @@ const Login = () => {
               <p>بيانات اختبار:</p>
               <p>- مدير: admin / admin123</p>
               <p>- مستخدم: user / user123</p>
+              <p>- وكيل: agent / agent123</p>
             </div>
           </CardContent>
           
