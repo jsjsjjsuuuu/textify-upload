@@ -15,7 +15,7 @@ const ZoomControls = ({ onZoomIn, onZoomOut, onResetZoom }: ZoomControlsProps) =
         variant="secondary" 
         size="icon" 
         onClick={onZoomIn} 
-        className="h-8 w-8 bg-white/90 hover:bg-white"
+        className="h-8 w-8 bg-white/90 hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800"
       >
         <ZoomIn size={16} />
       </Button>
@@ -23,7 +23,7 @@ const ZoomControls = ({ onZoomIn, onZoomOut, onResetZoom }: ZoomControlsProps) =
         variant="secondary" 
         size="icon" 
         onClick={onZoomOut} 
-        className="h-8 w-8 bg-white/90 hover:bg-white"
+        className="h-8 w-8 bg-white/90 hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800"
       >
         <ZoomOut size={16} />
       </Button>
@@ -31,7 +31,7 @@ const ZoomControls = ({ onZoomIn, onZoomOut, onResetZoom }: ZoomControlsProps) =
         variant="secondary" 
         size="icon" 
         onClick={onResetZoom} 
-        className="h-8 w-8 bg-white/90 hover:bg-white"
+        className="h-8 w-8 bg-white/90 hover:bg-white dark:bg-gray-800/90 dark:hover:bg-gray-800"
       >
         <Maximize2 size={16} />
       </Button>

@@ -1,7 +1,10 @@
+
 import { useState, useRef, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
-import ZoomControls from "./ZoomControls";
 import ImageErrorHandler from "@/components/common/ImageErrorHandler";
+import ZoomControls from "./ZoomControls";
+import ImageMetadata from "./ImageMetadata";
+import DraggableImageCore from "./DraggableImageCore";
 
 interface DraggableImageProps {
   image: ImageData;
@@ -10,7 +13,7 @@ interface DraggableImageProps {
 }
 
 const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps) => {
-  // State for zoom and dragging
+  // حالة التكبير والسحب
   const [zoomLevel, setZoomLevel] = useState(1.5); // تكبير تلقائي بنسبة 50%
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -31,7 +34,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
     setErrorType("general");
   }, [image.id]);
   
-  // Zoom control handlers
+  // مناولات التحكم في التكبير
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
     setZoomLevel(prev => Math.min(prev + 0.2, 3));
@@ -48,7 +51,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
     setPosition({ x: 0, y: 0 });
   };
   
-  // Mouse drag handlers
+  // مناولات سحب الماوس
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsDragging(true);
@@ -65,7 +68,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
       const newX = e.clientX - startPos.x;
       const newY = e.clientY - startPos.y;
       
-      // Calculate bounds to prevent dragging image completely out of view
+      // حساب الحدود لمنع سحب الصورة خارج نطاق الرؤية بالكامل
       const containerWidth = imageContainerRef.current?.clientWidth || 0;
       const containerHeight = imageContainerRef.current?.clientHeight || 0;
       const imageWidth = (imageRef.current?.naturalWidth || 0) * zoomLevel;
@@ -74,11 +77,11 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
       const maxX = Math.max(0, (imageWidth - containerWidth) / 2);
       const maxY = Math.max(0, (imageHeight - containerHeight) / 2);
       
-      // Bound the position
+      // تقييد الموضع
       const boundedX = Math.min(Math.max(newX, -maxX), maxX);
       const boundedY = Math.min(Math.max(newY, -maxY), maxY);
       
-      // Use requestAnimationFrame for smoother updates
+      // استخدام requestAnimationFrame لتحديثات أكثر سلاسة
       requestAnimationFrame(() => {
         setPosition({ x: boundedX, y: boundedY });
       });
@@ -97,13 +100,13 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
   };
   
   const handleImageClick = () => {
-    // Only trigger image click if not dragging
+    // تشغيل نقرة الصورة فقط في حالة عدم السحب
     if (!isDragging) {
       onImageClick(image);
     }
   };
 
-  // معالجة خطأ تحميل الصورة بشكل أفضل
+  // معالجة خطأ تحميل الصورة
   const handleImageError = () => {
     console.log(`فشل تحميل الصورة: ${image.id}, محاولة: ${retryCount + 1}`);
     setImgError(true);
@@ -171,85 +174,34 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
         onResetZoom={handleResetZoom}
       />
       
-      <div 
-        ref={imageContainerRef}
-        className="relative w-full h-[420px] overflow-hidden bg-transparent cursor-move flex items-center justify-center" 
-        onClick={handleImageClick}
+      <DraggableImageCore
+        imageRef={imageRef}
+        containerRef={imageContainerRef}
+        previewUrl={image.previewUrl}
+        zoomLevel={zoomLevel}
+        position={position}
+        isDragging={isDragging}
+        imgError={imgError}
+        isRetrying={isRetrying}
+        errorType={errorType}
+        retryCount={retryCount}
+        imageId={image.id}
+        status={image.status}
+        submitted={image.submitted}
+        number={image.number}
+        onImageClick={handleImageClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
-      >
-        <img 
-          ref={imageRef}
-          src={image.previewUrl} 
-          alt="صورة محملة" 
-          className="w-full h-full object-contain transition-transform duration-150" 
-          style={{ 
-            transform: `scale(${zoomLevel}) translate(${position.x / zoomLevel}px, ${position.y / zoomLevel}px)`,
-            maxHeight: '100%',
-            maxWidth: '100%',
-            transformOrigin: 'center',
-            pointerEvents: 'none', // Prevents image from capturing mouse events
-            willChange: 'transform', // Optimize for transforms
-            display: imgError ? 'none' : 'block',
-          }} 
-          onError={handleImageError}
-          crossOrigin="anonymous"
-        />
-        
-        {imgError && (
-          <ImageErrorHandler 
-            imageId={image.id}
-            onRetry={handleRetryLoadImage}
-            retryCount={retryCount}
-            maxRetries={2}
-            isLoading={isRetrying}
-            errorType={errorType}
-            fadeIn={true}
-          />
-        )}
-        
-        <div className="absolute top-1 right-1 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
-          صورة {image.number}
-        </div>
-        
-        {image.status === "processing" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
-            <span className="text-xs">جاري المعالجة...</span>
-          </div>
-        )}
-        
-        {image.status === "completed" && (
-          <div className="absolute top-1 left-1 bg-green-500 text-white p-1 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          </div>
-        )}
-        
-        {image.status === "error" && (
-          <div className="absolute top-1 left-1 bg-destructive text-white p-1 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </div>
-        )}
-        
-        {image.submitted && (
-          <div className="absolute bottom-1 right-1 bg-brand-green text-white px-1.5 py-0.5 rounded-md text-[10px]">
-            تم الإرسال
-          </div>
-        )}
-      </div>
+        onImageError={handleImageError}
+        onRetryLoadImage={handleRetryLoadImage}
+      />
       
-      <div className="text-xs text-muted-foreground mt-1 text-center">
-        {formatDate(image.date)}
-      </div>
-      
-      {image.confidence !== undefined && (
-        <div className="mt-1 text-center">
-          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-            دقة الاستخراج: {Math.round(image.confidence)}%
-          </span>
-        </div>
-      )}
+      <ImageMetadata
+        image={image}
+        formatDate={formatDate}
+      />
     </div>
   );
 };
