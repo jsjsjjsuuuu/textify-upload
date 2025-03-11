@@ -19,6 +19,7 @@ export const parseDataFromOCRText = (text: string) => {
     /شركة\s+(.+?)(?:\n|\r|$)/i,
     /مؤسسة\s+(.+?)(?:\n|\r|$)/i,
     /مجموعة\s+(.+?)(?:\n|\r|$)/i,
+    /مكتب\s+(.+?)(?:\n|\r|$)/i,
     // البحث عن "company" باللغة الإنجليزية
     /company[:\s]+(.+?)(?:\n|\r|$)/i
   ];
@@ -31,16 +32,66 @@ export const parseDataFromOCRText = (text: string) => {
     }
   }
   
-  // Common patterns for data extraction
+  // أنماط محسنة لاستخراج البيانات للسوق العراقي
   const patterns = {
-    code: [/كود[:\s]+([0-9]+)/i, /code[:\s]+([0-9]+)/i, /رقم[:\s]+([0-9]+)/i],
-    senderName: [/اسم المرسل[:\s]+(.+?)(?:\n|\r|$)/i, /sender[:\s]+(.+?)(?:\n|\r|$)/i, /الاسم[:\s]+(.+?)(?:\n|\r|$)/i],
-    phoneNumber: [/هاتف[:\s]+([0-9\-]+)/i, /phone[:\s]+([0-9\-]+)/i, /جوال[:\s]+([0-9\-]+)/i, /رقم الهاتف[:\s]+([0-9\-]+)/i],
-    province: [/محافظة[:\s]+(.+?)(?:\n|\r|$)/i, /province[:\s]+(.+?)(?:\n|\r|$)/i, /المدينة[:\s]+(.+?)(?:\n|\r|$)/i],
-    price: [/سعر[:\s]+(.+?)(?:\n|\r|$)/i, /price[:\s]+(.+?)(?:\n|\r|$)/i, /المبلغ[:\s]+(.+?)(?:\n|\r|$)/i]
+    code: [
+      /كود[:\s]+([0-9]+)/i, 
+      /code[:\s]+([0-9]+)/i, 
+      /رقم[:\s]+([0-9]+)/i,
+      /رقم الفاتورة[:\s]+([0-9]+)/i,
+      /رقم الطلب[:\s]+([0-9]+)/i,
+      /رمز[:\s]+([0-9]+)/i,
+      /ID[:\s]+([0-9]+)/i
+    ],
+    senderName: [
+      /اسم المرسل[:\s]+(.+?)(?:\n|\r|$)/i, 
+      /sender[:\s]+(.+?)(?:\n|\r|$)/i, 
+      /الاسم[:\s]+(.+?)(?:\n|\r|$)/i,
+      /الزبون[:\s]+(.+?)(?:\n|\r|$)/i,
+      /المرسل[:\s]+(.+?)(?:\n|\r|$)/i,
+      /العميل[:\s]+(.+?)(?:\n|\r|$)/i,
+      /customer[:\s]+(.+?)(?:\n|\r|$)/i
+    ],
+    phoneNumber: [
+      /هاتف[:\s]+([0-9\-\s]+)/i, 
+      /phone[:\s]+([0-9\-\s]+)/i, 
+      /جوال[:\s]+([0-9\-\s]+)/i, 
+      /رقم الهاتف[:\s]+([0-9\-\s]+)/i,
+      /موبايل[:\s]+([0-9\-\s]+)/i,
+      /الرقم[:\s]+([0-9\-\s]+)/i,
+      /ت[:\s]+([0-9\-\s]+)/i,
+      /تلفون[:\s]+([0-9\-\s]+)/i,
+      /\b(07\d{8,9})\b/i // البحث عن أي رقم يبدأ ب 07 متبوعًا بـ 8 أو 9 أرقام
+    ],
+    province: [
+      /محافظة[:\s]+(.+?)(?:\n|\r|$)/i, 
+      /province[:\s]+(.+?)(?:\n|\r|$)/i, 
+      /المدينة[:\s]+(.+?)(?:\n|\r|$)/i,
+      /city[:\s]+(.+?)(?:\n|\r|$)/i,
+      /منطقة[:\s]+(.+?)(?:\n|\r|$)/i,
+      /المحافظة[:\s]+(.+?)(?:\n|\r|$)/i,
+      /التوصيل إلى[:\s]+(.+?)(?:\n|\r|$)/i,
+      /العنوان[:\s]+(.+?)(?:\n|\r|$)/i
+    ],
+    price: [
+      /سعر[:\s]+(.+?)(?:\n|\r|$)/i, 
+      /price[:\s]+(.+?)(?:\n|\r|$)/i, 
+      /المبلغ[:\s]+(.+?)(?:\n|\r|$)/i,
+      /amount[:\s]+(.+?)(?:\n|\r|$)/i,
+      /قيمة[:\s]+(.+?)(?:\n|\r|$)/i,
+      /كلفة[:\s]+(.+?)(?:\n|\r|$)/i,
+      /الدفع[:\s]+(.+?)(?:\n|\r|$)/i,
+      /التكلفة[:\s]+(.+?)(?:\n|\r|$)/i,
+      /(\d+) دينار/i,
+      /(\d+) د\.ع/i,
+      /(\d+) الف/i,
+      /(\d+)الف/i,
+      /(\d+)k/i,
+      /(\d+) k/i
+    ]
   };
   
-  // Try to match each field
+  // محاولة مطابقة كل حقل من الأنماط المحسنة
   for (const [field, fieldPatterns] of Object.entries(patterns)) {
     for (const pattern of fieldPatterns) {
       const match = text.match(pattern);
@@ -51,7 +102,7 @@ export const parseDataFromOCRText = (text: string) => {
     }
   }
   
-  // تصحيح اسم المحافظة
+  // تصحيح اسم المحافظة للمحافظات العراقية
   if (result.province) {
     result.province = correctProvinceName(result.province);
   }
@@ -77,13 +128,13 @@ export const parseDataFromOCRText = (text: string) => {
     }
   }
   
-  // Also try to look for JSON in the text
+  // البحث عن تنسيق JSON في النص
   try {
     const jsonMatch = text.match(/{[\s\S]*?}/);
     if (jsonMatch) {
       try {
         const jsonData = JSON.parse(jsonMatch[0]);
-        // Merge any valid data from JSON with existing results
+        // دمج البيانات الصالحة من JSON مع النتائج الموجودة
         if (jsonData.code) result.code = jsonData.code;
         if (jsonData.senderName) result.senderName = jsonData.senderName;
         if (jsonData.phoneNumber) result.phoneNumber = jsonData.phoneNumber;
@@ -101,9 +152,27 @@ export const parseDataFromOCRText = (text: string) => {
     console.log("Error looking for JSON in text:", e);
   }
   
-  // Process price according to the new rules
+  // معالجة السعر وفقًا للقواعد الجديدة للسوق العراقي
   if (result.price) {
     result.price = formatPrice(result.price);
+  }
+  
+  // تحسين رقم الهاتف العراقي
+  if (result.phoneNumber) {
+    // إزالة المسافات والرموز غير الرقمية
+    let phoneNumber = result.phoneNumber.replace(/[^\d]/g, '');
+    
+    // إذا كان الرقم يبدأ بـ 7 (بدون الصفر)، أضف 0 في البداية
+    if (phoneNumber.startsWith('7') && phoneNumber.length === 10) {
+      phoneNumber = '0' + phoneNumber;
+    }
+    
+    // إذا كان الرقم يبدأ بـ 964 (رمز العراق الدولي)، استبدله بـ 0
+    if (phoneNumber.startsWith('964')) {
+      phoneNumber = '0' + phoneNumber.substring(3);
+    }
+    
+    result.phoneNumber = phoneNumber;
   }
   
   // تعزيز البيانات المستخرجة من خلال نظام التعلم
@@ -123,12 +192,12 @@ export const updateImageWithExtractedData = (
   confidence: number = 0,
   method: "ocr" | "gemini" = "ocr"
 ): ImageData => {
-  // Format the price before updating
+  // تنسيق السعر قبل التحديث
   if (parsedData.price) {
     parsedData.price = formatPrice(parsedData.price);
   }
   
-  // Calculate confidence score if not provided
+  // حساب درجة الثقة إذا لم يتم توفيرها
   if (!confidence) {
     confidence = calculateConfidenceScore(parsedData);
   }
@@ -203,6 +272,3 @@ export const calculateConfidenceScore = (data: Record<string, string>): number =
   
   return Math.min(Math.round(score), 100);
 };
-
-// Re-export the formatPrice function from utils.ts
-// export { formatPrice } from "@/lib/gemini/utils";

@@ -92,10 +92,10 @@ export function enhanceExtractedData(parsedData: any, fullText: string): any {
 }
 
 /**
- * تنسيق السعر وفقًا لقواعد محددة:
+ * تنسيق السعر وفقًا لقواعد محددة للسوق العراقي:
  * - إذا كان السعر رقمًا صغيرًا أقل من 1000، اضربه في 1000
  * - إذا كان "مجاني" أو "توصيل" أو "واصل" أو "0"، اجعله صفرًا
- * - بخلاف ذلك، نظفه وأعده كما هو
+ * - تعامل مع الأسعار بالدينار العراقي والدولار الأمريكي
  */
 export function formatPrice(price: string): string {
   console.log(`تنسيق السعر: "${price}"`);
@@ -106,23 +106,33 @@ export function formatPrice(price: string): string {
     return '0';
   }
   
-  // التحقق مما إذا كان السعر "مجاني" أو "صفر" أو "توصيل" أو "واصل" أو ما شابه
+  // تحويل السعر إلى نص للتأكد
+  const priceStr = price.toString();
+  
+  // التحقق مما إذا كان السعر "مجاني" أو "صفر" أو "توصيل" أو "واصل" أو ما شابه - الكلمات الشائعة في السوق العراقي
   if (
-    price.toLowerCase().includes('free') || 
-    price.includes('مجان') || 
-    price === '0' ||
-    price.includes('صفر') || 
-    price.toLowerCase().includes('delivered') || 
-    price.toLowerCase().includes('delivery') ||
-    price.includes('توصيل') ||
-    price.includes('واصل')
+    priceStr.toLowerCase().includes('free') || 
+    priceStr.includes('مجان') || 
+    priceStr === '0' ||
+    priceStr.includes('صفر') || 
+    priceStr.toLowerCase().includes('delivered') || 
+    priceStr.toLowerCase().includes('delivery') ||
+    priceStr.includes('توصيل') ||
+    priceStr.includes('واصل') ||
+    priceStr.includes('بدون') ||
+    priceStr.includes('سلم') ||
+    priceStr.includes('خدمة')
   ) {
     console.log(`السعر "${price}" تم تحديده كمجاني/توصيل/واصل، تعيينه إلى 0`);
     return '0';
   }
   
+  // إزالة رموز العملة والكلمات غير المهمة
+  let cleanedPrice = priceStr.replace(/[$€£د.ع]/g, ''); // إزالة رموز العملة
+  cleanedPrice = cleanedPrice.replace(/دينار|دولار|عراقي|alf|الف|ألف|د\.ع\./gi, ''); // إزالة كلمات العملة
+  
   // تنظيف قيمة السعر - إزالة الأحرف غير الرقمية باستثناء النقطة العشرية
-  let cleanedPrice = price.toString().replace(/[^\d.]/g, '').trim();
+  cleanedPrice = cleanedPrice.replace(/[^\d.]/g, '').trim();
   
   // التحقق من وجود قيمة بعد التنظيف
   if (!cleanedPrice || cleanedPrice === '') {
@@ -134,7 +144,7 @@ export function formatPrice(price: string): string {
   if (/^\d+$/.test(cleanedPrice)) {
     const numValue = parseInt(cleanedPrice, 10);
     
-    // إذا كان الرقم أقل من 1000 - يجب ضربه في 1000
+    // إذا كان الرقم أقل من 1000 - يجب ضربه في 1000 (شائع في السوق العراقي)
     if (numValue > 0 && numValue < 1000) {
       const formattedPrice = (numValue * 1000).toString();
       console.log(`السعر "${price}" تم تحويله إلى ${formattedPrice} (ضرب × 1000)`);
@@ -146,10 +156,16 @@ export function formatPrice(price: string): string {
     }
   }
   
-  // تنظيف السعر بإزالة الفواصل والمسافات
-  if (cleanedPrice !== price) {
-    console.log(`السعر "${price}" تم تنظيفه إلى ${cleanedPrice}`);
-    return cleanedPrice || '0';
+  // التعامل مع الأرقام العشرية (للدولار)
+  if (cleanedPrice.includes('.')) {
+    // إذا كان رقم عشري صغير (مثلاً $20.5)، قد يكون بالدولار - نحوله للدينار العراقي (تقريباً)
+    const numValue = parseFloat(cleanedPrice);
+    if (numValue > 0 && numValue < 100) {
+      // تحويل تقريبي للدينار العراقي (سعر صرف تقريبي)
+      const estimatedIQD = Math.round(numValue * 1300);
+      console.log(`السعر "${price}" تم تحويله من دولار إلى دينار: ${estimatedIQD}`);
+      return estimatedIQD.toString();
+    }
   }
   
   // إذا وصلنا إلى هنا ولم نعالج القيمة، نعيد القيمة بعد التنظيف
