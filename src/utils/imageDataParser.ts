@@ -114,38 +114,44 @@ export const parseDataFromOCRText = (text: string) => {
 
 /**
  * Formats price according to business rules
- * - If price is a simple number, multiply by 1000
- * - If price is "free", "0", or "delivered", set to 0
+ * - If price is a single number less than 1000, multiply by 1000
+ * - If price is "free", "0", "مجاني", "واصل" or "delivered", set to 0
  * - Otherwise clean and return as is
  */
 export const formatPrice = (price: string): string => {
-  // Clean the price value - remove non-numeric characters except decimal point
+  // تنظيف قيمة السعر - إزالة الأحرف غير الرقمية باستثناء النقطة العشرية
   const cleanedPrice = price.toString().replace(/[^\d.]/g, '').trim();
   
-  // Check if the price is "free", "مجاني", "0", "delivered" or "توصيل"
+  // التحقق مما إذا كان السعر "مجاني" أو "صفر" أو "توصيل" أو ما شابه
   if (
     price.toLowerCase().includes('free') || 
     price.includes('مجان') || 
-    price === '0' || 
+    price === '0' ||
+    price.includes('صفر') || 
     cleanedPrice === '0' || 
     price.toLowerCase().includes('delivered') || 
-    price.includes('توصيل')
+    price.toLowerCase().includes('delivery') || 
+    price.includes('توصيل') ||
+    price.includes('واصل')
   ) {
     console.log(`Price "${price}" identified as free/delivered, setting to 0`);
     return '0';
   }
   
-  // If it's just a single number, multiply by 1000
+  // إذا كان مجرد رقم بسيط (مثل 22 أو 50)، اضربه في 1000
   if (/^\d+$/.test(cleanedPrice) && !price.includes(',') && !price.includes('.')) {
     const numValue = parseInt(cleanedPrice, 10);
-    if (numValue > 0 && numValue < 1000) {
-      const formattedPrice = (numValue * 1000).toString();
-      console.log(`Price "${price}" converted to ${formattedPrice} (multiplied by 1000)`);
-      return formattedPrice;
+    if (numValue > 0 && numValue < 100000) {  // تحقق أنه أقل من 100000
+      // تحقق إذا كان الرقم أقل من 1000 - بحاجة للضرب
+      if (numValue < 1000) {
+        const formattedPrice = (numValue * 1000).toString();
+        console.log(`Price "${price}" converted to ${formattedPrice} (multiplied by 1000)`);
+        return formattedPrice;
+      }
     }
   }
   
-  // Return the cleaned price
+  // تنظيف السعر بإزالة الفواصل والمسافات
   if (cleanedPrice !== price) {
     console.log(`Price "${price}" cleaned to ${cleanedPrice}`);
     return cleanedPrice || '0';

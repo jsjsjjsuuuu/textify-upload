@@ -83,13 +83,60 @@ export function enhanceExtractedData(parsedData: any, fullText: string): any {
     }
   }
   
-  // محاولة تنظيف السعر من أي أحرف غير ضرورية
+  // تنسيق السعر بالطريقة المطلوبة
   if (enhancedData.price) {
-    // استخدم قواعد تنسيق السعر المحددة في التطبيق
-    // (تم نقل منطق تنسيق السعر إلى وظيفة formatPrice في imageDataParser.ts)
+    enhancedData.price = formatPrice(enhancedData.price);
   }
   
   return enhancedData;
+}
+
+/**
+ * تنسيق السعر وفقًا لقواعد محددة:
+ * - إذا كان السعر رقمًا صغيرًا، اضربه في 1000
+ * - إذا كان "مجاني" أو "توصيل" أو "0"، اجعله صفرًا
+ * - بخلاف ذلك، نظفه وأعده كما هو
+ */
+export function formatPrice(price: string): string {
+  // تنظيف قيمة السعر - إزالة الأحرف غير الرقمية باستثناء النقطة العشرية
+  const cleanedPrice = price.toString().replace(/[^\d.]/g, '').trim();
+  
+  // التحقق مما إذا كان السعر "مجاني" أو "صفر" أو "توصيل" أو ما شابه
+  if (
+    price.toLowerCase().includes('free') || 
+    price.includes('مجان') || 
+    price === '0' ||
+    price.includes('صفر') ||
+    cleanedPrice === '0' || 
+    price.toLowerCase().includes('delivered') || 
+    price.toLowerCase().includes('delivery') ||
+    price.includes('توصيل') ||
+    price.includes('واصل')
+  ) {
+    console.log(`السعر "${price}" تم تحديده كمجاني/توصيل، تعيينه إلى 0`);
+    return '0';
+  }
+  
+  // إذا كان مجرد رقم بسيط (مثل 22 أو 50)، اضربه في 1000
+  if (/^\d+$/.test(cleanedPrice) && !price.includes(',') && !price.includes('.')) {
+    const numValue = parseInt(cleanedPrice, 10);
+    if (numValue > 0 && numValue < 100000) {  // تحقق أنه أقل من 100000
+      // تحقق إذا كان الرقم أقل من 1000 - بحاجة للضرب
+      if (numValue < 1000) {
+        const formattedPrice = (numValue * 1000).toString();
+        console.log(`السعر "${price}" تم تحويله إلى ${formattedPrice} (ضرب × 1000)`);
+        return formattedPrice;
+      }
+    }
+  }
+  
+  // تنظيف السعر بإزالة الفواصل والمسافات
+  if (cleanedPrice !== price) {
+    console.log(`السعر "${price}" تم تنظيفه إلى ${cleanedPrice}`);
+    return cleanedPrice || '0';
+  }
+  
+  return price;
 }
 
 /**
