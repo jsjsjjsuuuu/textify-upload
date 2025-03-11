@@ -37,15 +37,13 @@ const ImageTable = ({
     const currentRetryCount = retryCountMap[imageId] || 0;
     if (currentRetryCount < 2) {
       // محاولة إعادة التحميل تلقائيًا
-      handleRetryImage(null, imageId);
+      handleRetryImage(imageId);
     } else {
       setIsRetryingMap(prev => ({ ...prev, [imageId]: false }));
     }
   };
 
-  const handleRetryImage = (e: React.MouseEvent | null, imageId: string) => {
-    if (e) e.stopPropagation();
-    
+  const handleRetryImage = (imageId: string) => {
     // تحديث عداد المحاولات
     const newRetryCount = (retryCountMap[imageId] || 0) + 1;
     setRetryCountMap(prev => ({ ...prev, [imageId]: newRetryCount }));
@@ -127,6 +125,7 @@ const ImageTable = ({
                               style={{ mixBlendMode: 'multiply' }} 
                               onError={() => handleImageError(image.id)}
                               crossOrigin="anonymous"
+                              loading="lazy"
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                               <Search className="w-5 h-5 text-white drop-shadow-md" />
@@ -135,13 +134,14 @@ const ImageTable = ({
                         ) : (
                           <ImageErrorHandler 
                             imageId={image.id}
-                            onRetry={() => handleRetryImage(null, image.id)}
+                            onRetry={() => handleRetryImage(image.id)}
                             retryCount={retryCount}
                             maxRetries={2}
                             isLoading={isRetrying}
-                            className="rounded-lg"
-                            errorMessage="الصورة غير متاحة"
+                            className="rounded-lg !p-2"
+                            errorMessage="غير متاح"
                             retryMessage="إعادة"
+                            loadingMessage="تحميل..."
                           />
                         )}
                       </div>
