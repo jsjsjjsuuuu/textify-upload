@@ -13,9 +13,17 @@ const ImagePreviewCell: React.FC<ImagePreviewCellProps> = ({ imageId, previewUrl
   const [imgError, setImgError] = useState<boolean>(false);
   const [retryCount, setRetryCount] = useState<number>(0);
   const [isRetrying, setIsRetrying] = useState<boolean>(false);
+  const [errorType, setErrorType] = useState<"network" | "format" | "access" | "general">("general");
 
   const handleImageError = () => {
     setImgError(true);
+    
+    // تحديد نوع الخطأ استنادًا إلى حالة الاتصال
+    if (!navigator.onLine) {
+      setErrorType("network");
+    } else if (retryCount >= 2) {
+      setErrorType("access");
+    }
     
     // تحديث عداد المحاولات
     const currentRetryCount = retryCount;
@@ -28,6 +36,13 @@ const ImagePreviewCell: React.FC<ImagePreviewCellProps> = ({ imageId, previewUrl
   };
 
   const handleRetryImage = () => {
+    // تحديث نوع الخطأ إذا تغيرت حالة الاتصال
+    if (!navigator.onLine) {
+      setErrorType("network");
+    } else {
+      setErrorType("general");
+    }
+    
     // تحديث عداد المحاولات
     setRetryCount(prev => prev + 1);
     
@@ -76,6 +91,8 @@ const ImagePreviewCell: React.FC<ImagePreviewCellProps> = ({ imageId, previewUrl
           errorMessage="غير متاح"
           retryMessage="إعادة"
           loadingMessage="تحميل..."
+          errorType={errorType}
+          fadeIn={true}
         />
       )}
     </div>

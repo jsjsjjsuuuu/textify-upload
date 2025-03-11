@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import ZoomControls from "./ZoomControls";
@@ -19,6 +18,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
   const [imgError, setImgError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [errorType, setErrorType] = useState<"network" | "format" | "access" | "general">("general");
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   
@@ -28,6 +28,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
     setImgError(false);
     setRetryCount(0);
     setIsRetrying(false);
+    setErrorType("general");
   }, [image.id]);
   
   // Zoom control handlers
@@ -107,6 +108,13 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
     console.log(`فشل تحميل الصورة: ${image.id}, محاولة: ${retryCount + 1}`);
     setImgError(true);
     
+    // تحديد نوع الخطأ استنادًا إلى حالة الاتصال وعدد المحاولات
+    if (!navigator.onLine) {
+      setErrorType("network");
+    } else if (retryCount >= 2) {
+      setErrorType("access");
+    }
+    
     // محاولة إعادة التحميل تلقائيًا إذا لم يتم تجاوز الحد الأقصى
     if (retryCount < 2) {
       handleRetryLoadImage();
@@ -117,6 +125,13 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
 
   // محاولة تحميل الصورة مرة أخرى
   const handleRetryLoadImage = () => {
+    // تحديث نوع الخطأ إذا تغيرت حالة الاتصال
+    if (!navigator.onLine) {
+      setErrorType("network");
+    } else {
+      setErrorType("general");
+    }
+    
     setIsRetrying(true);
     setRetryCount(prev => prev + 1);
     
@@ -190,6 +205,8 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
             retryCount={retryCount}
             maxRetries={2}
             isLoading={isRetrying}
+            errorType={errorType}
+            fadeIn={true}
           />
         )}
         
