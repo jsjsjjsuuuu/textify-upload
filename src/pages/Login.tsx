@@ -7,13 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import BackgroundPattern from "@/components/BackgroundPattern";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, LogIn } from "lucide-react";
-
-// قائمة المستخدمين الافتراضية للتجربة
-const DEFAULT_USERS = [
-  { username: "admin", password: "admin123", role: "admin" },
-  { username: "user", password: "user123", role: "user" },
-  { username: "agent", password: "agent123", role: "agent" }
-];
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -22,31 +16,22 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // محاكاة طلب تسجيل الدخول
-    setTimeout(() => {
-      const user = DEFAULT_USERS.find(
-        (u) => u.username === username && u.password === password
-      );
+    try {
+      const success = await login(username, password);
 
-      if (user) {
-        // تخزين بيانات المستخدم في التخزين المحلي
-        localStorage.setItem("user", JSON.stringify({
-          username: user.username,
-          role: user.role,
-          isLoggedIn: true
-        }));
-
+      if (success) {
         toast({
           title: "تم تسجيل الدخول بنجاح",
-          description: `مرحباً ${user.username}!`,
+          description: `مرحباً ${username}!`,
         });
 
-        // التوجيه إلى الصفحة الرئيسية
+        // توجيه المستخدم إلى الصفحة الرئيسية
         navigate("/");
       } else {
         toast({
@@ -55,8 +40,16 @@ const Login = () => {
           variant: "destructive",
         });
       }
+    } catch (error) {
+      console.error("Error during login:", error);
+      toast({
+        title: "خطأ في النظام",
+        description: "حدث خطأ أثناء محاولة تسجيل الدخول. يرجى المحاولة مرة أخرى.",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (

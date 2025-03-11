@@ -1,6 +1,6 @@
 
-import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { ReactNode, useEffect } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 interface AuthGuardProps {
@@ -10,6 +10,13 @@ interface AuthGuardProps {
 
 const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
   const { isAuthenticated, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isAuthenticated, navigate]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;

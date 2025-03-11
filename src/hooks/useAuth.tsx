@@ -45,12 +45,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const parsedUser = JSON.parse(storedUser) as User;
         setUser(parsedUser);
+        
+        // إذا كان المستخدم مسجل الدخول وكان في صفحة تسجيل الدخول، توجيهه للصفحة الرئيسية
+        if (location.pathname === "/login") {
+          navigate("/");
+        }
       } catch (error) {
         console.error("Error parsing stored user:", error);
         localStorage.removeItem("user");
       }
     }
-  }, []);
+  }, [location.pathname, navigate]);
 
   // التحقق من الصفحات المحمية
   useEffect(() => {
