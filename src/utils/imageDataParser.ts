@@ -100,11 +100,114 @@ export const parseDataFromOCRText = (text: string) => {
     console.log("Error looking for JSON in text:", e);
   }
   
+  // Process price according to the new rules
+  if (result.price) {
+    result.price = formatPrice(result.price);
+  }
+  
   // تعزيز البيانات المستخرجة من خلال نظام التعلم
   const enhancedResult = enhanceWithLearning(text, result);
   console.log("Enhanced data with learning system:", enhancedResult);
   
   return enhancedResult;
+};
+
+/**
+ * Formats price according to business rules
+ * - If price is a simple number, multiply by 1000
+ * - If price is "free", "0", or "delivered", set to 0
+ * - Otherwise clean and return as is
+ */
+export const formatPrice = (price: string): string => {
+  // Clean the price value - remove non-numeric characters except decimal point
+  const cleanedPrice = price.toString().replace(/[^\d.]/g, '').trim();
+  
+  // Check if the price is "free", "مجاني", "0", "delivered" or "توصيل"
+  if (
+    price.toLowerCase().includes('free') || 
+    price.includes('مجان') || 
+    price === '0' || 
+    cleanedPrice === '0' || 
+    price.toLowerCase().includes('delivered') || 
+    price.includes('توصيل')
+  ) {
+    console.log(`Price "${price}" identified as free/delivered, setting to 0`);
+    return '0';
+  }
+  
+  // If it's just a single number, multiply by 1000
+  if (/^\d+$/.test(cleanedPrice) && !price.includes(',') && !price.includes('.')) {
+    const numValue = parseInt(cleanedPrice, 10);
+    if (numValue > 0 && numValue < 1000) {
+      const formattedPrice = (numValue * 1000).toString();
+      console.log(`Price "${price}" converted to ${formattedPrice} (multiplied by 1000)`);
+      return formattedPrice;
+    }
+  }
+  
+  // Return the cleaned price
+  if (cleanedPrice !== price) {
+    console.log(`Price "${price}" cleaned to ${cleanedPrice}`);
+    return cleanedPrice || '0';
+  }
+  
+  return price;
+};
+
+/**
+ * Calculates confidence score for the extracted data
+ */
+export const calculateConfidenceScore = (data: Record<string, string>): number => {
+  let score = 0;
+  const fields = ['code', 'senderName', 'phoneNumber', 'province', 'price', 'companyName'];
+  const weights = {
+    code: 20,
+    senderName: 15,
+    phoneNumber: 20,
+    province: 15,
+    price: 15,
+    companyName: 15
+  };
+  
+  for (const field of fields) {
+    if (data[field] && data[field].toString().trim() !== '') {
+      // For code, check if it's a valid number
+      if (field === 'code') {
+        if (/^\d+$/.test(data[field].toString())) {
+          score += weights[field];
+        } else {
+          score += weights[field] * 0.5; // Half score for non-numeric code
+        }
+      } 
+      // For phone number, check if it's in correct format
+      else if (field === 'phoneNumber') {
+        const digits = data[field].toString().replace(/\D/g, '');
+        if (digits.length === 11) {
+          score += weights[field];
+        } else {
+          score += weights[field] * 0.5; // Half score for invalid phone format
+        }
+      } 
+      // For price, check if it's a valid number
+      else if (field === 'price') {
+        if (/^\d+(\.\d+)?$/.test(data[field].toString())) {
+          score += weights[field];
+        } else {
+          score += weights[field] * 0.5; // Half score for invalid price format
+        }
+      } 
+      // For text fields, check length
+      else {
+        if (data[field].toString().length > 2) {
+          score += weights[field];
+        } else {
+          score += weights[field] * 0.7; // 70% score for short text
+        }
+      }
+    }
+  }
+  
+  return Math.min(Math.round(score), 100);
 };
 
 /**
@@ -117,6 +220,16 @@ export const updateImageWithExtractedData = (
   confidence: number = 0,
   method: "ocr" | "gemini" = "ocr"
 ): ImageData => {
+  // Format the price before updating
+  if (parsedData.price) {
+    parsedData.price = formatPrice(parsedData.price);
+  }
+  
+  // Calculate confidence score if not provided
+  if (!confidence) {
+    confidence = calculateConfidenceScore(parsedData);
+  }
+  
   return {
     ...image,
     extractedText,

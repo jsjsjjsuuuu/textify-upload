@@ -1,3 +1,4 @@
+
 /**
  * تحويل ملف صورة إلى Base64
  */
@@ -84,33 +85,26 @@ export function enhanceExtractedData(parsedData: any, fullText: string): any {
   
   // محاولة تنظيف السعر من أي أحرف غير ضرورية
   if (enhancedData.price) {
-    let priceValue = enhancedData.price.toString()
-      .replace(/[^\d٠-٩\.,]/g, '')
-      .replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30));
-    
-    // تحويل الفاصلة إلى نقطة للأرقام العشرية
-    priceValue = priceValue.replace(/,/g, '.');
-    
-    if (priceValue) {
-      enhancedData.price = priceValue;
-    }
+    // استخدم قواعد تنسيق السعر المحددة في التطبيق
+    // (تم نقل منطق تنسيق السعر إلى وظيفة formatPrice في imageDataParser.ts)
   }
   
   return enhancedData;
 }
 
 /**
- * حساب نتيجة الثق�� في البيانات المستخرجة
+ * حساب نتيجة الثقة في البيانات المستخرجة
  */
 export function calculateConfidenceScore(data: any): number {
   let score = 0;
-  const fields = ['code', 'senderName', 'phoneNumber', 'province', 'price'];
+  const fields = ['code', 'senderName', 'phoneNumber', 'province', 'price', 'companyName'];
   const weights = {
-    code: 25,
-    senderName: 20,
+    code: 20,
+    senderName: 15,
     phoneNumber: 20,
     province: 15,
-    price: 20
+    price: 15,
+    companyName: 15
   };
   
   for (const field of fields) {
@@ -150,7 +144,7 @@ export function calculateConfidenceScore(data: any): number {
     }
   }
   
-  return score;
+  return Math.min(Math.round(score), 100);
 }
 
 // Utility to check if a blob URL is valid

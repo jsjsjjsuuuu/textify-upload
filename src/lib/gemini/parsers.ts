@@ -5,6 +5,7 @@
 
 import { enhanceExtractedData, calculateConfidenceScore } from "./utils";
 import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinces";
+import { formatPrice } from "@/utils/imageDataParser";
 
 /**
  * استخراج JSON من نص الاستجابة ومعالجته
@@ -102,7 +103,9 @@ export function parseGeminiResponse(extractedText: string): {
     }
     
     if (enhancedData.price || enhancedData["السعر"] || enhancedData["سعر"]) {
-      mappedData.price = enhancedData.price || enhancedData["السعر"] || enhancedData["سعر"];
+      let price = enhancedData.price || enhancedData["السعر"] || enhancedData["سعر"];
+      // Format the price according to business rules
+      mappedData.price = formatPrice(price);
     }
     
     // إذا لم نتمكن من استخراج البيانات من JSON، نحاول استخراجها من النص مباشرة
@@ -128,7 +131,11 @@ export function parseGeminiResponse(extractedText: string): {
         for (const [arabicKey, englishKey] of Object.entries(dataFields)) {
           if (line.includes(arabicKey)) {
             const value = line.split(':')[1]?.trim() || line.split('،')[1]?.trim() || "";
-            mappedData[englishKey] = value;
+            if (englishKey === "price" && value) {
+              mappedData[englishKey] = formatPrice(value);
+            } else {
+              mappedData[englishKey] = value;
+            }
           }
         }
       });
