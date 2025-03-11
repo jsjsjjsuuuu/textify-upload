@@ -93,40 +93,56 @@ export function enhanceExtractedData(parsedData: any, fullText: string): any {
 
 /**
  * تنسيق السعر وفقًا لقواعد محددة:
- * - إذا كان السعر رقمًا صغيرًا، اضربه في 1000
- * - إذا كان "مجاني" أو "توصيل" أو "0"، اجعله صفرًا
+ * - إذا كان السعر رقمًا صغيرًا أقل من 1000، اضربه في 1000
+ * - إذا كان "مجاني" أو "توصيل" أو "واصل" أو "0"، اجعله صفرًا
  * - بخلاف ذلك، نظفه وأعده كما هو
  */
 export function formatPrice(price: string): string {
-  // تنظيف قيمة السعر - إزالة الأحرف غير الرقمية باستثناء النقطة العشرية
-  const cleanedPrice = price.toString().replace(/[^\d.]/g, '').trim();
+  console.log(`تنسيق السعر: "${price}"`);
   
-  // التحقق مما إذا كان السعر "مجاني" أو "صفر" أو "توصيل" أو ما شابه
+  // تحقق إذا كان السعر فارغًا
+  if (!price || price.trim() === '') {
+    console.log(`السعر فارغ، تعيينه إلى 0`);
+    return '0';
+  }
+  
+  // التحقق مما إذا كان السعر "مجاني" أو "صفر" أو "توصيل" أو "واصل" أو ما شابه
   if (
     price.toLowerCase().includes('free') || 
     price.includes('مجان') || 
     price === '0' ||
-    price.includes('صفر') ||
-    cleanedPrice === '0' || 
+    price.includes('صفر') || 
     price.toLowerCase().includes('delivered') || 
     price.toLowerCase().includes('delivery') ||
     price.includes('توصيل') ||
     price.includes('واصل')
   ) {
-    console.log(`السعر "${price}" تم تحديده كمجاني/توصيل، تعيينه إلى 0`);
+    console.log(`السعر "${price}" تم تحديده كمجاني/توصيل/واصل، تعيينه إلى 0`);
     return '0';
   }
   
-  // إذا كان مجرد رقم بسيط (مثل 22 أو 50)، اضربه في 1000
-  if (/^\d+$/.test(cleanedPrice) && !price.includes(',') && !price.includes('.')) {
+  // تنظيف قيمة السعر - إزالة الأحرف غير الرقمية باستثناء النقطة العشرية
+  let cleanedPrice = price.toString().replace(/[^\d.]/g, '').trim();
+  
+  // التحقق من وجود قيمة بعد التنظيف
+  if (!cleanedPrice || cleanedPrice === '') {
+    console.log(`السعر "${price}" لا يحتوي على أرقام، تعيينه إلى 0`);
+    return '0';
+  }
+  
+  // إذا كان رقم صحيح (بدون فاصلة عشرية)
+  if (/^\d+$/.test(cleanedPrice)) {
     const numValue = parseInt(cleanedPrice, 10);
-    if (numValue > 0 && numValue < 100000) {  // تحقق أنه أقل من 100000
-      // تحقق إذا كان الرقم أقل من 1000 - بحاجة للضرب
-      if (numValue < 1000) {
-        const formattedPrice = (numValue * 1000).toString();
-        console.log(`السعر "${price}" تم تحويله إلى ${formattedPrice} (ضرب × 1000)`);
-        return formattedPrice;
-      }
+    
+    // إذا كان الرقم أقل من 1000 - يجب ضربه في 1000
+    if (numValue > 0 && numValue < 1000) {
+      const formattedPrice = (numValue * 1000).toString();
+      console.log(`السعر "${price}" تم تحويله إلى ${formattedPrice} (ضرب × 1000)`);
+      return formattedPrice;
+    } else if (numValue >= 1000) {
+      // إذا كان الرقم 1000 أو أكبر، نعيده كما هو
+      console.log(`السعر "${price}" قيمته أكبر من 1000، الإبقاء عليه كما هو: ${numValue}`);
+      return numValue.toString();
     }
   }
   
@@ -136,7 +152,8 @@ export function formatPrice(price: string): string {
     return cleanedPrice || '0';
   }
   
-  return price;
+  // إذا وصلنا إلى هنا ولم نعالج القيمة، نعيد القيمة بعد التنظيف
+  return cleanedPrice || '0';
 }
 
 /**

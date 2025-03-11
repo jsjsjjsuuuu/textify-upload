@@ -3,9 +3,8 @@
  * وظائف لتحليل استجابات Gemini API
  */
 
-import { enhanceExtractedData, calculateConfidenceScore } from "./utils";
+import { enhanceExtractedData, calculateConfidenceScore, formatPrice } from "./utils";
 import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinces";
-import { formatPrice } from "@/utils/imageDataParser";
 
 /**
  * استخراج JSON من نص الاستجابة ومعالجته
@@ -104,7 +103,7 @@ export function parseGeminiResponse(extractedText: string): {
     
     if (enhancedData.price || enhancedData["السعر"] || enhancedData["سعر"]) {
       let price = enhancedData.price || enhancedData["السعر"] || enhancedData["سعر"];
-      // Format the price according to business rules
+      // Format the price according to business rules - استخدام الدالة المخصصة لتنسيق السعر
       mappedData.price = formatPrice(price);
     }
     
@@ -175,6 +174,11 @@ export function parseGeminiResponse(extractedText: string): {
           break;
         }
       }
+    }
+    
+    // تنسيق السعر النهائي مرة أخرى للتأكد من صحته
+    if (mappedData.price) {
+      mappedData.price = formatPrice(mappedData.price);
     }
     
     console.log("Final mapped data:", mappedData);

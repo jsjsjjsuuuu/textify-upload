@@ -2,6 +2,7 @@
 import { ImageData } from "@/types/ImageData";
 import { enhanceWithLearning } from "./learningSystem";
 import { correctProvinceName, IRAQ_PROVINCES, CITY_PROVINCE_MAP } from "./provinces";
+import { formatPrice } from "@/lib/gemini/utils";
 
 /**
  * Attempts to parse structured data from OCR text
@@ -113,51 +114,38 @@ export const parseDataFromOCRText = (text: string) => {
 };
 
 /**
- * Formats price according to business rules
- * - If price is a single number less than 1000, multiply by 1000
- * - If price is "free", "0", "مجاني", "واصل" or "delivered", set to 0
- * - Otherwise clean and return as is
+ * Updates an image with extracted data
  */
-export const formatPrice = (price: string): string => {
-  // تنظيف قيمة السعر - إزالة الأحرف غير الرقمية باستثناء النقطة العشرية
-  const cleanedPrice = price.toString().replace(/[^\d.]/g, '').trim();
-  
-  // التحقق مما إذا كان السعر "مجاني" أو "صفر" أو "توصيل" أو ما شابه
-  if (
-    price.toLowerCase().includes('free') || 
-    price.includes('مجان') || 
-    price === '0' ||
-    price.includes('صفر') || 
-    cleanedPrice === '0' || 
-    price.toLowerCase().includes('delivered') || 
-    price.toLowerCase().includes('delivery') || 
-    price.includes('توصيل') ||
-    price.includes('واصل')
-  ) {
-    console.log(`Price "${price}" identified as free/delivered, setting to 0`);
-    return '0';
+export const updateImageWithExtractedData = (
+  image: ImageData, 
+  extractedText: string, 
+  parsedData: Record<string, string>,
+  confidence: number = 0,
+  method: "ocr" | "gemini" = "ocr"
+): ImageData => {
+  // Format the price before updating
+  if (parsedData.price) {
+    parsedData.price = formatPrice(parsedData.price);
   }
   
-  // إذا كان مجرد رقم بسيط (مثل 22 أو 50)، اضربه في 1000
-  if (/^\d+$/.test(cleanedPrice) && !price.includes(',') && !price.includes('.')) {
-    const numValue = parseInt(cleanedPrice, 10);
-    if (numValue > 0 && numValue < 100000) {  // تحقق أنه أقل من 100000
-      // تحقق إذا كان الرقم أقل من 1000 - بحاجة للضرب
-      if (numValue < 1000) {
-        const formattedPrice = (numValue * 1000).toString();
-        console.log(`Price "${price}" converted to ${formattedPrice} (multiplied by 1000)`);
-        return formattedPrice;
-      }
-    }
+  // Calculate confidence score if not provided
+  if (!confidence) {
+    confidence = calculateConfidenceScore(parsedData);
   }
   
-  // تنظيف السعر بإزالة الفواصل والمسافات
-  if (cleanedPrice !== price) {
-    console.log(`Price "${price}" cleaned to ${cleanedPrice}`);
-    return cleanedPrice || '0';
-  }
-  
-  return price;
+  return {
+    ...image,
+    extractedText,
+    confidence,
+    code: parsedData.code || "",
+    senderName: parsedData.senderName || "",
+    phoneNumber: parsedData.phoneNumber || "",
+    province: parsedData.province || "",
+    price: parsedData.price || "",
+    companyName: parsedData.companyName || "",
+    status: "completed",
+    extractionMethod: method
+  };
 };
 
 /**
@@ -216,37 +204,5 @@ export const calculateConfidenceScore = (data: Record<string, string>): number =
   return Math.min(Math.round(score), 100);
 };
 
-/**
- * Updates an image with extracted data
- */
-export const updateImageWithExtractedData = (
-  image: ImageData, 
-  extractedText: string, 
-  parsedData: Record<string, string>,
-  confidence: number = 0,
-  method: "ocr" | "gemini" = "ocr"
-): ImageData => {
-  // Format the price before updating
-  if (parsedData.price) {
-    parsedData.price = formatPrice(parsedData.price);
-  }
-  
-  // Calculate confidence score if not provided
-  if (!confidence) {
-    confidence = calculateConfidenceScore(parsedData);
-  }
-  
-  return {
-    ...image,
-    extractedText,
-    confidence,
-    code: parsedData.code || "",
-    senderName: parsedData.senderName || "",
-    phoneNumber: parsedData.phoneNumber || "",
-    province: parsedData.province || "",
-    price: parsedData.price || "",
-    companyName: parsedData.companyName || "",
-    status: "completed",
-    extractionMethod: method
-  };
-};
+// Re-export the formatPrice function from utils.ts
+// export { formatPrice } from "@/lib/gemini/utils";

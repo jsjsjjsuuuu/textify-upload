@@ -6,7 +6,7 @@ import { useImageState } from "@/hooks/useImageState";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useSubmitToApi } from "@/hooks/useSubmitToApi";
-import { createReliableBlobUrl } from "@/lib/gemini/utils";
+import { createReliableBlobUrl, formatPrice } from "@/lib/gemini/utils";
 
 export const useImageProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -17,6 +17,31 @@ export const useImageProcessing = () => {
   const { processWithOcr } = useOcrProcessing();
   const { useGemini, processWithGemini } = useGeminiProcessing();
   const { isSubmitting, handleSubmitToApi: submitToApi } = useSubmitToApi(updateImage);
+
+  // تخصيص معالج تغيير النص لتنسيق السعر تلقائيًا
+  const handleCustomTextChange = (id: string, field: string, value: string) => {
+    // إذا كان الحقل هو السعر، نتحقق من التنسيق
+    if (field === "price" && value) {
+      const originalValue = value;
+      const formattedValue = formatPrice(value);
+      
+      // إذا كان التنسيق مختلفًا عن القيمة الأصلية، نستخدم القيمة المنسقة
+      if (formattedValue !== originalValue) {
+        console.log(`تنسيق السعر تلقائيًا: "${originalValue}" -> "${formattedValue}"`);
+        value = formattedValue;
+        
+        // إظهار إشعار بالتغيير
+        toast({
+          title: "تم تنسيق السعر تلقائيًا",
+          description: `تم تحويل "${originalValue}" إلى "${formattedValue}"`,
+          variant: "default"
+        });
+      }
+    }
+    
+    // استدعاء معالج تغيير النص الأصلي
+    handleTextChange(id, field, value);
+  };
 
   const handleFileChange = async (files: FileList | null) => {
     console.log("handleFileChange called with files:", files);
@@ -92,6 +117,16 @@ export const useImageProcessing = () => {
           processedImage = await processWithOcr(file, newImage);
         }
         
+        // إذا كان هناك سعر، نتأكد من تنسيقه بشكل صحيح
+        if (processedImage.price) {
+          const originalPrice = processedImage.price;
+          processedImage.price = formatPrice(originalPrice);
+          
+          if (originalPrice !== processedImage.price) {
+            console.log(`تم تنسيق السعر تلقائيًا بعد المعالجة: "${originalPrice}" -> "${processedImage.price}"`);
+          }
+        }
+        
         updateImage(newImage.id, processedImage);
       } catch (error) {
         console.error("General error in image processing:", error);
@@ -125,6 +160,35 @@ export const useImageProcessing = () => {
   const handleSubmitToApi = (id: string) => {
     const image = images.find(img => img.id === id);
     if (image) {
+      // التحقق من صحة البيانات قبل الإرسال
+      let hasErrors = false;
+      let errorMessages = [];
+      
+      // التحقق من رقم الهاتف
+      if (image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, '').length !== 11) {
+        hasErrors = true;
+        errorMessages.push("رقم الهاتف غير صحيح (يجب أن يكون 11 رقم)");
+      }
+      
+      // التحقق من السعر
+      if (image.price) {
+        const cleanedPrice = image.price.toString().replace(/[^\d.]/g, '');
+        const numValue = parseFloat(cleanedPrice);
+        if (numValue > 0 && numValue < 1000 && image.price !== '0') {
+          hasErrors = true;
+          errorMessages.push("السعر غير صحيح (يجب أن يكون 1000 أو أكبر أو 0)");
+        }
+      }
+      
+      if (hasErrors) {
+        toast({
+          title: "لا يمكن إرسال البيانات",
+          description: errorMessages.join("، "),
+          variant: "destructive"
+        });
+        return;
+      }
+      
       submitToApi(id, image);
     }
   };
@@ -136,7 +200,7 @@ export const useImageProcessing = () => {
     isSubmitting,
     useGemini,
     handleFileChange,
-    handleTextChange,
+    handleTextChange: handleCustomTextChange,
     handleDelete: deleteImage,
     handleSubmitToApi
   };

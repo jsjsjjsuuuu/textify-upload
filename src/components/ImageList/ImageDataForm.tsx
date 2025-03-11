@@ -3,10 +3,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IRAQ_PROVINCES } from "@/utils/provinces";
 import { ImageData } from "@/types/ImageData";
-import { useState } from "react";
-import { formatPrice } from "@/utils/imageDataParser";
+import { useState, useEffect } from "react";
+import { formatPrice } from "@/lib/gemini/utils";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ImageDataFormProps {
   image: ImageData;
@@ -14,26 +15,79 @@ interface ImageDataFormProps {
 }
 
 const ImageDataForm = ({ image, onTextChange }: ImageDataFormProps) => {
+  const { toast } = useToast();
+  
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
   
   // State to manage temporary price value before formatting
   const [priceInput, setPriceInput] = useState(image.price || '');
   const [priceFormatted, setPriceFormatted] = useState(false);
+  const [isPriceValid, setIsPriceValid] = useState(true);
+  
+  // اذا تغير السعر من الخارج، قم بتحديث حالة الإدخال
+  useEffect(() => {
+    if (image.price !== priceInput) {
+      setPriceInput(image.price || '');
+      validatePrice(image.price || '');
+    }
+  }, [image.price]);
+  
+  // التحقق من صحة قيمة السعر
+  const validatePrice = (value: string) => {
+    // إذا كان السعر فارغًا أو 0 ، فهو صالح
+    if (!value || value === '0') {
+      setIsPriceValid(true);
+      return true;
+    }
+    
+    // إذا احتوى على أحرف غير رقمية (باستثناء النقطة العشرية)، فهو غير صالح
+    if (!/^\d+(\.\d+)?$/.test(value.replace(/[^\d.]/g, ''))) {
+      setIsPriceValid(false);
+      return false;
+    }
+    
+    // إذا كان رقمًا أقل من 1000، فهو غير صالح
+    const numValue = parseFloat(value.replace(/[^\d.]/g, ''));
+    if (numValue > 0 && numValue < 1000) {
+      setIsPriceValid(false);
+      return false;
+    }
+    
+    setIsPriceValid(true);
+    return true;
+  };
   
   // Handle price change and formatting
   const handlePriceChange = (value: string) => {
     setPriceInput(value);
     setPriceFormatted(false);
+    validatePrice(value);
   };
   
   // Format and save price
   const handleFormatPrice = () => {
+    const originalPrice = priceInput;
     const formattedPrice = formatPrice(priceInput);
-    if (formattedPrice !== priceInput) {
+    
+    // تحقق مما إذا كان التنسيق قد أدى إلى تغيير القيمة فعليًا
+    if (formattedPrice !== originalPrice) {
       setPriceInput(formattedPrice);
       onTextChange(image.id, "price", formattedPrice);
       setPriceFormatted(true);
+      setIsPriceValid(true);
+      
+      toast({
+        title: "تم تنسيق السعر",
+        description: `تم تحويل "${originalPrice}" إلى "${formattedPrice}"`,
+        variant: "default"
+      });
+    } else {
+      toast({
+        title: "لم يتم تغيير السعر",
+        description: "السعر بالفعل منسق بشكل صحيح",
+        variant: "default"
+      });
     }
   };
   
@@ -48,7 +102,7 @@ const ImageDataForm = ({ image, onTextChange }: ImageDataFormProps) => {
       case "phoneNumber":
         return isPhoneNumberValid ? baseConfidence : Math.floor(baseConfidence * 0.7);
       case "price":
-        return priceFormatted ? baseConfidence : Math.floor(baseConfidence * 0.8);
+        return isPriceValid ? baseConfidence : Math.floor(baseConfidence * 0.7);
       default:
         return baseConfidence;
     }
@@ -125,7 +179,7 @@ const ImageDataForm = ({ image, onTextChange }: ImageDataFormProps) => {
               )}
               {image.phoneNumber && !isPhoneNumberValid && (
                 <span className="text-xs text-destructive font-normal flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  <AlertCircle className="h-3 w-3 ml-1" />
                   خطأ
                 </span>
               )}
@@ -174,7 +228,7 @@ const ImageDataForm = ({ image, onTextChange }: ImageDataFormProps) => {
           </Select>
         </div>
         
-        {/* السعر مع زر التحقق */}
+        {/* السعر مع زر التحقق والتنبيهات */}
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
             <span>السعر:</span>
@@ -186,8 +240,14 @@ const ImageDataForm = ({ image, onTextChange }: ImageDataFormProps) => {
               )}
               {priceFormatted && (
                 <span className="text-[10px] bg-green-100 text-green-700 flex items-center px-1 rounded">
-                  <Check className="h-2.5 w-2.5 mr-0.5" />
+                  <Check className="h-2.5 w-2.5 ml-0.5" />
                   تم التنسيق
+                </span>
+              )}
+              {!isPriceValid && (
+                <span className="text-xs text-destructive font-normal flex items-center">
+                  <AlertCircle className="h-3 w-3 ml-1" />
+                  غير صالح
                 </span>
               )}
             </div>
@@ -196,7 +256,7 @@ const ImageDataForm = ({ image, onTextChange }: ImageDataFormProps) => {
             <Input 
               value={priceInput} 
               onChange={e => handlePriceChange(e.target.value)} 
-              className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm rounded-l-none"
+              className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm rounded-l-none ${!isPriceValid ? "border-destructive" : ""}`}
               placeholder="أدخل السعر"
             />
             <Button 
@@ -209,8 +269,15 @@ const ImageDataForm = ({ image, onTextChange }: ImageDataFormProps) => {
               <span className="text-[10px] mr-1">تحقق</span>
             </Button>
           </div>
+          {!isPriceValid && (
+            <p className="text-xs text-destructive">
+              {priceInput && parseFloat(priceInput.replace(/[^\d.]/g, '')) < 1000 ? 
+                "يجب أن يكون السعر 1000 أو أكبر، اضغط على 'تحقق' للتصحيح" : 
+                "صيغة السعر غير صحيحة، اضغط على 'تحقق' للتصحيح"}
+            </p>
+          )}
           <p className="text-[10px] text-muted-foreground">
-            ملاحظة: سيتم ضرب السعر × 1000 إذا كان رقمًا بسيطًا. السعر "مجاني" أو "توصيل" سيتم تعيينه إلى 0.
+            ملاحظة: سيتم ضرب السعر × 1000 إذا كان رقمًا بسيطًا. السعر "مجاني" أو "توصيل" أو "واصل" سيتم تعيينه إلى 0.
           </p>
         </div>
         
