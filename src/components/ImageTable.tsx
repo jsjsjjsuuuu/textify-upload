@@ -1,9 +1,10 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Trash, Send, AlertCircle, FileText, Search } from "lucide-react";
+import { Edit, Trash, Send, AlertCircle, FileText, Search, RefreshCw } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 
 interface ImageTableProps {
   images: ImageData[];
@@ -22,7 +23,19 @@ const ImageTable = ({
   onSubmit,
   formatDate
 }: ImageTableProps) => {
+  const [imgErrorMap, setImgErrorMap] = useState<Record<string, boolean>>({});
+
   if (images.length === 0) return null;
+
+  const handleImageError = (imageId: string) => {
+    setImgErrorMap(prev => ({ ...prev, [imageId]: true }));
+  };
+
+  const handleRetryImage = (e: React.MouseEvent, imageId: string) => {
+    e.stopPropagation();
+    setImgErrorMap(prev => ({ ...prev, [imageId]: false }));
+    // سيتم إعادة تحميل الصورة تلقائيًا عند تغيير خاصية الخطأ
+  };
 
   return (
     <motion.section
@@ -62,6 +75,7 @@ const ImageTable = ({
               {images.map(image => {
                 // التحقق من صحة رقم الهاتف
                 const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+                const hasImgError = imgErrorMap[image.id] === true;
                 
                 return (
                   <tr 
@@ -72,18 +86,35 @@ const ImageTable = ({
                     <td className="py-3.5 px-4 text-sm">{formatDate(image.date)}</td>
                     <td className="py-3.5 px-4">
                       <div 
-                        className="w-20 h-20 rounded-lg overflow-hidden bg-transparent cursor-pointer border-2 border-border/40 dark:border-gray-700/40 transition-transform hover:scale-105 group shadow-sm hover:shadow-md" 
-                        onClick={() => onImageClick(image)}
+                        className="w-20 h-20 rounded-lg overflow-hidden bg-transparent cursor-pointer border-2 border-border/40 dark:border-gray-700/40 transition-transform hover:scale-105 group shadow-sm hover:shadow-md relative" 
+                        onClick={() => !hasImgError && onImageClick(image)}
                       >
-                        <img 
-                          src={image.previewUrl} 
-                          alt="صورة مصغرة" 
-                          className="object-contain h-full w-full transition-transform duration-200 group-hover:scale-110" 
-                          style={{ mixBlendMode: 'multiply' }} 
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <Search className="w-5 h-5 text-white drop-shadow-md" />
-                        </div>
+                        {!hasImgError ? (
+                          <>
+                            <img 
+                              src={image.previewUrl} 
+                              alt="صورة مصغرة" 
+                              className="object-contain h-full w-full transition-transform duration-200 group-hover:scale-110" 
+                              style={{ mixBlendMode: 'multiply' }} 
+                              onError={() => handleImageError(image.id)}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <Search className="w-5 h-5 text-white drop-shadow-md" />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="M17.5 5c-2.6-2.4-6.8-2.4-9.3 0m11.3 4c-3.3-3-8.2-3-11.5 0m13.3 4c-4-3.6-9.6-3.6-13.5 0"/></svg>
+                            <p className="mt-1 text-[10px] text-center text-muted-foreground">الصورة غير متاحة</p>
+                            <button 
+                              onClick={(e) => handleRetryImage(e, image.id)} 
+                              className="mt-1 p-1 text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded flex items-center"
+                            >
+                              <RefreshCw size={10} className="mr-1" />
+                              إعادة
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-sm font-medium">{image.code || "—"}</td>

@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import ZoomControls from "./ZoomControls";
@@ -19,10 +18,11 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   
-  // Reset position when component mounts
+  // Reset position when component mounts or image changes
   useEffect(() => {
     setPosition({ x: 0, y: 0 });
-  }, []);
+    setImgError(false); // إعادة ضبط حالة خطأ الصورة عند تغيير الصورة
+  }, [image.id]);
   
   // Zoom control handlers
   const handleZoomIn = (e: React.MouseEvent) => {
@@ -96,6 +96,23 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
     }
   };
 
+  // محاولة تحميل الصورة مرة أخرى إذا فشلت
+  const handleRetryLoadImage = () => {
+    setImgError(false);
+    if (imageRef.current) {
+      const timestamp = new Date().getTime();
+      const originalSrc = image.previewUrl;
+      
+      // إعادة تعيين مصدر الصورة لتحميلها مرة أخرى
+      imageRef.current.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; // صورة فارغة
+      setTimeout(() => {
+        if (imageRef.current) {
+          imageRef.current.src = originalSrc + "?t=" + timestamp;
+        }
+      }, 50);
+    }
+  };
+
   return (
     <div className="p-3 bg-transparent relative">
       <ZoomControls 
@@ -125,14 +142,21 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
             transformOrigin: 'center',
             pointerEvents: 'none', // Prevents image from capturing mouse events
             willChange: 'transform', // Optimize for transforms
+            display: imgError ? 'none' : 'block',
           }} 
           onError={() => setImgError(true)}
         />
         
         {imgError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="M17.5 5c-2.6-2.4-6.8-2.4-9.3 0m11.3 4c-3.3-3-8.2-3-11.5 0m13.3 4c-4-3.6-9.6-3.6-13.5 0"/></svg>
             <p className="mt-2 text-xs text-center text-muted-foreground">الصورة غير متاحة حاليًا</p>
+            <button 
+              onClick={handleRetryLoadImage} 
+              className="mt-3 px-3 py-1 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
+            >
+              إعادة المحاولة
+            </button>
           </div>
         )}
         
