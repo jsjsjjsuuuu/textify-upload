@@ -39,15 +39,15 @@ const ImagePreviewContainer = ({
           className="w-full" 
           onValueChange={(value) => setViewMode(value as "list" | "table")}
         >
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-4">
             <h2 className="text-xl font-bold text-brand-brown dark:text-brand-beige">الصور المستخرجة ({images.length})</h2>
-            <TabsList className="grid grid-cols-2 w-[200px]">
+            <TabsList className="grid grid-cols-2 w-[220px] shadow-md">
               <TabsTrigger value="list" className="data-[state=active]:bg-brand-brown data-[state=active]:text-white">عرض القائمة</TabsTrigger>
               <TabsTrigger value="table" className="data-[state=active]:bg-brand-green data-[state=active]:text-white">عرض الجدول</TabsTrigger>
             </TabsList>
           </div>
 
-          <TabsContent value="list" className="mt-0">
+          <TabsContent value="list" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
             <ImageList 
               images={images}
               isSubmitting={isSubmitting}
@@ -59,7 +59,7 @@ const ImagePreviewContainer = ({
             />
           </TabsContent>
           
-          <TabsContent value="table" className="mt-0">
+          <TabsContent value="table" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
             <ImageTable 
               images={images}
               isSubmitting={isSubmitting}

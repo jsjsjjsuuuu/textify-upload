@@ -35,6 +35,9 @@ const ImageList = ({
         <h2 className="text-2xl font-bold text-brand-brown dark:text-brand-beige flex items-center">
           معاينة الصور والنصوص المستخرجة
         </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          يمكنك مراجعة وتعديل البيانات المستخرجة من الصور قبل إرسالها
+        </p>
       </div>
       
       <div className="space-y-6">
