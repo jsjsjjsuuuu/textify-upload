@@ -34,12 +34,16 @@ const ImagePreviewContainer = ({
   return (
     <div className="w-full mt-6">
       {images.length > 0 ? (
-        <Tabs defaultValue="list" className="w-full" onValueChange={(value) => setViewMode(value as "list" | "table")}>
+        <Tabs 
+          defaultValue="list" 
+          className="w-full" 
+          onValueChange={(value) => setViewMode(value as "list" | "table")}
+        >
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-brand-brown dark:text-brand-beige">الصور المستخرجة ({images.length})</h2>
             <TabsList className="grid grid-cols-2 w-[200px]">
-              <TabsTrigger value="list">عرض القائمة</TabsTrigger>
-              <TabsTrigger value="table">عرض الجدول</TabsTrigger>
+              <TabsTrigger value="list" className="data-[state=active]:bg-brand-brown data-[state=active]:text-white">عرض القائمة</TabsTrigger>
+              <TabsTrigger value="table" className="data-[state=active]:bg-brand-green data-[state=active]:text-white">عرض الجدول</TabsTrigger>
             </TabsList>
           </div>
 
