@@ -100,7 +100,7 @@ const PriceField = ({
       </label>
       <div className="flex">
         <Input value={priceInput} onChange={e => handlePriceChange(e.target.value)} className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm rounded-l-none ${!isPriceValid ? "border-destructive" : ""}`} placeholder="أدخل السعر" />
-        <Button onClick={handleFormatPrice} type="button" size="sm" className="h-8 rounded-r-none text-base font-normal text-gray-100 bg-[#ab6713]">
+        <Button onClick={handleFormatPrice} type="button" size="sm" className="h-8 rounded-r-none font-normal text-gray-100 bg-yellow-950 hover:bg-yellow-800 text-xs">
           تحقق
         </Button>
       </div>
