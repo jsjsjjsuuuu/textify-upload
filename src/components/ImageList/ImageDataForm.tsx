@@ -7,6 +7,7 @@ import {
   PriceField, 
   ExtractedTextDisplay 
 } from "./FormFields";
+import { useSaveToDatabase } from "@/hooks/useSaveToDatabase";
 
 interface ImageDataFormProps {
   image: ImageData;
@@ -19,6 +20,9 @@ const ImageDataForm = ({
 }: ImageDataFormProps) => {
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+  
+  // استخدام Hook حفظ البيانات
+  const { saveImageToDatabase, isSaving, savedImages } = useSaveToDatabase();
 
   const handleFieldChange = (field: string, value: string) => {
     onTextChange(image.id, field, value);
@@ -72,10 +76,13 @@ const ImageDataForm = ({
           onChange={(value) => handleFieldChange("price", value)}
         />
         
-        {/* النص المستخرج */}
+        {/* النص المستخرج مع خيار الحفظ في قاعدة البيانات */}
         <ExtractedTextDisplay 
           text={image.extractedText} 
-          confidence={image.confidence} 
+          confidence={image.confidence}
+          onSaveToDatabase={() => saveImageToDatabase(image)}
+          isSaving={isSaving[image.id]}
+          isSaved={savedImages[image.id]}
         />
       </div>
     </div>

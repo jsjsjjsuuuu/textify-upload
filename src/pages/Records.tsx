@@ -1,171 +1,147 @@
+
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import BackgroundPattern from "@/components/BackgroundPattern";
-import { Upload, PictureInPicture, Save, Brain } from "lucide-react";
-import { testGeminiConnection } from "@/lib/gemini";
+import AppHeader from "@/components/AppHeader";
+import { Card } from "@/components/ui/card";
+import { getExtractedRecords, ExtractedRecord } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
+import { format } from "date-fns";
+import { ar } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
+import AuthGuard from "@/components/AuthGuard";
 
 const Records = () => {
-  const [savedApiKey, setSavedApiKey] = useState<string>("");
-  const [apiKey, setApiKey] = useState<string>("");
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [records, setRecords] = useState<ExtractedRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const storedApiKey = localStorage.getItem("geminiApiKey") || "";
-    setSavedApiKey(storedApiKey);
-    setApiKey(storedApiKey);
-  }, []);
-
-  const handleSaveApiKey = async () => {
-    if (!apiKey) {
-      toast({
-        title: "خطأ",
-        description: "الرجاء إدخال مفتاح API صالح",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsTestingConnection(true);
+  // تنسيق التاريخ باللغة العربية
+  const formatDate = (dateString: string) => {
     try {
-      const testResult = await testGeminiConnection(apiKey);
-      if (testResult.success) {
-        localStorage.setItem("geminiApiKey", apiKey);
-        setSavedApiKey(apiKey);
-        
-        toast({
-          title: "تم الحفظ",
-          description: "تم حفظ مفتاح API بنجاح واختبار الاتصال",
-        });
-      } else {
-        toast({
-          title: "خطأ في الاتصال",
-          description: testResult.message,
-          variant: "destructive",
-        });
-      }
+      return format(new Date(dateString), "dd MMMM yyyy, HH:mm", { locale: ar });
     } catch (error) {
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء اختبار الاتصال",
-        variant: "destructive",
-      });
-    } finally {
-      setIsTestingConnection(false);
+      return dateString;
     }
   };
 
+  // جلب السجلات من قاعدة البيانات
   useEffect(() => {
-    if (!apiKey && !savedApiKey) {
-      const defaultApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
-      setApiKey(defaultApiKey);
-      setSavedApiKey(defaultApiKey);
-      localStorage.setItem("geminiApiKey", defaultApiKey);
-      toast({
-        title: "تم تعيين المفتاح الافتراضي",
-        description: "تم تعيين مفتاح API الافتراضي بنجاح",
-      });
-    }
-  }, [apiKey, savedApiKey, toast]);
+    const fetchRecords = async () => {
+      if (!user?.id) return;
+
+      setLoading(true);
+      try {
+        const data = await getExtractedRecords(user.id);
+        setRecords(data);
+      } catch (error) {
+        console.error("خطأ في جلب السجلات:", error);
+        toast({
+          title: "خطأ في جلب البيانات",
+          description: "حدث خطأ أثناء محاولة استرجاع السجلات من قاعدة البيانات",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecords();
+  }, [user, toast]);
 
   return (
     <div className="relative min-h-screen pb-20">
       <BackgroundPattern />
 
-      <div className="container px-4 py-8 mx-auto max-w-6xl">
-        <header className="text-center mb-8 animate-slide-up">
-          <h1 className="text-4xl font-bold text-brand-brown mb-3">السجلات واستخراج البيانات</h1>
-        </header>
+      <div className="container px-4 sm:px-6 py-4 sm:py-6 mx-auto max-w-6xl">
+        <AppHeader />
 
-        <nav className="mb-8 flex justify-end">
-          <ul className="flex gap-6 py-[3px] my-0 mx-[240px] px-[174px]">
-            <li>
-              <a href="/" className="text-brand-brown font-medium hover:text-brand-coral transition-colors my-[46px]">
-                الرئيسية
-              </a>
-            </li>
-            <li>
-              <a href="/api" className="text-brand-brown font-medium hover:text-brand-coral transition-colors">
-                API
-              </a>
-            </li>
-            <li>
-              <a href="/records" className="text-brand-brown font-medium hover:text-brand-coral transition-colors">
-                السجلات
-              </a>
-            </li>
-          </ul>
-        </nav>
+        <div className="flex flex-col items-center pt-4">
+          <div className="w-full">
+            <h2 className="text-2xl font-bold text-brand-brown dark:text-brand-beige mb-6 flex items-center">
+              <span className="bg-brand-coral/20 w-1.5 h-6 rounded mr-2 block"></span>
+              سجلات البيانات المستخرجة
+            </h2>
 
-        <div className="grid grid-cols-1 gap-8">
-          <Card className="p-6 shadow-md bg-white/90 backdrop-blur-sm">
-            <h2 className="text-2xl font-bold text-brand-brown mb-6">إعدادات استخراج البيانات باستخدام Gemini</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="apiKey" className="block text-sm font-medium mb-1">مفتاح API لـ Gemini:</label>
-                <div className="flex gap-2">
-                  <Input
-                    id="apiKey"
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="أدخل مفتاح API لـ Gemini هنا"
-                    className="flex-1"
-                    dir="ltr"
-                  />
-                  <Button 
-                    onClick={handleSaveApiKey} 
-                    className="bg-brand-brown hover:bg-brand-brown/90"
-                    disabled={isTestingConnection}
-                  >
-                    {isTestingConnection ? (
-                      <span className="flex items-center">
-                        <Brain className="h-4 w-4 ml-1 animate-pulse" />
-                        جاري الاختبار...
-                      </span>
-                    ) : (
-                      <span className="flex items-center">
-                        <Save className="h-4 w-4 ml-1" />
-                        حفظ واختبار
-                      </span>
+            {loading ? (
+              <div className="text-center py-12">
+                <svg className="animate-spin h-8 w-8 mx-auto text-brand-brown" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="mt-4 text-gray-500">جاري تحميل السجلات...</p>
+              </div>
+            ) : records.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/30 rounded-lg">
+                <p className="text-gray-500 dark:text-gray-400">لا توجد سجلات محفوظة حتى الآن</p>
+                <p className="mt-2 text-gray-400 dark:text-gray-500 text-sm">قم بحفظ النصوص المستخرجة من الصور لرؤيتها هنا</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {records.map((record) => (
+                  <Card key={record.id} className="overflow-hidden">
+                    <div className="p-4 border-b border-border/10">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-semibold">
+                          {record.company_name || record.sender_name || "سجل بدون اسم"}
+                        </h3>
+                        <span className="text-xs bg-brand-brown/10 dark:bg-brand-beige/10 text-brand-brown dark:text-brand-beige px-2 py-1 rounded-full">
+                          {record.price ? `${record.price} د.ع` : "بدون سعر"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                        <span>{record.province || "المحافظة غير محددة"}</span>
+                        {record.phone_number && (
+                          <span className="before:content-['•'] before:mx-1">
+                            {record.phone_number}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {record.image_url && (
+                      <div className="w-full h-40 relative overflow-hidden">
+                        <img 
+                          src={record.image_url}
+                          alt="صورة السجل" 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                     )}
-                  </Button>
-                </div>
-                {savedApiKey && (
-                  <p className="text-xs text-green-600 mt-1">تم تكوين مفتاح API بنجاح!</p>
-                )}
-                <p className="text-xs text-muted-foreground mt-2">
-                  تم تعيين مفتاح API تلقائيًا: AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8
-                </p>
-              </div>
 
-              <div className="bg-muted/30 p-4 rounded-lg">
-                <div className="flex items-center mb-2">
-                  <PictureInPicture className="h-5 w-5 text-brand-brown mr-2" />
-                  <h3 className="text-lg font-semibold">ميزات استخراج البيانات</h3>
-                </div>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>استخراج تلقائي للبيانات من الصور مثل الكود، الاسم، رقم الهاتف، الخ.</li>
-                  <li>دعم اللغة العربية بشكل كامل.</li>
-                  <li>تحليل متقدم للصور باستخدام نماذج الذكاء الاصطناعي من Google Gemini.</li>
-                  <li>تحويل النص المستخرج إلى هيكل بيانات منظم.</li>
-                </ul>
-              </div>
+                    <div className="p-4">
+                      <div className="text-xs text-gray-500 mb-2 flex justify-between">
+                        <span>كود: {record.code || "غير محدد"}</span>
+                        <span>الثقة: {record.confidence || 0}%</span>
+                      </div>
+                      
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                          عرض النص المستخرج
+                        </summary>
+                        <div className="bg-muted/30 p-2 mt-1 rounded-md rtl-textarea text-muted-foreground max-h-24 overflow-y-auto text-xs">
+                          {record.extracted_text}
+                        </div>
+                      </details>
 
-              <div className="bg-brand-brown/10 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">كيفية استخدام الميزة:</h3>
-                <ol className="list-decimal list-inside space-y-1 text-sm">
-                  <li>قم بإدخال مفتاح API لـ Gemini واحفظه.</li>
-                  <li>عد إلى الصفحة الرئيسية وقم برفع الصور كالمعتاد.</li>
-                  <li>سيتم استخدام Gemini لاستخراج البيانات تلقائيًا من الصور المرفوعة.</li>
-                </ol>
+                      <div className="mt-3 pt-3 border-t border-border/10 text-xs text-gray-400">
+                        {record.created_at && (
+                          <div>
+                            تم الحفظ: {formatDate(record.created_at)}
+                          </div>
+                        )}
+                        {record.extraction_method && (
+                          <div className="mt-1">
+                            طريقة الاستخراج: {record.extraction_method === "ocr" ? "OCR" : "Gemini AI"}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
-            </div>
-          </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>

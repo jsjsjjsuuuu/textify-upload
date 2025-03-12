@@ -9,14 +9,16 @@ interface AuthGuardProps {
 }
 
 const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
+    } else if (requireAdmin && !isAdmin) {
+      navigate("/");
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isAdmin, navigate, requireAdmin]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
@@ -25,6 +27,14 @@ const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
   if (requireAdmin && !isAdmin) {
     return <Navigate to="/" />;
   }
+
+  // إضافة تسجيل للتأكد من تشغيل الحارس
+  console.log("AuthGuard فعال:", { 
+    isAuthenticated, 
+    isAdmin, 
+    userRole: user?.role,
+    requireAdmin
+  });
 
   return <>{children}</>;
 };

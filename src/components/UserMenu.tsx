@@ -9,7 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
-import { LogOut, Settings, User, ChevronDown } from "lucide-react";
+import { LogOut, Settings, User, ChevronDown, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const UserMenu = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -29,11 +30,22 @@ const UserMenu = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>حسابي</DropdownMenuLabel>
+        {user.email && (
+          <div className="px-2 py-1.5 text-xs text-muted-foreground">
+            {user.email}
+          </div>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem className="flex items-center gap-2">
           <User className="h-4 w-4" />
           <span>الملف الشخصي</span>
         </DropdownMenuItem>
+        <Link to="/records">
+          <DropdownMenuItem className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span>السجلات المحفوظة</span>
+          </DropdownMenuItem>
+        </Link>
         {isAdmin && (
           <DropdownMenuItem className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
