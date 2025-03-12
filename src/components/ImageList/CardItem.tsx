@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ImageData } from "@/types/ImageData";
@@ -33,7 +34,6 @@ const CardItem = ({
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
   const [isBookmarkletOpen, setIsBookmarkletOpen] = useState(false);
-  const [websiteUrl, setWebsiteUrl] = useState("");
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const { toast } = useToast();
   
@@ -48,7 +48,6 @@ const CardItem = ({
     const url = prompt("أدخل عنوان URL للموقع الذي تريد ملء البيانات فيه:", "https://");
     if (!url) return;
     
-    setWebsiteUrl(url);
     setIsAutoFilling(true);
     
     try {
@@ -67,11 +66,43 @@ const CardItem = ({
       const result = await autoFillWebsiteForm(url, formData);
       
       if (result.success) {
-        toast({
-          title: "نجاح الإدخال التلقائي",
-          description: result.message,
-          variant: "default"
-        });
+        // تحقق مما إذا كان الرابط موجودًا في النتيجة
+        if (result.data && result.data.bookmarkletUrl) {
+          // إنشاء وصف يشرح كيفية استخدام الرابط
+          toast({
+            title: "تم إنشاء وصلة الإدخال التلقائي",
+            description: "يمكنك الآن الانتقال إلى الموقع المستهدف واستخدام الأداة المضافة إلى المفضلة",
+            variant: "default"
+          });
+          
+          // إضافة الرابط إلى المفضلة
+          const bookmarkTitle = `ملء البيانات لـ ${image.code || "الصورة"}`;
+          try {
+            // عرض تنبيه للمستخدم يطلب منه حفظ الرابط في المفضلة يدويًا
+            alert("لإضافة أداة الإدخال التلقائي إلى المفضلة:\n1. انسخ الرابط من الإشعار التالي\n2. انقر بزر الماوس الأيمن على شريط المفضلة\n3. اختر 'إضافة صفحة'\n4. الصق الرابط في حقل 'العنوان'");
+            
+            // نسخ الرابط إلى الحافظة
+            await navigator.clipboard.writeText(result.data.bookmarkletUrl);
+            toast({
+              title: "تم نسخ الرابط",
+              description: "تم نسخ رابط الإدخال التلقائي. يمكنك إضافته إلى المفضلة يدويًا",
+              variant: "default"
+            });
+          } catch (err) {
+            console.error("خطأ في إضافة المفضلة:", err);
+            toast({
+              title: "تعذر إضافة المفضلة تلقائيًا",
+              description: "يرجى إضافة الرابط إلى المفضلة يدويًا",
+              variant: "default"
+            });
+          }
+        } else {
+          toast({
+            title: "نجاح",
+            description: result.message,
+            variant: "default"
+          });
+        }
       } else {
         toast({
           title: "فشل الإدخال التلقائي",
