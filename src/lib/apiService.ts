@@ -442,7 +442,8 @@ export async function autoFillWebsiteForm(websiteUrl: string, data: any): Promis
         
       }, 3000); // انتظار 3 ثوانٍ قبل محاولة حقن الكود
     });
-  }
+  };
+}
 
 // تصدير الدوال من geminiService
 export * from './geminiService';
