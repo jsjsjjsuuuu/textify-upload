@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -6,7 +5,7 @@ import { useImageState } from "@/hooks/useImageState";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useSubmitToApi } from "@/hooks/useSubmitToApi";
-import { createReliableBlobUrl, formatPrice } from "@/lib/gemini/utils";
+import { createReliableBlobUrl, formatPrice } from "@/utils/parsing/formatters";
 
 export const useImageProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);

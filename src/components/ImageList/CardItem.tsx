@@ -45,15 +45,15 @@ const CardItem = ({
           <div className="flex justify-between items-start">
             <DraggableImage
               image={image}
-              onImageClick={() => onImageClick(image)}
-              zoomLevel={zoomLevel}
+              onClick={() => onImageClick(image)}
+              zoom={zoomLevel}
               onZoomChange={handleZoomChange}
             />
             
             <ActionButtons
-              id={image.id}
+              imageId={image.id}
               status={image.status}
-              isSubmitting={isSubmitting === image.id}
+              isSubmitting={isSubmitting === true && isSubmitting}
               isSubmitted={image.submitted}
               onDelete={onDelete}
               onSubmit={onSubmit}

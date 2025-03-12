@@ -1,7 +1,7 @@
 
 import { ImageData } from "@/types/ImageData";
 import { FormFields } from "./FormFields";
-import ExtractedTextDisplay from "./FormFields/ExtractedTextDisplay";
+import { ExtractedTextDisplay } from "./FormFields";
 
 interface ImageDataFormProps {
   image: ImageData;

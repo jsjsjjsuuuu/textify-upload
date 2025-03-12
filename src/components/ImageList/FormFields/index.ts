@@ -1,6 +1,14 @@
 
-export { default as TextField } from './TextField';
-export { default as ProvinceField } from './ProvinceField';
-export { default as PhoneNumberField } from './PhoneNumberField';
-export { default as PriceField } from './PriceField';
+import * as TextField from './TextField';
+import * as PhoneNumberField from './PhoneNumberField';
+import * as ProvinceField from './ProvinceField';
+import * as PriceField from './PriceField';
+
+export const FormFields = {
+  TextField,
+  PhoneNumberField,
+  ProvinceField,
+  PriceField
+};
+
 export { default as ExtractedTextDisplay } from './ExtractedTextDisplay';
