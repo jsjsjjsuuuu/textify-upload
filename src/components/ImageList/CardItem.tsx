@@ -1,10 +1,12 @@
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ImageData } from "@/types/ImageData";
 import { motion } from "framer-motion";
 import DraggableImage from "./DraggableImage";
 import ImageDataForm from "./ImageDataForm";
 import ActionButtons from "./ActionButtons";
+import BookmarkletGenerator from "@/components/BookmarkletGenerator";
 
 interface CardItemProps {
   image: ImageData;
@@ -27,6 +29,13 @@ const CardItem = ({
 }: CardItemProps) => {
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+  const [isBookmarkletOpen, setIsBookmarkletOpen] = useState(false);
+  
+  const handleExport = (imageId: string) => {
+    if (imageId === image.id) {
+      setIsBookmarkletOpen(true);
+    }
+  };
 
   return (
     <motion.div
@@ -65,10 +74,17 @@ const CardItem = ({
               isPhoneNumberValid={isPhoneNumberValid}
               onDelete={onDelete}
               onSubmit={onSubmit}
+              onExport={handleExport}
             />
           </div>
         </CardContent>
       </Card>
+      
+      <BookmarkletGenerator 
+        isOpen={isBookmarkletOpen} 
+        onClose={() => setIsBookmarkletOpen(false)} 
+        imageData={isBookmarkletOpen ? image : null}
+      />
     </motion.div>
   );
 };

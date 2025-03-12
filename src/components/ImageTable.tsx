@@ -1,9 +1,11 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash, Send, AlertCircle } from "lucide-react";
+import { Edit, Trash, Send, AlertCircle, ExternalLink } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
+import BookmarkletGenerator from "@/components/BookmarkletGenerator";
 
 interface ImageTableProps {
   images: ImageData[];
@@ -22,6 +24,19 @@ const ImageTable = ({
   onSubmit,
   formatDate
 }: ImageTableProps) => {
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [isBookmarkletOpen, setIsBookmarkletOpen] = useState(false);
+
+  const handleExport = (id: string) => {
+    setSelectedImageId(id);
+    setIsBookmarkletOpen(true);
+  };
+
+  const getSelectedImage = () => {
+    if (!selectedImageId) return null;
+    return images.find(img => img.id === selectedImageId) || null;
+  };
+
   if (images.length === 0) return null;
 
   return (
@@ -143,6 +158,7 @@ const ImageTable = ({
                         >
                           <Edit size={14} />
                         </Button>
+                        
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -151,6 +167,18 @@ const ImageTable = ({
                         >
                           <Trash size={14} />
                         </Button>
+                        
+                        {image.status === "completed" && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 rounded-full bg-muted/30 text-brand-coral hover:bg-brand-coral/10" 
+                            onClick={() => handleExport(image.id)}
+                          >
+                            <ExternalLink size={14} />
+                          </Button>
+                        )}
+                        
                         {image.status === "completed" && !image.submitted && (
                           <Button 
                             variant="ghost" 
@@ -171,6 +199,12 @@ const ImageTable = ({
           </table>
         </div>
       </div>
+      
+      <BookmarkletGenerator 
+        isOpen={isBookmarkletOpen} 
+        onClose={() => setIsBookmarkletOpen(false)} 
+        imageData={getSelectedImage()}
+      />
     </motion.section>
   );
 };

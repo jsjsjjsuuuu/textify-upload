@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Trash, Send } from "lucide-react";
+import { Trash, Send, ExternalLink } from "lucide-react";
 
 interface ActionButtonsProps {
   imageId: string;
@@ -10,6 +10,7 @@ interface ActionButtonsProps {
   isPhoneNumberValid: boolean;
   onDelete: (id: string) => void;
   onSubmit: (id: string) => void;
+  onExport?: (id: string) => void;
 }
 
 const ActionButtons = ({ 
@@ -19,7 +20,8 @@ const ActionButtons = ({
   isSubmitted, 
   isPhoneNumberValid, 
   onDelete, 
-  onSubmit 
+  onSubmit,
+  onExport
 }: ActionButtonsProps) => {
   return (
     <div className="flex justify-end gap-2 mt-3">
@@ -32,6 +34,18 @@ const ActionButtons = ({
         <Trash size={14} className="ml-1 opacity-70" />
         حذف
       </Button>
+      
+      {onExport && isCompleted && !isSubmitting && (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => onExport(imageId)} 
+          className="border-brand-coral/30 text-brand-coral hover:bg-brand-coral/10 hover:text-brand-coral h-8 text-xs"
+        >
+          <ExternalLink size={14} className="ml-1 opacity-70" />
+          تصدير البيانات
+        </Button>
+      )}
       
       <Button 
         variant="default" 
