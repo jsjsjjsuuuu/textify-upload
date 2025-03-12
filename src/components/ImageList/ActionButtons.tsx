@@ -5,8 +5,8 @@ import { Trash, Send } from "lucide-react";
 interface ActionButtonsProps {
   imageId: string;
   isSubmitting: boolean;
-  isCompleted: boolean;
   isSubmitted: boolean;
+  isCompleted: boolean;
   isPhoneNumberValid: boolean;
   onDelete: (id: string) => void;
   onSubmit: (id: string) => void;

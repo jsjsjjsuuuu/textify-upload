@@ -83,18 +83,8 @@ export function enhanceExtractedData(parsedData: any, fullText: string): any {
     }
   }
   
-  // تنسيق السعر بالطريقة المطلوبة
-  if (enhancedData.price) {
-    enhancedData.price = formatPrice(enhancedData.price);
-  }
-  
   return enhancedData;
 }
-
-/**
- * تنسيق السعر وفقًا لقواعد محددة للسوق العراقي
- */
-import { formatPrice } from "@/utils/parsing/formatters";
 
 /**
  * حساب نتيجة الثقة في البيانات المستخرجة

@@ -37,6 +37,9 @@ const CardItem = ({
     setZoomLevel(newZoom);
   };
 
+  // التحقق من صحة رقم الهاتف
+  const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+
   return (
     <Card className="overflow-hidden border border-border/40 dark:border-gray-800 bg-white/80 dark:bg-gray-900/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-3 md:p-4">
@@ -45,16 +48,16 @@ const CardItem = ({
           <div className="flex justify-between items-start">
             <DraggableImage
               image={image}
-              onClick={() => onImageClick(image)}
-              zoom={zoomLevel}
-              onZoomChange={handleZoomChange}
+              onImageClick={onImageClick}
+              formatDate={formatDate}
             />
             
             <ActionButtons
               imageId={image.id}
-              status={image.status}
-              isSubmitting={isSubmitting === true && isSubmitting}
-              isSubmitted={image.submitted}
+              isSubmitting={isSubmitting}
+              isCompleted={image.status === "completed"}
+              isSubmitted={image.submitted || false}
+              isPhoneNumberValid={isPhoneNumberValid}
               onDelete={onDelete}
               onSubmit={onSubmit}
             />

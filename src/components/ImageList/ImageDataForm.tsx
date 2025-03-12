@@ -1,7 +1,6 @@
 
 import { ImageData } from "@/types/ImageData";
-import { FormFields } from "./FormFields";
-import { ExtractedTextDisplay } from "./FormFields";
+import { TextField, PhoneNumberField, ProvinceField, PriceField, ExtractedTextDisplay } from "./FormFields";
 
 interface ImageDataFormProps {
   image: ImageData;
@@ -20,56 +19,51 @@ const ImageDataForm = ({
   isSaved,
   formatDate
 }: ImageDataFormProps) => {
+  const handleChange = (field: string) => (value: string) => {
+    onTextChange(image.id, field, value);
+  };
+
+  // التحقق من صحة رقم الهاتف
+  const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+
   return (
     <div>
       <div className="grid grid-cols-2 gap-x-2 gap-y-2">
-        <FormFields.TextField
-          id={image.id}
+        <TextField
           label="الكود"
-          value={image.code}
-          field="code"
-          onChange={onTextChange}
+          value={image.code || ''}
+          onChange={handleChange('code')}
+          placeholder="أدخل الكود"
         />
         
-        <FormFields.TextField
-          id={image.id}
+        <TextField
           label="اسم المرسل"
-          value={image.senderName}
-          field="senderName"
-          onChange={onTextChange}
-          className="col-span-1"
+          value={image.senderName || ''}
+          onChange={handleChange('senderName')}
+          placeholder="أدخل اسم المرسل"
         />
         
-        <FormFields.PhoneNumberField
-          id={image.id}
-          label="رقم الهاتف"
-          value={image.phoneNumber}
-          field="phoneNumber"
-          onChange={onTextChange}
+        <PhoneNumberField
+          value={image.phoneNumber || ''}
+          onChange={handleChange('phoneNumber')}
+          isValid={isPhoneNumberValid}
         />
         
-        <FormFields.ProvinceField
-          id={image.id}
-          label="المحافظة"
-          value={image.province}
-          field="province"
-          onChange={onTextChange}
+        <ProvinceField
+          value={image.province || ''}
+          onChange={handleChange('province')}
         />
         
-        <FormFields.PriceField
-          id={image.id}
-          label="السعر"
-          value={image.price}
-          field="price"
-          onChange={onTextChange}
+        <PriceField
+          value={image.price || ''}
+          onChange={handleChange('price')}
         />
         
-        <FormFields.TextField
-          id={image.id}
+        <TextField
           label="اسم الشركة"
-          value={image.companyName}
-          field="companyName"
-          onChange={onTextChange}
+          value={image.companyName || ''}
+          onChange={handleChange('companyName')}
+          placeholder="أدخل اسم الشركة"
         />
         
         <ExtractedTextDisplay

@@ -3,7 +3,8 @@
  * وظائف لتحليل استجابات Gemini API
  */
 
-import { enhanceExtractedData, calculateConfidenceScore, formatPrice } from "./utils";
+import { enhanceExtractedData, calculateConfidenceScore } from "./utils";
+import { formatPrice } from "@/utils/parsing/formatters";
 import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinces";
 
 /**
