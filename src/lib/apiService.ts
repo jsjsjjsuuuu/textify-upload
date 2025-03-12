@@ -386,8 +386,17 @@ export async function autoFillWebsiteForm(websiteUrl: string, data: any): Promis
         `;
         
         try {
-          // حقن الكود في الصفحة المستهدفة
-          newWindow.eval(injectionScript);
+          // حقن الكود في الصفحة المستهدفة باستخدام script element بدلاً من eval
+          // استخدام طريقة أكثر أماناً عبر إضافة عنصر script للصفحة
+          const scriptElement = document.createElement('script');
+          scriptElement.textContent = injectionScript;
+          
+          // الوصول إلى الصفحة في النافذة الجديدة وإضافة العنصر له
+          if (newWindow.document) {
+            newWindow.document.head.appendChild(scriptElement);
+          } else {
+            throw new Error("لا يمكن الوصول إلى وثيقة النافذة الجديدة");
+          }
           
           // إعداد مستمع للرسائل من النافذة المستهدفة
           const messageListener = (event: MessageEvent) => {
