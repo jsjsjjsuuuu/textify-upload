@@ -1,228 +1,171 @@
-
-import React, { useEffect, useState } from "react";
-import BackgroundPattern from "@/components/BackgroundPattern";
-import AppHeader from "@/components/AppHeader";
-import { getExtractedData, deleteExtractedData } from '@/lib/supabase';
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Database, Trash, Eye, Calendar } from "lucide-react";
-import { formatDate } from "@/utils/dateFormatter";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
-interface ExtractedRecord {
-  id: string;
-  code: string;
-  senderName: string;
-  phoneNumber: string;
-  province: string;
-  price: string;
-  companyName: string;
-  extractedText: string;
-  confidence: number;
-  created_at: string;
-}
+import { Input } from "@/components/ui/input";
+import BackgroundPattern from "@/components/BackgroundPattern";
+import { Upload, PictureInPicture, Save, Brain } from "lucide-react";
+import { testGeminiConnection } from "@/lib/gemini";
 
 const Records = () => {
-  const [records, setRecords] = useState<ExtractedRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedRecord, setSelectedRecord] = useState<ExtractedRecord | null>(null);
+  const [savedApiKey, setSavedApiKey] = useState<string>("");
+  const [apiKey, setApiKey] = useState<string>("");
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
   const { toast } = useToast();
 
-  const fetchRecords = async () => {
-    setLoading(true);
-    try {
-      const result = await getExtractedData();
-      if (result.success) {
-        setRecords(result.data as ExtractedRecord[]);
-      } else {
-        throw new Error("فشل في جلب البيانات");
-      }
-    } catch (error) {
-      console.error("خطأ في جلب السجلات:", error);
+  useEffect(() => {
+    const storedApiKey = localStorage.getItem("geminiApiKey") || "";
+    setSavedApiKey(storedApiKey);
+    setApiKey(storedApiKey);
+  }, []);
+
+  const handleSaveApiKey = async () => {
+    if (!apiKey) {
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء جلب السجلات",
-        variant: "destructive"
+        description: "الرجاء إدخال مفتاح API صالح",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestingConnection(true);
+    try {
+      const testResult = await testGeminiConnection(apiKey);
+      if (testResult.success) {
+        localStorage.setItem("geminiApiKey", apiKey);
+        setSavedApiKey(apiKey);
+        
+        toast({
+          title: "تم الحفظ",
+          description: "تم حفظ مفتاح API بنجاح واختبار الاتصال",
+        });
+      } else {
+        toast({
+          title: "خطأ في الاتصال",
+          description: testResult.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء اختبار الاتصال",
+        variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsTestingConnection(false);
     }
   };
 
   useEffect(() => {
-    fetchRecords();
-  }, []);
-
-  const handleDelete = async (id: string) => {
-    try {
-      const result = await deleteExtractedData(id);
-      if (result.success) {
-        setRecords(prev => prev.filter(record => record.id !== id));
-        toast({
-          title: "تم الحذف",
-          description: "تم حذف السجل بنجاح"
-        });
-      } else {
-        throw new Error("فشل في حذف السجل");
-      }
-    } catch (error) {
-      console.error("خطأ في حذف السجل:", error);
+    if (!apiKey && !savedApiKey) {
+      const defaultApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
+      setApiKey(defaultApiKey);
+      setSavedApiKey(defaultApiKey);
+      localStorage.setItem("geminiApiKey", defaultApiKey);
       toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء حذف السجل",
-        variant: "destructive"
+        title: "تم تعيين المفتاح الافتراضي",
+        description: "تم تعيين مفتاح API الافتراضي بنجاح",
       });
     }
-  };
-
-  const handleViewDetails = (record: ExtractedRecord) => {
-    setSelectedRecord(record);
-  };
+  }, [apiKey, savedApiKey, toast]);
 
   return (
     <div className="relative min-h-screen pb-20">
       <BackgroundPattern />
 
-      <div className="container px-4 sm:px-6 py-4 sm:py-6 mx-auto max-w-6xl">
-        <AppHeader />
+      <div className="container px-4 py-8 mx-auto max-w-6xl">
+        <header className="text-center mb-8 animate-slide-up">
+          <h1 className="text-4xl font-bold text-brand-brown mb-3">السجلات واستخراج البيانات</h1>
+        </header>
 
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-brand-brown dark:text-brand-beige flex items-center">
-              <Database className="mr-2 h-6 w-6" />
-              السجلات المحفوظة
-            </h1>
-            <div className="flex items-center">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={fetchRecords}
-                className="flex items-center"
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                تحديث
-              </Button>
-            </div>
-          </div>
+        <nav className="mb-8 flex justify-end">
+          <ul className="flex gap-6 py-[3px] my-0 mx-[240px] px-[174px]">
+            <li>
+              <a href="/" className="text-brand-brown font-medium hover:text-brand-coral transition-colors my-[46px]">
+                الرئيسية
+              </a>
+            </li>
+            <li>
+              <a href="/api" className="text-brand-brown font-medium hover:text-brand-coral transition-colors">
+                API
+              </a>
+            </li>
+            <li>
+              <a href="/records" className="text-brand-brown font-medium hover:text-brand-coral transition-colors">
+                السجلات
+              </a>
+            </li>
+          </ul>
+        </nav>
 
-          <div className="bg-white/80 dark:bg-gray-900/50 backdrop-blur-sm border border-border rounded-xl shadow-sm overflow-hidden">
-            {loading ? (
-              <div className="p-8 text-center">
-                <div className="h-6 w-6 mr-2 rounded-full border-2 border-brand-coral/40 border-t-brand-coral animate-spin mx-auto"></div>
-                <p className="mt-2 text-muted-foreground">جاري تحميل السجلات...</p>
-              </div>
-            ) : records.length === 0 ? (
-              <div className="p-8 text-center">
-                <p className="text-muted-foreground">لا توجد سجلات محفوظة حتى الآن.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableCaption>قائمة بالسجلات المحفوظة في قاعدة البيانات</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">الكود</TableHead>
-                      <TableHead>اسم المرسل</TableHead>
-                      <TableHead>رقم الهاتف</TableHead>
-                      <TableHead>المحافظة</TableHead>
-                      <TableHead>السعر</TableHead>
-                      <TableHead>اسم الشركة</TableHead>
-                      <TableHead>دقة الاستخراج</TableHead>
-                      <TableHead>تاريخ الإنشاء</TableHead>
-                      <TableHead className="text-left">الإجراءات</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {records.map((record) => (
-                      <TableRow key={record.id}>
-                        <TableCell className="font-medium">{record.code || "-"}</TableCell>
-                        <TableCell>{record.senderName || "-"}</TableCell>
-                        <TableCell>{record.phoneNumber || "-"}</TableCell>
-                        <TableCell>{record.province || "-"}</TableCell>
-                        <TableCell>{record.price || "-"}</TableCell>
-                        <TableCell>{record.companyName || "-"}</TableCell>
-                        <TableCell>{record.confidence ? `${record.confidence}%` : "-"}</TableCell>
-                        <TableCell>{formatDate(new Date(record.created_at))}</TableCell>
-                        <TableCell className="flex gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleViewDetails(record)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="text-destructive"
-                            onClick={() => handleDelete(record.id)}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
-
-          {selectedRecord && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-3xl w-full max-h-[80vh] overflow-y-auto">
-                <h2 className="text-xl font-bold mb-4">تفاصيل السجل</h2>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">الكود</p>
-                    <p>{selectedRecord.code || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">اسم المرسل</p>
-                    <p>{selectedRecord.senderName || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">رقم الهاتف</p>
-                    <p>{selectedRecord.phoneNumber || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">المحافظة</p>
-                    <p>{selectedRecord.province || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">السعر</p>
-                    <p>{selectedRecord.price || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">اسم الشركة</p>
-                    <p>{selectedRecord.companyName || "-"}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">النص المستخرج</p>
-                    <div className="bg-muted/30 p-2 mt-1 rounded-md rtl-textarea text-muted-foreground max-h-40 overflow-y-auto text-xs">
-                      {selectedRecord.extractedText || "-"}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => setSelectedRecord(null)}
+        <div className="grid grid-cols-1 gap-8">
+          <Card className="p-6 shadow-md bg-white/90 backdrop-blur-sm">
+            <h2 className="text-2xl font-bold text-brand-brown mb-6">إعدادات استخراج البيانات باستخدام Gemini</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="apiKey" className="block text-sm font-medium mb-1">مفتاح API لـ Gemini:</label>
+                <div className="flex gap-2">
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="أدخل مفتاح API لـ Gemini هنا"
+                    className="flex-1"
+                    dir="ltr"
+                  />
+                  <Button 
+                    onClick={handleSaveApiKey} 
+                    className="bg-brand-brown hover:bg-brand-brown/90"
+                    disabled={isTestingConnection}
                   >
-                    إغلاق
+                    {isTestingConnection ? (
+                      <span className="flex items-center">
+                        <Brain className="h-4 w-4 ml-1 animate-pulse" />
+                        جاري الاختبار...
+                      </span>
+                    ) : (
+                      <span className="flex items-center">
+                        <Save className="h-4 w-4 ml-1" />
+                        حفظ واختبار
+                      </span>
+                    )}
                   </Button>
                 </div>
+                {savedApiKey && (
+                  <p className="text-xs text-green-600 mt-1">تم تكوين مفتاح API بنجاح!</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  تم تعيين مفتاح API تلقائيًا: AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8
+                </p>
+              </div>
+
+              <div className="bg-muted/30 p-4 rounded-lg">
+                <div className="flex items-center mb-2">
+                  <PictureInPicture className="h-5 w-5 text-brand-brown mr-2" />
+                  <h3 className="text-lg font-semibold">ميزات استخراج البيانات</h3>
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>استخراج تلقائي للبيانات من الصور مثل الكود، الاسم، رقم الهاتف، الخ.</li>
+                  <li>دعم اللغة العربية بشكل كامل.</li>
+                  <li>تحليل متقدم للصور باستخدام نماذج الذكاء الاصطناعي من Google Gemini.</li>
+                  <li>تحويل النص المستخرج إلى هيكل بيانات منظم.</li>
+                </ul>
+              </div>
+
+              <div className="bg-brand-brown/10 p-4 rounded-lg">
+                <h3 className="font-semibold mb-2">كيفية استخدام الميزة:</h3>
+                <ol className="list-decimal list-inside space-y-1 text-sm">
+                  <li>قم بإدخال مفتاح API لـ Gemini واحفظه.</li>
+                  <li>عد إلى الصفحة الرئيسية وقم برفع الصور كالمعتاد.</li>
+                  <li>سيتم استخدام Gemini لاستخراج البيانات تلقائيًا من الصور المرفوعة.</li>
+                </ol>
               </div>
             </div>
-          )}
+          </Card>
         </div>
       </div>
     </div>

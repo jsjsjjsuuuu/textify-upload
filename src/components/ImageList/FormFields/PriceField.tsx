@@ -1,21 +1,20 @@
-
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, AlertCircle } from "lucide-react";
-import { formatPrice } from "@/utils/parsing/formatters";
+import { formatPrice } from "@/lib/gemini/utils";
 import { useToast } from "@/hooks/use-toast";
-
 interface PriceFieldProps {
   value: string;
   onChange: (value: string) => void;
 }
-
 const PriceField = ({
   value,
   onChange
 }: PriceFieldProps) => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [priceInput, setPriceInput] = useState(value || '');
   const [priceFormatted, setPriceFormatted] = useState(false);
   const [isPriceValid, setIsPriceValid] = useState(true);
@@ -62,7 +61,7 @@ const PriceField = ({
   // Format and save price
   const handleFormatPrice = () => {
     const originalPrice = priceInput;
-    const formattedPrice = formatPrice(originalPrice);
+    const formattedPrice = formatPrice(priceInput);
 
     // تحقق مما إذا كان التنسيق قد أدى إلى تغيير القيمة فعليًا
     if (formattedPrice !== originalPrice) {
@@ -83,51 +82,29 @@ const PriceField = ({
       });
     }
   };
-
   const errorText = !isPriceValid && priceInput ? priceInput && parseFloat(priceInput.replace(/[^\d.]/g, '')) < 1000 ? "يجب أن يكون السعر 1000 أو أكبر، اضغط على 'تحقق' للتصحيح" : "صيغة السعر غير صحيحة، اضغط على 'تحقق' للتصحيح" : '';
-
-  const priceStatusElement = (
-    <div className="flex items-center space-x-2 space-x-reverse">
-      {priceFormatted && (
-        <span className="text-[10px] bg-green-100 text-green-700 flex items-center px-1 rounded">
+  const priceStatusElement = <div className="flex items-center space-x-2 space-x-reverse">
+      {priceFormatted && <span className="text-[10px] bg-green-100 text-green-700 flex items-center px-1 rounded">
           <Check className="h-2.5 w-2.5 ml-0.5" />
           تم التنسيق
-        </span>
-      )}
-      {!isPriceValid && (
-        <span className="text-xs text-destructive font-normal flex items-center">
+        </span>}
+      {!isPriceValid && <span className="text-xs text-destructive font-normal flex items-center">
           <AlertCircle className="h-3 w-3 ml-1" />
           غير صالح
-        </span>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="space-y-1">
+        </span>}
+    </div>;
+  return <div className="space-y-1">
       <label className="block text-xs font-medium flex justify-between">
         <span>السعر:</span>
         {priceStatusElement}
       </label>
       <div className="flex">
-        <Input
-          value={priceInput}
-          onChange={e => handlePriceChange(e.target.value)}
-          className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm rounded-l-none ${!isPriceValid ? "border-destructive" : ""}`}
-          placeholder="أدخل السعر"
-        />
-        <Button
-          onClick={handleFormatPrice}
-          type="button"
-          size="sm"
-          className="h-8 rounded-r-none font-normal text-gray-100 bg-yellow-950 hover:bg-yellow-800 text-xs"
-        >
+        <Input value={priceInput} onChange={e => handlePriceChange(e.target.value)} className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm rounded-l-none ${!isPriceValid ? "border-destructive" : ""}`} placeholder="أدخل السعر" />
+        <Button onClick={handleFormatPrice} type="button" size="sm" className="h-8 rounded-r-none font-normal text-gray-100 bg-yellow-950 hover:bg-yellow-800 text-xs">
           تحقق
         </Button>
       </div>
       {!isPriceValid && errorText && <p className="text-xs text-destructive">{errorText}</p>}
-    </div>
-  );
+    </div>;
 };
-
 export default PriceField;

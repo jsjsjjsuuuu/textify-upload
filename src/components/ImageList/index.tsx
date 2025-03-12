@@ -1,8 +1,7 @@
 
-import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import CardItem from "./CardItem";
-import { useSaveToDatabase } from "@/hooks/useSaveToDatabase";
+import { motion } from "framer-motion";
 
 interface ImageListProps {
   images: ImageData[];
@@ -23,35 +22,34 @@ const ImageList = ({
   onSubmit,
   formatDate
 }: ImageListProps) => {
-  const { saveToDatabase, isSavingItem, isItemSaved } = useSaveToDatabase();
-  
-  const handleSaveToDatabase = (id: string) => {
-    const image = images.find(img => img.id === id);
-    if (image) {
-      saveToDatabase(id, image);
-    }
-  };
-
   if (images.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {images.map((image) => (
-        <CardItem
-          key={image.id}
-          image={image}
-          isSubmitting={isSubmitting}
-          onImageClick={onImageClick}
-          onTextChange={onTextChange}
-          onDelete={onDelete}
-          onSubmit={onSubmit}
-          onSaveToDatabase={handleSaveToDatabase}
-          isSaving={isSavingItem(image.id)}
-          isSaved={isItemSaved(image.id)}
-          formatDate={formatDate}
-        />
-      ))}
-    </div>
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <h2 className="text-2xl font-bold text-brand-brown dark:text-brand-beige mb-6 flex items-center">
+        <span className="bg-brand-coral/20 w-1.5 h-6 rounded mr-2 block"></span>
+        معاينة الصور والنصوص المستخرجة
+      </h2>
+      
+      <div className="space-y-6">
+        {images.map(image => (
+          <CardItem 
+            key={image.id}
+            image={image}
+            isSubmitting={isSubmitting}
+            onImageClick={onImageClick}
+            onTextChange={onTextChange}
+            onDelete={onDelete}
+            onSubmit={onSubmit}
+            formatDate={formatDate}
+          />
+        ))}
+      </div>
+    </motion.section>
   );
 };
 

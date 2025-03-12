@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import BackgroundPattern from "@/components/BackgroundPattern";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, LogIn, Mail } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,12 +23,12 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const success = await login(email, password);
+      const success = await login(username, password);
 
       if (success) {
         toast({
           title: "تم تسجيل الدخول بنجاح",
-          description: `مرحباً!`,
+          description: `مرحباً ${username}!`,
         });
 
         // توجيه المستخدم إلى الصفحة الرئيسية
@@ -36,7 +36,7 @@ const Login = () => {
       } else {
         toast({
           title: "فشل تسجيل الدخول",
-          description: "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+          description: "اسم المستخدم أو كلمة المرور غير صحيحة",
           variant: "destructive",
         });
       }
@@ -69,24 +69,18 @@ const Login = () => {
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                البريد الإلكتروني
+              <label htmlFor="username" className="text-sm font-medium">
+                اسم المستخدم
               </label>
-              <div className="relative">
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="أدخل البريد الإلكتروني"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-white dark:bg-gray-900 pl-10"
-                  dir="rtl"
-                />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                  <Mail className="h-4 w-4 text-gray-500" />
-                </div>
-              </div>
+              <Input
+                id="username"
+                placeholder="أدخل اسم المستخدم"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                className="bg-white dark:bg-gray-900"
+                dir="rtl"
+              />
             </div>
             
             <div className="space-y-2">
@@ -101,7 +95,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="bg-white dark:bg-gray-900 pl-10"
+                  className="bg-white dark:bg-gray-900 pr-10"
                   dir="rtl"
                 />
                 <button
@@ -119,10 +113,9 @@ const Login = () => {
             </div>
             
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              <p>إعدادات الاختبار:</p>
-              <p>- admin@example.com / admin123</p>
-              <p>- user@example.com / user123</p>
-              <p>- أو استخدم اسم المستخدم بدلاً من البريد الإلكتروني: admin / admin123</p>
+              <p>بيانات اختبار:</p>
+              <p>- مدير: admin / admin123</p>
+              <p>- مستخدم: user / user123</p>
             </div>
           </CardContent>
           
