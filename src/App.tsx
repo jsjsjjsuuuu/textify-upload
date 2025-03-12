@@ -26,7 +26,7 @@ function App() {
             </AuthGuard>
           } />
           <Route path="/api" element={
-            <AuthGuard requireAdmin={true}>
+            <AuthGuard>
               <ApiSettings />
             </AuthGuard>
           } />

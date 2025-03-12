@@ -54,26 +54,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("Error parsing stored user:", error);
         localStorage.removeItem("user");
       }
-    } else if (isProtectedRoute(location.pathname)) {
-      // إذا كان المستخدم غير مسجل الدخول ويحاول الوصول إلى صفحة محمية
-      navigate("/login", { state: { from: location.pathname } });
     }
   }, [location.pathname, navigate]);
 
-  // التحقق مما إذا كان المسار محمي
-  const isProtectedRoute = (path: string) => {
-    const protectedRoutes = ["/records", "/api"];
-    return protectedRoutes.some(route => 
-      path.startsWith(route) || path === "/"
-    );
-  };
-
-  // التحقق من الصفحات المحمية عند تغيير المسار
+  // التحقق من الصفحات المحمية
   useEffect(() => {
-    if (isProtectedRoute(location.pathname) && !user) {
-      navigate("/login", { state: { from: location.pathname } });
+    const protectedRoutes = ["/records", "/api"];
+    const isProtectedRoute = protectedRoutes.some(route => 
+      location.pathname.startsWith(route) || location.pathname === "/"
+    );
+    
+    if (isProtectedRoute && !user) {
+      navigate("/login");
     }
-  }, [location.pathname, user, navigate]);
+  }, [location, user, navigate]);
 
   const login = async (username: string, password: string): Promise<boolean> => {
     // محاكاة طلب تسجيل الدخول (في الإنتاج يجب استخدام API)
@@ -90,12 +84,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setUser(userObj);
       localStorage.setItem("user", JSON.stringify(userObj));
-      
-      // التحقق مما إذا كان هناك مسار محفوظ للعودة إليه
-      const { state } = location;
-      const destination = state && state.from ? state.from : "/";
-      navigate(destination);
-      
       return true;
     }
     

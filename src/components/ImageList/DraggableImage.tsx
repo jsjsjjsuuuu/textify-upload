@@ -1,9 +1,7 @@
+
 import { useState, useRef, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
-import ImageErrorHandler from "@/components/common/ImageErrorHandler";
 import ZoomControls from "./ZoomControls";
-import ImageMetadata from "./ImageMetadata";
-import DraggableImageCore from "./DraggableImageCore";
 
 interface DraggableImageProps {
   image: ImageData;
@@ -12,28 +10,21 @@ interface DraggableImageProps {
 }
 
 const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps) => {
-  // حالة التكبير والسحب
+  // State for zoom and dragging
   const [zoomLevel, setZoomLevel] = useState(1.5); // تكبير تلقائي بنسبة 50%
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [imgError, setImgError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const [isRetrying, setIsRetrying] = useState(false);
-  const [errorType, setErrorType] = useState<"network" | "format" | "access" | "general">("general");
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   
-  // إعادة ضبط الموقع عند تحميل المكون أو تغيير الصورة
+  // Reset position when component mounts
   useEffect(() => {
     setPosition({ x: 0, y: 0 });
-    setImgError(false);
-    setRetryCount(0);
-    setIsRetrying(false);
-    setErrorType("general");
-  }, [image.id]);
+  }, []);
   
-  // مناولات التحكم في التكبير
+  // Zoom control handlers
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
     setZoomLevel(prev => Math.min(prev + 0.2, 3));
@@ -46,11 +37,11 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
   
   const handleResetZoom = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoomLevel(1.5);
+    setZoomLevel(1.5); // إعادة تعيين إلى تكبير 50%
     setPosition({ x: 0, y: 0 });
   };
   
-  // مناولات سحب الماوس
+  // Mouse drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsDragging(true);
@@ -67,7 +58,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
       const newX = e.clientX - startPos.x;
       const newY = e.clientY - startPos.y;
       
-      // حساب الحدود لمنع سحب الصورة خارج نطاق الرؤية بالكامل
+      // Calculate bounds to prevent dragging image completely out of view
       const containerWidth = imageContainerRef.current?.clientWidth || 0;
       const containerHeight = imageContainerRef.current?.clientHeight || 0;
       const imageWidth = (imageRef.current?.naturalWidth || 0) * zoomLevel;
@@ -76,11 +67,11 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
       const maxX = Math.max(0, (imageWidth - containerWidth) / 2);
       const maxY = Math.max(0, (imageHeight - containerHeight) / 2);
       
-      // تقييد الموضع
+      // Bound the position
       const boundedX = Math.min(Math.max(newX, -maxX), maxX);
       const boundedY = Math.min(Math.max(newY, -maxY), maxY);
       
-      // استخدام requestAnimationFrame لتحديثات أكثر سلاسة
+      // Use requestAnimationFrame for smoother updates
       requestAnimationFrame(() => {
         setPosition({ x: boundedX, y: boundedY });
       });
@@ -99,69 +90,9 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
   };
   
   const handleImageClick = () => {
-    // تشغيل نقرة الصورة فقط في حالة عدم السحب
+    // Only trigger image click if not dragging
     if (!isDragging) {
       onImageClick(image);
-    }
-  };
-
-  // معالجة خطأ تحميل الصورة
-  const handleImageError = () => {
-    console.log(`فشل تحميل الصورة: ${image.id}, محاولة: ${retryCount + 1}`);
-    setImgError(true);
-    
-    // تحديد نوع الخطأ استنادًا إلى حالة الاتصال وعدد المحاولات
-    if (!navigator.onLine) {
-      setErrorType("network");
-    } else if (retryCount >= 2) {
-      setErrorType("access");
-    }
-    
-    // محاولة إعادة التحميل تلقائيًا إذا لم يتم تجاوز الحد الأقصى
-    if (retryCount < 2) {
-      handleRetryLoadImage();
-    } else {
-      setIsRetrying(false);
-    }
-  };
-
-  // محاولة تحميل الصورة مرة أخرى
-  const handleRetryLoadImage = () => {
-    // تحديث نوع الخطأ إذا تغيرت حالة الاتصال
-    if (!navigator.onLine) {
-      setErrorType("network");
-    } else {
-      setErrorType("general");
-    }
-    
-    setIsRetrying(true);
-    setRetryCount(prev => prev + 1);
-    
-    if (imageRef.current) {
-      const timestamp = new Date().getTime();
-      let originalSrc = image.previewUrl;
-      
-      // إزالة أي معلمات URL سابقة
-      originalSrc = originalSrc.split('?')[0];
-      
-      // إعادة تعيين مصدر الصورة لتحميلها مرة أخرى
-      imageRef.current.src = "";
-      
-      setTimeout(() => {
-        if (imageRef.current) {
-          // إضافة معلمة الوقت لتجنب التخزين المؤقت
-          imageRef.current.src = `${originalSrc}?t=${timestamp}`;
-          console.log(`إعادة محاولة تحميل الصورة: ${originalSrc}?t=${timestamp}`);
-          
-          // تعيين حالة الخطأ إلى false ليتم إعادة عرض الصورة
-          setImgError(false);
-          
-          // إعادة تعيين حالة المحاولة بعد فترة زمنية في حالة فشل التحميل
-          setTimeout(() => {
-            setIsRetrying(false);
-          }, 5000); // انتظر 5 ثوانٍ كحد أقصى
-        }
-      }, 100);
     }
   };
 
@@ -173,35 +104,78 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
         onResetZoom={handleResetZoom}
       />
       
-      <DraggableImageCore
-        imageRef={imageRef}
-        containerRef={imageContainerRef}
-        previewUrl={image.previewUrl}
-        zoomLevel={zoomLevel}
-        position={position}
-        isDragging={isDragging}
-        imgError={imgError}
-        isRetrying={isRetrying}
-        errorType={errorType}
-        retryCount={retryCount}
-        imageId={image.id}
-        status={image.status}
-        submitted={image.submitted}
-        number={image.number}
-        onImageClick={handleImageClick}
+      <div 
+        ref={imageContainerRef}
+        className="relative w-full h-[420px] overflow-hidden bg-transparent cursor-move flex items-center justify-center" 
+        onClick={handleImageClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
-        onImageError={handleImageError}
-        onRetryLoadImage={handleRetryLoadImage}
-      />
+      >
+        <img 
+          ref={imageRef}
+          src={image.previewUrl} 
+          alt="صورة محملة" 
+          className="w-full h-full object-contain transition-transform duration-150" 
+          style={{ 
+            transform: `scale(${zoomLevel}) translate(${position.x / zoomLevel}px, ${position.y / zoomLevel}px)`,
+            maxHeight: '100%',
+            maxWidth: '100%',
+            transformOrigin: 'center',
+            pointerEvents: 'none', // Prevents image from capturing mouse events
+            willChange: 'transform', // Optimize for transforms
+          }} 
+          onError={() => setImgError(true)}
+        />
+        
+        {imgError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="M17.5 5c-2.6-2.4-6.8-2.4-9.3 0m11.3 4c-3.3-3-8.2-3-11.5 0m13.3 4c-4-3.6-9.6-3.6-13.5 0"/></svg>
+            <p className="mt-2 text-xs text-center text-muted-foreground">الصورة غير متاحة حاليًا</p>
+          </div>
+        )}
+        
+        <div className="absolute top-1 right-1 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
+          صورة {image.number}
+        </div>
+        
+        {image.status === "processing" && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
+            <span className="text-xs">جاري المعالجة...</span>
+          </div>
+        )}
+        
+        {image.status === "completed" && (
+          <div className="absolute top-1 left-1 bg-green-500 text-white p-1 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+        )}
+        
+        {image.status === "error" && (
+          <div className="absolute top-1 left-1 bg-destructive text-white p-1 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </div>
+        )}
+        
+        {image.submitted && (
+          <div className="absolute bottom-1 right-1 bg-brand-green text-white px-1.5 py-0.5 rounded-md text-[10px]">
+            تم الإرسال
+          </div>
+        )}
+      </div>
       
-      <ImageMetadata
-        image={image}
-        formatDate={formatDate}
-        hasError={imgError}
-      />
+      <div className="text-xs text-muted-foreground mt-1 text-center">
+        {formatDate(image.date)}
+      </div>
+      
+      {image.confidence !== undefined && (
+        <div className="mt-1 text-center">
+          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+            دقة الاستخراج: {Math.round(image.confidence)}%
+          </span>
+        </div>
+      )}
     </div>
   );
 };

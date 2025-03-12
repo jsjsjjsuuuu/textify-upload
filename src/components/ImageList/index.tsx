@@ -29,16 +29,11 @@ const ImageList = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="w-full"
     >
-      <div className="mb-6 border-r-4 border-brand-coral/60 pr-3">
-        <h2 className="text-2xl font-bold text-brand-brown dark:text-brand-beige flex items-center">
-          معاينة الصور والنصوص المستخرجة
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          يمكنك مراجعة وتعديل البيانات المستخرجة من الصور قبل إرسالها
-        </p>
-      </div>
+      <h2 className="text-2xl font-bold text-brand-brown dark:text-brand-beige mb-6 flex items-center">
+        <span className="bg-brand-coral/20 w-1.5 h-6 rounded mr-2 block"></span>
+        معاينة الصور والنصوص المستخرجة
+      </h2>
       
       <div className="space-y-6">
         {images.map(image => (

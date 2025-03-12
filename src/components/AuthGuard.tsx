@@ -1,6 +1,6 @@
 
 import { ReactNode, useEffect } from "react";
-import { Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 interface AuthGuardProps {
@@ -11,17 +11,15 @@ interface AuthGuardProps {
 const AuthGuard = ({ children, requireAdmin = false }: AuthGuardProps) => {
   const { isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     if (!isAuthenticated) {
-      // حفظ المسار الحالي للعودة إليه بعد تسجيل الدخول
-      navigate("/login", { state: { from: location.pathname } });
+      navigate("/login");
     }
-  }, [isAuthenticated, navigate, location.pathname]);
+  }, [isAuthenticated, navigate]);
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location.pathname }} />;
+    return <Navigate to="/login" />;
   }
 
   if (requireAdmin && !isAdmin) {

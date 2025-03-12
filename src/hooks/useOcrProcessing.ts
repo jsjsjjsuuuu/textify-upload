@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { extractTextFromImage } from "@/lib/ocrService";
-import { parseDataFromOCRText, updateImageWithExtractedData } from "@/utils/parsers";
+import { parseDataFromOCRText, updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { useToast } from "@/hooks/use-toast";
 
 export const useOcrProcessing = () => {

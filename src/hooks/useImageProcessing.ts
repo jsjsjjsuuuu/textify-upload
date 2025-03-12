@@ -7,7 +7,6 @@ import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useSubmitToApi } from "@/hooks/useSubmitToApi";
 import { createReliableBlobUrl, formatPrice } from "@/lib/gemini/utils";
-import { validateImageData, formatImageData, prepareNewImage } from "@/utils/dataValidation";
 
 export const useImageProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -90,8 +89,15 @@ export const useImageProcessing = () => {
         continue;
       }
       
-      // إعداد الصورة الجديدة باستخدام الدالة المساعدة
-      const newImage = prepareNewImage(file, previewUrl, startingNumber + i);
+      const newImage: ImageData = {
+        id: crypto.randomUUID(),
+        file,
+        previewUrl,
+        extractedText: "",
+        date: new Date(),
+        status: "processing",
+        number: startingNumber + i
+      };
       
       addImage(newImage);
       console.log("Added new image to state with ID:", newImage.id);
@@ -101,14 +107,25 @@ export const useImageProcessing = () => {
         
         if (useGemini) {
           console.log("Using Gemini API for extraction");
-          processedImage = await processWithGemini(file, newImage, processWithOcr);
+          processedImage = await processWithGemini(
+            file, 
+            newImage, 
+            processWithOcr
+          );
         } else {
           console.log("No Gemini API key, using OCR directly");
           processedImage = await processWithOcr(file, newImage);
         }
         
-        // تنسيق البيانات المستخرجة
-        processedImage = formatImageData(processedImage);
+        // إذا كان هناك سعر، نتأكد من تنسيقه بشكل صحيح
+        if (processedImage.price) {
+          const originalPrice = processedImage.price;
+          processedImage.price = formatPrice(originalPrice);
+          
+          if (originalPrice !== processedImage.price) {
+            console.log(`تم تنسيق السعر تلقائيًا بعد المعالجة: "${originalPrice}" -> "${processedImage.price}"`);
+          }
+        }
         
         updateImage(newImage.id, processedImage);
       } catch (error) {
@@ -142,21 +159,38 @@ export const useImageProcessing = () => {
 
   const handleSubmitToApi = (id: string) => {
     const image = images.find(img => img.id === id);
-    if (!image) return;
-    
-    // التحقق من صحة البيانات قبل الإرسال
-    const validation = validateImageData(image);
-    
-    if (!validation.valid) {
-      toast({
-        title: "لا يمكن إرسال البيانات",
-        description: validation.errors.join("، "),
-        variant: "destructive"
-      });
-      return;
+    if (image) {
+      // التحقق من صحة البيانات قبل الإرسال
+      let hasErrors = false;
+      let errorMessages = [];
+      
+      // التحقق من رقم الهاتف
+      if (image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, '').length !== 11) {
+        hasErrors = true;
+        errorMessages.push("رقم الهاتف غير صحيح (يجب أن يكون 11 رقم)");
+      }
+      
+      // التحقق من السعر
+      if (image.price) {
+        const cleanedPrice = image.price.toString().replace(/[^\d.]/g, '');
+        const numValue = parseFloat(cleanedPrice);
+        if (numValue > 0 && numValue < 1000 && image.price !== '0') {
+          hasErrors = true;
+          errorMessages.push("السعر غير صحيح (يجب أن يكون 1000 أو أكبر أو 0)");
+        }
+      }
+      
+      if (hasErrors) {
+        toast({
+          title: "لا يمكن إرسال البيانات",
+          description: errorMessages.join("، "),
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      submitToApi(id, image);
     }
-    
-    submitToApi(id, image);
   };
 
   return {
