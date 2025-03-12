@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast"; 
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { FirecrawlService } from '@/lib/firecrawlService';
 import { Card } from "@/components/ui/card";
-import { BookmarkletGenerator } from './BookmarkletGenerator';
+import BookmarkletGenerator from "@/components/BookmarkletGenerator";
 import { ImageData } from "@/types/ImageData";
 
 interface CrawlResult {
