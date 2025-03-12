@@ -31,7 +31,6 @@ const CardItem = ({
   onSubmit, 
   formatDate 
 }: CardItemProps) => {
-  // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
   const [isBookmarkletOpen, setIsBookmarkletOpen] = useState(false);
   const [isAutoFilling, setIsAutoFilling] = useState(false);
@@ -44,9 +43,13 @@ const CardItem = ({
   };
 
   const handleAutoFill = async () => {
-    // عرض مربع حوار لإدخال عنوان URL للموقع
-    const url = prompt("أدخل عنوان URL للموقع الذي تريد ملء البيانات فيه:", "https://");
+    // حفظ الإعداد الافتراضي في localStorage
+    const lastUsedUrl = localStorage.getItem('lastAutoFillUrl');
+    const url = prompt("أدخل عنوان URL للموقع الذي تريد ملء البيانات فيه:", lastUsedUrl || "https://");
     if (!url) return;
+    
+    // حفظ URL في localStorage للاستخدام القادم
+    localStorage.setItem('lastAutoFillUrl', url);
     
     setIsAutoFilling(true);
     
@@ -62,54 +65,124 @@ const CardItem = ({
         extractedText: image.extractedText || ""
       };
       
-      // إرسال البيانات للخدمة المحسنة
-      const result = await autoFillWebsiteForm(url, formData);
-      
-      if (result.success) {
-        // تحقق مما إذا كان الرابط موجودًا في النتيجة
-        if (result.data && result.data.bookmarkletUrl) {
-          // إنشاء وصف يشرح كيفية استخدام الرابط
-          toast({
-            title: "تم إنشاء وصلة الإدخال التلقائي",
-            description: "يمكنك الآن الانتقال إلى الموقع المستهدف واستخدام الأداة المضافة إلى المفضلة",
-            variant: "default"
-          });
+      // إنشاء نص البرمجة النصية مباشرة
+      const scriptText = `
+        (function() {
+          const data = ${JSON.stringify(formData)};
           
-          // إضافة الرابط إلى المفضلة
-          const bookmarkTitle = `ملء البيانات لـ ${image.code || "الصورة"}`;
-          try {
-            // عرض تنبيه للمستخدم يطلب منه حفظ الرابط في المفضلة يدويًا
-            alert("لإضافة أداة الإدخال التلقائي إلى المفضلة:\n1. انسخ الرابط من الإشعار التالي\n2. انقر بزر الماوس الأيمن على شريط المفضلة\n3. اختر 'إضافة صفحة'\n4. الصق الرابط في حقل 'العنوان'");
+          // إنشاء عنصر لعرض حالة التقدم
+          const progressBar = document.createElement('div');
+          progressBar.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; height: 4px; background: #0f0; z-index: 9999; transition: width 0.3s;';
+          document.body.appendChild(progressBar);
+          
+          // وظيفة لتحديث شريط التقدم
+          const updateProgress = (percent) => {
+            progressBar.style.width = percent + '%';
+            if (percent === 100) {
+              setTimeout(() => progressBar.remove(), 1000);
+            }
+          };
+          
+          // وظيفة للبحث عن الحقول وملئها
+          const fillFields = () => {
+            const fields = {
+              'senderName': ['sender', 'name', 'الاسم', 'المرسل'],
+              'phoneNumber': ['phone', 'tel', 'mobile', 'هاتف', 'موبايل', 'جوال'],
+              'province': ['province', 'city', 'region', 'محافظة', 'المحافظة', 'المدينة'],
+              'price': ['price', 'cost', 'amount', 'سعر', 'المبلغ', 'التكلفة'],
+              'companyName': ['company', 'vendor', 'شركة', 'المورد'],
+              'code': ['code', 'id', 'number', 'رقم', 'كود']
+            };
             
-            // نسخ الرابط إلى الحافظة
-            await navigator.clipboard.writeText(result.data.bookmarkletUrl);
-            toast({
-              title: "تم نسخ الرابط",
-              description: "تم نسخ رابط الإدخال التلقائي. يمكنك إضافته إلى المفضلة يدويًا",
-              variant: "default"
-            });
-          } catch (err) {
-            console.error("خطأ في إضافة المفضلة:", err);
-            toast({
-              title: "تعذر إضافة المفضلة تلقائيًا",
-              description: "يرجى إضافة الرابط إلى المفضلة يدويًا",
-              variant: "default"
-            });
+            let filledCount = 0;
+            const totalFields = Object.keys(fields).length;
+            
+            for (const [dataKey, selectors] of Object.entries(fields)) {
+              if (!data[dataKey]) continue;
+              
+              for (const selector of selectors) {
+                const elements = [
+                  ...document.querySelectorAll(\`input[id*="\${selector}"i]\`),
+                  ...document.querySelectorAll(\`input[name*="\${selector}"i]\`),
+                  ...document.querySelectorAll(\`input[placeholder*="\${selector}"i]\`),
+                  ...document.querySelectorAll(\`textarea[id*="\${selector}"i]\`),
+                  ...document.querySelectorAll(\`textarea[name*="\${selector}"i]\`),
+                  ...document.querySelectorAll(\`select[id*="\${selector}"i]\`)
+                ];
+                
+                for (const element of elements) {
+                  if (element.disabled || element.readOnly) continue;
+                  
+                  if (element instanceof HTMLSelectElement) {
+                    const options = Array.from(element.options);
+                    const bestMatch = options.find(opt => 
+                      opt.text.toLowerCase().includes(data[dataKey].toLowerCase())
+                    );
+                    if (bestMatch) {
+                      element.value = bestMatch.value;
+                      element.dispatchEvent(new Event('change', { bubbles: true }));
+                      filledCount++;
+                      updateProgress((filledCount / totalFields) * 100);
+                      break;
+                    }
+                  } else {
+                    element.value = data[dataKey];
+                    element.dispatchEvent(new Event('input', { bubbles: true }));
+                    element.dispatchEvent(new Event('change', { bubbles: true }));
+                    filledCount++;
+                    updateProgress((filledCount / totalFields) * 100);
+                    break;
+                  }
+                }
+              }
+            }
+            
+            // إذا تم ملء كل الحقول المطلوبة
+            if (filledCount > 0) {
+              navigator.clipboard.writeText(JSON.stringify(data, null, 2))
+                .then(() => console.log('تم نسخ البيانات إلى الحافظة'))
+                .catch(() => console.warn('فشل نسخ البيانات إلى الحافظة'));
+            }
+            
+            return filledCount;
+          };
+          
+          // تنفيذ عملية الملء والتحقق من النجاح
+          const filledCount = fillFields();
+          if (filledCount > 0) {
+            const notification = document.createElement('div');
+            notification.style.cssText = \`
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              background: #4CAF50;
+              color: white;
+              padding: 15px 20px;
+              border-radius: 5px;
+              z-index: 10000;
+              direction: rtl;
+              font-family: Arial;
+              box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            \`;
+            notification.textContent = \`تم ملء \${filledCount} حقول بنجاح\`;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
           }
-        } else {
-          toast({
-            title: "نجاح",
-            description: result.message,
-            variant: "default"
-          });
-        }
-      } else {
-        toast({
-          title: "فشل الإدخال التلقائي",
-          description: result.message,
-          variant: "destructive"
-        });
-      }
+        })();
+      `;
+      
+      // إنشاء وصلة bookmarklet وتنفيذها
+      const bookmarkletUrl = `javascript:${encodeURIComponent(scriptText)}`;
+      const scriptElement = document.createElement('script');
+      scriptElement.textContent = decodeURIComponent(bookmarkletUrl.replace('javascript:', ''));
+      document.body.appendChild(scriptElement);
+      document.body.removeChild(scriptElement);
+      
+      toast({
+        title: "تم تنفيذ الإدخال التلقائي",
+        description: "تم محاولة ملء البيانات في النموذج",
+        variant: "default"
+      });
     } catch (error) {
       console.error("خطأ في الإدخال التلقائي:", error);
       toast({
@@ -166,7 +239,8 @@ const CardItem = ({
               <Button
                 size="sm"
                 variant="outline"
-                className="flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-900/30"
+                className="flex items
+                -center gap-1 text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-900/30"
                 onClick={handleAutoFill}
                 disabled={isAutoFilling || !image.extractedText}
               >
