@@ -126,9 +126,7 @@ const ImageErrorHandler = ({
             </div>
           )}
           
-          <div className="mt-4 text-xs text-amber-500">
-            تعذر الوصول للصورة، يرجى التحقق من الإذن
-          </div>
+          {/* إزالة الرسالة المكررة التي تظهر في الأسفل */}
         </>
       )}
     </div>
