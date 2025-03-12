@@ -1,3 +1,4 @@
+
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 // استخدام قيم افتراضية إذا لم تكن متوفرة من متغيرات البيئة
