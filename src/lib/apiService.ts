@@ -93,5 +93,37 @@ export async function authenticateWithExternalApi(apiKey: string): Promise<ApiRe
   });
 }
 
+/**
+ * ينفذ وظيفة تحاكي إدخال البيانات في موقع خارجي
+ * في حالة التطبيق الفعلي، هذا سيستخدم API لإدخال البيانات
+ */
+export async function autoFillWebsiteForm(websiteUrl: string, data: any): Promise<ApiResult> {
+  console.log("محاولة ملء النموذج تلقائيًا على:", websiteUrl);
+  console.log("البيانات للإدخال:", data);
+  
+  // محاكاة عملية الإدخال التلقائي مع تأخير
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // محاكاة معدل نجاح 85%
+      if (Math.random() > 0.15) {
+        resolve({
+          success: true,
+          message: "تم إدخال البيانات في الموقع بنجاح",
+          data: {
+            url: websiteUrl,
+            submissionId: `web-submission-${Date.now()}`,
+            timestamp: new Date().toISOString()
+          }
+        });
+      } else {
+        resolve({
+          success: false,
+          message: "تعذر ملء النموذج في الموقع المحدد"
+        });
+      }
+    }, 2000);
+  });
+}
+
 // تصدير الدوال من geminiService
 export * from './geminiService';
