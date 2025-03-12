@@ -1,46 +1,35 @@
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+
 import { ImageData } from "@/types/ImageData";
 import { useImageState } from "@/hooks/useImageState";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useSubmitToApi } from "@/hooks/useSubmitToApi";
-import { createReliableBlobUrl, formatPrice } from "@/utils/parsing/formatters";
+import { useFileUpload } from "@/hooks/useFileUpload";
+import { useDataValidation } from "@/hooks/useDataValidation";
+import { useTextHandler } from "@/hooks/useTextHandler";
+import { useToast } from "@/hooks/use-toast";
 
 export const useImageProcessing = () => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingProgress, setProcessingProgress] = useState(0);
-  const { toast } = useToast();
-  
   const { images, addImage, updateImage, deleteImage, handleTextChange } = useImageState();
   const { processWithOcr } = useOcrProcessing();
   const { useGemini, processWithGemini } = useGeminiProcessing();
   const { isSubmitting, handleSubmitToApi: submitToApi } = useSubmitToApi(updateImage);
+  const { toast } = useToast();
+  
+  const {
+    isProcessing,
+    processingProgress,
+    setIsProcessing,
+    setProcessingProgress,
+    calculateStartingNumber,
+    createNewImage,
+    validateFile,
+    validatePreviewUrl,
+    updateProgress
+  } = useFileUpload(images, addImage);
 
-  // تخصيص معالج تغيير النص لتنسيق السعر تلقائيًا
-  const handleCustomTextChange = (id: string, field: string, value: string) => {
-    // إذا كان الحقل هو السعر، نتحقق من التنسيق
-    if (field === "price" && value) {
-      const originalValue = value;
-      const formattedValue = formatPrice(value);
-      
-      // إذا كان التنسيق مختلفًا عن القيمة الأصلية، نستخدم القيمة المنسقة
-      if (formattedValue !== originalValue) {
-        console.log(`تنسيق السعر تلقائيًا: "${originalValue}" -> "${formattedValue}"`);
-        value = formattedValue;
-        
-        // إظهار إشعار بالتغيير
-        toast({
-          title: "تم تنسيق السعر تلقائيًا",
-          description: `تم تحويل "${originalValue}" إلى "${formattedValue}"`,
-          variant: "default"
-        });
-      }
-    }
-    
-    // استدعاء معالج تغيير النص الأصلي
-    handleTextChange(id, field, value);
-  };
+  const { validateSubmitData } = useDataValidation();
+  const { handleCustomTextChange } = useTextHandler(handleTextChange);
 
   const handleFileChange = async (files: FileList | null) => {
     console.log("handleFileChange called with files:", files);
@@ -55,75 +44,30 @@ export const useImageProcessing = () => {
     const fileArray = Array.from(files);
     console.log("Processing", fileArray.length, "files");
     
-    const totalFiles = fileArray.length;
+    const startingNumber = calculateStartingNumber();
     let processedFiles = 0;
-    
-    const startingNumber = images.length > 0 ? Math.max(...images.map(img => img.number || 0)) + 1 : 1;
-    console.log("Starting number for new images:", startingNumber);
     
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
       console.log("Processing file:", file.name, "type:", file.type);
       
-      if (!file.type.startsWith("image/")) {
-        toast({
-          title: "خطأ في نوع الملف",
-          description: "يرجى تحميل صور فقط",
-          variant: "destructive"
-        });
-        console.log("File is not an image, skipping");
-        continue;
-      }
+      if (!validateFile(file)) continue;
       
-      // Create a more reliable blob URL
       const previewUrl = createReliableBlobUrl(file);
       console.log("Created preview URL:", previewUrl);
       
-      if (!previewUrl) {
-        toast({
-          title: "خطأ في تحميل الصورة",
-          description: "فشل في إنشاء معاينة للصورة",
-          variant: "destructive"
-        });
-        continue;
-      }
+      if (!validatePreviewUrl(previewUrl)) continue;
       
-      const newImage: ImageData = {
-        id: crypto.randomUUID(),
-        file,
-        previewUrl,
-        extractedText: "",
-        date: new Date(),
-        status: "processing",
-        number: startingNumber + i
-      };
-      
+      const newImage = createNewImage(file, previewUrl, startingNumber, i);
       addImage(newImage);
-      console.log("Added new image to state with ID:", newImage.id);
       
       try {
         let processedImage: ImageData;
         
         if (useGemini) {
-          console.log("Using Gemini API for extraction");
-          processedImage = await processWithGemini(
-            file, 
-            newImage, 
-            processWithOcr
-          );
+          processedImage = await processWithGemini(file, newImage, processWithOcr);
         } else {
-          console.log("No Gemini API key, using OCR directly");
           processedImage = await processWithOcr(file, newImage);
-        }
-        
-        // إذا كان هناك سعر، نتأكد من تنسيقه بشكل صحيح
-        if (processedImage.price) {
-          const originalPrice = processedImage.price;
-          processedImage.price = formatPrice(originalPrice);
-          
-          if (originalPrice !== processedImage.price) {
-            console.log(`تم تنسيق السعر تلقائيًا بعد المعالجة: "${originalPrice}" -> "${processedImage.price}"`);
-          }
         }
         
         updateImage(newImage.id, processedImage);
@@ -139,13 +83,10 @@ export const useImageProcessing = () => {
       }
       
       processedFiles++;
-      const progress = Math.round(processedFiles / totalFiles * 100);
-      console.log("Processing progress:", progress + "%");
-      setProcessingProgress(progress);
+      updateProgress(processedFiles, fileArray.length);
     }
     
     setIsProcessing(false);
-    console.log("Image processing completed");
     
     if (processedFiles > 0) {
       toast({
@@ -158,36 +99,7 @@ export const useImageProcessing = () => {
 
   const handleSubmitToApi = (id: string) => {
     const image = images.find(img => img.id === id);
-    if (image) {
-      // التحقق من صحة البيانات قبل الإرسال
-      let hasErrors = false;
-      let errorMessages = [];
-      
-      // التحقق من رقم الهاتف
-      if (image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, '').length !== 11) {
-        hasErrors = true;
-        errorMessages.push("رقم الهاتف غير صحيح (يجب أن يكون 11 رقم)");
-      }
-      
-      // التحقق من السعر
-      if (image.price) {
-        const cleanedPrice = image.price.toString().replace(/[^\d.]/g, '');
-        const numValue = parseFloat(cleanedPrice);
-        if (numValue > 0 && numValue < 1000 && image.price !== '0') {
-          hasErrors = true;
-          errorMessages.push("السعر غير صحيح (يجب أن يكون 1000 أو أكبر أو 0)");
-        }
-      }
-      
-      if (hasErrors) {
-        toast({
-          title: "لا يمكن إرسال البيانات",
-          description: errorMessages.join("، "),
-          variant: "destructive"
-        });
-        return;
-      }
-      
+    if (image && validateSubmitData(image)) {
       submitToApi(id, image);
     }
   };
