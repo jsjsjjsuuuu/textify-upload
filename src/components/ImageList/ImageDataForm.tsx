@@ -1,3 +1,4 @@
+
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IRAQ_PROVINCES } from "@/utils/provinces";
@@ -114,7 +115,6 @@ const ImageDataForm = ({
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
             <span>اسم الشركة:</span>
-            {image.confidence}
           </label>
           <Input value={image.companyName || ''} onChange={e => onTextChange(image.id, "companyName", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل اسم الشركة" />
         </div>
@@ -123,7 +123,6 @@ const ImageDataForm = ({
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
             <span>الكود:</span>
-            {image.confidence}
           </label>
           <Input value={image.code || ''} onChange={e => onTextChange(image.id, "code", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل الكود" />
         </div>
@@ -132,7 +131,6 @@ const ImageDataForm = ({
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
             <span>اسم المرسل:</span>
-            {image.confidence}
           </label>
           <Input value={image.senderName || ''} onChange={e => onTextChange(image.id, "senderName", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل اسم المرسل" />
         </div>
@@ -142,7 +140,6 @@ const ImageDataForm = ({
           <label className="block text-xs font-medium flex justify-between">
             <span>رقم الهاتف:</span>
             <div className="flex items-center space-x-2 space-x-reverse">
-              {image.confidence}
               {image.phoneNumber && !isPhoneNumberValid && <span className="text-xs text-destructive font-normal flex items-center">
                   <AlertCircle className="h-3 w-3 ml-1" />
                   خطأ
@@ -161,7 +158,6 @@ const ImageDataForm = ({
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
             <span>المحافظة:</span>
-            {image.confidence}
           </label>
           <Select value={image.province || ''} onValueChange={value => onTextChange(image.id, "province", value)} dir="rtl">
             <SelectTrigger className="bg-white dark:bg-gray-900 h-8 text-sm">
@@ -180,7 +176,6 @@ const ImageDataForm = ({
           <label className="block text-xs font-medium flex justify-between">
             <span>السعر:</span>
             <div className="flex items-center space-x-2 space-x-reverse">
-              {image.confidence}
               {priceFormatted && <span className="text-[10px] bg-green-100 text-green-700 flex items-center px-1 rounded">
                   <Check className="h-2.5 w-2.5 ml-0.5" />
                   تم التنسيق
