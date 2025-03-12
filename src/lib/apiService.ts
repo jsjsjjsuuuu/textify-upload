@@ -1,6 +1,7 @@
 
-import { supabase, saveExtractedRecord, imageDataToRecord } from "./supabase";
+import { supabase } from "./supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { ImageData } from "@/types/ImageData";
 
 export interface ApiResult {
   success: boolean;
@@ -14,6 +15,53 @@ export interface TextSubmission {
   source: string;
   date: string;
 }
+
+// تحويل بيانات الصورة إلى تنسيق يمكن تخزينه في قاعدة البيانات
+export const imageDataToRecord = (image: ImageData) => {
+  return {
+    id: image.id,
+    code: image.code || null,
+    sender_name: image.senderName || null,
+    phone_number: image.phoneNumber || null,
+    province: image.province || null,
+    price: image.price || null,
+    company_name: image.companyName || null,
+    extracted_text: image.extractedText || null,
+    confidence: image.confidence || null,
+    extraction_method: image.extractionMethod || 'ocr',
+    status: image.status || 'completed',
+    created_at: new Date().toISOString(),
+  };
+};
+
+// حفظ البيانات المستخرجة في قاعدة البيانات
+export const saveExtractedRecord = async (image: ImageData) => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    
+    if (!userId) {
+      return { success: false, error: "المستخدم غير مسجل الدخول" };
+    }
+    
+    const record = {
+      ...imageDataToRecord(image),
+      user_id: userId
+    };
+    
+    const { data, error } = await supabase
+      .from('extracted_data')
+      .insert(record)
+      .select();
+    
+    if (error) throw error;
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('خطأ في حفظ البيانات:', error);
+    return { success: false, error };
+  }
+};
 
 /**
  * Convert a file to base64 encoded string
