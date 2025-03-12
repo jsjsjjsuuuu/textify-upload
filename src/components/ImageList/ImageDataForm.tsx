@@ -1,88 +1,84 @@
 
 import { ImageData } from "@/types/ImageData";
-import { 
-  TextField, 
-  ProvinceField, 
-  PhoneNumberField, 
-  PriceField, 
-  ExtractedTextDisplay 
-} from "./FormFields";
-import { useSaveToDatabase } from "@/hooks/useSaveToDatabase";
+import { FormFields } from "./FormFields";
+import ExtractedTextDisplay from "./FormFields/ExtractedTextDisplay";
 
 interface ImageDataFormProps {
   image: ImageData;
   onTextChange: (id: string, field: string, value: string) => void;
+  onSaveToDatabase?: (id: string) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+  formatDate: (date: Date) => string;
 }
 
 const ImageDataForm = ({
   image,
-  onTextChange
+  onTextChange,
+  onSaveToDatabase,
+  isSaving,
+  isSaved,
+  formatDate
 }: ImageDataFormProps) => {
-  // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
-  const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
-  
-  // استخدام Hook حفظ البيانات
-  const { saveImageToDatabase, isSaving, savedImages } = useSaveToDatabase();
-
-  const handleFieldChange = (field: string, value: string) => {
-    onTextChange(image.id, field, value);
-  };
-
   return (
-    <div className="p-4">
-      <h3 className="text-lg font-semibold text-brand-brown dark:text-brand-beige mb-3">البيانات المستخرجة</h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* اسم الشركة */}
-        <TextField
-          label="اسم الشركة:"
-          value={image.companyName || ''}
-          onChange={(value) => handleFieldChange("companyName", value)}
-          placeholder="أدخل اسم الشركة"
+    <div>
+      <div className="grid grid-cols-2 gap-x-2 gap-y-2">
+        <FormFields.TextField
+          id={image.id}
+          label="الكود"
+          value={image.code}
+          field="code"
+          onChange={onTextChange}
         />
         
-        {/* الكود */}
-        <TextField
-          label="الكود:"
-          value={image.code || ''}
-          onChange={(value) => handleFieldChange("code", value)}
-          placeholder="أدخل الكود"
+        <FormFields.TextField
+          id={image.id}
+          label="اسم المرسل"
+          value={image.senderName}
+          field="senderName"
+          onChange={onTextChange}
+          className="col-span-1"
         />
         
-        {/* اسم المرسل */}
-        <TextField
-          label="اسم المرسل:"
-          value={image.senderName || ''}
-          onChange={(value) => handleFieldChange("senderName", value)}
-          placeholder="أدخل اسم المرسل"
+        <FormFields.PhoneNumberField
+          id={image.id}
+          label="رقم الهاتف"
+          value={image.phoneNumber}
+          field="phoneNumber"
+          onChange={onTextChange}
         />
         
-        {/* رقم الهاتف مع التحقق */}
-        <PhoneNumberField
-          value={image.phoneNumber || ''}
-          onChange={(value) => handleFieldChange("phoneNumber", value)}
-          isValid={isPhoneNumberValid}
+        <FormFields.ProvinceField
+          id={image.id}
+          label="المحافظة"
+          value={image.province}
+          field="province"
+          onChange={onTextChange}
         />
         
-        {/* المحافظة */}
-        <ProvinceField
-          value={image.province || ''}
-          onChange={(value) => handleFieldChange("province", value)}
+        <FormFields.PriceField
+          id={image.id}
+          label="السعر"
+          value={image.price}
+          field="price"
+          onChange={onTextChange}
         />
         
-        {/* السعر مع زر التحقق والتنبيهات */}
-        <PriceField
-          value={image.price || ''}
-          onChange={(value) => handleFieldChange("price", value)}
+        <FormFields.TextField
+          id={image.id}
+          label="اسم الشركة"
+          value={image.companyName}
+          field="companyName"
+          onChange={onTextChange}
         />
         
-        {/* النص المستخرج مع خيار الحفظ في قاعدة البيانات */}
-        <ExtractedTextDisplay 
-          text={image.extractedText} 
+        <ExtractedTextDisplay
+          id={image.id}
+          text={image.extractedText}
           confidence={image.confidence}
-          onSaveToDatabase={() => saveImageToDatabase(image)}
-          isSaving={isSaving[image.id]}
-          isSaved={savedImages[image.id]}
+          onSaveToDatabase={onSaveToDatabase}
+          isSaving={isSaving}
+          isSaved={isSaved}
         />
       </div>
     </div>

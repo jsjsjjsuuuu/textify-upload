@@ -1,17 +1,19 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Save } from "lucide-react";
+import { Save, Database } from "lucide-react";
 
 interface ExtractedTextDisplayProps {
+  id: string;
   text: string;
   confidence?: number;
-  onSaveToDatabase?: () => void;
+  onSaveToDatabase?: (id: string) => void;
   isSaving?: boolean;
   isSaved?: boolean;
 }
 
 const ExtractedTextDisplay = ({
+  id,
   text,
   confidence,
   onSaveToDatabase,
@@ -41,17 +43,20 @@ const ExtractedTextDisplay = ({
                 className="h-7 px-2 text-xs"
                 onClick={(e) => {
                   e.preventDefault();
-                  onSaveToDatabase();
+                  onSaveToDatabase(id);
                 }}
                 disabled={isSaving || isSaved}
               >
-                <Save className="h-3 w-3 ml-1" />
+                <Database className="h-3 w-3 ml-1" />
                 {isSaving ? "جاري الحفظ..." : "حفظ في قاعدة البيانات"}
               </Button>
             )}
             
             {isAuthenticated && isSaved && (
-              <span className="text-green-600 text-xs">تم الحفظ ✓</span>
+              <span className="text-green-600 text-xs flex items-center">
+                <Database className="h-3 w-3 ml-1" />
+                تم الحفظ ✓
+              </span>
             )}
           </div>
         </summary>
