@@ -1,4 +1,3 @@
-
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 // استخدام قيم افتراضية إذا لم تكن متوفرة من متغيرات البيئة
@@ -75,6 +74,44 @@ export const saveExtractedRecord = async (image: ImageData) => {
     return { success: true, data };
   } catch (error) {
     console.error('خطأ في حفظ البيانات:', error);
+    return { success: false, error };
+  }
+};
+
+// دالة جلب البيانات المستخرجة
+export const getExtractedData = async () => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      return { success: false, error: "المستخدم غير مسجل الدخول" };
+    }
+
+    const { data, error } = await supabase
+      .from('extracted_data')
+      .select('*')
+      .eq('user_id', userData.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error('خطأ في جلب البيانات:', error);
+    return { success: false, error };
+  }
+};
+
+// دالة حذف السجل
+export const deleteExtractedData = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from('extracted_data')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('خطأ في حذف السجل:', error);
     return { success: false, error };
   }
 };

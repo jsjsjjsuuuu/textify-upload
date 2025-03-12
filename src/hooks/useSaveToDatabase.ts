@@ -1,8 +1,7 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ImageData } from '@/types/ImageData';
-import { saveExtractedData } from '@/services/supabaseService';
+import { saveExtractedRecord } from '@/lib/supabase';
 
 export const useSaveToDatabase = () => {
   const [isSaving, setIsSaving] = useState<Record<string, boolean>>({});
@@ -12,7 +11,7 @@ export const useSaveToDatabase = () => {
   const saveToDatabase = async (id: string, imageData: ImageData) => {
     try {
       setIsSaving(prev => ({ ...prev, [id]: true }));
-      const result = await saveExtractedData(imageData);
+      const result = await saveExtractedRecord(imageData);
       
       if (result.success) {
         setSavedItems(prev => ({ ...prev, [id]: true }));

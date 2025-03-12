@@ -1,8 +1,7 @@
-
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import BackgroundPattern from "@/components/BackgroundPattern";
 import AppHeader from "@/components/AppHeader";
-import { getExtractedData, deleteExtractedData } from "@/services/supabaseService";
+import { getExtractedData, deleteExtractedData } from '@/lib/supabase';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Database, Trash, Eye, Calendar } from "lucide-react";
