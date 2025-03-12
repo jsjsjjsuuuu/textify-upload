@@ -95,7 +95,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // إلغاء الاشتراك عند الإلغاء
       return () => {
-        authListener.subscription.unsubscribe();
+        try {
+          authListener.subscription.unsubscribe();
+        } catch (error) {
+          console.warn("خطأ عند إلغاء الاشتراك من مستمع المصادقة:", error);
+        }
       };
     } catch (error) {
       console.error("خطأ في إعداد Supabase:", error);
@@ -129,14 +133,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           localStorage.setItem("user", JSON.stringify(mappedUser));
           console.log("تم تسجيل الدخول بنجاح مع Supabase:", mappedUser);
           return true;
+        } else if (error) {
+          console.warn("خطأ في تسجيل الدخول مع Supabase:", error.message);
         }
       } catch (supabaseError) {
         console.warn("تعذر تسجيل الدخول مع Supabase:", supabaseError);
       }
       
       // للتوافق مع التطبيق في مرحلة الانتقال، نحاول تسجيل الدخول بالمستخدمين الافتراضيين
+      console.log("محاولة تسجيل الدخول باستخدام المستخدمين الافتراضيين", email);
       const foundUser = DEFAULT_USERS.find(
-        (u) => u.username === email && u.password === password
+        (u) => (u.username === email || `${u.username}@example.com` === email) && u.password === password
       );
 
       if (foundUser) {
@@ -144,7 +151,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: `local-${Date.now()}`,
           username: foundUser.username,
           role: foundUser.role,
-          isLoggedIn: true
+          isLoggedIn: true,
+          email: `${foundUser.username}@example.com`
         };
         
         setUser(userObj);
