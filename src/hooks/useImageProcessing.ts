@@ -53,7 +53,7 @@ export const useImageProcessing = () => {
       
       if (!validateFile(file)) continue;
       
-      const previewUrl = createReliableBlobUrl(file);
+      const previewUrl = createNewImage(file, "", startingNumber, i).previewUrl;
       console.log("Created preview URL:", previewUrl);
       
       if (!validatePreviewUrl(previewUrl)) continue;
