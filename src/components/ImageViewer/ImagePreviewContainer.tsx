@@ -6,7 +6,7 @@ import ImageList from "@/components/ImageList";
 import ImageTable from "@/components/ImageTable";
 import BatchExportDialog from "@/components/BatchExportDialog";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, Upload } from "lucide-react";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -46,7 +46,7 @@ const ImagePreviewContainer = ({
               variant="outline"
               className="bg-brand-coral/10 border-brand-coral/30 text-brand-coral hover:bg-brand-coral/20 hover:border-brand-coral/50"
             >
-              <FileSpreadsheet size={16} className="ml-2" />
+              <Upload size={16} className="ml-2" />
               تصدير دفعة واحدة ({completedImagesCount} صورة)
             </Button>
           </div>
