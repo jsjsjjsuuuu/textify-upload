@@ -111,7 +111,7 @@ export async function autoFillWebsiteForm(websiteUrl: string, data: any): Promis
   }
   
   // ننتظر 3 ثواني لتحميل الصفحة
-  return new Promise((resolve) => {
+  return new Promise<ApiResult>((resolve) => {
     setTimeout(() => {
       try {
         // التحقق من أن النافذة لا تزال مفتوحة
@@ -439,10 +439,15 @@ export async function autoFillWebsiteForm(websiteUrl: string, data: any): Promis
             message: "حدث خطأ أثناء محاولة الوصول إلى الموقع المستهدف"
           });
         }
-        
-      }, 3000); // انتظار 3 ثوانٍ قبل محاولة حقن الكود
-    });
-  };
+      } catch (error) {
+        console.error("خطأ:", error);
+        resolve({
+          success: false,
+          message: "حدث خطأ أثناء تنفيذ عملية الإدخال التلقائي"
+        });
+      }
+    }, 3000); // انتظار 3 ثوانٍ قبل محاولة حقن الكود
+  });
 }
 
 // تصدير الدوال من geminiService
