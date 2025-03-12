@@ -1,5 +1,4 @@
 
-
 export interface ApiResult {
   success: boolean;
   message: string;
@@ -96,5 +95,3 @@ export async function authenticateWithExternalApi(apiKey: string): Promise<ApiRe
 
 // تصدير الدوال من geminiService
 export * from './geminiService';
-export { createBookmarkletCode, createBatchBookmarkletCode } from './gemini';
-
