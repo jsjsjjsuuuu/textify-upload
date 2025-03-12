@@ -6,6 +6,7 @@ import ImagePreviewContainer from "@/components/ImageViewer/ImagePreviewContaine
 import LearningStats from "@/components/LearningStats";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
+import { useEffect } from "react";
 
 const Index = () => {
   const {
@@ -19,6 +20,21 @@ const Index = () => {
     handleDelete,
     handleSubmitToApi
   } = useImageProcessing();
+
+  // إضافة مستمع للرسائل من النوافذ الأخرى
+  useEffect(() => {
+    const handleMessages = (event: MessageEvent) => {
+      if (event.data && event.data.type) {
+        console.log("تم استلام رسالة من نافذة أخرى:", event.data);
+      }
+    };
+    
+    window.addEventListener("message", handleMessages);
+    
+    return () => {
+      window.removeEventListener("message", handleMessages);
+    };
+  }, []);
 
   return (
     <div className="relative min-h-screen pb-20">

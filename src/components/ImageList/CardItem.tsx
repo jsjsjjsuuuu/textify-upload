@@ -64,7 +64,7 @@ const CardItem = ({
         extractedText: image.extractedText || ""
       };
       
-      // إرسال البيانات للخدمة
+      // إرسال البيانات للخدمة المحسنة
       const result = await autoFillWebsiteForm(url, formData);
       
       if (result.success) {
