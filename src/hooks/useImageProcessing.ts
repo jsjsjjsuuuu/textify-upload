@@ -53,12 +53,12 @@ export const useImageProcessing = () => {
       
       if (!validateFile(file)) continue;
       
-      const previewUrl = createNewImage(file, "", startingNumber, i).previewUrl;
-      console.log("Created preview URL:", previewUrl);
+      // إنشاء صورة جديدة مع URL المعاينة
+      const newImage = createNewImage(file, "", startingNumber, i);
+      console.log("Created new image with preview URL:", newImage.previewUrl);
       
-      if (!validatePreviewUrl(previewUrl)) continue;
+      if (!validatePreviewUrl(newImage.previewUrl)) continue;
       
-      const newImage = createNewImage(file, previewUrl, startingNumber, i);
       addImage(newImage);
       
       try {

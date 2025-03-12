@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { createReliableBlobUrl } from "@/utils/parsing/formatters";
@@ -18,10 +19,13 @@ export const useFileUpload = (
   };
 
   const createNewImage = (file: File, previewUrl: string, startingNumber: number, index: number): ImageData => {
+    // إذا لم يتم توفير رابط المعاينة، قم بإنشاء واحد
+    const resolvedPreviewUrl = previewUrl || createReliableBlobUrl(file);
+    
     return {
       id: crypto.randomUUID(),
       file,
-      previewUrl,
+      previewUrl: resolvedPreviewUrl,
       extractedText: "",
       date: new Date(),
       status: "processing",
