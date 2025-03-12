@@ -11,7 +11,7 @@ interface DraggableImageProps {
 
 const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps) => {
   // State for zoom and dragging
-  const [zoomLevel, setZoomLevel] = useState(1.5); // تكبير تلقائي بنسبة 50%
+  const [zoomLevel, setZoomLevel] = useState(1.2); // تكبير تلقائي بنسبة 120%
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
@@ -37,7 +37,7 @@ const DraggableImage = ({ image, onImageClick, formatDate }: DraggableImageProps
   
   const handleResetZoom = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoomLevel(1.5); // إعادة تعيين إلى تكبير 50%
+    setZoomLevel(1.2); // إعادة تعيين إلى تكبير 120%
     setPosition({ x: 0, y: 0 });
   };
   
