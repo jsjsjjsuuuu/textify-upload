@@ -12,7 +12,15 @@ import { useFileProcessing } from "@/hooks/useFileProcessing";
 export const useImageProcessing = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { images, addImage, updateImage, deleteImage, handleTextChange } = useImageState();
+  const { 
+    images, 
+    isLoading, 
+    addImage, 
+    updateImage, 
+    deleteImage, 
+    handleTextChange 
+  } = useImageState();
+  
   const { processWithOcr } = useOcrProcessing();
   const { useGemini, processWithGemini } = useGeminiProcessing();
   const { handleSubmitToApi: submitToApi } = useSubmitToApi(updateImage);
@@ -42,6 +50,7 @@ export const useImageProcessing = () => {
 
   return {
     images,
+    isLoading,
     isProcessing,
     processingProgress,
     isSubmitting,

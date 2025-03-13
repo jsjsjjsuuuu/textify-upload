@@ -7,10 +7,12 @@ import LearningStats from "@/components/LearningStats";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 import { useEffect } from "react";
+import { Spinner } from "@/components/ui/spinner";
 
 const Index = () => {
   const {
     images,
+    isLoading,
     isProcessing,
     processingProgress,
     isSubmitting,
@@ -60,14 +62,21 @@ const Index = () => {
               </div>
             </div>
 
-            <ImagePreviewContainer 
-              images={images}
-              isSubmitting={isSubmitting}
-              onTextChange={handleTextChange}
-              onDelete={handleDelete}
-              onSubmit={handleSubmitToApi}
-              formatDate={formatDate}
-            />
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <Spinner className="h-8 w-8 text-brand-green mb-4" />
+                <p className="text-lg text-gray-600 dark:text-gray-400">جاري تحميل البيانات...</p>
+              </div>
+            ) : (
+              <ImagePreviewContainer 
+                images={images}
+                isSubmitting={isSubmitting}
+                onTextChange={handleTextChange}
+                onDelete={handleDelete}
+                onSubmit={handleSubmitToApi}
+                formatDate={formatDate}
+              />
+            )}
           </div>
         </div>
       </div>

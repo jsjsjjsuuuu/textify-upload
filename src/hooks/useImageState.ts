@@ -2,27 +2,133 @@
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
+import {
+  fetchAllImages,
+  saveImageData,
+  updateImageData,
+  deleteImageData,
+  DbImageData,
+  fromDbFormat
+} from "@/lib/supabaseService";
 
 export const useImageState = () => {
   const [images, setImages] = useState<ImageData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const addImage = (newImage: ImageData) => {
+  // جلب جميع الصور عند بدء التطبيق
+  useEffect(() => {
+    const loadImages = async () => {
+      setIsLoading(true);
+      try {
+        const { success, data, error } = await fetchAllImages();
+        
+        if (success && data) {
+          // تحويل البيانات من قاعدة البيانات إلى نموذج ImageData
+          // ملاحظة: سنحتاج إلى إعادة إنشاء كائنات File
+          const loadedImages: ImageData[] = [];
+          
+          for (const dbImage of data) {
+            try {
+              // إنشاء كائن File وهمي (لأننا لا نستطيع استعادة الملف الأصلي)
+              const dummyFile = new File([""], dbImage.file_name, {
+                type: "image/jpeg", // نفترض أنه jpeg، يمكن استخراج النوع الحقيقي من اسم الملف
+              });
+              
+              // تحويل البيانات من تنسيق قاعدة البيانات
+              const imageData = {
+                ...fromDbFormat(dbImage, dummyFile),
+                date: new Date(dbImage.created_at),
+                number: loadedImages.length + 1,
+              } as ImageData;
+              
+              loadedImages.push(imageData);
+            } catch (e) {
+              console.error('خطأ في تحويل بيانات الصورة:', e);
+            }
+          }
+          
+          setImages(loadedImages);
+        } else if (error) {
+          console.error('خطأ في جلب الصور:', error);
+          toast({
+            title: "خطأ في تحميل البيانات",
+            description: error,
+            variant: "destructive"
+          });
+        }
+      } catch (e) {
+        console.error('خطأ غير متوقع:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadImages();
+  }, [toast]);
+
+  const addImage = async (newImage: ImageData) => {
+    // إضافة الصورة إلى الحالة المحلية أولاً
     setImages(prev => [newImage, ...prev]);
+    
+    // حفظ الصورة في قاعدة البيانات
+    try {
+      const { success, error } = await saveImageData(newImage);
+      
+      if (!success) {
+        toast({
+          title: "خطأ في حفظ الصورة",
+          description: error,
+          variant: "destructive"
+        });
+      }
+    } catch (e) {
+      console.error('خطأ في حفظ الصورة:', e);
+    }
   };
 
-  const updateImage = (id: string, updatedFields: Partial<ImageData>) => {
+  const updateImage = async (id: string, updatedFields: Partial<ImageData>) => {
+    // تحديث الصورة في الحالة المحلية أولاً
     setImages(prev => prev.map(img => 
       img.id === id ? { ...img, ...updatedFields } : img
     ));
+    
+    // تحديث الصورة في قاعدة البيانات
+    try {
+      const { success, error } = await updateImageData(id, updatedFields);
+      
+      if (!success) {
+        console.error('خطأ في تحديث الصورة:', error);
+      }
+    } catch (e) {
+      console.error('خطأ في تحديث الصورة:', e);
+    }
   };
 
-  const deleteImage = (id: string) => {
+  const deleteImage = async (id: string) => {
+    // حذف الصورة من الحالة المحلية أولاً
     setImages(prev => prev.filter(img => img.id !== id));
-    toast({
-      title: "تم الحذف",
-      description: "تم حذف الصورة بنجاح"
-    });
+    
+    // حذف الصورة من قاعدة البيانات
+    try {
+      const { success, error } = await deleteImageData(id);
+      
+      if (success) {
+        toast({
+          title: "تم الحذف",
+          description: "تم حذف الصورة بنجاح"
+        });
+      } else {
+        console.error('خطأ في حذف الصورة:', error);
+        toast({
+          title: "خطأ في الحذف",
+          description: error,
+          variant: "destructive"
+        });
+      }
+    } catch (e) {
+      console.error('خطأ في حذف الصورة:', e);
+    }
   };
 
   const handleTextChange = (id: string, field: string, value: string) => {
@@ -48,6 +154,7 @@ export const useImageState = () => {
 
   return {
     images: getSortedImages(),
+    isLoading,
     addImage,
     updateImage,
     deleteImage,

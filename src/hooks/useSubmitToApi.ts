@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
-import { submitTextToApi } from "@/lib/apiService";
+import { submitImageToExternalApi } from "@/lib/supabaseService";
 import { useToast } from "@/hooks/use-toast";
 
 export const useSubmitToApi = (updateImage: (id: string, fields: Partial<ImageData>) => void) => {
@@ -20,12 +20,8 @@ export const useSubmitToApi = (updateImage: (id: string, fields: Partial<ImageDa
     
     setIsSubmitting(true);
     try {
-      const result = await submitTextToApi({
-        imageId: id,
-        text: image.extractedText,
-        source: image.file.name,
-        date: image.date.toISOString()
-      });
+      // استخدام وظيفة Supabase للإرسال
+      const result = await submitImageToExternalApi(id);
       
       if (result.success) {
         updateImage(id, { submitted: true });
@@ -37,7 +33,7 @@ export const useSubmitToApi = (updateImage: (id: string, fields: Partial<ImageDa
       } else {
         toast({
           title: "فشل في الإرسال",
-          description: result.message,
+          description: result.error,
           variant: "destructive"
         });
       }
