@@ -7,7 +7,7 @@ import { useClipboard } from "@/hooks/useClipboard";
 import { ImageData } from "@/types/ImageData";
 import BookmarkletButton from "./BookmarkletButton";
 import BookmarkletInstructions from "./BookmarkletInstructions";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BookmarkletGeneratorProps {
@@ -44,7 +44,6 @@ const BookmarkletGenerator = ({
   
   // إضافة حالة لتتبع تنفيذ السكريبت
   const [isExecuting, setIsExecuting] = useState(false);
-  const debugRef = useRef<string | null>(null);
 
   // التحقق مما إذا كان آخر URL مستخدم هو موقع Google
   const lastUsedUrl = typeof window !== 'undefined' ? localStorage.getItem('lastAutoFillUrl') || '' : '';
@@ -60,7 +59,6 @@ const BookmarkletGenerator = ({
     setIsExecuting(true);
     try {
       console.log("بيانات الإدخال التلقائي:", rawDataObject);
-      debugRef.current = JSON.stringify(rawDataObject);
       
       // حفظ البيانات في localStorage لضمان عدم فقدانها
       localStorage.setItem('autofillData', JSON.stringify(rawDataObject));

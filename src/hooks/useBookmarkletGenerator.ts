@@ -25,6 +25,7 @@ export const useBookmarkletGenerator = (
   }, [passedImageData]);
 
   useEffect(() => {
+    if (!isOpen) return;
     if (!imageData && !isMultiMode) return;
     
     setIsGenerating(true);
@@ -47,6 +48,7 @@ export const useBookmarkletGenerator = (
       } else if (imageData) {
         // إعداد بيانات صورة واحدة
         dataObject = {
+          id: imageData.id,
           companyName: imageData.companyName || "",
           code: imageData.code || "",
           senderName: imageData.senderName || "",
@@ -89,8 +91,8 @@ export const useBookmarkletGenerator = (
       return `
         (function() {
           try {
-            // في حالة الصور المتعددة، نقوم بإنشاء واجهة مستخدم للتنقل بين البيانات
-            var dataEntries = ${JSON.stringify(data)};
+            // التأكد من وجود البيانات
+            const dataEntries = ${JSON.stringify(data)};
             var currentIndex = 0;
             
             function createInterface() {
@@ -197,8 +199,6 @@ export const useBookmarkletGenerator = (
             
             // وظيفة ملء النموذج
             function fillForm(data) {
-              // تنفيذ نفس منطق الملء الموجود في النسخة الفردية
-              // ... (rest of autofill logic)
               console.log("جاري ملء البيانات:", data);
               
               // وظيفة البحث عن وملء الحقول
@@ -244,8 +244,7 @@ export const useBookmarkletGenerator = (
                 'input[type="number"]'
               ], data.code);
               
-              // حقول اسم المرسل وباقي الحقول الأخرى
-              // ... (rest of field autofill code)
+              // باقي الحقول
               fillFields([
                 'input[name*="name"], input[name*="Name"]',
                 'input[name*="sender"], input[name*="Sender"]',
@@ -281,6 +280,29 @@ export const useBookmarkletGenerator = (
                 'input[id*="price"], input[id*="Price"]',
                 'input[id*="cost"], input[id*="Cost"]',
               ], data.price);
+              
+              // البحث عن القوائم المنسدلة
+              try {
+                if (data.province) {
+                  var selects = document.querySelectorAll('select');
+                  for (var i = 0; i < selects.length; i++) {
+                    var select = selects[i];
+                    var options = select.querySelectorAll('option');
+                    for (var j = 0; j < options.length; j++) {
+                      var option = options[j];
+                      var text = option.textContent || option.innerText;
+                      if (text && text.indexOf(data.province) !== -1) {
+                        select.value = option.value;
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                        console.log("تم اختيار المحافظة من القائمة المنسدلة:", text);
+                        break;
+                      }
+                    }
+                  }
+                }
+              } catch (e) {
+                console.error("خطأ في محاولة ملء القوائم المنسدلة:", e);
+              }
             }
             
             // إنشاء واجهة المستخدم
@@ -298,13 +320,12 @@ export const useBookmarkletGenerator = (
         })();
       `;
     } else {
-      // سكريبت للصورة الواحدة (نفس السكريبت السابق)
+      // سكريبت للصورة الواحدة
       return `
         (function() {
           try {
-            // تهيئة البيانات
+            // تأكد من وجود البيانات
             var currentData = ${JSON.stringify(data)};
-            
             console.log("بيانات الإدخال التلقائي:", currentData);
             
             // وظيفة ملء النموذج
@@ -333,7 +354,7 @@ export const useBookmarkletGenerator = (
                 return fieldFilled;
               }
               
-              // محاولة ملء حقول مختلفة بناءً على أنماط متوقعة
+              // محاولة ملء حقول مختلفة
               
               // حقول اسم الشركة
               fillFields([
@@ -358,7 +379,7 @@ export const useBookmarkletGenerator = (
                 'input[type="number"]'
               ], currentData.code);
               
-              // حقول اسم المرسل
+              // باقي الحقول
               fillFields([
                 'input[name*="name"], input[name*="Name"]',
                 'input[name*="sender"], input[name*="Sender"]',
@@ -369,7 +390,6 @@ export const useBookmarkletGenerator = (
                 'input[name*="customer"], input[name*="Customer"]'
               ], currentData.senderName);
               
-              // حقول رقم الهاتف
               fillFields([
                 'input[name*="phone"], input[name*="Phone"]',
                 'input[name*="mobile"], input[name*="Mobile"]',
@@ -385,7 +405,6 @@ export const useBookmarkletGenerator = (
                 'input[type="tel"]'
               ], currentData.phoneNumber);
               
-              // حقول المحافظة
               fillFields([
                 'input[name*="province"], input[name*="Province"]',
                 'input[name*="city"], input[name*="City"]',
@@ -403,7 +422,6 @@ export const useBookmarkletGenerator = (
                 'select[name*="مدينة"], select[name*="المدينة"]'
               ], currentData.province);
               
-              // حقول السعر
               fillFields([
                 'input[name*="price"], input[name*="Price"]',
                 'input[name*="cost"], input[name*="Cost"]',
@@ -420,31 +438,35 @@ export const useBookmarkletGenerator = (
                 'input[placeholder*="مبلغ"], input[placeholder*="المبلغ"]'
               ], currentData.price);
               
-              // البحث عن القوائم المنسدلة وتحديد الخيار المطابق للمحافظة
-              if (currentData.province) {
-                var selects = doc.querySelectorAll('select');
-                for (var i = 0; i < selects.length; i++) {
-                  var select = selects[i];
-                  var options = select.querySelectorAll('option');
-                  for (var j = 0; j < options.length; j++) {
-                    var option = options[j];
-                    var text = option.textContent || option.innerText;
-                    if (text && text.indexOf(currentData.province) !== -1) {
-                      select.value = option.value;
-                      select.dispatchEvent(new Event('change', { bubbles: true }));
-                      filled = true;
-                      console.log("تم اختيار المحافظة من القائمة المنسدلة:", text);
-                      break;
+              // البحث عن القوائم المنسدلة
+              try {
+                if (currentData.province) {
+                  var selects = doc.querySelectorAll('select');
+                  for (var i = 0; i < selects.length; i++) {
+                    var select = selects[i];
+                    var options = select.querySelectorAll('option');
+                    for (var j = 0; j < options.length; j++) {
+                      var option = options[j];
+                      var text = option.textContent || option.innerText;
+                      if (text && text.indexOf(currentData.province) !== -1) {
+                        select.value = option.value;
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                        filled = true;
+                        console.log("تم اختيار المحافظة من القائمة المنسدلة:", text);
+                        break;
+                      }
                     }
                   }
                 }
+              } catch (e) {
+                console.error("خطأ في محاولة ملء القوائم المنسدلة:", e);
               }
               
               return filled;
             }
             
             // محاولة ملء النموذج وإظهار رسالة
-            autofillForm(document);
+            var success = autofillForm(document);
             
             // إظهار رسالة للمستخدم
             var notification = document.createElement('div');
@@ -460,7 +482,7 @@ export const useBookmarkletGenerator = (
             notification.style.fontFamily = 'Arial, sans-serif';
             notification.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
             notification.style.direction = 'rtl';
-            notification.textContent = 'تمت محاولة ملء النموذج تلقائيًا';
+            notification.textContent = success ? 'تم ملء النموذج تلقائيًا' : 'تمت محاولة ملء النموذج';
             
             document.body.appendChild(notification);
             
@@ -488,20 +510,14 @@ export const useBookmarkletGenerator = (
 
   // دالة لإنشاء رمز الـ bookmarklet
   const generateBookmarkletCode = (script: string, data: any): string => {
-    // دمج البيانات والسكريبت معًا لضمان توفر البيانات
-    const fullScript = `
-      const data = ${JSON.stringify(data)};
-      ${script}
-    `;
-    
     // تشفير السكريبت لاستخدامه في الـ bookmarklet
-    const encoded = encodeURIComponent(fullScript);
-    return `javascript:(function(){${encoded}})();`;
+    const encoded = encodeURIComponent(script);
+    return `javascript:${encoded}`;
   };
 
   // دالة لإنشاء صفحة وسيطة لتنفيذ السكريبت
   const generateIntermediatePageHtml = (data: any, isMultiMode: boolean): string => {
-    // إنشاء الـ HTML للصفحة الوسيطة (الكود السابق)
+    // إنشاء الـ HTML للصفحة الوسيطة
     return `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
@@ -524,7 +540,62 @@ export const useBookmarkletGenerator = (
             justify-content: center;
             height: 100vh;
           }
-          /* ... (rest of CSS styles) ... */
+          .container {
+            max-width: 600px;
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          h1 {
+            margin-top: 0;
+            color: #2c974b;
+          }
+          .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #2c974b;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+          }
+          .data-preview {
+            margin-top: 20px;
+            text-align: right;
+          }
+          #statusMessage {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f0f8ff;
+            border-radius: 5px;
+            font-weight: bold;
+          }
+          .button {
+            background-color: #2c974b;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 0 5px;
+            transition: background-color 0.3s;
+          }
+          .button:hover {
+            background-color: #217a3b;
+          }
+          .button.secondary {
+            background-color: #6c757d;
+          }
+          .button.secondary:hover {
+            background-color: #5a6268;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
         </style>
       </head>
       <body>
@@ -547,10 +618,13 @@ export const useBookmarkletGenerator = (
         </div>
         
         <script>
-          // البيانات متوفرة مباشرة في الصفحة
-          var currentData = ${JSON.stringify(data)};
+          // حفظ البيانات الخام
+          var dataEntries = ${JSON.stringify(data)};
           
-          // نص السكريبت
+          // تحديد ما إذا كان وضع متعدد
+          var isMultiMode = ${isMultiMode};
+          
+          // سكريبت الإدخال التلقائي
           var autofillScript = \`${buildAutofillScript(data, isMultiMode).replace(/`/g, '\\`')}\`;
           
           // زر التنفيذ المباشر
@@ -569,43 +643,64 @@ export const useBookmarkletGenerator = (
               localStorage.setItem('lastAutoFillUrl', targetUrl);
             } catch (e) {}
             
-            // فتح نافذة جديدة بالموقع المستهدف
+            // نهج جديد: استخدام نافذة وسيطة لطلب البيانات من النافذة الرئيسية
+            var uniqueId = dataEntries.id || ('img_' + Date.now());
+            
+            // فتح نافذة بالموقع المستهدف
             var targetWindow = window.open(targetUrl, "_blank");
             
-            // التعامل مع عدم وجود نافذة (قد تكون محظورة)
             if (!targetWindow) {
               document.getElementById('statusMessage').textContent = "تم حظر النوافذ المنبثقة! الرجاء السماح بالنوافذ المنبثقة وإعادة المحاولة.";
               document.getElementById('spinner').style.display = "none";
               return;
             }
             
-            // انتظار حتى يتم تحميل الصفحة ثم تنفيذ السكريبت
+            // إضافة مستمع للرسائل
+            window.addEventListener("message", function messageHandler(event) {
+              if (event.data && event.data.type === 'direct-autofill-response') {
+                // تم استلام رد من النافذة الرئيسية مع البيانات والسكريبت
+                if (event.data.success) {
+                  try {
+                    // تنفيذ السكريبت في النافذة المستهدفة
+                    targetWindow.postMessage({
+                      type: 'execute-script',
+                      script: event.data.script,
+                      data: event.data.data
+                    }, '*');
+                    
+                    document.getElementById('statusMessage').textContent = "تم إرسال البيانات للموقع المستهدف بنجاح.";
+                  } catch (e) {
+                    document.getElementById('statusMessage').textContent = "خطأ في تنفيذ السكريبت: " + e.message;
+                    console.error("خطأ في تنفيذ السكريبت:", e);
+                  }
+                } else {
+                  document.getElementById('statusMessage').textContent = "خطأ: " + (event.data.error || "فشل في الحصول على البيانات");
+                }
+                
+                document.getElementById('spinner').style.display = "none";
+                
+                // إزالة المستمع بعد الاستخدام
+                window.removeEventListener("message", messageHandler);
+              }
+            });
+            
+            // انتظار قليلاً ثم طلب البيانات والسكريبت من النافذة الرئيسية
             setTimeout(function() {
               try {
-                // محاولة تنفيذ السكريبت من خلال إضافة عناصر نصية
-                var dataScript = document.createElement('script');
-                dataScript.textContent = "window.autofillData = " + JSON.stringify(currentData) + ";";
-                targetWindow.document.head.appendChild(dataScript);
+                // إرسال طلب للحصول على السكريبت المباشر من الصفحة الرئيسية
+                window.opener.postMessage({
+                  type: 'direct-autofill-request',
+                  imageId: uniqueId,
+                  targetOrigin: '*'
+                }, '*');
                 
-                var scriptElement = document.createElement('script');
-                scriptElement.textContent = autofillScript;
-                targetWindow.document.head.appendChild(scriptElement);
-                
-                document.getElementById('statusMessage').textContent = "تم تنفيذ السكريبت على الموقع المستهدف.";
-                document.getElementById('spinner').style.display = "none";
+                document.getElementById('statusMessage').textContent = "تم إرسال طلب البيانات للصفحة الرئيسية...";
               } catch (e) {
-                console.error("خطأ في تنفيذ السكريبت:", e);
-                
-                // محاولة بديلة باستخدام location.href
-                try {
-                  targetWindow.location.href = "javascript:" + encodeURIComponent("window.autofillData = " + JSON.stringify(currentData) + ";" + autofillScript);
-                  document.getElementById('statusMessage').textContent = "تم محاولة تنفيذ السكريبت بطريقة بديلة.";
-                } catch (e2) {
-                  document.getElementById('statusMessage').textContent = "فشل تنفيذ السكريبت: " + e2.message;
-                }
+                document.getElementById('statusMessage').textContent = "خطأ في طلب البيانات: " + e.message;
                 document.getElementById('spinner').style.display = "none";
+                console.error("خطأ في طلب البيانات:", e);
               }
-            }, 2000);
+            }, 1000);
           });
           
           // زر الإغلاق
@@ -649,6 +744,11 @@ export const useBookmarkletGenerator = (
       setTimeout(() => {
         URL.revokeObjectURL(intermediateUrl);
       }, 1000);
+      
+      toast({
+        title: "تم",
+        description: "تم فتح صفحة الإدخال التلقائي",
+      });
     } catch (error) {
       console.error("Error opening window:", error);
       toast({

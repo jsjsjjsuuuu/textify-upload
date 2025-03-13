@@ -41,27 +41,23 @@ const Index = () => {
         const selectedImage = images.find(img => img.id === imageId);
         
         if (selectedImage && event.source && event.source instanceof Window) {
-          console.log("إرسال بيانات الإدخال التلقائي:", {
-            companyName: selectedImage.companyName,
-            code: selectedImage.code,
-            senderName: selectedImage.senderName,
-            phoneNumber: selectedImage.phoneNumber,
-            province: selectedImage.province,
-            price: selectedImage.price
-          });
+          const dataToSend = {
+            companyName: selectedImage.companyName || "",
+            code: selectedImage.code || "",
+            senderName: selectedImage.senderName || "",
+            phoneNumber: selectedImage.phoneNumber || "",
+            province: selectedImage.province || "",
+            price: selectedImage.price || ""
+          };
+          
+          console.log("إرسال بيانات الإدخال التلقائي:", dataToSend);
           
           // إرسال البيانات للنافذة الطالبة
           try {
             event.source.postMessage({
               type: 'autofill-data-response',
-              data: {
-                companyName: selectedImage.companyName || "",
-                code: selectedImage.code || "",
-                senderName: selectedImage.senderName || "",
-                phoneNumber: selectedImage.phoneNumber || "",
-                province: selectedImage.province || "",
-                price: selectedImage.price || ""
-              }
+              data: dataToSend,
+              success: true
             }, '*');
             
             toast({
@@ -92,7 +88,8 @@ const Index = () => {
                 province: "",
                 price: ""
               },
-              error: "الصورة المطلوبة غير موجودة"
+              error: "الصورة المطلوبة غير موجودة",
+              success: false
             }, '*');
           }
         }
@@ -110,6 +107,105 @@ const Index = () => {
             description: event.data.error || "حدث خطأ أثناء إدخال البيانات",
             variant: "destructive"
           });
+        }
+      } else if (event.data.type === 'direct-autofill-request') {
+        // طلب تنفيذ الإدخال التلقائي مباشرة (من الآي فريم)
+        const { imageId, targetOrigin } = event.data;
+        const selectedImage = images.find(img => img.id === imageId);
+        
+        if (selectedImage && event.source && event.source instanceof Window) {
+          const dataToSend = {
+            companyName: selectedImage.companyName || "",
+            code: selectedImage.code || "",
+            senderName: selectedImage.senderName || "",
+            phoneNumber: selectedImage.phoneNumber || "",
+            province: selectedImage.province || "",
+            price: selectedImage.price || ""
+          };
+          
+          console.log("إرسال بيانات الإدخال التلقائي المباشر:", dataToSend);
+          
+          // إرسال البيانات والسكريبت مباشرة
+          try {
+            const script = `
+              (function() {
+                try {
+                  window.autofillData = ${JSON.stringify(dataToSend)};
+                  
+                  // وظيفة ملء النموذج باستخدام البيانات
+                  function autofillForm() {
+                    const currentData = window.autofillData;
+                    console.log("بيانات الإدخال التلقائي:", currentData);
+                    
+                    // ... (باقي كود ملء النموذج)
+                    
+                    // إظهار إشعار للمستخدم
+                    const notification = document.createElement('div');
+                    notification.style.position = 'fixed';
+                    notification.style.top = '10px';
+                    notification.style.right = '10px';
+                    notification.style.zIndex = '9999';
+                    notification.style.backgroundColor = 'rgba(0, 150, 0, 0.8)';
+                    notification.style.color = 'white';
+                    notification.style.padding = '10px 15px';
+                    notification.style.borderRadius = '5px';
+                    notification.style.direction = 'rtl';
+                    notification.textContent = 'تم تنفيذ الإدخال التلقائي';
+                    
+                    document.body.appendChild(notification);
+                    
+                    setTimeout(() => {
+                      notification.style.opacity = '0';
+                      notification.style.transition = 'opacity 0.5s';
+                      setTimeout(() => notification.remove(), 500);
+                    }, 5000);
+                    
+                    return "تم تنفيذ الإدخال التلقائي بنجاح";
+                  }
+                  
+                  // تنفيذ الإدخال التلقائي
+                  autofillForm();
+                  
+                  // إرسال رسالة تأكيد
+                  window.parent.postMessage({
+                    type: 'autofill-result',
+                    success: true,
+                    message: 'تم تنفيذ الإدخال التلقائي بنجاح'
+                  }, '*');
+                  
+                  return true;
+                } catch(e) {
+                  console.error("خطأ في تنفيذ الإدخال التلقائي:", e);
+                  
+                  window.parent.postMessage({
+                    type: 'autofill-result',
+                    success: false,
+                    error: e.message || 'خطأ غير معروف'
+                  }, '*');
+                  
+                  return false;
+                }
+              })();
+            `;
+            
+            event.source.postMessage({
+              type: 'direct-autofill-response',
+              script: script,
+              data: dataToSend,
+              success: true
+            }, targetOrigin || '*');
+            
+          } catch (error) {
+            console.error("خطأ في إرسال سكريبت الإدخال المباشر:", error);
+            
+            if (event.source instanceof Window) {
+              event.source.postMessage({
+                type: 'direct-autofill-response',
+                success: false,
+                error: (error as Error).message || "خطأ غير معروف"
+              }, targetOrigin || '*');
+            }
+          }
         }
       }
     };
