@@ -1,10 +1,11 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ImageData } from '@/types/ImageData';
 import { Company } from '@/types/Company';
 
 // إنشاء عميل Supabase باستخدام المتغيرات البيئية
 // أو استخدام المفاتيح المحددة مباشرة إذا لم تتوفر المتغيرات البيئية
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tmqexqmogyvsrtgvsct.supabase.co';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tmqexqmogyvsct.supabase.co';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtcWV4cW1vZ3l2c3J0Z3ZzY3F0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3MzkxMTIsImV4cCI6MjA1NzMxNTExMn0.Rc8AIgx6-sWStsO1Xh9P5H91cu6hM5ogxGuthJs8Btk';
 
 // تحقق من وجود متغيرات البيئة أو المفاتيح المباشرة
@@ -119,13 +120,17 @@ export const fromDbFormat = (dbData: DbImageData, file: File): Partial<ImageData
 };
 
 // مخزن محلي بديل عند عدم توفر Supabase
-const localStorageDB = {
-  images: [] as DbImageData[],
+interface LocalStorageDB {
+  images: DbImageData[];
+  companies: DbCompany[];
+  counter: number;
+}
+
+const localStorageDB: LocalStorageDB = {
+  images: [],
+  companies: [],
   counter: 0
 };
-
-// إضافة مخزن محلي للشركات
-localStorageDB.companies = [] as DbCompany[];
 
 // وظائف التعامل مع الشركات
 export const fetchCompanies = async (): Promise<{ success: boolean; data?: DbCompany[]; error?: string }> => {
