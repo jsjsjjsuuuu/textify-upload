@@ -1,8 +1,8 @@
 
 import React from "react";
-import { RefreshCw, Monitor, ExternalLink } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
 
 interface PreviewFrameProps {
   isLoading: boolean;
@@ -10,61 +10,78 @@ interface PreviewFrameProps {
   lastValidUrl: string;
   sandboxMode: string;
   useUserAgent: boolean;
+  allowFullAccess?: boolean;
   iframeRef: React.RefObject<HTMLIFrameElement>;
   openExternalUrl: () => void;
 }
 
-const PreviewFrame = ({
-  isLoading,
-  viewMode,
-  lastValidUrl,
-  sandboxMode,
+const PreviewFrame = ({ 
+  isLoading, 
+  viewMode, 
+  lastValidUrl, 
+  sandboxMode, 
   useUserAgent,
-  iframeRef,
-  openExternalUrl,
+  allowFullAccess = false,
+  iframeRef, 
+  openExternalUrl 
 }: PreviewFrameProps) => {
+  if (!lastValidUrl) return null;
+
+  const userAgentAttr = useUserAgent ? {
+    'data-user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1'
+  } : {};
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className="bg-white dark:bg-gray-800/90 rounded-xl shadow-md overflow-hidden"
-      style={{ height: "calc(100vh - 270px)", minHeight: "500px" }}
-    >
-      {isLoading ? (
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <RefreshCw className="animate-spin h-8 w-8 mx-auto mb-4 text-brand-brown" />
-            <p className="text-muted-foreground">جاري تحميل الموقع...</p>
+    <Card className="overflow-hidden shadow-md dark:shadow-primary/10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+      <div className="w-full h-[70vh] relative">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900 z-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-brown"></div>
           </div>
-        </div>
-      ) : viewMode === "iframe" && lastValidUrl ? (
-        <iframe
-          ref={iframeRef}
-          src={lastValidUrl}
-          title="معاينة الموقع"
-          className="w-full h-full border-0"
-          sandbox={sandboxMode}
-          loading="lazy"
-        />
-      ) : (
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center max-w-md p-6">
-            <Monitor className="h-12 w-12 mx-auto mb-4 text-brand-brown/50" />
-            <h3 className="text-lg font-medium mb-2">أدخل عنوان URL لعرض الموقع</h3>
-            <p className="text-muted-foreground">
-              قم بإدخال عنوان URL للموقع الذي تريد معاينته وانقر على "عرض الموقع"
-            </p>
-            {viewMode === "external" && lastValidUrl && (
-              <Button onClick={openExternalUrl} className="mt-4 bg-brand-brown hover:bg-brand-brown/90">
-                <ExternalLink className="ml-2 h-4 w-4" />
-                فتح الموقع في نافذة جديدة
-              </Button>
-            )}
+        )}
+        
+        {viewMode === "iframe" && lastValidUrl ? (
+          <>
+            <iframe
+              ref={iframeRef}
+              src={lastValidUrl}
+              className="w-full h-full border-0"
+              allowFullScreen
+              {...(sandboxMode && !allowFullAccess ? { sandbox: sandboxMode } : {})}
+              {...userAgentAttr}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="absolute bottom-4 left-4 bg-white dark:bg-slate-800 opacity-80 hover:opacity-100"
+              onClick={openExternalUrl}
+            >
+              <ExternalLink className="h-4 w-4 ml-2" />
+              فتح في نافذة جديدة
+            </Button>
+          </>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+            <div className="text-center">
+              {viewMode === "external" ? (
+                <>
+                  <p className="text-lg text-muted-foreground">تم فتح الرابط في نافذة جديدة</p>
+                  <Button
+                    variant="link"
+                    className="mt-2"
+                    onClick={openExternalUrl}
+                  >
+                    انقر هنا لإعادة الفتح في نافذة جديدة
+                  </Button>
+                </>
+              ) : (
+                <p className="text-lg text-muted-foreground">أدخل رابطاً لبدء المعاينة</p>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </motion.div>
+        )}
+      </div>
+    </Card>
   );
 };
 
