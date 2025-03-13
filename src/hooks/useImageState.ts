@@ -10,22 +10,26 @@ import {
   DbImageData,
   fromDbFormat
 } from "@/lib/supabaseService";
+import { useAuth } from "@/hooks/useAuth";
 
 export const useImageState = () => {
   const [images, setImages] = useState<ImageData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  // جلب جميع الصور عند بدء التطبيق
+  // جلب جميع الصور عند بدء التطبيق أو عند تغيير الشركة النشطة
   useEffect(() => {
     const loadImages = async () => {
       setIsLoading(true);
       try {
-        const { success, data, error } = await fetchAllImages();
+        // استخدام معرف الشركة النشطة من المستخدم الحالي إذا كان متاحًا
+        const companyId = user?.activeCompanyId;
+        
+        const { success, data, error } = await fetchAllImages(companyId);
         
         if (success && data) {
           // تحويل البيانات من قاعدة البيانات إلى نموذج ImageData
-          // ملاحظة: سنحتاج إلى إعادة إنشاء كائنات File
           const loadedImages: ImageData[] = [];
           
           for (const dbImage of data) {
@@ -65,9 +69,14 @@ export const useImageState = () => {
     };
     
     loadImages();
-  }, [toast]);
+  }, [toast, user?.activeCompanyId]);
 
   const addImage = async (newImage: ImageData) => {
+    // إضافة معرف الشركة النشطة من المستخدم الحالي
+    if (user?.activeCompanyId) {
+      newImage.companyId = user.activeCompanyId;
+    }
+    
     // إضافة الصورة إلى الحالة المحلية أولاً
     setImages(prev => [newImage, ...prev]);
     

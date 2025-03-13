@@ -1,6 +1,6 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ImageData } from '@/types/ImageData';
+import { Company } from '@/types/Company';
 
 // إنشاء عميل Supabase باستخدام المتغيرات البيئية
 // أو استخدام المفاتيح المحددة مباشرة إذا لم تتوفر المتغيرات البيئية
@@ -45,6 +45,7 @@ if (hasSupabaseConfig) {
 export interface DbImageData {
   id: string;
   user_id?: string;
+  company_id?: string; // إضافة معرف الشركة
   file_name: string;
   file_url: string;
   extracted_text: string;
@@ -55,12 +56,21 @@ export interface DbImageData {
   secondary_phone_number?: string;
   province?: string;
   price?: string;
-  company_name?: string;
+  company_name: string;
   created_at: string;
   updated_at: string;
   status: string;
   submitted: boolean;
   extraction_method?: string;
+}
+
+// واجهة بيانات الشركة في قاعدة البيانات
+export interface DbCompany {
+  id: string;
+  name: string;
+  logo_url?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // تحويل من ImageData إلى DbImageData
@@ -80,7 +90,8 @@ export const toDbFormat = (imageData: ImageData): Omit<DbImageData, 'created_at'
     company_name: imageData.companyName,
     status: imageData.status,
     submitted: !!imageData.submitted,
-    extraction_method: imageData.extractionMethod
+    extraction_method: imageData.extractionMethod,
+    company_id: imageData.companyId,
   };
 };
 
@@ -88,6 +99,7 @@ export const toDbFormat = (imageData: ImageData): Omit<DbImageData, 'created_at'
 export const fromDbFormat = (dbData: DbImageData, file: File): Partial<ImageData> => {
   return {
     id: dbData.id,
+    companyId: dbData.company_id, // إضافة معرف الشركة
     file,
     previewUrl: dbData.file_url,
     extractedText: dbData.extracted_text,
@@ -112,6 +124,76 @@ const localStorageDB = {
   counter: 0
 };
 
+// إضافة مخزن محلي للشركات
+localStorageDB.companies = [] as DbCompany[];
+
+// وظائف التعامل مع الشركات
+export const fetchCompanies = async (): Promise<{ success: boolean; data?: DbCompany[]; error?: string }> => {
+  try {
+    if (!hasSupabaseConfig) {
+      // استرجاع محلي للشركات
+      console.log("استرجاع الشركات من المخزن المحلي -", localStorageDB.companies.length, "شركة");
+      return { success: true, data: localStorageDB.companies };
+    }
+    
+    // استخدام Supabase لاسترجاع الشركات
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .order('name');
+      
+    if (error) {
+      console.error('خطأ في استرجاع الشركات:', error);
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('خطأ غير متوقع:', error);
+    return { success: false, error: String(error) };
+  }
+};
+
+export const saveCompany = async (company: Company): Promise<{ success: boolean; data?: DbCompany; error?: string }> => {
+  try {
+    const dbCompany: Omit<DbCompany, 'created_at' | 'updated_at'> = {
+      id: company.id,
+      name: company.name,
+      logo_url: company.logoUrl
+    };
+    
+    if (!hasSupabaseConfig) {
+      // تخزين محلي للشركة
+      const localCompany: DbCompany = {
+        ...dbCompany,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      localStorageDB.companies.push(localCompany);
+      console.log("تم تخزين الشركة محلياً:", localCompany.id);
+      return { success: true, data: localCompany };
+    }
+    
+    // استخدام Supabase لتخزين الشركة
+    const { data, error } = await supabase
+      .from('companies')
+      .upsert(dbCompany)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('خطأ في حفظ الشركة:', error);
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('خطأ غير متوقع:', error);
+    return { success: false, error: String(error) };
+  }
+};
+
 // وظائف التعامل مع قاعدة البيانات مع دعم الوضع المحلي
 export const saveImageData = async (imageData: ImageData): Promise<{ success: boolean; error?: string }> => {
   try {
@@ -119,6 +201,7 @@ export const saveImageData = async (imageData: ImageData): Promise<{ success: bo
       // تخزين محلي بدلاً من Supabase
       const localData: DbImageData = {
         ...toDbFormat(imageData),
+        company_id: imageData.companyId, // إضافة معرف الشركة
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         file_url: imageData.previewUrl
@@ -152,10 +235,13 @@ export const saveImageData = async (imageData: ImageData): Promise<{ success: bo
     const publicUrl = urlData.publicUrl;
     
     // تخزين بيانات الصورة في الجدول
-    const dbData = toDbFormat({
-      ...imageData,
-      previewUrl: publicUrl
-    });
+    const dbData = {
+      ...toDbFormat({
+        ...imageData,
+        previewUrl: publicUrl
+      }),
+      company_id: imageData.companyId // إضافة معرف الشركة
+    };
     
     const { error: insertError } = await supabase
       .from('image_data')
@@ -300,19 +386,33 @@ export const deleteImageData = async (id: string): Promise<{ success: boolean; e
   }
 };
 
-export const fetchAllImages = async (): Promise<{ success: boolean; data?: DbImageData[]; error?: string }> => {
+// تعديل وظيفة fetchAllImages لتصفية حسب الشركة
+export const fetchAllImages = async (companyId?: string): Promise<{ success: boolean; data?: DbImageData[]; error?: string }> => {
   try {
     if (!hasSupabaseConfig) {
       // استرجاع محلي بدلاً من Supabase
       console.log("استرجاع الصور من المخزن المحلي -", localStorageDB.images.length, "صورة");
-      return { success: true, data: localStorageDB.images };
+      
+      // تصفية حسب الشركة إذا تم تحديد معرف الشركة
+      const filteredImages = companyId 
+        ? localStorageDB.images.filter(img => img.company_id === companyId)
+        : localStorageDB.images;
+        
+      return { success: true, data: filteredImages };
     }
     
     // استخدام Supabase إذا كان متاحاً
-    const { data, error } = await supabase
+    let query = supabase
       .from('image_data')
       .select('*')
       .order('created_at', { ascending: false });
+      
+    // تصفية حسب الشركة إذا تم تحديد معرف الشركة
+    if (companyId) {
+      query = query.eq('company_id', companyId);
+    }
+    
+    const { data, error } = await query;
       
     if (error) {
       console.error('خطأ في استرجاع البيانات:', error);

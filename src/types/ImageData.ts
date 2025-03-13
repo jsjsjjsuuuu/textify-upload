@@ -1,6 +1,7 @@
 
 export interface ImageData {
   id: string;
+  companyId?: string; // إضافة معرف الشركة
   file: File;
   previewUrl: string;
   extractedText: string;
@@ -8,7 +9,7 @@ export interface ImageData {
   code?: string;
   senderName?: string;
   phoneNumber?: string;
-  secondaryPhoneNumber?: string; // إضافة رقم هاتف ثانوي
+  secondaryPhoneNumber?: string;
   province?: string;
   price?: string;
   companyName?: string;
