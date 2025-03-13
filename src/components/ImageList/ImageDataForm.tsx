@@ -19,6 +19,7 @@ const ImageDataForm = ({
 }: ImageDataFormProps) => {
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+  const isSecondaryPhoneNumberValid = !image.secondaryPhoneNumber || image.secondaryPhoneNumber.replace(/[^\d]/g, '').length === 11;
 
   const handleFieldChange = (field: string, value: string) => {
     onTextChange(image.id, field, value);
@@ -58,6 +59,15 @@ const ImageDataForm = ({
           value={image.phoneNumber || ''}
           onChange={(value) => handleFieldChange("phoneNumber", value)}
           isValid={isPhoneNumberValid}
+        />
+        
+        {/* رقم الهاتف الثانوي مع التحقق */}
+        <PhoneNumberField
+          value={image.secondaryPhoneNumber || ''}
+          onChange={(value) => handleFieldChange("secondaryPhoneNumber", value)}
+          isValid={isSecondaryPhoneNumberValid}
+          label="رقم الهاتف الثانوي:"
+          placeholder="أدخل رقم الهاتف الثانوي"
         />
         
         {/* المحافظة */}

@@ -8,6 +8,7 @@ export interface ImageData {
   code?: string;
   senderName?: string;
   phoneNumber?: string;
+  secondaryPhoneNumber?: string; // إضافة رقم هاتف ثانوي
   province?: string;
   price?: string;
   companyName?: string;

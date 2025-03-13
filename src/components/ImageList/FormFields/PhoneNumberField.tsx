@@ -6,9 +6,17 @@ interface PhoneNumberFieldProps {
   value: string;
   onChange: (value: string) => void;
   isValid: boolean;
+  label?: string;
+  placeholder?: string;
 }
 
-const PhoneNumberField = ({ value, onChange, isValid }: PhoneNumberFieldProps) => {
+const PhoneNumberField = ({ 
+  value, 
+  onChange, 
+  isValid,
+  label = "رقم الهاتف:",
+  placeholder = "أدخل رقم الهاتف"
+}: PhoneNumberFieldProps) => {
   const errorElement = value && !isValid ? (
     <span className="text-xs text-destructive font-normal flex items-center">
       <AlertCircle className="h-3 w-3 ml-1" />
@@ -18,10 +26,10 @@ const PhoneNumberField = ({ value, onChange, isValid }: PhoneNumberFieldProps) =
 
   return (
     <TextField
-      label="رقم الهاتف:"
+      label={label}
       value={value || ''}
       onChange={onChange}
-      placeholder="أدخل رقم الهاتف"
+      placeholder={placeholder}
       hasError={value && !isValid ? true : false}
       errorMessage="يجب أن يكون رقم الهاتف 11 رقم بالضبط"
       rightElement={errorElement}
