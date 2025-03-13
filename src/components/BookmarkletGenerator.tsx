@@ -7,7 +7,7 @@ import { useClipboard } from "@/hooks/useClipboard";
 import { ImageData } from "@/types/ImageData";
 import BookmarkletButton from "./BookmarkletButton";
 import BookmarkletInstructions from "./BookmarkletInstructions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BookmarkletGeneratorProps {
@@ -44,10 +44,48 @@ const BookmarkletGenerator = ({
   
   // إضافة حالة لتتبع تنفيذ السكريبت
   const [isExecuting, setIsExecuting] = useState(false);
+  const [executionStatus, setExecutionStatus] = useState<string | null>(null);
+  const [executionAttempts, setExecutionAttempts] = useState(0);
 
   // التحقق مما إذا كان آخر URL مستخدم هو موقع Google
   const lastUsedUrl = typeof window !== 'undefined' ? localStorage.getItem('lastAutoFillUrl') || '' : '';
   const isGoogleUrl = lastUsedUrl.includes('google.com') || lastUsedUrl.includes('docs.google.com');
+  
+  // متابعة حالة التنفيذ
+  useEffect(() => {
+    if (isExecuting && executionAttempts > 0) {
+      const timer = setTimeout(() => {
+        if (executionAttempts < 5) {
+          // محاولة النقر على زر الحفظ مرة أخرى بعد ثانيتين
+          setExecutionStatus(`محاولة النقر على زر الحفظ (${executionAttempts + 1}/5)...`);
+          setExecutionAttempts(prev => prev + 1);
+          
+          // استدعاء وظيفة النقر على زر الحفظ
+          const targetUrl = lastUsedUrl || 'about:blank';
+          if (targetUrl !== 'about:blank') {
+            const options = {
+              clickSubmitButton: true,
+              waitBeforeClick: 2000,
+              retryAttempt: executionAttempts
+            };
+            executeScript(targetUrl, options);
+          }
+        } else {
+          // إنهاء المحاولات بعد 5 مرات
+          setIsExecuting(false);
+          setExecutionStatus("انتهت المحاولات. يرجى التحقق من نجاح الإضافة أو النقر يدوياً على زر الحفظ.");
+          
+          toast({
+            title: "اكتملت محاولات النقر التلقائي",
+            description: "تمت محاولة النقر على زر الحفظ 5 مرات. يرجى التحقق من نجاح الإضافة.",
+            variant: "default"
+          });
+        }
+      }, 3000); // انتظر 3 ثوانٍ بين المحاولات
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isExecuting, executionAttempts, executeScript, lastUsedUrl, toast]);
   
   // نسخ الرابط إلى الحافظة
   const handleCopyToClipboard = () => {
@@ -57,6 +95,9 @@ const BookmarkletGenerator = ({
   // وظيفة تنفيذ سكريبت الإدخال التلقائي محسنة
   const handleExecuteScript = async () => {
     setIsExecuting(true);
+    setExecutionStatus("جاري تنفيذ الإدخال التلقائي...");
+    setExecutionAttempts(1);
+    
     try {
       console.log("بيانات الإدخال التلقائي:", rawDataObject);
       
@@ -73,14 +114,17 @@ const BookmarkletGenerator = ({
           variant: "destructive"
         });
         setIsExecuting(false);
+        setExecutionStatus(null);
         return;
       }
       
       // إضافة خيارات محسنة لزيادة فرص النجاح
       const options = {
-        clickSubmitButton: true,    // النقر على زر الحفظ
-        waitBeforeClick: 2000,      // انتظار ثانيتين قبل النقر
-        retryCount: 5               // محاولة النقر 5 مرات
+        clickSubmitButton: true,
+        waitBeforeClick: 1500,      // انتظار 1.5 ثانية قبل النقر
+        forceSubmit: true,          // الإجبار على محاولة النقر
+        useRobustClickMethod: true, // استخدام طريقة أكثر قوة للنقر
+        retryAttempt: 1             // محاولة أولى
       };
       
       // استدعاء وظيفة تنفيذ السكريبت مع الخيارات المحسنة
@@ -92,11 +136,7 @@ const BookmarkletGenerator = ({
         variant: "default"
       });
       
-      // إغلاق مربع الحوار بعد التنفيذ مع تأخير أطول
-      setTimeout(() => {
-        onClose();
-        setIsExecuting(false);
-      }, 3000);
+      // سيتم إغلاق مربع الحوار عبر useEffect الذي يراقب عدد المحاولات
     } catch (error) {
       console.error("خطأ في تنفيذ السكريبت:", error);
       toast({
@@ -105,6 +145,7 @@ const BookmarkletGenerator = ({
         variant: "destructive"
       });
       setIsExecuting(false);
+      setExecutionStatus(null);
     }
   };
   
@@ -186,21 +227,40 @@ const BookmarkletGenerator = ({
             </Button>
           </div>
           
+          {/* حالة التنفيذ */}
+          {executionStatus && (
+            <div className={`text-sm p-2 rounded-md ${
+              executionStatus.includes("خطأ") ? 
+                "bg-red-50 text-red-700 border border-red-200" : 
+                "bg-blue-50 text-blue-700 border border-blue-200"
+            }`}>
+              <p>{executionStatus}</p>
+              {executionAttempts > 0 && executionAttempts <= 5 && (
+                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                  <div 
+                    className="bg-blue-600 h-1.5 rounded-full" 
+                    style={{ width: `${(executionAttempts / 5) * 100}%` }}
+                  ></div>
+                </div>
+              )}
+            </div>
+          )}
+          
           {/* تعليمات الاستخدام */}
           <BookmarkletInstructions 
             isMultiMode={isMultiMode} 
             isGoogleUrl={isGoogleUrl}
           />
           
-          {/* اقتراحات إضافية للمستخدم مع إضافة إشعار حول النقر التلقائي على زر الحفظ */}
+          {/* اقتراحات إضافية للمستخدم مع إشعار حول النقر التلقائي على زر الحفظ */}
           <div className="text-sm text-muted-foreground bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-md border border-yellow-200 dark:border-yellow-700/30">
             <p className="font-semibold mb-1 text-yellow-700 dark:text-yellow-400">ملاحظات مهمة عن حفظ البيانات:</p>
             <ul className="mr-4 list-disc space-y-1 text-xs">
-              <li>النظام سيحاول <strong>النقر تلقائياً</strong> على زر الحفظ أو الإضافة بعد ملء النموذج</li>
-              <li>في حال فشل النقر التلقائي، سيظهر إشعار يطلب منك النقر يدوياً على زر الحفظ</li>
-              <li>سيتم محاولة النقر على الزر <strong>عدة مرات</strong> لضمان تسجيل البيانات</li>
-              <li>في بعض المواقع، تحتاج للتأكد من ظهور رسالة تأكيد بعد الحفظ للتأكد من نجاح العملية</li>
-              <li>إذا استمرت المشكلة، حاول فتح نافذة جديدة للموقع والتأكد من تسجيل الدخول أولاً</li>
+              <li><strong>نظام محسن جديد:</strong> سيحاول النقر على زر الحفظ تلقائياً <strong>5 مرات متتالية</strong> بفواصل زمنية لضمان نجاح الحفظ</li>
+              <li>إذا لم تنجح المحاولات التلقائية، يرجى النقر يدوياً على زر الحفظ/الإضافة في الموقع</li>
+              <li>تأكد من ظهور رسالة تأكيد من الموقع بعد الحفظ للتأكد من نجاح العملية</li>
+              <li>قد تحتاج لتحديث صفحة الموقع وتسجيل الدخول مجدداً إذا كانت هناك مشكلة في الحفظ</li>
+              <li>في حالة استمرار المشكلة، جرب استخدام زر المفضلة بدلاً من التنفيذ المباشر</li>
             </ul>
           </div>
         </div>
