@@ -45,6 +45,22 @@ export const useBookmarkletGenerator = (
           const exportData = ${JSON.stringify(exportData)};
           console.log("تم استيراد البيانات:", exportData);
           
+          // تأكد من أننا على صفحة ويب حقيقية (وليس about:blank)
+          if (window.location.href === 'about:blank') {
+            // إذا كنا على صفحة فارغة، افتح صفحة جديدة أو قم بتوجيه المستخدم
+            if (confirm('يرجى الانتقال إلى الموقع المطلوب أولاً، ثم تنفيذ الأداة مرة أخرى. هل تريد الانتقال إلى آخر موقع تم استخدامه؟')) {
+              const lastUrl = localStorage.getItem('lastAutoFillUrl');
+              if (lastUrl && lastUrl !== 'about:blank') {
+                window.location.href = lastUrl;
+                return;
+              } else {
+                alert('لم يتم العثور على عنوان URL سابق. يرجى الانتقال إلى موقع الويب المطلوب يدوياً ثم تشغيل الأداة مرة أخرى.');
+                return;
+              }
+            }
+            return;
+          }
+          
           // إنشاء نافذة إشعار للمستخدم
           function showNotification(message, type = 'info') {
             const notif = document.createElement('div');
@@ -192,7 +208,20 @@ export const useBookmarkletGenerator = (
               form.style.maxWidth = '400px';
               form.style.direction = 'rtl';
               
-              form.innerHTML = '<h3 style="margin-top: 0; text-align: center; margin-bottom: 15px;">حفظ بيانات تسجيل الدخول</h3><div style="margin-bottom: 10px;"><label style="display: block; margin-bottom: 5px;">اسم المستخدم / البريد الإلكتروني:</label><input type="text" id="save-username" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></div><div style="margin-bottom: 20px;"><label style="display: block; margin-bottom: 5px;">كلمة المرور:</label><input type="password" id="save-password" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></div><div style="display: flex; justify-content: space-between;"><button id="save-credentials-cancel" style="padding: 8px 16px; background-color: #f1f1f1; border: none; border-radius: 4px; cursor: pointer;">إلغاء</button><button id="save-credentials-submit" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">حفظ</button></div>';
+              // ضبط HTML بشكل يدوي بدلاً من استخدام سلسلة نصية متعددة الأسطر
+              form.innerHTML = '<h3 style="margin-top: 0; text-align: center; margin-bottom: 15px;">حفظ بيانات تسجيل الدخول</h3>' +
+                '<div style="margin-bottom: 10px;">' +
+                '  <label style="display: block; margin-bottom: 5px;">اسم المستخدم / البريد الإلكتروني:</label>' +
+                '  <input type="text" id="save-username" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">' +
+                '</div>' +
+                '<div style="margin-bottom: 20px;">' +
+                '  <label style="display: block; margin-bottom: 5px;">كلمة المرور:</label>' +
+                '  <input type="password" id="save-password" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">' +
+                '</div>' +
+                '<div style="display: flex; justify-content: space-between;">' +
+                '  <button id="save-credentials-cancel" style="padding: 8px 16px; background-color: #f1f1f1; border: none; border-radius: 4px; cursor: pointer;">إلغاء</button>' +
+                '  <button id="save-credentials-submit" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">حفظ</button>' +
+                '</div>';
               
               document.body.appendChild(form);
               
@@ -202,8 +231,8 @@ export const useBookmarkletGenerator = (
               });
               
               document.getElementById('save-credentials-submit').addEventListener('click', () => {
-                const username = (document.getElementById('save-username') as HTMLInputElement).value;
-                const password = (document.getElementById('save-password') as HTMLInputElement).value;
+                const username = document.getElementById('save-username').value;
+                const password = document.getElementById('save-password').value;
                 
                 if (username && password) {
                   try {
@@ -293,6 +322,8 @@ export const useBookmarkletGenerator = (
             // البحث عن التسميات
             const allLabels = document.querySelectorAll('label');
             for (const labelElement of allLabels) {
+              if (!labelElement.textContent) continue;
+              
               const labelText = labelElement.textContent.toLowerCase().trim();
               if (labels.some(l => labelText.includes(l.toLowerCase()))) {
                 const labelFor = labelElement.getAttribute('for');
@@ -316,6 +347,8 @@ export const useBookmarkletGenerator = (
             formGroups.forEach(group => {
               const groupLabels = group.querySelectorAll('label, .label, .field-label');
               groupLabels.forEach(label => {
+                if (!label.textContent) return;
+                
                 const labelText = label.textContent.toLowerCase().trim();
                 if (labels.some(l => labelText.includes(l.toLowerCase()))) {
                   const inputs = group.querySelectorAll('input, textarea, select');
@@ -419,6 +452,22 @@ export const useBookmarkletGenerator = (
           // تخزين آخر URL تم استخدامه
           if (typeof localStorage !== 'undefined') {
             localStorage.setItem('lastAutoFillUrl', window.location.href);
+          }
+          
+          // تأكد من أننا على صفحة ويب حقيقية (وليس about:blank)
+          if (window.location.href === 'about:blank') {
+            // إذا كنا على صفحة فارغة، افتح صفحة جديدة أو قم بتوجيه المستخدم
+            if (confirm('يرجى الانتقال إلى الموقع المطلوب أولاً، ثم تنفيذ الأداة مرة أخرى. هل تريد الانتقال إلى آخر موقع تم استخدامه؟')) {
+              const lastUrl = localStorage.getItem('lastAutoFillUrl');
+              if (lastUrl && lastUrl !== 'about:blank') {
+                window.location.href = lastUrl;
+                return;
+              } else {
+                alert('لم يتم العثور على عنوان URL سابق. يرجى الانتقال إلى موقع الويب المطلوب يدوياً ثم تشغيل الأداة مرة أخرى.');
+                return;
+              }
+            }
+            return;
           }
           
           // جميع البيانات المستخرجة من الصور
@@ -603,6 +652,8 @@ export const useBookmarkletGenerator = (
             // البحث عن التسميات
             const allLabels = document.querySelectorAll('label');
             for (const labelElement of allLabels) {
+              if (!labelElement.textContent) continue;
+              
               const labelText = labelElement.textContent.toLowerCase().trim();
               if (labels.some(l => labelText.includes(l.toLowerCase()))) {
                 const labelFor = labelElement.getAttribute('for');
@@ -626,6 +677,8 @@ export const useBookmarkletGenerator = (
             formGroups.forEach(group => {
               const groupLabels = group.querySelectorAll('label, .label, .field-label');
               groupLabels.forEach(label => {
+                if (!label.textContent) return;
+                
                 const labelText = label.textContent.toLowerCase().trim();
                 if (labels.some(l => labelText.includes(l.toLowerCase()))) {
                   const inputs = group.querySelectorAll('input, textarea, select');
@@ -711,29 +764,60 @@ export const useBookmarkletGenerator = (
             panel.style.fontFamily = 'Arial, sans-serif';
             panel.style.minWidth = '280px';
             
+            // استخدام تنسيق HTML البسيط بدلا من النص المعقد
+            const titleHTML = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: move;">' +
+              '<h3 style="margin: 0; font-size: 16px; font-weight: bold; color: #333;">أداة ملء البيانات تلقائياً</h3>' +
+              '<span id="panel-close" style="cursor: pointer; font-size: 18px; color: #777;">&times;</span>' +
+              '</div>';
+              
             const title = document.createElement('div');
-            title.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: move;"><h3 style="margin: 0; font-size: 16px; font-weight: bold; color: #333;">أداة ملء البيانات تلقائياً</h3><span id="panel-close" style="cursor: pointer; font-size: 18px; color: #777;">&times;</span></div>';
+            title.innerHTML = titleHTML;
             panel.appendChild(title);
             
+            const infoHTML = '<div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">' +
+              '<span>السجل: <span id="current-index" style="font-weight: bold;">' + (currentIndex + 1) + '</span> من <span style="font-weight: bold;">' + allExportData.length + '</span></span>' +
+              '<span id="progress-info" style="font-size: 12px; color: #777;"></span>' +
+              '</div>';
+              
             const info = document.createElement('div');
-            info.innerHTML = '<div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;"><span>السجل: <span id="current-index" style="font-weight: bold;">' + (currentIndex + 1) + '</span> من <span style="font-weight: bold;">' + allExportData.length + '</span></span><span id="progress-info" style="font-size: 12px; color: #777;"></span></div>';
+            info.innerHTML = infoHTML;
             panel.appendChild(info);
             
+            const progressBarHTML = '<div style="height: 6px; background-color: #f0f0f0; border-radius: 3px; margin-bottom: 12px; overflow: hidden;">' +
+              '<div id="progress-bar" style="height: 100%; width: ' + ((currentIndex + 1) / allExportData.length) * 100 + '%; background-color: #4CAF50; transition: width 0.3s;"></div>' +
+              '</div>';
+              
             const progressBar = document.createElement('div');
-            progressBar.innerHTML = '<div style="height: 6px; background-color: #f0f0f0; border-radius: 3px; margin-bottom: 12px; overflow: hidden;"><div id="progress-bar" style="height: 100%; width: ' + ((currentIndex + 1) / allExportData.length) * 100 + '%; background-color: #4CAF50; transition: width 0.3s;"></div></div>';
+            progressBar.innerHTML = progressBarHTML;
             panel.appendChild(progressBar);
             
+            const dataHTML = '<div id="current-data" style="margin-bottom: 12px; font-size: 13px; background-color: #f9f9f9; padding: 8px; border-radius: 4px; max-height: 120px; overflow-y: auto;">' +
+              '<div><strong>الكود:</strong> <span id="data-code">' + (allExportData[currentIndex].code || '-') + '</span></div>' +
+              '<div><strong>الاسم:</strong> <span id="data-name">' + (allExportData[currentIndex].senderName || '-') + '</span></div>' +
+              '<div><strong>الهاتف:</strong> <span id="data-phone">' + (allExportData[currentIndex].phoneNumber || '-') + '</span></div>' +
+              '<div><strong>المحافظة:</strong> <span id="data-province">' + (allExportData[currentIndex].province || '-') + '</span></div>' +
+              '<div><strong>السعر:</strong> <span id="data-price">' + (allExportData[currentIndex].price || '-') + '</span></div>' +
+              '<div><strong>الشركة:</strong> <span id="data-company">' + (allExportData[currentIndex].companyName || '-') + '</span></div>' +
+              '</div>';
+              
             const dataDisplay = document.createElement('div');
-            dataDisplay.innerHTML = '<div id="current-data" style="margin-bottom: 12px; font-size: 13px; background-color: #f9f9f9; padding: 8px; border-radius: 4px; max-height: 120px; overflow-y: auto;"><div><strong>الكود:</strong> <span id="data-code">' + (allExportData[currentIndex].code || '-') + '</span></div><div><strong>الاسم:</strong> <span id="data-name">' + (allExportData[currentIndex].senderName || '-') + '</span></div><div><strong>الهاتف:</strong> <span id="data-phone">' + (allExportData[currentIndex].phoneNumber || '-') + '</span></div><div><strong>المحافظة:</strong> <span id="data-province">' + (allExportData[currentIndex].province || '-') + '</span></div><div><strong>السعر:</strong> <span id="data-price">' + (allExportData[currentIndex].price || '-') + '</span></div><div><strong>الشركة:</strong> <span id="data-company">' + (allExportData[currentIndex].companyName || '-') + '</span></div></div>';
+            dataDisplay.innerHTML = dataHTML;
             panel.appendChild(dataDisplay);
             
             const buttonsContainer = document.createElement('div');
             buttonsContainer.style.display = 'flex';
             buttonsContainer.style.gap = '8px';
             
-            const controlButtons = '<button id="prev-button" ' + (currentIndex === 0 ? 'disabled' : '') + ' style="flex: 1; padding: 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: ' + (currentIndex === 0 ? '0.5' : '1') + ';">السابق</button><button id="fill-button" style="flex: 1; padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">ملء</button><button id="next-button" ' + (currentIndex >= allExportData.length - 1 ? 'disabled' : '') + ' style="flex: 1; padding: 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: ' + (currentIndex >= allExportData.length - 1 ? '0.5' : '1') + ';">التالي</button>';
+            const disabledPrev = currentIndex === 0 ? 'disabled' : '';
+            const opacityPrev = currentIndex === 0 ? '0.5' : '1';
+            const disabledNext = currentIndex >= allExportData.length - 1 ? 'disabled' : '';
+            const opacityNext = currentIndex >= allExportData.length - 1 ? '0.5' : '1';
             
-            buttonsContainer.innerHTML = controlButtons;
+            const controlButtonsHTML = '<button id="prev-button" ' + disabledPrev + ' style="flex: 1; padding: 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: ' + opacityPrev + ';">السابق</button>' +
+              '<button id="fill-button" style="flex: 1; padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">ملء</button>' +
+              '<button id="next-button" ' + disabledNext + ' style="flex: 1; padding: 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: ' + opacityNext + ';">التالي</button>';
+            
+            buttonsContainer.innerHTML = controlButtonsHTML;
             panel.appendChild(buttonsContainer);
             
             const submitContainer = document.createElement('div');
@@ -856,7 +940,7 @@ export const useBookmarkletGenerator = (
             const allButtons = document.querySelectorAll('button');
             for (const pattern of submitPatterns) {
               for (const button of allButtons) {
-                if (button.textContent.toLowerCase().includes(pattern)) {
+                if (button.textContent && button.textContent.toLowerCase().includes(pattern)) {
                   button.click();
                   return true;
                 }
@@ -867,7 +951,7 @@ export const useBookmarkletGenerator = (
             const links = document.querySelectorAll('a.btn, a.button, .btn, .button');
             for (const pattern of submitPatterns) {
               for (const link of links) {
-                if (link.textContent.toLowerCase().includes(pattern)) {
+                if (link.textContent && link.textContent.toLowerCase().includes(pattern)) {
                   link.click();
                   return true;
                 }

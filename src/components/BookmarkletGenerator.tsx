@@ -81,49 +81,115 @@ const BookmarkletGenerator = ({
         bookmarkletUrl.replace('javascript:', '')
       );
       
+      // تسجيل السكريبت للتشخيص
+      console.log("سكريبت الإدخال التلقائي:", scriptContent.substring(0, 100) + "...");
+      
+      // حفظ آخر عنوان URL في التخزين المحلي للإشارة إليه في السكريبت
+      localStorage.setItem('lastAutoFillUrl', window.location.href);
+      
       // التحقق من وجود نافذة مفتوحة يمكن استخدامها
       if (window.opener && !window.opener.closed) {
         try {
           // محاولة تنفيذ السكريبت في النافذة المفتوحة
-          const scriptToExecute = `(function() { 
-            try { 
-              ${scriptContent}; 
-              return true; 
-            } catch(err) { 
-              console.error("Error executing script:", err); 
-              return false; 
-            } 
-          })();`;
-
-          const success = window.opener.eval(scriptToExecute);
+          // إعداد فتح نافذة جديدة مع السكريبت - نهج أكثر موثوقية
+          const newWindow = window.open('about:blank', '_blank');
           
-          if (success) {
+          if (newWindow) {
+            // كتابة صفحة HTML بسيطة للتأكد من تحميل المستند بشكل صحيح
+            newWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>جاري تنفيذ الإدخال التلقائي...</title>
+                <meta charset="utf-8">
+              </head>
+              <body>
+                <h3 style="font-family: Arial; text-align: center; margin-top: 50px;">جاري تنفيذ الإدخال التلقائي...</h3>
+                <p style="font-family: Arial; text-align: center;">سيتم تحويلك تلقائياً خلال لحظات.</p>
+                <script>
+                  // استدعاء السكريبت المطلوب بعد تحميل الصفحة
+                  setTimeout(function() {
+                    try {
+                      ${scriptContent}
+                    } catch (err) {
+                      console.error("Error executing script:", err);
+                      document.body.innerHTML += '<p style="color: red; text-align: center;">حدث خطأ: ' + err.message + '</p>';
+                    }
+                  }, 500);
+                </script>
+              </body>
+              </html>
+            `);
+            
+            // إغلاق الكتابة للتأكد من تحميل المستند
+            newWindow.document.close();
+            
             toast({
-              title: "تم تنفيذ الإدخال التلقائي",
-              description: "تم إدخال البيانات في النافذة المفتوحة بنجاح",
+              title: "تم فتح نافذة جديدة",
+              description: "تم تحويل الإدخال التلقائي إلى نافذة جديدة. يرجى التحقق منها.",
               variant: "default"
             });
           } else {
-            throw new Error("فشل تنفيذ السكريبت في النافذة المفتوحة");
+            throw new Error("لم يتم فتح النافذة الجديدة. قد تكون النوافذ المنبثقة محظورة.");
           }
         } catch (error) {
-          console.error("خطأ في تنفيذ السكريبت في النافذة المفتوحة:", error);
-          // إذا فشل التنفيذ في النافذة المفتوحة، ننتقل إلى تنفيذه في نافذة جديدة
+          console.error("خطأ في تنفيذ السكريبت في نافذة:", error);
+          // فتح في نافذة جديدة كخطة بديلة
           window.open(`javascript:${scriptContent}`, '_blank');
           toast({
             title: "تم فتح نافذة جديدة",
-            description: "سيتم تنفيذ الإدخال التلقائي في نافذة جديدة",
+            description: "سيتم تنفيذ الإدخال التلقائي في نافذة جديدة. قد تحتاج إلى السماح بالنوافذ المنبثقة.",
             variant: "default"
           });
         }
       } else {
-        // فتح نافذة جديدة بالسكريبت
-        window.open(`javascript:${scriptContent}`, '_blank');
-        toast({
-          title: "تم فتح نافذة جديدة",
-          description: "سيتم تنفيذ الإدخال التلقائي في نافذة جديدة",
-          variant: "default"
-        });
+        // فتح نافذة جديدة مع السكريبت
+        const newWindow = window.open('about:blank', '_blank');
+        
+        if (newWindow) {
+          // كتابة صفحة HTML بسيطة للتأكد من تحميل المستند بشكل صحيح
+          newWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>جاري تنفيذ الإدخال التلقائي...</title>
+              <meta charset="utf-8">
+            </head>
+            <body>
+              <h3 style="font-family: Arial; text-align: center; margin-top: 50px;">جاري تنفيذ الإدخال التلقائي...</h3>
+              <p style="font-family: Arial; text-align: center;">سيتم تحويلك تلقائياً خلال لحظات إلى الموقع المستهدف.</p>
+              <script>
+                // استدعاء السكريبت المطلوب بعد تحميل الصفحة
+                setTimeout(function() {
+                  try {
+                    ${scriptContent}
+                  } catch (err) {
+                    console.error("Error executing script:", err);
+                    document.body.innerHTML += '<p style="color: red; text-align: center;">حدث خطأ: ' + err.message + '</p>';
+                  }
+                }, 500);
+              </script>
+            </body>
+            </html>
+          `);
+          
+          // إغلاق الكتابة للتأكد من تحميل المستند
+          newWindow.document.close();
+          
+          toast({
+            title: "تم فتح نافذة الإدخال التلقائي",
+            description: "يرجى فتح موقع الويب المطلوب في نافذة أخرى ثم استخدام زر التنفيذ مرة أخرى",
+            variant: "default"
+          });
+        } else {
+          // استخدام الطريقة التقليدية كخطة بديلة
+          window.open(`javascript:${scriptContent}`, '_blank');
+          toast({
+            title: "تم فتح نافذة جديدة",
+            description: "يرجى السماح بالنوافذ المنبثقة إذا لم تظهر النافذة",
+            variant: "default"
+          });
+        }
       }
       
       // حفظ حالة الإدخال التلقائي في التخزين المحلي
