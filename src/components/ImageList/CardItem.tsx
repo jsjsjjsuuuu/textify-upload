@@ -23,6 +23,13 @@ interface CardItemProps {
   formatDate: (date: Date) => string;
 }
 
+interface SavedCredential {
+  domain: string;
+  username: string;
+  password: string;
+  date: string;
+}
+
 const CardItem = ({ 
   image, 
   isSubmitting, 
@@ -53,7 +60,7 @@ const CardItem = ({
     
     try {
       // استعادة آخر URL مستخدم من التخزين المحلي
-      const lastUsedUrl = localStorage.getItem('lastAutoFillUrl');
+      const lastUsedUrl = localStorage.getItem('lastAutoFillUrl') || localStorage.getItem('lastPreviewUrl');
       
       // إذا لم يكن هناك URL سابق، نطلب من المستخدم إدخاله
       let targetUrl = lastUsedUrl;
@@ -102,10 +109,35 @@ const CardItem = ({
         return;
       }
       
+      // استرجاع بيانات تسجيل الدخول المحفوظة
+      const storedCredentials = localStorage.getItem("savedLoginCredentials");
+      let savedCredentials: SavedCredential[] = [];
+      
+      if (storedCredentials) {
+        try {
+          savedCredentials = JSON.parse(storedCredentials);
+        } catch (error) {
+          console.error("خطأ في استرجاع بيانات تسجيل الدخول:", error);
+        }
+      }
+      
+      // البحث عن بيانات تسجيل الدخول للموقع المستهدف
+      let loginCredential: SavedCredential | null = null;
+      if (savedCredentials.length > 0 && targetUrl) {
+        try {
+          const urlObj = new URL(targetUrl);
+          const domain = urlObj.hostname;
+          loginCredential = savedCredentials.find(cred => cred.domain === domain) || null;
+        } catch (error) {
+          console.error("خطأ في تحليل URL:", error);
+        }
+      }
+      
       // إنشاء نص البرمجة النصية مباشرة
       const scriptText = `
         (function() {
           const data = ${JSON.stringify(formData)};
+          ${loginCredential ? `const savedLogin = ${JSON.stringify(loginCredential)};` : 'const savedLogin = null;'}
           
           // عرض إشعار حول النجاح أو الفشل
           const showNotification = (message, isSuccess) => {
@@ -172,13 +204,11 @@ const CardItem = ({
               const passwordField = document.querySelector('input[type="password"]');
               
               if (usernameField && passwordField) {
-                // محاولة استرجاع بيانات تسجيل الدخول المحفوظة محليًا
-                const savedLogin = localStorage.getItem('savedLoginCredentials');
+                // إذا كان لدينا بيانات دخول محفوظة، نستخدمها
                 if (savedLogin) {
                   try {
-                    const credentials = JSON.parse(savedLogin);
-                    usernameField.value = credentials.username || '';
-                    passwordField.value = credentials.password || '';
+                    usernameField.value = savedLogin.username || '';
+                    passwordField.value = savedLogin.password || '';
                     
                     usernameField.dispatchEvent(new Event('input', { bubbles: true }));
                     passwordField.dispatchEvent(new Event('input', { bubbles: true }));
@@ -196,7 +226,7 @@ const CardItem = ({
                       
                     if (loginButton) {
                       // عرض رسالة للمستخدم وتنفيذ النقر بعد فترة
-                      showNotification('سيتم تسجيل الدخول خلال 3 ثوان. انقر أي مكان لإلغاء العملية.', true);
+                      showNotification('سيتم تسجيل الدخول تلقائيًا خلال 3 ثوان. انقر أي مكان لإلغاء العملية.', true);
                       
                       const cancelClickHandler = () => {
                         clearTimeout(loginTimeout);
@@ -221,29 +251,11 @@ const CardItem = ({
                       return true;
                     }
                   } catch (e) {
-                    console.error('خطأ في استرجاع بيانات تسجيل الدخول:', e);
+                    console.error('خطأ في استخدام بيانات تسجيل الدخول:', e);
                   }
                 } else {
                   // اقتراح حفظ بيانات الدخول
-                  showNotification('لم يتم العثور على بيانات تسجيل دخول محفوظة. قم بتسجيل الدخول يدويًا ثم حدث الصفحة.', false);
-                  
-                  // إضافة زر لحفظ بيانات تسجيل الدخول
-                  const saveButton = document.createElement('button');
-                  saveButton.textContent = 'حفظ بيانات الدخول للمستقبل';
-                  saveButton.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #2196F3; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; z-index: 10000; font-family: Arial;';
-                  saveButton.onclick = () => {
-                    const username = usernameField.value;
-                    const password = passwordField.value;
-                    if (username && password) {
-                      localStorage.setItem('savedLoginCredentials', JSON.stringify({ username, password }));
-                      showNotification('تم حفظ بيانات تسجيل الدخول بنجاح!', true);
-                      saveButton.remove();
-                    } else {
-                      showNotification('الرجاء إدخال اسم المستخدم وكلمة المرور أولاً', false);
-                    }
-                  };
-                  document.body.appendChild(saveButton);
-                  
+                  showNotification('لم يتم العثور على بيانات تسجيل دخول محفوظة. قم بتسجيل الدخول يدويًا ثم استخدم زر حفظ بيانات الدخول.', false);
                   return true;
                 }
               }
@@ -510,7 +522,7 @@ const CardItem = ({
   };
 
   const navigateToPreview = () => {
-    const lastUsedUrl = localStorage.getItem('lastAutoFillUrl');
+    const lastUsedUrl = localStorage.getItem('lastAutoFillUrl') || localStorage.getItem('lastPreviewUrl');
     if (lastUsedUrl) {
       localStorage.setItem('lastPreviewUrl', lastUsedUrl);
       navigate('/preview');

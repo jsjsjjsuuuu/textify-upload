@@ -10,8 +10,25 @@ import {
   PreviewFrame
 } from "@/components/WebsitePreview";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, RefreshCw, AlertCircle } from "lucide-react";
+import { ExternalLink, RefreshCw, AlertCircle, Save, Key, Database } from "lucide-react";
 import AuthGuard from "@/components/AuthGuard";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle,
+  DialogFooter 
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label"; 
+import { Input } from "@/components/ui/input";
+
+interface SavedCredential {
+  domain: string;
+  username: string;
+  password: string;
+  date: string;
+}
 
 const WebsitePreview = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,6 +43,13 @@ const WebsitePreview = () => {
   const [lastValidUrl, setLastValidUrl] = useState<string>("");
   const [autoFillScript, setAutoFillScript] = useState<string>("");
   const [autoFillApplied, setAutoFillApplied] = useState<boolean>(false);
+  
+  // إضافة حالة لإدارة مربع حوار حفظ بيانات تسجيل الدخول
+  const [credentialsDialogOpen, setCredentialsDialogOpen] = useState<boolean>(false);
+  const [savedCredentials, setSavedCredentials] = useState<SavedCredential[]>([]);
+  const [currentUsername, setCurrentUsername] = useState<string>("");
+  const [currentPassword, setCurrentPassword] = useState<string>("");
+  const [credentialsViewOpen, setCredentialsViewOpen] = useState<boolean>(false);
 
   // استعادة آخر عنوان URL مستخدم من التخزين المحلي عند تحميل الصفحة
   useEffect(() => {
@@ -58,6 +82,17 @@ const WebsitePreview = () => {
     const script = searchParams.get("script");
     if (autoFill === "true" && script) {
       setAutoFillScript(decodeURIComponent(script));
+    }
+    
+    // استرجاع بيانات تسجيل الدخول المحفوظة
+    const storedCredentials = localStorage.getItem("savedLoginCredentials");
+    if (storedCredentials) {
+      try {
+        const parsedCredentials = JSON.parse(storedCredentials) as SavedCredential[];
+        setSavedCredentials(parsedCredentials);
+      } catch (error) {
+        console.error("خطأ في استرجاع بيانات تسجيل الدخول:", error);
+      }
     }
   }, [searchParams]);
   
@@ -238,6 +273,65 @@ const WebsitePreview = () => {
     localStorage.setItem("previewAllowFullAccess", checked.toString());
   };
   
+  // وظيفة حفظ بيانات تسجيل الدخول
+  const saveLoginCredentials = () => {
+    if (!currentUsername || !currentPassword) {
+      toast({
+        title: "خطأ",
+        description: "الرجاء إدخال اسم المستخدم وكلمة المرور",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // استخراج اسم النطاق من URL
+    const urlObj = new URL(lastValidUrl);
+    const domain = urlObj.hostname;
+    
+    const newCredential: SavedCredential = {
+      domain,
+      username: currentUsername,
+      password: currentPassword,
+      date: new Date().toISOString()
+    };
+    
+    // التحقق مما إذا كان النطاق موجودًا بالفعل وتحديثه
+    const updatedCredentials = [...savedCredentials];
+    const existingIndex = updatedCredentials.findIndex(cred => cred.domain === domain);
+    
+    if (existingIndex >= 0) {
+      updatedCredentials[existingIndex] = newCredential;
+    } else {
+      updatedCredentials.push(newCredential);
+    }
+    
+    // حفظ البيانات المحدثة
+    setSavedCredentials(updatedCredentials);
+    localStorage.setItem("savedLoginCredentials", JSON.stringify(updatedCredentials));
+    
+    toast({
+      title: "تم الحفظ",
+      description: `تم حفظ بيانات تسجيل الدخول لـ ${domain}`,
+    });
+    
+    // إغلاق مربع الحوار وإعادة تعيين الحقول
+    setCredentialsDialogOpen(false);
+    setCurrentUsername("");
+    setCurrentPassword("");
+  };
+  
+  // حذف بيانات تسجيل دخول محفوظة
+  const deleteCredential = (domain: string) => {
+    const updatedCredentials = savedCredentials.filter(cred => cred.domain !== domain);
+    setSavedCredentials(updatedCredentials);
+    localStorage.setItem("savedLoginCredentials", JSON.stringify(updatedCredentials));
+    
+    toast({
+      title: "تم الحذف",
+      description: `تم حذف بيانات تسجيل الدخول لـ ${domain}`,
+    });
+  };
+  
   // التحقق مما إذا كان العنوان هو Google Sheets
   const isGoogleSheetsUrl = lastValidUrl.includes('docs.google.com/spreadsheets');
 
@@ -271,7 +365,7 @@ const WebsitePreview = () => {
             />
           </PreviewUrlInput>
 
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
             <Button 
               variant="outline" 
               className="text-sm"
@@ -287,6 +381,26 @@ const WebsitePreview = () => {
             >
               <RefreshCw className="h-4 w-4 ml-2" />
               تحديث الصفحة
+            </Button>
+            
+            {/* زر حفظ بيانات تسجيل الدخول */}
+            <Button 
+              variant="outline" 
+              className="text-sm bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30"
+              onClick={() => setCredentialsDialogOpen(true)}
+            >
+              <Key className="h-4 w-4 ml-2" />
+              حفظ بيانات الدخول
+            </Button>
+            
+            {/* زر عرض بيانات تسجيل الدخول المحفوظة */}
+            <Button 
+              variant="outline" 
+              className="text-sm bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 dark:hover:bg-purple-900/30"
+              onClick={() => setCredentialsViewOpen(true)}
+            >
+              <Database className="h-4 w-4 ml-2" />
+              بيانات الدخول المحفوظة {savedCredentials.length > 0 && `(${savedCredentials.length})`}
             </Button>
           </div>
           
@@ -316,6 +430,7 @@ const WebsitePreview = () => {
             </h3>
             <ul className="mr-6 list-disc text-sm space-y-2">
               <li>الآن يمكنك تسجيل الدخول تلقائيًا إذا كنت قد حفظت بيانات الدخول من قبل</li>
+              <li>يمكنك حفظ بيانات تسجيل الدخول لكل موقع باستخدام زر "حفظ بيانات الدخول"</li>
               <li>إذا كنت تواجه مشكلة في تسجيل الدخول، استخدم خيار "فتح في نافذة خارجية" لفتح الموقع في تبويب جديد</li>
               <li>جرب تغيير إعدادات الـ Sandbox إلى "كامل الصلاحيات" لتمكين تخزين الكوكيز وتتبع الجلسة</li>
               <li>في بعض الحالات، قد تحتاج لاستخدام "فتح في نافذة خارجية" ثم الرجوع بعد تسجيل الدخول</li>
@@ -325,6 +440,90 @@ const WebsitePreview = () => {
           </div>
         </div>
       </div>
+      
+      {/* مربع حوار حفظ بيانات تسجيل الدخول */}
+      <Dialog open={credentialsDialogOpen} onOpenChange={setCredentialsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>حفظ بيانات تسجيل الدخول</DialogTitle>
+            <DialogDescription>
+              أدخل بيانات تسجيل الدخول للموقع الحالي ({new URL(lastValidUrl || "https://example.com").hostname})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">اسم المستخدم</Label>
+              <Input
+                id="username"
+                value={currentUsername}
+                onChange={e => setCurrentUsername(e.target.value)}
+                placeholder="أدخل اسم المستخدم"
+                dir="rtl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">كلمة المرور</Label>
+              <Input
+                id="password"
+                type="password"
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                placeholder="أدخل كلمة المرور"
+                dir="rtl"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCredentialsDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button type="button" onClick={saveLoginCredentials}>
+              <Save className="ml-2 h-4 w-4" /> حفظ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* مربع حوار عرض بيانات تسجيل الدخول المحفوظة */}
+      <Dialog open={credentialsViewOpen} onOpenChange={setCredentialsViewOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>بيانات تسجيل الدخول المحفوظة</DialogTitle>
+            <DialogDescription>
+              قائمة بيانات تسجيل الدخول التي قمت بحفظها
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto">
+            {savedCredentials.length === 0 ? (
+              <p className="text-center py-4 text-gray-500">لا توجد بيانات محفوظة</p>
+            ) : (
+              <div className="space-y-4">
+                {savedCredentials.map((cred, index) => (
+                  <div key={index} className="border p-3 rounded-md relative bg-gray-50 dark:bg-gray-800">
+                    <div className="flex justify-between">
+                      <div>
+                        <h4 className="font-medium">{cred.domain}</h4>
+                        <p className="text-sm text-gray-500">المستخدم: {cred.username}</p>
+                        <p className="text-sm text-gray-500">
+                          تم الحفظ: {new Date(cred.date).toLocaleDateString('ar-SA')}
+                        </p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => deleteCredential(cred.domain)}
+                        className="h-8"
+                      >
+                        حذف
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AuthGuard>
   );
 };
