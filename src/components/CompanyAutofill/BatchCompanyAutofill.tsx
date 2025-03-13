@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "lucide-react";
 import { Play, Pause, Square, Settings2, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 interface BatchCompanyAutofillProps {
@@ -20,19 +19,21 @@ interface BatchCompanyAutofillProps {
   onClose: () => void;
   images: ImageData[];
   updateImage: (id: string, fields: Partial<ImageData>) => void;
+  companyId?: string; // تغيير هنا: إضافة companyId كخاصية اختيارية
 }
 
 const BatchCompanyAutofill: React.FC<BatchCompanyAutofillProps> = ({ 
   isOpen, 
   onClose, 
   images,
-  updateImage
+  updateImage,
+  companyId // استخدام companyId المستلمة
 }) => {
   const { toast } = useToast();
   const { executeBatchAutofill, isAutofilling } = useCompanyAutofill();
   
   // حالة الدفعة
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(companyId || ""); // استخدام companyId كقيمة أولية إذا كانت موجودة
   const [selectedImages, setSelectedImages] = useState<Record<string, boolean>>({});
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<Record<string, any>>({});
@@ -56,12 +57,17 @@ const BatchCompanyAutofill: React.FC<BatchCompanyAutofillProps> = ({
   // الحصول على قائمة الشركات النشطة
   const companies = getActiveDeliveryCompanies();
   
-  // إعادة تعيين حالة الإرسال عند إعادة فتح الحوار
+  // إعادة تعيين حالة الإرسال وتحديث companyId عند إعادة فتح الحوار
   useEffect(() => {
     if (isOpen) {
       setProgress(0);
       setResults({});
       setIsRunning(false);
+      
+      // تحديث selectedCompanyId بالقيمة المستلمة من companyId إذا كانت موجودة
+      if (companyId) {
+        setSelectedCompanyId(companyId);
+      }
       
       // تحديد الصور المكتملة تلقائيًا
       const initialSelectedImages: Record<string, boolean> = {};
@@ -77,7 +83,7 @@ const BatchCompanyAutofill: React.FC<BatchCompanyAutofillProps> = ({
       // تحديث الإحصائيات
       updateStats(initialSelectedImages);
     }
-  }, [isOpen, images]);
+  }, [isOpen, images, companyId]);
   
   // تحديث الإحصائيات
   const updateStats = (selected: Record<string, boolean>) => {
