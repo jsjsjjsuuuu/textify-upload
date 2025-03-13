@@ -76,19 +76,27 @@ const BookmarkletGenerator = ({
         return;
       }
       
-      // إضافة معلمة للإشارة إلى أنه يجب الضغط على زر الحفظ بعد ملء النموذج
+      // إضافة خيارات محسنة لزيادة فرص النجاح
       const options = {
-        clickSubmitButton: true // معلمة جديدة تشير إلى ضرورة النقر على زر الحفظ
+        clickSubmitButton: true,    // النقر على زر الحفظ
+        waitBeforeClick: 2000,      // انتظار ثانيتين قبل النقر
+        retryCount: 5               // محاولة النقر 5 مرات
       };
       
-      // استدعاء وظيفة تنفيذ السكريبت مع الخيارات الجديدة
+      // استدعاء وظيفة تنفيذ السكريبت مع الخيارات المحسنة
       executeScript(targetUrl, options);
       
-      // إغلاق مربع الحوار بعد التنفيذ
+      toast({
+        title: "تم بدء الإدخال التلقائي",
+        description: "سيتم محاولة النقر على زر الحفظ عدة مرات لضمان تسجيل البيانات",
+        variant: "default"
+      });
+      
+      // إغلاق مربع الحوار بعد التنفيذ مع تأخير أطول
       setTimeout(() => {
         onClose();
         setIsExecuting(false);
-      }, 2000);
+      }, 3000);
     } catch (error) {
       console.error("خطأ في تنفيذ السكريبت:", error);
       toast({
@@ -185,15 +193,14 @@ const BookmarkletGenerator = ({
           />
           
           {/* اقتراحات إضافية للمستخدم مع إضافة إشعار حول النقر التلقائي على زر الحفظ */}
-          <div className="text-sm text-muted-foreground bg-muted/30 p-2 rounded-md border border-muted">
-            <p className="font-semibold mb-1">ملاحظات مهمة:</p>
+          <div className="text-sm text-muted-foreground bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-md border border-yellow-200 dark:border-yellow-700/30">
+            <p className="font-semibold mb-1 text-yellow-700 dark:text-yellow-400">ملاحظات مهمة عن حفظ البيانات:</p>
             <ul className="mr-4 list-disc space-y-1 text-xs">
-              <li>سيتم النقر تلقائياً على زر الحفظ أو الإضافة بعد ملء النموذج</li>
-              <li>إذا لم يتم النقر تلقائياً، قد يكون هناك حماية في الموقع تمنع ذلك</li>
-              <li>بعض المواقع تمنع تنفيذ السكريبت تلقائياً لأسباب أمنية</li>
-              <li>جرب فتح الموقع المطلوب في نافذة جديدة ثم استخدم زر المفضلة</li>
-              <li>بعض المتصفحات تتطلب تغيير إعدادات الأمان للسماح بتنفيذ السكريبت</li>
-              <li>إذا كنت تستخدم موقع Google، حاول استخدام ميزة زر المفضلة بدلاً من زر التنفيذ المباشر</li>
+              <li>النظام سيحاول <strong>النقر تلقائياً</strong> على زر الحفظ أو الإضافة بعد ملء النموذج</li>
+              <li>في حال فشل النقر التلقائي، سيظهر إشعار يطلب منك النقر يدوياً على زر الحفظ</li>
+              <li>سيتم محاولة النقر على الزر <strong>عدة مرات</strong> لضمان تسجيل البيانات</li>
+              <li>في بعض المواقع، تحتاج للتأكد من ظهور رسالة تأكيد بعد الحفظ للتأكد من نجاح العملية</li>
+              <li>إذا استمرت المشكلة، حاول فتح نافذة جديدة للموقع والتأكد من تسجيل الدخول أولاً</li>
             </ul>
           </div>
         </div>
@@ -203,4 +210,3 @@ const BookmarkletGenerator = ({
 };
 
 export default BookmarkletGenerator;
-
