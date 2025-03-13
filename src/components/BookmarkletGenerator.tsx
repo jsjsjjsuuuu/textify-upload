@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CopyIcon, CheckIcon, PlayIcon, AlertCircleIcon } from "lucide-react";
@@ -276,7 +277,25 @@ const BookmarkletGenerator = ({
           if (newWindow && !newWindow.closed) {
             try {
               // محاولة تنفيذ السكريبت على الصفحة المستهدفة
-              newWindow.eval(scriptToRun);
+              // هنا نستخدم Function constructor بدلاً من eval مباشرة
+              // لأن TypeScript لا يعرف eval على كائن Window
+              const scriptFunction = new Function(scriptToRun);
+              newWindow.document.defaultView?.addEventListener('load', () => {
+                try {
+                  scriptFunction.call(newWindow);
+                } catch (err) {
+                  console.error("خطأ في تنفيذ السكريبت:", err);
+                }
+              });
+              
+              // تنفيذ مباشر إذا كانت الصفحة محملة بالفعل
+              if (newWindow.document.readyState === 'complete') {
+                try {
+                  scriptFunction.call(newWindow);
+                } catch (err) {
+                  console.error("خطأ في التنفيذ المباشر للسكريبت:", err);
+                }
+              }
               
               toast({
                 title: "تم تنفيذ الإدخال التلقائي",
