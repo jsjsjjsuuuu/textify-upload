@@ -67,7 +67,7 @@ const generateBookmarklet = (
         // تحديد محتوى السكريبت
         const scriptContent = function() {
           // تعريف البيانات داخل نطاق محمي
-          const data = ${JSON.stringify(dataObject)};
+          let data = ${JSON.stringify(dataObject)};
           console.log("بيانات الإدخال التلقائي:", data);
           
           // التحقق من أن الصفحة الحالية ليست صفحة فارغة
@@ -307,7 +307,9 @@ const generateBookmarklet = (
             try {
               const savedData = localStorage.getItem('autofillData');
               if (savedData) {
-                return JSON.parse(savedData);
+                let parsedData = JSON.parse(savedData);
+                console.log("تم تحميل البيانات المحفوظة:", parsedData);
+                return parsedData;
               }
             } catch (e) {
               console.warn('فشل تحميل البيانات المحفوظة:', e);
@@ -317,7 +319,9 @@ const generateBookmarklet = (
           
           // الوظيفة الرئيسية لملء البيانات
           function autoFillFields() {
+            // مهم: تحميل البيانات من التخزين المحلي أو استخدام الموجودة في السكريبت
             const currentData = loadData();
+            console.log("البيانات الحالية للملء:", currentData);
             
             if (currentData.multiple && Array.isArray(currentData.items) && currentData.items.length > 0) {
               // إنشاء شريط تحكم للتنقل بين البيانات المتعددة
@@ -470,6 +474,17 @@ const generateBookmarklet = (
               notification.style.transition = 'opacity 0.7s';
               setTimeout(() => notification.remove(), 700);
             }, 5000);
+            
+            // إرسال نتيجة الملء للنافذة الأم إذا كانت متاحة
+            try {
+              window.parent.postMessage({
+                type: 'AUTOFILL_RESULT',
+                success: filledFields > 0,
+                filledCount: filledFields
+              }, '*');
+            } catch (e) {
+              console.warn('فشل في إرسال نتيجة الملء للنافذة الأم:', e);
+            }
           }
           
           // حفظ الصفحة الحالية لاستخدامها لاحقًا

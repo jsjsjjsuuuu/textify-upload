@@ -202,9 +202,17 @@ const BookmarkletGenerator = ({
             try {
               updateProgress(10, 'جاري التحضير للإدخال التلقائي...');
               
-              // تحضير السكريبت
+              // تحضير السكريبت وتضمين البيانات مباشرة
               updateProgress(20, 'جاري تحضير سكريبت الإدخال التلقائي...');
-              const scriptToRun = \`${bookmarkletCode.replace(/`/g, '\\`')}\`;
+              
+              // تسجيل البيانات في السكريبت مباشرة
+              const dataScript = '(function() { window.autofillData = ' + JSON.stringify(autofillData) + '; })();';
+              
+              // استخراج السكريبت الأساسي مع استبدال الوصول إلى البيانات
+              const scriptToRun = \`${bookmarkletCode.replace(/`/g, '\\`')}\`.replace(
+                'const data = ${JSON.stringify(rawDataObject)};',
+                'const data = window.autofillData || ${JSON.stringify(rawDataObject)};'
+              );
               
               // فتح النافذة المستهدفة
               updateProgress(40, 'جاري فتح الموقع المستهدف...');
@@ -241,12 +249,20 @@ const BookmarkletGenerator = ({
                 // إنشاء عنصر script وإضافته للصفحة المستهدفة
                 const injectScript = () => {
                   try {
+                    // أولاً إدخال البيانات
+                    const dataScriptEl = targetWindow.document.createElement('script');
+                    dataScriptEl.textContent = dataScript;
+                    targetWindow.document.head.appendChild(dataScriptEl);
+                    
+                    // ثم إدخال السكريبت الرئيسي
                     const script = targetWindow.document.createElement('script');
                     script.textContent = scriptToRun;
                     targetWindow.document.head.appendChild(script);
-                    // إزالة العنصر بعد التنفيذ
+                    
+                    // إزالة العناصر بعد التنفيذ
                     setTimeout(() => {
                       try {
+                        dataScriptEl.remove();
                         script.remove();
                       } catch (e) {}
                     }, 100);
@@ -270,10 +286,12 @@ const BookmarkletGenerator = ({
                 // نحاول أيضًا باستخدام location.href
                 try {
                   const jsPrefix = 'javascript:';
+                  const fullScript = dataScript + ';' + scriptToRun;
+                  
                   // نتأكد من أن الرمز لا يحتوي على بادئة javascript: بالفعل
-                  const jsCodeToExecute = scriptToRun.startsWith(jsPrefix) 
-                    ? scriptToRun.substring(jsPrefix.length) 
-                    : scriptToRun;
+                  const jsCodeToExecute = fullScript.startsWith(jsPrefix) 
+                    ? fullScript.substring(jsPrefix.length) 
+                    : fullScript;
                   
                   targetWindow.location.href = jsPrefix + encodeURIComponent(jsCodeToExecute);
                 } catch (e) {
@@ -306,8 +324,9 @@ const BookmarkletGenerator = ({
           
           document.getElementById('continueBtn').addEventListener('click', () => {
             // فتح الموقع المستهدف مرة أخرى مع تمرير السكريبت كجزء من الرابط
-            const bookmarkletUrl = "javascript:" + encodeURIComponent(\`${bookmarkletCode.replace(/`/g, '\\`')}\`);
-            window.open(targetUrl + "#" + bookmarkletUrl, '_blank');
+            const dataScript = encodeURIComponent('window.autofillData = ' + JSON.stringify(autofillData) + ';');
+            const mainScript = encodeURIComponent(\`${bookmarkletCode.replace(/`/g, '\\`')}\`);
+            window.open(targetUrl + "#javascript:" + dataScript + mainScript, '_blank');
           });
           
           // إضافة مستمع لرسائل من النافذة المستهدفة
