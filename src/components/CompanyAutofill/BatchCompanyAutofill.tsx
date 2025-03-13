@@ -1,13 +1,13 @@
 
-import React, { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Check, X, AlertTriangle } from "lucide-react";
-import { DeliveryCompany } from "@/types/DeliveryCompany";
 import { ImageData } from "@/types/ImageData";
+import { DeliveryCompany } from "@/types/DeliveryCompany";
 import { getDeliveryCompanyById } from "@/utils/deliveryCompanies/companyData";
 import { useCompanyAutofill } from "@/hooks/useCompanyAutofill";
+import { useToast } from "@/hooks/use-toast";
+import { PlayIcon, ExternalLinkIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 interface BatchCompanyAutofillProps {
   isOpen: boolean;
@@ -17,178 +17,180 @@ interface BatchCompanyAutofillProps {
 }
 
 const BatchCompanyAutofill = ({ isOpen, onClose, images, companyId }: BatchCompanyAutofillProps) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [results, setResults] = useState<{[key: string]: boolean}>({});
-  const { executeAutofill } = useCompanyAutofill();
-  
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const { toast } = useToast();
   const company = getDeliveryCompanyById(companyId);
   
-  // فلترة الصور المكتملة
-  const eligibleImages = images.filter(img => img.status === "completed");
+  const { executeAutofill } = useCompanyAutofill();
   
-  const handleBatchAutofill = async () => {
-    if (eligibleImages.length === 0 || !company) return;
-    
-    setIsProcessing(true);
-    setResults({});
-    setProgress(0);
-    
-    const url = company.formUrl || company.websiteUrl;
-    if (!url) {
-      setIsProcessing(false);
-      return;
+  // تصفية الصور المكتملة فقط
+  const completedImages = images.filter(img => img.status === "completed");
+  
+  // الانتقال للصورة التالية
+  const goToNextImage = () => {
+    if (currentIndex < completedImages.length - 1) {
+      setCurrentIndex(prev => prev + 1);
     }
-    
-    // فتح نافذة موقع الشركة
-    const targetWindow = window.open(url, `batch-autofill-${company.id}-${Date.now()}`);
-    if (!targetWindow) {
-      setIsProcessing(false);
-      return;
-    }
-    
-    // الانتظار حتى يتم تحميل الصفحة
-    await new Promise(resolve => {
-      const checkInterval = setInterval(() => {
-        if (targetWindow.closed) {
-          clearInterval(checkInterval);
-          resolve(null);
-        } else if (targetWindow.document.readyState === 'complete') {
-          clearInterval(checkInterval);
-          setTimeout(resolve, 1500);
-        }
-      }, 500);
-      
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        resolve(null);
-      }, 30000);
-    });
-    
-    // بدء عملية الإدخال التلقائي لكل صورة
-    for (let i = 0; i < eligibleImages.length; i++) {
-      const image = eligibleImages[i];
-      
-      try {
-        // طلب من المستخدم تأكيد الاستمرار
-        if (i > 0) {
-          if (!confirm(`هل تريد الاستمرار بإدخال البيانات للوصل التالي؟ (${i+1}/${eligibleImages.length})`)) {
-            break;
-          }
-        }
-        
-        // تنفيذ الإدخال التلقائي
-        const result = await executeAutofill(companyId, image, url);
-        setResults(prev => ({...prev, [image.id]: result.success}));
-        
-        // تأخير صغير بين الطلبات
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (error) {
-        console.error("خطأ في الإدخال التلقائي للصورة:", image.id, error);
-        setResults(prev => ({...prev, [image.id]: false}));
-      }
-      
-      // تحديث نسبة التقدم
-      setProgress(Math.round(((i + 1) / eligibleImages.length) * 100));
-    }
-    
-    setIsProcessing(false);
   };
   
-  const successCount = Object.values(results).filter(r => r === true).length;
-  const failureCount = Object.values(results).filter(r => r === false).length;
-  const totalProcessed = successCount + failureCount;
+  // الانتقال للصورة السابقة
+  const goToPrevImage = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+    }
+  };
+  
+  // الحصول على الصورة الحالية
+  const currentImage = completedImages[currentIndex];
+  
+  // وظيفة فتح موقع الشركة في نافذة جديدة
+  const handleOpenWebsite = () => {
+    if (!company) return;
+    
+    const url = company.formUrl || company.websiteUrl;
+    if (url) {
+      window.open(url, `_blank_${company.id}`);
+    } else {
+      toast({
+        title: "خطأ",
+        description: "لم يتم تحديد رابط للموقع الإلكتروني لهذه الشركة",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // وظيفة تنفيذ الإدخال التلقائي
+  const handleExecuteAutofill = async () => {
+    if (!company || !currentImage) return;
+    
+    setIsExecuting(true);
+    try {
+      await executeAutofill(companyId, currentImage);
+      // الانتقال تلقائيًا للصورة التالية بعد التنفيذ الناجح
+      if (currentIndex < completedImages.length - 1) {
+        setTimeout(() => {
+          goToNextImage();
+        }, 1000);
+      }
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+  
+  if (!company) return null;
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            {company?.logoUrl && (
+          <DialogTitle className="flex items-center gap-2">
+            {company.logoUrl && (
               <img 
                 src={company.logoUrl} 
-                alt={company?.name} 
+                alt={company.name} 
                 className="h-6 w-6 object-contain"
               />
             )}
-            إدخال دفعة من البيانات - {company?.name}
+            إدخال متعدد - {company.name}
           </DialogTitle>
           <DialogDescription>
-            سيتم إدخال بيانات {eligibleImages.length} صورة في موقع {company?.name}.
-            ستحتاج إلى تأكيد كل عملية إدخال.
+            إدخال {completedImages.length} صورة في نموذج شركة {company.name}
           </DialogDescription>
         </DialogHeader>
         
-        <div className="my-6">
-          {eligibleImages.length === 0 ? (
-            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-md">
-              <AlertTriangle className="h-5 w-5 text-amber-500 inline-block ml-2" />
-              <span className="text-amber-800 dark:text-amber-400">
-                لا توجد صور جاهزة للإدخال. تأكد من معالجة الصور أولاً.
-              </span>
-            </div>
-          ) : (
-            <>
-              {isProcessing && (
-                <div className="mb-4">
-                  <Progress value={progress} className="h-2 mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    جاري إدخال البيانات... ({totalProcessed}/{eligibleImages.length})
-                  </p>
-                </div>
-              )}
+        {completedImages.length > 0 ? (
+          <div className="space-y-4 my-4">
+            {/* عداد الصور */}
+            <div className="flex justify-between items-center">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={goToPrevImage}
+                disabled={currentIndex === 0}
+              >
+                <ChevronRightIcon className="h-4 w-4" />
+              </Button>
               
-              {Object.keys(results).length > 0 && (
-                <div className="space-y-2 max-h-64 overflow-y-auto p-2 border rounded-md">
-                  <div className="flex justify-between text-sm font-medium pb-2 border-b">
-                    <span>ملخص النتائج:</span>
-                    <span className="text-green-600 dark:text-green-400">
-                      نجاح: {successCount}/{eligibleImages.length}
-                    </span>
-                  </div>
-                  
-                  {eligibleImages.map(image => {
-                    const isProcessed = image.id in results;
-                    const isSuccessful = results[image.id] === true;
-                    
-                    return (
-                      <div 
-                        key={image.id}
-                        className={`flex items-center justify-between p-2 text-sm rounded-md ${
-                          !isProcessed ? 'bg-gray-50 dark:bg-gray-800/40' :
-                          isSuccessful ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'
-                        }`}
-                      >
-                        <span className="truncate flex-1">
-                          {image.senderName || image.companyName || `صورة ${image.number}`}
-                        </span>
-                        
-                        {isProcessed && (
-                          isSuccessful ? (
-                            <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                          ) : (
-                            <X className="h-4 w-4 text-red-600 dark:text-red-400" />
-                          )
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+              <span className="text-sm font-medium">
+                صورة {currentIndex + 1} من {completedImages.length}
+              </span>
+              
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={goToNextImage}
+                disabled={currentIndex === completedImages.length - 1}
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* عرض البيانات الحالية */}
+            <div className="bg-muted/50 p-3 rounded-md space-y-2">
+              <h3 className="text-sm font-medium">البيانات التي سيتم إدخالها:</h3>
+              <ul className="space-y-1 text-sm">
+                {company.fields.map(field => {
+                  const value = currentImage[field.name as keyof ImageData] as string;
+                  return (
+                    <li key={field.name} className="flex justify-between">
+                      <span className="text-muted-foreground">{field.description || field.name}:</span>
+                      <span className="font-medium">{value || "—"}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+            
+            {/* أزرار التحكم */}
+            <div className="flex justify-between items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={handleOpenWebsite}
+              >
+                <ExternalLinkIcon className="ml-2 h-4 w-4" />
+                فتح الموقع
+              </Button>
+              
+              <Button 
+                onClick={handleExecuteAutofill}
+                disabled={isExecuting}
+                className="w-full bg-brand-green hover:bg-brand-green/90"
+              >
+                {isExecuting ? (
+                  <span className="flex items-center">
+                    <span className="animate-spin ml-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    جاري التنفيذ...
+                  </span>
+                ) : (
+                  <>
+                    <PlayIcon className="ml-2 h-4 w-4" />
+                    تنفيذ مباشرة
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {/* تعليمات الاستخدام */}
+            <div className="text-sm text-muted-foreground">
+              <p>يمكنك التنقل بين الصور باستخدام الأزرار أعلاه ومن ثم تنفيذ الإدخال التلقائي لكل صورة.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            لا توجد صور مكتملة متاحة للإدخال التلقائي
+          </div>
+        )}
         
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onClose} disabled={isProcessing}>
-            {Object.keys(results).length > 0 ? "إغلاق" : "إلغاء"}
-          </Button>
           <Button 
-            onClick={handleBatchAutofill} 
-            disabled={isProcessing || eligibleImages.length === 0 || !company}
-            className="bg-brand-green hover:bg-brand-green/90"
+            variant="outline" 
+            onClick={onClose}
+            disabled={isExecuting}
           >
-            {isProcessing ? "جاري الإدخال..." : "بدء الإدخال الآلي"}
+            إغلاق
           </Button>
         </DialogFooter>
       </DialogContent>
