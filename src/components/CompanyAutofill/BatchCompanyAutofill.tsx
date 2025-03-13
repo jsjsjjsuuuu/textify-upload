@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Badge } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Play, Pause, Square, Settings2, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 interface BatchCompanyAutofillProps {
