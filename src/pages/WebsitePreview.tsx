@@ -1,29 +1,67 @@
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, ExternalLink, Monitor, Search } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, RefreshCw, ExternalLink, Monitor, Search, Settings } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import BackgroundPattern from "@/components/BackgroundPattern";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import AppHeader from "@/components/AppHeader";
 
 const WebsitePreview = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [url, setUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<"iframe" | "external">("iframe");
+  const [sandboxMode, setSandboxMode] = useState<string>("allow-same-origin allow-scripts allow-popups allow-forms");
+  const [useUserAgent, setUseUserAgent] = useState<boolean>(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [lastValidUrl, setLastValidUrl] = useState<string>("");
 
   // استعادة آخر عنوان URL مستخدم من التخزين المحلي عند تحميل الصفحة
-  React.useEffect(() => {
-    const savedUrl = localStorage.getItem("lastPreviewUrl");
+  useEffect(() => {
+    const savedUrl = searchParams.get("url") || localStorage.getItem("lastPreviewUrl");
     if (savedUrl) {
       setUrl(savedUrl);
       setLastValidUrl(savedUrl);
+      if (viewMode === "iframe") {
+        setTimeout(() => loadWebsite(savedUrl), 500);
+      }
     }
-  }, []);
+    
+    const savedSandboxMode = localStorage.getItem("previewSandboxMode");
+    if (savedSandboxMode) {
+      setSandboxMode(savedSandboxMode);
+    }
+    
+    const savedUseUserAgent = localStorage.getItem("previewUseUserAgent");
+    if (savedUseUserAgent) {
+      setUseUserAgent(savedUseUserAgent === "true");
+    }
+  }, [searchParams]);
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
@@ -37,8 +75,10 @@ const WebsitePreview = () => {
     return inputUrl;
   };
 
-  const loadWebsite = () => {
-    if (!url.trim()) {
+  const loadWebsite = (inputUrl?: string) => {
+    const urlToLoad = inputUrl || url;
+    
+    if (!urlToLoad.trim()) {
       toast({
         title: "خطأ",
         description: "الرجاء إدخال عنوان URL صالح",
@@ -48,7 +88,7 @@ const WebsitePreview = () => {
     }
 
     setIsLoading(true);
-    const validatedUrl = validateUrl(url);
+    const validatedUrl = validateUrl(urlToLoad);
     setUrl(validatedUrl);
     
     // حفظ URL في التخزين المحلي للاستخدام المستقبلي
@@ -58,6 +98,10 @@ const WebsitePreview = () => {
     // تحديث الآي فريم
     if (iframeRef.current) {
       iframeRef.current.src = validatedUrl;
+    }
+    
+    if (viewMode === "external") {
+      window.open(validatedUrl, "_blank");
     }
     
     setIsLoading(false);
@@ -84,6 +128,16 @@ const WebsitePreview = () => {
       const validatedUrl = validateUrl(url);
       window.open(validatedUrl, "_blank");
     }
+  };
+  
+  const handleSandboxModeChange = (value: string) => {
+    setSandboxMode(value);
+    localStorage.setItem("previewSandboxMode", value);
+  };
+  
+  const handleUseUserAgentChange = (checked: boolean) => {
+    setUseUserAgent(checked);
+    localStorage.setItem("previewUseUserAgent", checked.toString());
   };
 
   return (
@@ -127,26 +181,90 @@ const WebsitePreview = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button onClick={loadWebsite} className="bg-brand-brown hover:bg-brand-brown/90 flex-shrink-0">
+              <Select value={viewMode} onValueChange={(value: "iframe" | "external") => setViewMode(value)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="طريقة العرض" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="iframe">داخل التطبيق</SelectItem>
+                  <SelectItem value="external">في نافذة جديدة</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex-shrink-0">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-right">إعدادات متقدمة</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Switch 
+                          id="user-agent"
+                          checked={useUserAgent}
+                          onCheckedChange={handleUseUserAgentChange}
+                        />
+                        <Label htmlFor="user-agent" className="text-right">محاكاة متصفح جوال</Label>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <Label className="text-right block">إعدادات Sandbox</Label>
+                        <Select value={sandboxMode} onValueChange={handleSandboxModeChange}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="إعدادات Sandbox" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="allow-same-origin allow-scripts allow-popups allow-forms">قياسي</SelectItem>
+                            <SelectItem value="allow-same-origin allow-scripts allow-popups allow-forms allow-modals">سماح بالنوافذ المنبثقة</SelectItem>
+                            <SelectItem value="allow-same-origin allow-scripts allow-popups allow-forms allow-storage-access-by-user-activation">سماح بالوصول للتخزين</SelectItem>
+                            <SelectItem value="allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-storage-access-by-user-activation allow-top-navigation">كامل (غير آمن)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
+              <Button onClick={() => loadWebsite()} className="bg-brand-brown hover:bg-brand-brown/90 flex-shrink-0">
                 <Monitor className="ml-2 h-4 w-4" />
                 عرض الموقع
               </Button>
-              <Button
-                variant="outline"
-                onClick={refreshWebsite}
-                className="flex-shrink-0"
-                title="تحديث الصفحة"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={openExternalUrl}
-                className="flex-shrink-0"
-                title="فتح في صفحة جديدة"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={refreshWebsite}
+                      className="flex-shrink-0"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>تحديث الصفحة</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={openExternalUrl}
+                      className="flex-shrink-0"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>فتح في صفحة جديدة</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </motion.div>
@@ -165,13 +283,13 @@ const WebsitePreview = () => {
                 <p className="text-muted-foreground">جاري تحميل الموقع...</p>
               </div>
             </div>
-          ) : lastValidUrl ? (
+          ) : viewMode === "iframe" && lastValidUrl ? (
             <iframe
               ref={iframeRef}
               src={lastValidUrl}
               title="معاينة الموقع"
               className="w-full h-full border-0"
-              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+              sandbox={sandboxMode}
               loading="lazy"
             />
           ) : (
@@ -182,6 +300,12 @@ const WebsitePreview = () => {
                 <p className="text-muted-foreground">
                   قم بإدخال عنوان URL للموقع الذي تريد معاينته وانقر على "عرض الموقع"
                 </p>
+                {viewMode === "external" && lastValidUrl && (
+                  <Button onClick={openExternalUrl} className="mt-4 bg-brand-brown hover:bg-brand-brown/90">
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                    فتح الموقع في نافذة جديدة
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -189,8 +313,13 @@ const WebsitePreview = () => {
 
         <div className="mt-4 text-sm text-muted-foreground">
           <p>
-            ملاحظة: بعض المواقع قد تمنع عرضها داخل إطارات iframe لأسباب أمنية. في هذه الحالة، استخدم زر "فتح في صفحة جديدة".
+            ملاحظة: بعض المواقع قد تمنع عرضها داخل إطارات iframe لأسباب أمنية. إذا كنت تواجه مشكلة في العرض، جرب أحد الخيارات التالية:
           </p>
+          <ul className="mr-6 mt-2 list-disc">
+            <li>تغيير إعدادات "Sandbox" من الإعدادات المتقدمة</li>
+            <li>استخدام خيار "في نافذة جديدة" لفتح الموقع في متصفح منفصل</li>
+            <li>تفعيل خيار "محاكاة متصفح جوال" للمساعدة في تجاوز بعض القيود</li>
+          </ul>
         </div>
       </div>
     </div>
