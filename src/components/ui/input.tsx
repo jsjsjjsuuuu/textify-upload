@@ -1,9 +1,13 @@
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
+    // إضافة data-input-type لتسهيل استهداف الحقول في الإدخال التلقائي
+    const inputType = props.name || props.id || props.placeholder;
+    
     return (
       <input
         type={type}
@@ -12,6 +16,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className
         )}
         ref={ref}
+        data-input-type={inputType}
         {...props}
       />
     )

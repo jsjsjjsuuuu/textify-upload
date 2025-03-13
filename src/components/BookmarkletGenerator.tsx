@@ -42,6 +42,26 @@ const BookmarkletGenerator = ({
   const handleCopyToClipboard = () => {
     copyToClipboard(bookmarkletUrl);
   };
+
+  // إضافة وظيفة تنفيذ سكريبت الإدخال التلقائي في نافذة الحالية
+  const handleExecuteScript = () => {
+    try {
+      // استخراج السكريبت من الرابط
+      const scriptContent = decodeURIComponent(
+        bookmarkletUrl.replace('javascript:', '')
+      );
+      
+      // تنفيذ السكريبت (بخطر محسوب في بيئة التطوير فقط)
+      const executeScript = new Function(scriptContent);
+      executeScript();
+      
+      // إغلاق مربع الحوار بعد التنفيذ
+      onClose();
+    } catch (error) {
+      console.error("خطأ في تنفيذ السكريبت:", error);
+      alert("حدث خطأ في تنفيذ الإدخال التلقائي: " + (error as Error).message);
+    }
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -71,8 +91,8 @@ const BookmarkletGenerator = ({
             imagesCount={multipleImages.length} 
           />
           
-          {/* زر النسخ */}
-          <div className="flex justify-between items-center">
+          {/* أزرار التحكم */}
+          <div className="flex justify-between items-center gap-2">
             <Button 
               variant="outline" 
               size="sm" 
@@ -81,6 +101,15 @@ const BookmarkletGenerator = ({
             >
               {copied ? <CheckIcon className="ml-2 h-4 w-4" /> : <CopyIcon className="ml-2 h-4 w-4" />}
               {copied ? "تم النسخ" : "نسخ الرابط"}
+            </Button>
+            
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="w-full bg-brand-green hover:bg-brand-green/90"
+              onClick={handleExecuteScript}
+            >
+              تنفيذ مباشرة
             </Button>
           </div>
           
