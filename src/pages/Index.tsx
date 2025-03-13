@@ -7,6 +7,7 @@ import LearningStats from "@/components/LearningStats";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const {
@@ -20,12 +21,63 @@ const Index = () => {
     handleDelete,
     handleSubmitToApi
   } = useImageProcessing();
+  
+  const { toast } = useToast();
 
-  // إضافة مستمع للرسائل من النوافذ الأخرى
+  // إضافة معالج الرسائل للتواصل بين النوافذ المختلفة
   useEffect(() => {
     const handleMessages = (event: MessageEvent) => {
-      if (event.data && event.data.type) {
-        console.log("تم استلام رسالة من نافذة أخرى:", event.data);
+      console.log("تم استلام رسالة من نافذة أخرى:", event.data);
+      
+      if (event.data && event.data.type === 'autofill-data-request') {
+        // عندما تطلب نافذة أخرى البيانات، نرسلها
+        const imageId = event.data.imageId;
+        const selectedImage = images.find(img => img.id === imageId);
+        
+        if (selectedImage && event.source && event.source instanceof Window) {
+          console.log("إرسال بيانات الإدخال التلقائي:", {
+            companyName: selectedImage.companyName,
+            code: selectedImage.code,
+            senderName: selectedImage.senderName,
+            phoneNumber: selectedImage.phoneNumber,
+            province: selectedImage.province,
+            price: selectedImage.price
+          });
+          
+          // إرسال البيانات للنافذة الطالبة
+          event.source.postMessage({
+            type: 'autofill-data-response',
+            data: {
+              companyName: selectedImage.companyName,
+              code: selectedImage.code,
+              senderName: selectedImage.senderName,
+              phoneNumber: selectedImage.phoneNumber,
+              province: selectedImage.province,
+              price: selectedImage.price
+            }
+          }, '*');
+          
+          toast({
+            title: "تم إرسال البيانات",
+            description: "تم إرسال بيانات الإدخال التلقائي إلى النافذة المستهدفة",
+            variant: "default"
+          });
+        }
+      } else if (event.data && event.data.type === 'autofill-result') {
+        // استلام نتيجة عملية الإدخال التلقائي
+        if (event.data.success) {
+          toast({
+            title: "تم الإدخال التلقائي بنجاح",
+            description: event.data.message || "تم إدخال البيانات بنجاح في الموقع المستهدف",
+            variant: "default"
+          });
+        } else {
+          toast({
+            title: "فشل الإدخال التلقائي",
+            description: event.data.error || "حدث خطأ أثناء إدخال البيانات",
+            variant: "destructive"
+          });
+        }
       }
     };
     
@@ -34,7 +86,7 @@ const Index = () => {
     return () => {
       window.removeEventListener("message", handleMessages);
     };
-  }, []);
+  }, [images, toast]);
 
   return (
     <div className="relative min-h-screen pb-20">

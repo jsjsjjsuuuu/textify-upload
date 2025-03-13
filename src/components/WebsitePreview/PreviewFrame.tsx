@@ -71,16 +71,39 @@ const PreviewFrame = ({
       // محاولة تمكين سكريبت التفاعل
       const bridgeScript = `
         window.addEventListener('message', function(event) {
-          if (event.data && event.data.type === 'execute-script') {
-            try {
-              const scriptFn = new Function(event.data.script);
-              scriptFn();
-              window.parent.postMessage({ type: 'script-executed', message: 'تم تنفيذ السكريبت بنجاح' }, '*');
-            } catch (error) {
-              window.parent.postMessage({ type: 'script-error', error: error.message }, '*');
+          try {
+            console.log('تم استلام رسالة في الإطار:', event.data);
+            
+            if (event.data && event.data.type === 'execute-script') {
+              try {
+                // تعريف currentData بالبيانات المرسلة
+                window.currentData = event.data.data || {};
+                
+                console.log('البيانات المستلمة للإدخال التلقائي:', window.currentData);
+                
+                // تنفيذ السكريبت المرسل
+                const scriptFn = new Function(event.data.script);
+                scriptFn();
+                
+                // إرسال تأكيد للأب
+                window.parent.postMessage({ 
+                  type: 'script-executed', 
+                  message: 'تم تنفيذ السكريبت بنجاح' 
+                }, '*');
+              } catch (error) {
+                console.error('خطأ في تنفيذ السكريبت:', error);
+                window.parent.postMessage({ 
+                  type: 'script-error', 
+                  error: error.message 
+                }, '*');
+              }
             }
+          } catch (e) {
+            console.error('خطأ عام في معالجة الرسائل:', e);
           }
         });
+        
+        // إضافة شارة تدل على تمكين السكريبت
         document.body.style.position = 'relative';
         const badge = document.createElement('div');
         badge.innerHTML = 'السكريبت مُمكّن';
@@ -126,7 +149,7 @@ const PreviewFrame = ({
     }
   };
 
-  // وظيفة لتنفيذ سكريبت في الإطار
+  // وظيفة لتنفيذ سكريبت اختباري في الإطار
   const executeScript = () => {
     if (!iframeRef.current || !scriptPermission) {
       toast({
@@ -138,13 +161,18 @@ const PreviewFrame = ({
     }
     
     const testScript = `
-      console.log('تم تنفيذ السكريبت بنجاح');
-      alert('تم تنفيذ السكريبت بنجاح في الإطار');
+      try {
+        console.log('تم تنفيذ السكريبت الاختباري بنجاح');
+        alert('تم تنفيذ السكريبت بنجاح في الإطار\\n\\nتأكد من وجود شارة خضراء في أسفل يسار الإطار.');
+      } catch (e) {
+        console.error('خطأ في السكريبت الاختباري:', e);
+      }
     `;
     
     iframeRef.current.contentWindow?.postMessage({
       type: 'execute-script',
-      script: testScript
+      script: testScript,
+      data: { test: 'بيانات اختبارية' }
     }, '*');
   };
 
