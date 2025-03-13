@@ -87,113 +87,60 @@ const BookmarkletGenerator = ({
       // حفظ آخر عنوان URL في التخزين المحلي للإشارة إليه في السكريبت
       localStorage.setItem('lastAutoFillUrl', window.location.href);
       
-      // التحقق من وجود نافذة مفتوحة يمكن استخدامها
-      if (window.opener && !window.opener.closed) {
-        try {
-          // محاولة تنفيذ السكريبت في النافذة المفتوحة
-          // إعداد فتح نافذة جديدة مع السكريبت - نهج أكثر موثوقية
-          const newWindow = window.open('about:blank', '_blank');
-          
-          if (newWindow) {
-            // كتابة صفحة HTML بسيطة للتأكد من تحميل المستند بشكل صحيح
-            newWindow.document.write(`
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <title>جاري تنفيذ الإدخال التلقائي...</title>
-                <meta charset="utf-8">
-              </head>
-              <body>
-                <h3 style="font-family: Arial; text-align: center; margin-top: 50px;">جاري تنفيذ الإدخال التلقائي...</h3>
-                <p style="font-family: Arial; text-align: center;">سيتم تحويلك تلقائياً خلال لحظات.</p>
-                <script>
-                  // استدعاء السكريبت المطلوب بعد تحميل الصفحة
-                  setTimeout(function() {
-                    try {
-                      ${scriptContent}
-                    } catch (err) {
-                      console.error("Error executing script:", err);
-                      document.body.innerHTML += '<p style="color: red; text-align: center;">حدث خطأ: ' + err.message + '</p>';
-                    }
-                  }, 500);
-                </script>
-              </body>
-              </html>
-            `);
-            
-            // إغلاق الكتابة للتأكد من تحميل المستند
-            newWindow.document.close();
+      // الطريقة المحسنة: استخدام تقنية window.location.href مباشرة مع الجافاسكريبت
+      // هذا سيجعل السكريبت يتنفذ مباشرة في النافذة الجديدة بدلاً من محاولة حقن الكود
+      const jsCode = `
+        javascript:(function() {
+          ${scriptContent}
+        })();
+      `;
+      
+      // فتح نافذة جديدة مع صفحة فارغة
+      const newWindow = window.open('about:blank', '_blank');
+      
+      if (newWindow) {
+        // انتظار لحظة قبل تنفيذ السكريبت
+        setTimeout(() => {
+          try {
+            // تحويل النافذة مباشرة إلى تنفيذ السكريبت
+            newWindow.location.href = 'javascript:' + encodeURIComponent(scriptContent);
             
             toast({
-              title: "تم فتح نافذة جديدة",
-              description: "تم تحويل الإدخال التلقائي إلى نافذة جديدة. يرجى التحقق منها.",
+              title: "تم فتح الإدخال التلقائي",
+              description: "تم فتح نافذة جديدة وتم تنفيذ الإدخال التلقائي",
               variant: "default"
             });
-          } else {
-            throw new Error("لم يتم فتح النافذة الجديدة. قد تكون النوافذ المنبثقة محظورة.");
+          } catch (error) {
+            console.error("خطأ في تنفيذ السكريبت:", error);
+            
+            // إذا فشل التنفيذ، نعرض رسالة للمستخدم ونغلق النافذة
+            newWindow.document.write(`
+              <html dir="rtl">
+                <head>
+                  <title>خطأ في الإدخال التلقائي</title>
+                  <meta charset="utf-8">
+                  <style>
+                    body { font-family: Arial; text-align: center; margin-top: 50px; }
+                    .error { color: red; }
+                    button { padding: 10px 20px; margin-top: 20px; cursor: pointer; }
+                  </style>
+                </head>
+                <body>
+                  <h2 class="error">حدث خطأ في تنفيذ الإدخال التلقائي</h2>
+                  <p>يرجى التأكد من أنك قمت بفتح الموقع المستهدف أولاً ثم تنفيذ الإدخال التلقائي مرة أخرى.</p>
+                  <button onclick="window.close()">إغلاق</button>
+                </body>
+              </html>
+            `);
           }
-        } catch (error) {
-          console.error("خطأ في تنفيذ السكريبت في نافذة:", error);
-          // فتح في نافذة جديدة كخطة بديلة
-          window.open(`javascript:${scriptContent}`, '_blank');
-          toast({
-            title: "تم فتح نافذة جديدة",
-            description: "سيتم تنفيذ الإدخال التلقائي في نافذة جديدة. قد تحتاج إلى السماح بالنوافذ المنبثقة.",
-            variant: "default"
-          });
-        }
+        }, 300);
       } else {
-        // فتح نافذة جديدة مع السكريبت
-        const newWindow = window.open('about:blank', '_blank');
-        
-        if (newWindow) {
-          // كتابة صفحة HTML بسيطة للتأكد من تحميل المستند بشكل صحيح
-          newWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <title>جاري تنفيذ الإدخال التلقائي...</title>
-              <meta charset="utf-8">
-            </head>
-            <body>
-              <h3 style="font-family: Arial; text-align: center; margin-top: 50px;">جاري تنفيذ الإدخال التلقائي...</h3>
-              <p style="font-family: Arial; text-align: center;">سيتم تحويلك تلقائياً خلال لحظات إلى الموقع المستهدف.</p>
-              <script>
-                // استدعاء السكريبت المطلوب بعد تحميل الصفحة
-                setTimeout(function() {
-                  try {
-                    ${scriptContent}
-                  } catch (err) {
-                    console.error("Error executing script:", err);
-                    document.body.innerHTML += '<p style="color: red; text-align: center;">حدث خطأ: ' + err.message + '</p>';
-                  }
-                }, 500);
-              </script>
-            </body>
-            </html>
-          `);
-          
-          // إغلاق الكتابة للتأكد من تحميل المستند
-          newWindow.document.close();
-          
-          toast({
-            title: "تم فتح نافذة الإدخال التلقائي",
-            description: "يرجى فتح موقع الويب المطلوب في نافذة أخرى ثم استخدام زر التنفيذ مرة أخرى",
-            variant: "default"
-          });
-        } else {
-          // استخدام الطريقة التقليدية كخطة بديلة
-          window.open(`javascript:${scriptContent}`, '_blank');
-          toast({
-            title: "تم فتح نافذة جديدة",
-            description: "يرجى السماح بالنوافذ المنبثقة إذا لم تظهر النافذة",
-            variant: "default"
-          });
-        }
+        toast({
+          title: "خطأ في فتح النافذة",
+          description: "يرجى السماح بالنوافذ المنبثقة في متصفحك",
+          variant: "destructive"
+        });
       }
-      
-      // حفظ حالة الإدخال التلقائي في التخزين المحلي
-      localStorage.setItem('lastAutoFillDate', new Date().toISOString());
       
       // إغلاق مربع الحوار بعد التنفيذ
       setTimeout(() => {
