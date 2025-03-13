@@ -7,8 +7,9 @@ import ImageTable from "@/components/ImageTable";
 import BatchExportDialog from "@/components/BatchExportDialog";
 import BatchSubmitDialog from "@/components/BatchSubmitDialog";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, Upload, Send, Truck } from "lucide-react";
+import { FileSpreadsheet, Upload, Send, Truck, CheckCircle } from "lucide-react";
 import { CompanySelector, BatchCompanyAutofill } from "@/components/CompanyAutofill";
+import { Badge } from "@/components/ui/badge";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -33,6 +34,7 @@ const ImagePreviewContainer = ({
   const [isCompanySelectorOpen, setIsCompanySelectorOpen] = useState(false);
   const [isBatchAutofillOpen, setIsBatchAutofillOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [successCount, setSuccessCount] = useState(0);
 
   const handleImageClick = async (image: ImageData) => {
     console.log("Image clicked:", image.id, image.previewUrl);
@@ -78,6 +80,18 @@ const ImagePreviewContainer = ({
     // إذا كان هناك نتائج للإدخال التلقائي، نقوم بتحديث الصورة كاملة
     // هذا يتم معالجته في التطبيق الرئيسي
     if (fields.autoFillResult !== undefined) {
+      // تحقق من نجاح الإدخال التلقائي
+      const latestResult = fields.autoFillResult[fields.autoFillResult.length - 1];
+      if (latestResult && latestResult.success) {
+        setSuccessCount(prev => prev + 1);
+        
+        toast({
+          title: "تم الإدخال التلقائي بنجاح",
+          description: `تم إدخال البيانات بنجاح في شركة ${latestResult.company}`,
+          variant: "success",
+        });
+      }
+      
       // إرسال حدث تحديث الصورة
       const event = new CustomEvent('image-update', { 
         detail: {
@@ -91,9 +105,29 @@ const ImagePreviewContainer = ({
     }
   };
 
+  // عرض إشعار مستمر عند تراكم نجاحات الإدخال التلقائي
+  useEffect(() => {
+    if (successCount > 0) {
+      const timer = setTimeout(() => {
+        setSuccessCount(0);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [successCount]);
+
   return (
     <>
       <div className="grid grid-cols-1 gap-8">
+        {successCount > 0 && (
+          <div className="fixed bottom-6 left-6 z-50 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 p-4 rounded-lg shadow-lg flex items-center gap-2 transition-all duration-300">
+            <CheckCircle className="text-green-600 dark:text-green-400" />
+            <span>
+              تم إدخال <Badge variant="success" className="mx-1">{successCount}</Badge> عنصر بنجاح
+            </span>
+          </div>
+        )}
+        
         {(completedImagesCount > 1 || submittableImagesCount > 1) && (
           <div className="flex flex-wrap justify-end gap-2">
             {completedImagesCount > 1 && (
@@ -179,6 +213,7 @@ const ImagePreviewContainer = ({
           }}
           images={images}
           updateImage={updateImage}
+          selectedCompanyId={selectedCompanyId}
         />
       )}
     </>
