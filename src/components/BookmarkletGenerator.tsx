@@ -73,281 +73,273 @@ const BookmarkletGenerator = ({
         return;
       }
       
-      // إنشاء محتوى HTML للصفحة الوسيطة التي ستقوم بتنفيذ السكريبت
-      const scriptToRun = `
-      try {
-        // حفظ البيانات في متغير
-        const autofillData = ${JSON.stringify(rawDataObject)};
-        console.log("بيانات الإدخال التلقائي:", autofillData);
-        
-        // تحديد وظيفة ملء الحقول
-        function fillField(selectors, value) {
-          if (!value) return false;
+      // تطوير طريقة التنفيذ باستخدام صفحة وسيطة
+      const intermediateHtmlContent = `
+      <!DOCTYPE html>
+      <html lang="ar" dir="rtl">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>جاري تنفيذ الإدخال التلقائي...</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f9f9f9;
+            flex-direction: column;
+            text-align: center;
+            direction: rtl;
+          }
+          .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 80%;
+            width: 500px;
+          }
+          .progress-container {
+            margin: 20px 0;
+            background-color: #eee;
+            border-radius: 20px;
+            height: 10px;
+            overflow: hidden;
+          }
+          .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.5s;
+            border-radius: 20px;
+          }
+          h1 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.5rem;
+          }
+          p {
+            margin-bottom: 20px;
+            color: #666;
+            line-height: 1.6;
+          }
+          .status-text {
+            font-weight: bold;
+            margin: 10px 0;
+          }
+          .success { color: #4CAF50; }
+          .error { color: #f44336; }
+          .warning { color: #ff9800; }
+          .button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+          }
+          .button:hover {
+            background-color: #45a049;
+          }
+          .button-secondary {
+            background-color: #666;
+          }
+          .button-secondary:hover {
+            background-color: #555;
+          }
+          .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #4CAF50;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="loading-spinner"></div>
+          <h1>جاري تنفيذ الإدخال التلقائي</h1>
+          <div class="progress-container">
+            <div class="progress-bar" id="progress"></div>
+          </div>
+          <p class="status-text" id="status">جاري التحضير للإدخال التلقائي...</p>
+          <p>سيتم فتح الصفحة المستهدفة وإدخال البيانات تلقائياً خلال لحظات.</p>
+          <p>لا تغلق هذه النافذة حتى تكتمل العملية.</p>
+          <button class="button" id="continueBtn" style="display: none;">متابعة</button>
+          <button class="button button-secondary" id="closeBtn" style="display: none;">إغلاق</button>
+        </div>
+
+        <script>
+          // تحميل البيانات من localStorage
+          const autofillData = ${JSON.stringify(rawDataObject)};
+          const targetUrl = "${targetUrl}";
+          let targetWindow = null;
           
-          // التأكد من أن selectors هو مصفوفة
-          const allSelectors = (typeof selectors === 'string') ? [selectors] : selectors;
-          
-          // البحث عن حقول الإدخال
-          for (const selector of allSelectors) {
-            // محاولة باستخدام querySelector
-            let elements = [];
+          // تحديث حالة التقدم
+          function updateProgress(percent, statusText, type = '') {
+            document.getElementById('progress').style.width = percent + '%';
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = statusText;
+            statusElement.className = 'status-text ' + type;
+          }
+
+          // الدالة الرئيسية لتنفيذ الإدخال التلقائي
+          async function executeAutofill() {
             try {
-              elements = [...document.querySelectorAll(selector)];
-            } catch (e) {
-              continue;
-            }
-            
-            // البحث بطرق أخرى إذا لم نجد
-            if (elements.length === 0) {
-              elements = [...document.querySelectorAll('input, textarea, select, [contenteditable="true"]')]
-                .filter(el => {
-                  // البحث في النصوص المرتبطة بالعنصر
-                  const labels = document.querySelectorAll('label[for="' + el.id + '"]');
-                  let labelText = '';
-                  if (labels.length) {
-                    labelText = labels[0].textContent || '';
-                  }
-                  
-                  return (el.placeholder && (el.placeholder.includes(selector) || selector.includes(el.placeholder))) ||
-                         (el.name && (el.name.includes(selector) || selector.includes(el.name))) ||
-                         (el.id && (el.id.includes(selector) || selector.includes(el.id))) ||
-                         (el.className && (el.className.includes(selector) || selector.includes(el.className))) ||
-                         (labelText && (labelText.includes(selector) || selector.includes(labelText)));
-                });
-            }
-            
-            // ملء أول عنصر وجدناه
-            if (elements.length > 0) {
-              const element = elements[0];
+              updateProgress(10, 'جاري التحضير للإدخال التلقائي...');
               
-              // التعامل مع العناصر المختلفة
-              if (element.tagName === 'SELECT') {
-                // القوائم المنسدلة
-                const options = [...element.options];
-                const option = options.find(opt => {
-                  const optText = opt.text.toLowerCase();
-                  const optValue = opt.value.toLowerCase();
-                  const valueToCheck = value.toString().toLowerCase();
-                  
-                  return optText.includes(valueToCheck) || 
-                         valueToCheck.includes(optText) || 
-                         optValue.includes(valueToCheck) || 
-                         valueToCheck.includes(optValue);
-                });
-                
-                if (option) {
-                  element.value = option.value;
-                  element.dispatchEvent(new Event('change', { bubbles: true }));
-                  return true;
-                }
-              } else if (element.hasAttribute('contenteditable')) {
-                // عناصر قابلة للتحرير
-                element.innerHTML = value;
-                element.dispatchEvent(new Event('input', { bubbles: true }));
-                return true;
-              } else {
-                // حقول نصية
-                element.value = value;
-                element.dispatchEvent(new Event('input', { bubbles: true }));
-                element.dispatchEvent(new Event('change', { bubbles: true }));
-                // محاولة تحديث حالة React
-                try {
-                  const nativeValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
-                  if (nativeValueSetter) {
-                    nativeValueSetter.call(element, value);
+              // تحضير السكريبت
+              updateProgress(20, 'جاري تحضير سكريبت الإدخال التلقائي...');
+              const scriptToRun = \`${bookmarkletCode.replace(/`/g, '\\`')}\`;
+              
+              // فتح النافذة المستهدفة
+              updateProgress(40, 'جاري فتح الموقع المستهدف...');
+              targetWindow = window.open(targetUrl, '_blank');
+              
+              if (!targetWindow) {
+                throw new Error('تم منع النوافذ المنبثقة. يرجى السماح بالنوافذ المنبثقة في إعدادات المتصفح.');
+              }
+              
+              updateProgress(60, 'تم فتح الموقع المستهدف، جاري الانتظار للتحميل...');
+              
+              // انتظر 2 ثانية للسماح بتحميل الصفحة
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              // اختبار إذا ما زلنا نستطيع الوصول للنافذة (لم يتم إغلاقها)
+              if (targetWindow.closed) {
+                throw new Error('تم إغلاق النافذة المستهدفة.');
+              }
+              
+              updateProgress(80, 'جاري تنفيذ سكريبت الإدخال التلقائي...');
+              
+              // نحاول استخدام آلية نقل رسائل postMessage
+              try {
+                targetWindow.postMessage({ 
+                  type: 'AUTOFILL_DATA', 
+                  data: autofillData 
+                }, '*');
+              } catch (e) {
+                console.warn('فشل في استخدام postMessage:', e);
+              }
+              
+              // محاولة تنفيذ السكريبت
+              try {
+                // إنشاء عنصر script وإضافته للصفحة المستهدفة
+                const injectScript = () => {
+                  try {
+                    const script = targetWindow.document.createElement('script');
+                    script.textContent = scriptToRun;
+                    targetWindow.document.head.appendChild(script);
+                    // إزالة العنصر بعد التنفيذ
+                    setTimeout(() => {
+                      try {
+                        script.remove();
+                      } catch (e) {}
+                    }, 100);
+                    return true;
+                  } catch (e) {
+                    console.error('فشل حقن السكريبت:', e);
+                    return false;
                   }
-                } catch (e) {}
-                return true;
-              }
-            }
-          }
-          
-          return false;
-        }
-        
-        // محددات للحقول المختلفة
-        const fieldSelectors = {
-          companyName: [
-            'input[name*="company"], input[placeholder*="شركة"], input[id*="company"], input[name*="COMPANY"]',
-            'شركة', 'الشركة', 'company', 'COMPANY', 'الجهة', 'جهة', 'المؤسسة'
-          ],
-          code: [
-            'input[name*="code"], input[placeholder*="كود"], input[id*="code"], input[name*="CODE"]',
-            'كود', 'رمز', 'code', 'CODE', 'رقم الطلب', 'رقم الفاتورة', 'رقم البضاعة', 'رقم'
-          ],
-          senderName: [
-            'input[name*="name"], input[placeholder*="اسم"], input[id*="name"], input[name*="NAME"], input[name*="sender"]',
-            'الاسم', 'اسم', 'اسم المرسل', 'sender', 'SENDER', 'customer', 'المرسل', 'العميل', 'الزبون', 'name'
-          ],
-          phoneNumber: [
-            'input[name*="phone"], input[placeholder*="هاتف"], input[id*="phone"], input[type="tel"], input[name*="PHONE"], input[name*="TEL"]',
-            'هاتف', 'رقم الهاتف', 'phone', 'تليفون', 'موبايل', 'جوال', 'الهاتف', 'الجوال', 'mobile', 'MOBILE', 'PHONE'
-          ],
-          province: [
-            'select[name*="province"], select[id*="province"], select[name*="city"], select[id*="city"], select[name*="region"], select[id*="region"]',
-            'input[name*="province"], input[id*="province"], input[name*="city"], input[id*="city"]',
-            'المحافظة', 'محافظة', 'city', 'province', 'region', 'المدينة', 'مدينة', 'المنطقة', 'منطقة'
-          ],
-          price: [
-            'input[name*="price"], input[placeholder*="سعر"], input[id*="price"], input[name*="amount"], input[name*="PRICE"]',
-            'السعر', 'المبلغ', 'price', 'amount', 'cost', 'المبلغ', 'القيمة', 'سعر', 'الكلفة', 'التكلفة'
-          ]
-        };
-        
-        // تأخير قصير للتأكد من تحميل الصفحة
-        setTimeout(() => {
-          // ملء الحقول
-          let filledFields = 0;
-          
-          if (autofillData.multiple && Array.isArray(autofillData.items) && autofillData.items.length > 0) {
-            // الوضع المتعدد - نستخدم العنصر الأول فقط الآن
-            const item = autofillData.items[0];
-            
-            for (const [field, selectors] of Object.entries(fieldSelectors)) {
-              if (item[field]) {
-                if (fillField(selectors, item[field])) {
-                  filledFields++;
+                };
+                
+                // نحاول تنفيذ السكريبت إذا كانت الصفحة محملة
+                if (targetWindow.document.readyState === 'complete') {
+                  injectScript();
+                } else {
+                  // نضيف مستمع لحدث load إذا لم تكن الصفحة محملة بعد
+                  targetWindow.addEventListener('load', () => {
+                    setTimeout(injectScript, 1000);
+                  });
                 }
-              }
-            }
-          } else {
-            // وضع العنصر الواحد
-            for (const [field, selectors] of Object.entries(fieldSelectors)) {
-              if (autofillData[field]) {
-                if (fillField(selectors, autofillData[field])) {
-                  filledFields++;
+                
+                // نحاول أيضًا باستخدام location.href
+                try {
+                  const jsPrefix = 'javascript:';
+                  // نتأكد من أن الرمز لا يحتوي على بادئة javascript: بالفعل
+                  const jsCodeToExecute = scriptToRun.startsWith(jsPrefix) 
+                    ? scriptToRun.substring(jsPrefix.length) 
+                    : scriptToRun;
+                  
+                  targetWindow.location.href = jsPrefix + encodeURIComponent(jsCodeToExecute);
+                } catch (e) {
+                  console.warn('فشل في استخدام location.href:', e);
                 }
+                
+                updateProgress(100, 'تم تنفيذ سكريبت الإدخال التلقائي بنجاح!', 'success');
+              } catch (scriptError) {
+                console.error('فشل في تنفيذ السكريبت:', scriptError);
+                updateProgress(100, 'حدث خطأ أثناء تنفيذ السكريبت. قد تكون قيود أمان الموقع تمنع ذلك.', 'warning');
               }
+              
+              // إظهار زر الإغلاق
+              document.getElementById('closeBtn').style.display = 'inline-block';
+              document.getElementById('continueBtn').style.display = 'inline-block';
+            } catch (error) {
+              console.error('خطأ في تنفيذ الإدخال التلقائي:', error);
+              updateProgress(100, 'خطأ: ' + error.message, 'error');
+              document.getElementById('closeBtn').style.display = 'inline-block';
             }
           }
           
-          // عرض إشعار
-          const notification = document.createElement('div');
-          notification.style.position = 'fixed';
-          notification.style.top = '10px';
-          notification.style.right = '10px';
-          notification.style.padding = '10px 15px';
-          notification.style.backgroundColor = filledFields > 0 ? '#4CAF50' : '#FF9800';
-          notification.style.color = 'white';
-          notification.style.fontSize = '14px';
-          notification.style.fontWeight = 'bold';
-          notification.style.borderRadius = '5px';
-          notification.style.zIndex = '999999';
-          notification.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
-          notification.style.direction = 'rtl';
+          // تنفيذ العملية فور تحميل الصفحة
+          window.addEventListener('load', executeAutofill);
           
-          if (filledFields > 0) {
-            notification.textContent = \`✓ تم ملء \${filledFields} من الحقول بنجاح!\`;
-          } else {
-            notification.textContent = '⚠️ لم يتم العثور على حقول مناسبة للملء. جرب موقعاً آخر.';
-          }
+          // إضافة مستمعي الأحداث للأزرار
+          document.getElementById('closeBtn').addEventListener('click', () => {
+            window.close();
+          });
           
-          document.body.appendChild(notification);
+          document.getElementById('continueBtn').addEventListener('click', () => {
+            // فتح الموقع المستهدف مرة أخرى مع تمرير السكريبت كجزء من الرابط
+            const bookmarkletUrl = "javascript:" + encodeURIComponent(\`${bookmarkletCode.replace(/`/g, '\\`')}\`);
+            window.open(targetUrl + "#" + bookmarkletUrl, '_blank');
+          });
           
-          // إخفاء الإشعار بعد 5 ثوانٍ
-          setTimeout(() => {
-            notification.style.opacity = '0';
-            notification.style.transition = 'opacity 0.7s';
-            setTimeout(() => notification.remove(), 700);
-          }, 5000);
-        }, 500);
-      } catch (error) {
-        console.error("خطأ في تنفيذ السكريبت:", error);
-        alert("حدث خطأ أثناء تنفيذ السكريبت: " + error.message);
-      }
+          // إضافة مستمع لرسائل من النافذة المستهدفة
+          window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'AUTOFILL_RESULT') {
+              if (event.data.success) {
+                updateProgress(100, 'تم ملء ' + event.data.filledCount + ' حقول بنجاح!', 'success');
+              } else {
+                updateProgress(100, 'لم يتم العثور على حقول مناسبة للملء', 'warning');
+              }
+            }
+          });
+        </script>
+      </body>
+      </html>
       `;
       
-      // فتح نافذة جديدة بالموقع المستهدف
-      const newWindow = window.open(targetUrl, '_blank');
+      // إنشاء بلوب من المحتوى
+      const blob = new Blob([intermediateHtmlContent], { type: 'text/html' });
+      const intermediateUrl = URL.createObjectURL(blob);
       
-      if (!newWindow) {
-        toast({
-          title: "تم منع النوافذ المنبثقة",
-          description: "يرجى السماح بالنوافذ المنبثقة في متصفحك",
-          variant: "destructive"
-        });
-        setIsExecuting(false);
-        return;
-      }
-      
-      // تنفيذ السكريبت في النافذة المستهدفة بعد فترة قصيرة للسماح بتحميل الصفحة
-      setTimeout(() => {
-        try {
-          // تأكد من أن النافذة لا تزال مفتوحة
-          if (newWindow && !newWindow.closed) {
-            try {
-              // محاولة تنفيذ السكريبت على الصفحة المستهدفة
-              // هنا نستخدم Function constructor بدلاً من eval مباشرة
-              // لأن TypeScript لا يعرف eval على كائن Window
-              const scriptFunction = new Function(scriptToRun);
-              newWindow.document.defaultView?.addEventListener('load', () => {
-                try {
-                  scriptFunction.call(newWindow);
-                } catch (err) {
-                  console.error("خطأ في تنفيذ السكريبت:", err);
-                }
-              });
-              
-              // تنفيذ مباشر إذا كانت الصفحة محملة بالفعل
-              if (newWindow.document.readyState === 'complete') {
-                try {
-                  scriptFunction.call(newWindow);
-                } catch (err) {
-                  console.error("خطأ في التنفيذ المباشر للسكريبت:", err);
-                }
-              }
-              
-              toast({
-                title: "تم تنفيذ الإدخال التلقائي",
-                description: "تمت محاولة ملء البيانات في الصفحة المستهدفة",
-                variant: "default"
-              });
-            } catch (evalError) {
-              console.error("خطأ في تنفيذ السكريبت:", evalError);
-              
-              // في حالة الفشل، جرب طريقة بديلة: إنشاء علامة سكريبت
-              try {
-                const scriptTag = newWindow.document.createElement('script');
-                scriptTag.textContent = scriptToRun;
-                newWindow.document.head.appendChild(scriptTag);
-                
-                toast({
-                  title: "تم تنفيذ الإدخال التلقائي",
-                  description: "تمت محاولة ملء البيانات باستخدام طريقة بديلة",
-                  variant: "default"
-                });
-              } catch (scriptError) {
-                console.error("فشل تنفيذ السكريبت بالطرق البديلة:", scriptError);
-                toast({
-                  title: "فشل تنفيذ الإدخال التلقائي",
-                  description: "يبدو أن الموقع يمنع الوصول إلى السكريبت. حاول استخدام زر المفضلة بدلاً من ذلك.",
-                  variant: "destructive"
-                });
-              }
-            }
-          } else {
-            toast({
-              title: "تم إغلاق النافذة",
-              description: "يبدو أن النافذة المستهدفة تم إغلاقها",
-              variant: "destructive"
-            });
-          }
-        } catch (error) {
-          console.error("خطأ عام في تنفيذ السكريبت:", error);
-          toast({
-            title: "فشل تنفيذ الإدخال التلقائي",
-            description: "حدث خطأ غير متوقع. حاول استخدام زر المفضلة بدلاً من ذلك.",
-            variant: "destructive"
-          });
-        }
-        
-        setIsExecuting(false);
-      }, 1000);
+      // فتح صفحة وسيطة
+      window.open(intermediateUrl, '_blank');
       
       // إغلاق مربع الحوار بعد التنفيذ
       setTimeout(() => {
         onClose();
-      }, 1500);
+        
+        // تحرير الموارد
+        URL.revokeObjectURL(intermediateUrl);
+        setIsExecuting(false);
+      }, 2000);
     } catch (error) {
       console.error("خطأ في تنفيذ السكريبت:", error);
       toast({
@@ -366,7 +358,6 @@ const BookmarkletGenerator = ({
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     return !isMobile || (isMobile && !isIOS);
   };
-  
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -446,12 +437,13 @@ const BookmarkletGenerator = ({
           
           {/* اقتراحات إضافية للمستخدم */}
           <div className="text-sm text-muted-foreground bg-muted/30 p-2 rounded-md border border-muted">
-            <p className="font-semibold mb-1">نصائح للاستخدام الأمثل:</p>
+            <p className="font-semibold mb-1">نصائح حول مشكلة رفض السكريبت:</p>
             <ul className="mr-4 list-disc space-y-1 text-xs">
-              <li>قم بفتح الموقع المطلوب قبل النقر على "تنفيذ مباشرة"</li>
-              <li>تأكد من تسجيل الدخول إلى الموقع المستهدف قبل محاولة ملء البيانات</li>
-              <li>إذا لم تعمل الميزة، حاول استخدام زر المفضلة بدلاً من "تنفيذ مباشرة"</li>
-              <li>بعض المواقع قد تمنع الإدخال التلقائي لأسباب أمنية</li>
+              <li>بعض المواقع تمنع تنفيذ السكريبت تلقائياً لأسباب أمنية</li>
+              <li>جرب فتح الموقع المطلوب في نافذة جديدة ثم استخدم زر المفضلة</li>
+              <li>بعض المتصفحات تتطلب تغيير إعدادات الأمان للسماح بتنفيذ السكريبت</li>
+              <li>إذا كنت تستخدم موقع Google، حاول استخدام ميزة زر المفضلة بدلاً من زر التنفيذ المباشر</li>
+              <li>يمكنك تجربة نسخ السكريبت ولصقه في شريط العنوان يدوياً بإضافة "javascript:" في البداية</li>
             </ul>
           </div>
         </div>
