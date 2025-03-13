@@ -48,12 +48,12 @@ export const useImageProcessing = () => {
       return;
     }
     
-    const { isValid, errors } = validateImageData(image);
+    const { isValid, errorMessages } = validateImageData(image);
     
     if (!isValid) {
       toast({
         title: "بيانات غير مكتملة",
-        description: errors?.join("، ") || "يرجى التأكد من اكتمال جميع البيانات المطلوبة",
+        description: errorMessages?.join("، ") || "يرجى التأكد من اكتمال جميع البيانات المطلوبة",
         variant: "destructive"
       });
       return;

@@ -1,14 +1,16 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ImageData } from '@/types/ImageData';
 
 // إنشاء عميل Supabase باستخدام المتغيرات البيئية
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// أو استخدام المفاتيح المحددة مباشرة إذا لم تتوفر المتغيرات البيئية
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://tmqexqmogyvsrtgvsct.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtcWV4cW1vZ3l2c3J0Z3ZzY3F0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3MzkxMTIsImV4cCI6MjA1NzMxNTExMn0.Rc8AIgx6-sWStsO1Xh9P5H91cu6hM5ogxGuthJs8Btk';
 
-// تحقق من وجود متغيرات البيئة
+// تحقق من وجود متغيرات البيئة أو المفاتيح المباشرة
 const hasSupabaseConfig = supabaseUrl && supabaseKey;
 
-// إنشاء عميل Supabase فقط إذا كانت المتغيرات موجودة
+// إنشاء عميل Supabase فقط إذا كانت المفاتيح موجودة
 let supabase: any;
 
 if (hasSupabaseConfig) {

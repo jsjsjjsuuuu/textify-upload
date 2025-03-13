@@ -29,7 +29,8 @@ export const useSubmitToApi = (updateImage: (id: string, fields: Partial<ImageDa
 
         toast({
           title: "تم الإرسال بنجاح",
-          description: result.message || "تم إرسال البيانات إلى النظام"
+          description: result.message || "تم إرسال البيانات إلى النظام",
+          variant: "default"
         });
         console.log("تم الإرسال بنجاح:", result.message);
       } else {
