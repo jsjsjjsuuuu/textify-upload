@@ -9,13 +9,14 @@ import type {
 const TOAST_LIMIT = 20
 const TOAST_REMOVE_DELAY = 1000
 
-export type ToastVariant = NonNullable<ToastProps["variant"]> | "info" | "success"
+export type ToastVariant = NonNullable<ToastProps["variant"]> | "info" | "success" | "warning" | "report"
 
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  report?: Record<string, any>  // إضافة نوع تقرير للإشعارات
 }
 
 const actionTypes = {
@@ -147,12 +148,17 @@ function toast(props: Toast) {
 
   // تحويل الأنواع الإضافية إلى الأنواع المدعومة أساسياً
   let variant = props.variant;
+  
   // تعديل نوع الإشعار للتوافق
   if (variant === "info") {
     variant = "default";
   } else if (variant === "success") {
     variant = "default";
-    // يمكننا إضافة كلاس أو نمط خاص للإشعارات الناجحة هنا إذا لزم الأمر
+  } else if (variant === "warning") {
+    variant = "warning";
+  } else if (variant === "report") {
+    variant = "default";
+    // يمكننا إضافة معالجة خاصة للتقارير هنا
   }
 
   const newToast = {

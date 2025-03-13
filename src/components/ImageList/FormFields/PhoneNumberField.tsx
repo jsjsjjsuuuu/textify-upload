@@ -17,10 +17,32 @@ const PhoneNumberField = ({ value, onChange, isValid, isRequired = false }: Phon
       ? "حقل إلزامي" 
       : "";
   
+  // تحسين تجربة المستخدم بإضافة تنسيق تلقائي للأرقام
+  const handlePhoneNumberChange = (inputValue: string) => {
+    // إزالة جميع الرموز غير الرقمية
+    const digitsOnly = inputValue.replace(/\D/g, '');
+    
+    // إذا كان الرقم يبدأ بـ 964 (رمز العراق الدولي)، نستبدله بـ 0
+    let formattedNumber = digitsOnly;
+    if (formattedNumber.startsWith('964')) {
+      formattedNumber = '0' + formattedNumber.substring(3);
+    }
+    
+    // إذا كان الرقم يبدأ بـ 7 (بدون الصفر)، نضيف 0 في البداية
+    if (formattedNumber.startsWith('7') && formattedNumber.length === 10) {
+      formattedNumber = '0' + formattedNumber;
+    }
+    
+    // تقييد الطول إلى 11 رقم كحد أقصى
+    formattedNumber = formattedNumber.substring(0, 11);
+    
+    onChange(formattedNumber);
+  };
+
   const errorElement = hasError ? (
     <span className="text-xs text-destructive font-normal flex items-center">
       <AlertCircle className="h-3 w-3 ml-1" />
-      خطأ
+      {errorMessage || "خطأ"}
     </span>
   ) : null;
 
@@ -28,7 +50,7 @@ const PhoneNumberField = ({ value, onChange, isValid, isRequired = false }: Phon
     <TextField
       label={`رقم الهاتف:${isRequired ? ' *' : ''}`}
       value={value || ''}
-      onChange={onChange}
+      onChange={handlePhoneNumberChange}
       placeholder="أدخل رقم الهاتف"
       hasError={hasError}
       errorMessage={errorMessage}
