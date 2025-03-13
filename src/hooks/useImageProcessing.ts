@@ -25,7 +25,12 @@ export const useImageProcessing = () => {
   
   const { processWithOcr } = useOcrProcessing();
   const { useGemini, processWithGemini } = useGeminiProcessing();
-  const { handleSubmitToApi: submitToApi, isSubmitting: apiSubmitting } = useSubmitToApi(updateImage);
+  const { 
+    handleSubmitToApi: submitToApi, 
+    handleRetrySubmit: retrySubmit,
+    isSubmitting: apiSubmitting,
+    retryCount 
+  } = useSubmitToApi(updateImage);
   const { handleCustomTextChange } = useCustomTextHandlers(handleTextChange);
   const { validateImageData } = useDataValidation();
   const { isProcessing, processingProgress, handleFileChange } = useFileProcessing(
@@ -62,16 +67,32 @@ export const useImageProcessing = () => {
     submitToApi(id, image);
   };
 
+  const handleRetrySubmitToApi = (id: string) => {
+    const image = images.find(img => img.id === id);
+    if (!image) {
+      toast({
+        title: "خطأ في الإرسال",
+        description: "الصورة غير موجودة",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    retrySubmit(id, image);
+  };
+
   return {
     images,
     isLoading,
     isProcessing,
     processingProgress,
-    isSubmitting: apiSubmitting, // استخدام حالة التقديم من useSubmitToApi
+    isSubmitting: apiSubmitting,
+    retryCount,
     useGemini,
     handleFileChange,
     handleTextChange: handleCustomTextChange,
     handleDelete: deleteImage,
-    handleSubmitToApi
+    handleSubmitToApi,
+    handleRetrySubmitToApi
   };
 };
