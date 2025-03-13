@@ -40,11 +40,25 @@ const CardItem = ({
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <ImageViewer 
-            image={image} 
-            onImageClick={() => onImageClick(image)} 
-            showZoom={isHovered}
-          />
+          <div className="relative">
+            <div 
+              className="cursor-pointer"
+              onClick={() => onImageClick(image)}
+            >
+              {image.previewUrl && (
+                <img 
+                  src={image.previewUrl} 
+                  alt={`صورة ${image.number || 'بدون رقم'}`} 
+                  className="w-full h-auto rounded-md object-contain max-h-[300px]"
+                />
+              )}
+              {isHovered && (
+                <div className="absolute inset-0 bg-black/20 rounded-md flex items-center justify-center">
+                  <span className="bg-black/70 text-white px-2 py-1 rounded text-sm">اضغط للتكبير</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
         <div className="flex flex-col">
           <div className="flex-grow">

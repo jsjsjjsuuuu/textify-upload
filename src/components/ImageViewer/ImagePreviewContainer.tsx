@@ -213,7 +213,7 @@ const ImagePreviewContainer = ({
           }}
           images={images}
           updateImage={updateImage}
-          selectedCompanyId={selectedCompanyId}
+          companyId={selectedCompanyId}
         />
       )}
     </>
