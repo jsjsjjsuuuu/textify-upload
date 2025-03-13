@@ -9,6 +9,15 @@ export interface TextSubmission {
   text: string;
   source: string;
   date: string;
+  metadata?: {
+    senderName?: string;
+    phoneNumber?: string;
+    province?: string;
+    price?: string;
+    companyName?: string;
+    code?: string;
+    [key: string]: any;
+  };
 }
 
 /**

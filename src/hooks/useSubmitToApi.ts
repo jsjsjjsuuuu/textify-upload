@@ -18,13 +18,42 @@ export const useSubmitToApi = (updateImage: (id: string, fields: Partial<ImageDa
       return;
     }
     
+    // التأكد من صحة رقم الهاتف إذا كان موجودًا
+    if (image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, '').length !== 11) {
+      toast({
+        title: "خطأ في رقم الهاتف",
+        description: "رقم الهاتف غير صالح، يجب أن يتكون من 11 رقم",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // إذا كانت الصورة قد تم إرسالها مسبقًا
+    if (image.submitted) {
+      toast({
+        title: "تم الإرسال مسبقًا",
+        description: "تم إرسال هذه البيانات مسبقًا",
+        variant: "default"
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       const result = await submitTextToApi({
         imageId: id,
         text: image.extractedText,
         source: image.file.name,
-        date: image.date.toISOString()
+        date: image.date.toISOString(),
+        // إضافة بيانات إضافية للإرسال
+        metadata: {
+          senderName: image.senderName || "",
+          phoneNumber: image.phoneNumber || "",
+          province: image.province || "",
+          price: image.price || "",
+          companyName: image.companyName || "",
+          code: image.code || ""
+        }
       });
       
       if (result.success) {
@@ -34,19 +63,26 @@ export const useSubmitToApi = (updateImage: (id: string, fields: Partial<ImageDa
           title: "تم الإرسال بنجاح",
           description: result.message
         });
+        
+        return true;
       } else {
         toast({
           title: "فشل في الإرسال",
           description: result.message,
           variant: "destructive"
         });
+        
+        return false;
       }
     } catch (error) {
+      console.error("خطأ في إرسال البيانات:", error);
       toast({
         title: "خطأ في الإرسال",
         description: "حدث خطأ أثناء الاتصال بالخادم",
         variant: "destructive"
       });
+      
+      return false;
     } finally {
       setIsSubmitting(false);
     }

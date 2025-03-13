@@ -5,8 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import ImageList from "@/components/ImageList";
 import ImageTable from "@/components/ImageTable";
 import BatchExportDialog from "@/components/BatchExportDialog";
+import BatchSubmitDialog from "@/components/BatchSubmitDialog";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, Upload } from "lucide-react";
+import { FileSpreadsheet, Upload, Send } from "lucide-react";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -27,6 +28,7 @@ const ImagePreviewContainer = ({
 }: ImagePreviewContainerProps) => {
   const { toast } = useToast();
   const [isBatchExportOpen, setIsBatchExportOpen] = useState(false);
+  const [isBatchSubmitOpen, setIsBatchSubmitOpen] = useState(false);
 
   const handleImageClick = async (image: ImageData) => {
     console.log("Image clicked:", image.id, image.previewUrl);
@@ -35,20 +37,40 @@ const ImagePreviewContainer = ({
 
   // احسب عدد الصور التي تم معالجتها بنجاح
   const completedImagesCount = images.filter(img => img.status === "completed").length;
+  
+  // احسب عدد الصور المؤهلة للإرسال (المكتملة وغير المرسلة)
+  const submittableImagesCount = images.filter(img => 
+    img.status === "completed" && 
+    !img.submitted && 
+    (img.phoneNumber ? img.phoneNumber.replace(/[^\d]/g, '').length === 11 : true)
+  ).length;
 
   return (
     <>
       <div className="grid grid-cols-1 gap-8">
-        {completedImagesCount > 1 && (
-          <div className="flex justify-end">
-            <Button 
-              onClick={() => setIsBatchExportOpen(true)} 
-              variant="outline"
-              className="bg-brand-coral/10 border-brand-coral/30 text-brand-coral hover:bg-brand-coral/20 hover:border-brand-coral/50"
-            >
-              <Upload size={16} className="ml-2" />
-              تصدير دفعة واحدة ({completedImagesCount} صورة)
-            </Button>
+        {(completedImagesCount > 1 || submittableImagesCount > 1) && (
+          <div className="flex justify-end gap-2">
+            {submittableImagesCount > 1 && (
+              <Button 
+                onClick={() => setIsBatchSubmitOpen(true)} 
+                variant="default"
+                className="bg-brand-green hover:bg-brand-green/90"
+              >
+                <Send size={16} className="ml-2" />
+                إرسال دفعة واحدة ({submittableImagesCount} صورة)
+              </Button>
+            )}
+            
+            {completedImagesCount > 1 && (
+              <Button 
+                onClick={() => setIsBatchExportOpen(true)} 
+                variant="outline"
+                className="bg-brand-coral/10 border-brand-coral/30 text-brand-coral hover:bg-brand-coral/20 hover:border-brand-coral/50"
+              >
+                <Upload size={16} className="ml-2" />
+                تصدير دفعة واحدة ({completedImagesCount} صورة)
+              </Button>
+            )}
           </div>
         )}
 
@@ -76,6 +98,13 @@ const ImagePreviewContainer = ({
         isOpen={isBatchExportOpen} 
         onClose={() => setIsBatchExportOpen(false)} 
         images={images}
+      />
+      
+      <BatchSubmitDialog
+        isOpen={isBatchSubmitOpen}
+        onClose={() => setIsBatchSubmitOpen(false)}
+        images={images}
+        onSubmit={onSubmit}
       />
     </>
   );
