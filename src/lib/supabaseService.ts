@@ -14,9 +14,13 @@ const hasSupabaseConfig = supabaseUrl && supabaseKey;
 let supabase: any;
 
 if (hasSupabaseConfig) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-  console.log("تم الاتصال بـ Supabase بنجاح");
-  console.log("عنوان URL:", supabaseUrl); // سجل عنوان URL للتحقق
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey);
+    console.log("تم الاتصال بـ Supabase بنجاح");
+    console.log("عنوان URL:", supabaseUrl); // سجل عنوان URL للتحقق
+  } catch (error) {
+    console.error("فشل في الاتصال بـ Supabase:", error);
+  }
 } else {
   console.warn("متغيرات بيئة Supabase غير متوفرة - سيتم تخزين البيانات محلياً فقط");
   // إنشاء نسخة وهمية من عميل Supabase
@@ -141,6 +145,8 @@ export const fetchCompanies = async (): Promise<{ success: boolean; data?: DbCom
       return { success: true, data: localStorageDB.companies };
     }
     
+    console.log("محاولة استرجاع الشركات من Supabase...");
+    
     // استخدام Supabase لاسترجاع الشركات
     const { data, error } = await supabase
       .from('companies')
@@ -149,13 +155,13 @@ export const fetchCompanies = async (): Promise<{ success: boolean; data?: DbCom
       
     if (error) {
       console.error('خطأ في استرجاع الشركات:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: JSON.stringify(error, null, 2) };
     }
     
     console.log('تم استرجاع الشركات بنجاح:', data?.length || 0, 'شركة');
     return { success: true, data };
   } catch (error) {
-    console.error('خطأ غير متوقع:', error);
+    console.error('خطأ غير متوقع في استرجاع الشركات:', error);
     return { success: false, error: String(error) };
   }
 };
@@ -407,6 +413,8 @@ export const fetchAllImages = async (companyId?: string): Promise<{ success: boo
       return { success: true, data: filteredImages };
     }
     
+    console.log("محاولة استرجاع الصور من Supabase...", companyId ? `للشركة: ${companyId}` : "لجميع الشركات");
+    
     // استخدام Supabase إذا كان متاحاً
     let query = supabase
       .from('image_data')
@@ -422,13 +430,13 @@ export const fetchAllImages = async (companyId?: string): Promise<{ success: boo
       
     if (error) {
       console.error('خطأ في استرجاع البيانات:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: JSON.stringify(error, null, 2) };
     }
     
     console.log('تم استرجاع البيانات بنجاح:', data?.length || 0, 'صورة');
     return { success: true, data }; // تصحيح هنا: إرجاع البيانات الفعلية بدلاً من مصفوفة فارغة
   } catch (error) {
-    console.error('خطأ غير متوقع:', error);
+    console.error('خطأ غير متوقع في استرجاع الصور:', error);
     return { success: false, error: String(error) };
   }
 };

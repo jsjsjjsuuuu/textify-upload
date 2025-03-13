@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 export const useImageState = () => {
   const [images, setImages] = useState<ImageData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -22,6 +23,8 @@ export const useImageState = () => {
   useEffect(() => {
     const loadImages = async () => {
       setIsLoading(true);
+      setConnectionError(null);
+      
       try {
         // استخدام معرف الشركة النشطة من المستخدم الحالي إذا كان متاحًا
         const companyId = user?.activeCompanyId;
@@ -58,6 +61,7 @@ export const useImageState = () => {
           console.log("تم تحميل", loadedImages.length, "صورة بنجاح");
         } else if (error) {
           console.error('خطأ في جلب الصور:', error);
+          setConnectionError(error);
           toast({
             title: "خطأ في تحميل البيانات",
             description: error,
@@ -66,6 +70,7 @@ export const useImageState = () => {
         }
       } catch (e) {
         console.error('خطأ غير متوقع:', e);
+        setConnectionError(String(e));
       } finally {
         setIsLoading(false);
       }
@@ -167,6 +172,7 @@ export const useImageState = () => {
   return {
     images: getSortedImages(),
     isLoading,
+    connectionError,
     addImage,
     updateImage,
     deleteImage,
