@@ -20,6 +20,7 @@ interface CardItemProps {
   onDelete: (id: string) => void;
   onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
+  onExport: (imageId: string) => void;
 }
 
 const CardItem = ({ 
@@ -29,7 +30,8 @@ const CardItem = ({
   onTextChange, 
   onDelete, 
   onSubmit, 
-  formatDate 
+  formatDate,
+  onExport
 }: CardItemProps) => {
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
@@ -40,7 +42,7 @@ const CardItem = ({
   
   const handleExport = (imageId: string) => {
     if (imageId === image.id) {
-      setIsBookmarkletOpen(true);
+      onExport(imageId);
     }
   };
 
