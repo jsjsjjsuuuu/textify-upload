@@ -6,7 +6,7 @@ import ImagePreviewContainer from "@/components/ImageViewer/ImagePreviewContaine
 import LearningStats from "@/components/LearningStats";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -23,13 +23,19 @@ const Index = () => {
   } = useImageProcessing();
   
   const { toast } = useToast();
+  const isInitialized = useRef(false);
 
   // إضافة معالج الرسائل للتواصل بين النوافذ المختلفة
   useEffect(() => {
     const handleMessages = (event: MessageEvent) => {
       console.log("تم استلام رسالة من نافذة أخرى:", event.data);
       
-      if (event.data && event.data.type === 'autofill-data-request') {
+      // التحقق من أن الرسالة صالحة
+      if (!event.data || typeof event.data !== 'object') {
+        return;
+      }
+      
+      if (event.data.type === 'autofill-data-request') {
         // عندما تطلب نافذة أخرى البيانات، نرسلها
         const imageId = event.data.imageId;
         const selectedImage = images.find(img => img.id === imageId);
@@ -45,25 +51,52 @@ const Index = () => {
           });
           
           // إرسال البيانات للنافذة الطالبة
-          event.source.postMessage({
-            type: 'autofill-data-response',
-            data: {
-              companyName: selectedImage.companyName,
-              code: selectedImage.code,
-              senderName: selectedImage.senderName,
-              phoneNumber: selectedImage.phoneNumber,
-              province: selectedImage.province,
-              price: selectedImage.price
-            }
-          }, '*');
+          try {
+            event.source.postMessage({
+              type: 'autofill-data-response',
+              data: {
+                companyName: selectedImage.companyName || "",
+                code: selectedImage.code || "",
+                senderName: selectedImage.senderName || "",
+                phoneNumber: selectedImage.phoneNumber || "",
+                province: selectedImage.province || "",
+                price: selectedImage.price || ""
+              }
+            }, '*');
+            
+            toast({
+              title: "تم إرسال البيانات",
+              description: "تم إرسال بيانات الإدخال التلقائي إلى النافذة المستهدفة",
+              variant: "default"
+            });
+          } catch (error) {
+            console.error("خطأ في إرسال البيانات:", error);
+            toast({
+              title: "فشل إرسال البيانات",
+              description: "تعذر إرسال البيانات إلى النافذة المستهدفة",
+              variant: "destructive"
+            });
+          }
+        } else if (!selectedImage) {
+          console.error("الصورة المطلوبة غير موجودة:", imageId);
           
-          toast({
-            title: "تم إرسال البيانات",
-            description: "تم إرسال بيانات الإدخال التلقائي إلى النافذة المستهدفة",
-            variant: "default"
-          });
+          // إذا لم يتم العثور على الصورة بالمعرف المحدد، نرسل بيانات فارغة
+          if (event.source && event.source instanceof Window) {
+            event.source.postMessage({
+              type: 'autofill-data-response',
+              data: {
+                companyName: "",
+                code: "",
+                senderName: "",
+                phoneNumber: "",
+                province: "",
+                price: ""
+              },
+              error: "الصورة المطلوبة غير موجودة"
+            }, '*');
+          }
         }
-      } else if (event.data && event.data.type === 'autofill-result') {
+      } else if (event.data.type === 'autofill-result') {
         // استلام نتيجة عملية الإدخال التلقائي
         if (event.data.success) {
           toast({
@@ -81,7 +114,10 @@ const Index = () => {
       }
     };
     
+    // إضافة مستمع الرسائل وتسجيل جاهزية النافذة
     window.addEventListener("message", handleMessages);
+    isInitialized.current = true;
+    console.log("تم تهيئة معالج الرسائل بين النوافذ");
     
     return () => {
       window.removeEventListener("message", handleMessages);
