@@ -1,197 +1,533 @@
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImageData } from "@/types/ImageData";
-import { DeliveryCompany } from "@/types/DeliveryCompany";
-import { getDeliveryCompanyById } from "@/utils/deliveryCompanies/companyData";
+import { getActiveDeliveryCompanies } from "@/utils/deliveryCompanies/companyData";
 import { useCompanyAutofill } from "@/hooks/useCompanyAutofill";
 import { useToast } from "@/hooks/use-toast";
-import { PlayIcon, ExternalLinkIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { PlayIcon, PauseIcon, StopIcon, Settings2Icon, CheckIcon, XIcon, AlertCircleIcon } from "lucide-react";
 
 interface BatchCompanyAutofillProps {
   isOpen: boolean;
   onClose: () => void;
   images: ImageData[];
-  companyId: string;
+  updateImage: (id: string, fields: Partial<ImageData>) => void;
 }
 
-const BatchCompanyAutofill = ({ isOpen, onClose, images, companyId }: BatchCompanyAutofillProps) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isExecuting, setIsExecuting] = useState(false);
+const BatchCompanyAutofill: React.FC<BatchCompanyAutofillProps> = ({ 
+  isOpen, 
+  onClose, 
+  images,
+  updateImage
+}) => {
   const { toast } = useToast();
-  const company = getDeliveryCompanyById(companyId);
+  const { executeBatchAutofill, isAutofilling } = useCompanyAutofill();
   
-  const { executeAutofill } = useCompanyAutofill();
+  // حالة الدفعة
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [selectedImages, setSelectedImages] = useState<Record<string, boolean>>({});
+  const [progress, setProgress] = useState(0);
+  const [results, setResults] = useState<Record<string, any>>({});
+  const [isRunning, setIsRunning] = useState(false);
   
-  // تصفية الصور المكتملة فقط
-  const completedImages = images.filter(img => img.status === "completed");
+  // إعدادات الإدخال التلقائي
+  const [retryCount, setRetryCount] = useState(3);
+  const [delayBetweenRetries, setDelayBetweenRetries] = useState(5000);
+  const [delayBetweenRequests, setDelayBetweenRequests] = useState(5000);
+  const [maxConcurrent, setMaxConcurrent] = useState(2);
+  const [clickSubmitButton, setClickSubmitButton] = useState(true);
   
-  // الانتقال للصورة التالية
-  const goToNextImage = () => {
-    if (currentIndex < completedImages.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+  // إحصائيات
+  const [stats, setStats] = useState({
+    total: 0,
+    completed: 0,
+    success: 0,
+    failed: 0
+  });
+  
+  // الحصول على قائمة الشركات النشطة
+  const companies = getActiveDeliveryCompanies();
+  
+  // إعادة تعيين حالة الإرسال عند إعادة فتح الحوار
+  useEffect(() => {
+    if (isOpen) {
+      setProgress(0);
+      setResults({});
+      setIsRunning(false);
+      
+      // تحديد الصور المكتملة تلقائيًا
+      const initialSelectedImages: Record<string, boolean> = {};
+      images.forEach(img => {
+        if (img.status === "completed" && !img.submitted) {
+          initialSelectedImages[img.id] = true;
+        } else {
+          initialSelectedImages[img.id] = false;
+        }
+      });
+      setSelectedImages(initialSelectedImages);
+      
+      // تحديث الإحصائيات
+      updateStats(initialSelectedImages);
     }
+  }, [isOpen, images]);
+  
+  // تحديث الإحصائيات
+  const updateStats = (selected: Record<string, boolean>) => {
+    const selectedCount = Object.values(selected).filter(Boolean).length;
+    setStats({
+      total: selectedCount,
+      completed: 0,
+      success: 0,
+      failed: 0
+    });
   };
   
-  // الانتقال للصورة السابقة
-  const goToPrevImage = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
-    }
+  // تحديد أو إلغاء تحديد جميع الصور
+  const handleSelectAll = (select: boolean) => {
+    const newSelected: Record<string, boolean> = {};
+    images.forEach(img => {
+      if (img.status === "completed") {
+        newSelected[img.id] = select;
+      } else {
+        newSelected[img.id] = false;
+      }
+    });
+    setSelectedImages(newSelected);
+    updateStats(newSelected);
   };
   
-  // الحصول على الصورة الحالية
-  const currentImage = completedImages[currentIndex];
+  // تبديل تحديد صورة معينة
+  const handleToggleImage = (id: string, selected: boolean) => {
+    const newSelected = { ...selectedImages, [id]: selected };
+    setSelectedImages(newSelected);
+    updateStats(newSelected);
+  };
   
-  // وظيفة فتح موقع الشركة في نافذة جديدة
-  const handleOpenWebsite = () => {
-    if (!company) return;
-    
-    const url = company.formUrl || company.websiteUrl;
-    if (url) {
-      window.open(url, `_blank_${company.id}`);
-    } else {
+  // بدء عملية الإدخال التلقائي المجمع
+  const handleStartBatchProcess = async () => {
+    if (!selectedCompanyId) {
       toast({
         title: "خطأ",
-        description: "لم يتم تحديد رابط للموقع الإلكتروني لهذه الشركة",
+        description: "يرجى اختيار شركة التوصيل أولاً",
         variant: "destructive"
       });
+      return;
     }
-  };
-  
-  // وظيفة تنفيذ الإدخال التلقائي
-  const handleExecuteAutofill = async () => {
-    if (!company || !currentImage) return;
     
-    setIsExecuting(true);
-    try {
-      await executeAutofill(companyId, currentImage);
-      // الانتقال تلقائيًا للصورة التالية بعد التنفيذ الناجح
-      if (currentIndex < completedImages.length - 1) {
-        setTimeout(() => {
-          goToNextImage();
-        }, 1000);
+    // التحقق من وجود صور محددة
+    const selectedIds = Object.entries(selectedImages)
+      .filter(([_, selected]) => selected)
+      .map(([id]) => id);
+    
+    if (selectedIds.length === 0) {
+      toast({
+        title: "خطأ",
+        description: "يرجى تحديد صورة واحدة على الأقل",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // تجميع الصور المحددة
+    const selectedImagesData = images.filter(img => selectedImages[img.id]);
+    
+    // إعداد خيارات الإدخال التلقائي
+    const options = {
+      retryCount,
+      delayBetweenRetries,
+      delayBetweenRequests,
+      maxConcurrent,
+      clickSubmitButton,
+      onProgress: (completed: number, total: number) => {
+        // تحديث شريط التقدم
+        const percentage = Math.floor((completed / total) * 100);
+        setProgress(percentage);
+        
+        // تحديث الإحصائيات
+        setStats(prev => ({
+          ...prev,
+          completed
+        }));
+      },
+      onItemComplete: (imageId: string, result: any) => {
+        // تحديث نتائج العنصر
+        setResults(prev => ({
+          ...prev,
+          [imageId]: result
+        }));
+        
+        // تحديث بيانات الصورة
+        const image = images.find(img => img.id === imageId);
+        if (image) {
+          const currentAutoFillResults = image.autoFillResult || [];
+          const company = companies.find(c => c.id === selectedCompanyId);
+          
+          updateImage(imageId, {
+            autoFillResult: [
+              ...currentAutoFillResults,
+              {
+                ...result,
+                company: company?.name || selectedCompanyId,
+                timestamp: new Date().toISOString()
+              }
+            ]
+          });
+        }
+        
+        // تحديث إحصائيات النجاح/الفشل
+        setStats(prev => ({
+          ...prev,
+          success: result.success ? prev.success + 1 : prev.success,
+          failed: !result.success ? prev.failed + 1 : prev.failed
+        }));
       }
+    };
+    
+    // بدء العملية
+    setIsRunning(true);
+    toast({
+      title: "بدء الإدخال التلقائي المجمع",
+      description: `جاري معالجة ${selectedImagesData.length} صورة...`,
+    });
+    
+    try {
+      await executeBatchAutofill(selectedCompanyId, selectedImagesData, options);
     } finally {
-      setIsExecuting(false);
+      setIsRunning(false);
     }
   };
   
-  if (!company) return null;
+  // إيقاف العملية
+  const handleStopProcess = () => {
+    // يمكن تنفيذ الإيقاف المؤقت/الدائم هنا
+    setIsRunning(false);
+    toast({
+      title: "تم إيقاف العملية",
+      description: "تم إيقاف عملية الإدخال التلقائي المجمع",
+    });
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {company.logoUrl && (
-              <img 
-                src={company.logoUrl} 
-                alt={company.name} 
-                className="h-6 w-6 object-contain"
-              />
-            )}
-            إدخال متعدد - {company.name}
-          </DialogTitle>
+          <DialogTitle>الإدخال التلقائي المجمع</DialogTitle>
           <DialogDescription>
-            إدخال {completedImages.length} صورة في نموذج شركة {company.name}
+            إدخال البيانات تلقائياً في عدة طلبات دفعة واحدة
           </DialogDescription>
         </DialogHeader>
         
-        {completedImages.length > 0 ? (
-          <div className="space-y-4 my-4">
-            {/* عداد الصور */}
-            <div className="flex justify-between items-center">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={goToPrevImage}
-                disabled={currentIndex === 0}
-              >
-                <ChevronRightIcon className="h-4 w-4" />
-              </Button>
+        <Tabs defaultValue="selection" className="flex-1 overflow-hidden flex flex-col">
+          <TabsList className="mb-4">
+            <TabsTrigger value="selection">تحديد الصور</TabsTrigger>
+            <TabsTrigger value="settings">الإعدادات</TabsTrigger>
+            <TabsTrigger value="results">النتائج</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="selection" className="flex-1 overflow-hidden flex flex-col">
+            <div className="mb-4">
+              <div className="mb-4">
+                <Label htmlFor="company-select">اختر شركة التوصيل:</Label>
+                <select 
+                  id="company-select"
+                  className="w-full p-2 border rounded mt-1 bg-background"
+                  value={selectedCompanyId}
+                  onChange={(e) => setSelectedCompanyId(e.target.value)}
+                  disabled={isRunning}
+                >
+                  <option value="">-- اختر شركة --</option>
+                  {companies.map(company => (
+                    <option key={company.id} value={company.id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               
-              <span className="text-sm font-medium">
-                صورة {currentIndex + 1} من {completedImages.length}
-              </span>
-              
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={goToNextImage}
-                disabled={currentIndex === completedImages.length - 1}
-              >
-                <ChevronLeftIcon className="h-4 w-4" />
-              </Button>
+              <div className="flex justify-between mb-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleSelectAll(true)}
+                  disabled={isRunning}
+                >
+                  تحديد الكل
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleSelectAll(false)}
+                  disabled={isRunning}
+                >
+                  إلغاء تحديد الكل
+                </Button>
+              </div>
             </div>
             
-            {/* عرض البيانات الحالية */}
-            <div className="bg-muted/50 p-3 rounded-md space-y-2">
-              <h3 className="text-sm font-medium">البيانات التي سيتم إدخالها:</h3>
-              <ul className="space-y-1 text-sm">
-                {company.fields.map(field => {
-                  const value = currentImage[field.name as keyof ImageData] as string;
-                  return (
-                    <li key={field.name} className="flex justify-between">
-                      <span className="text-muted-foreground">{field.description || field.name}:</span>
-                      <span className="font-medium">{value || "—"}</span>
-                    </li>
-                  );
-                })}
-              </ul>
+            <div className="flex-1 overflow-hidden">
+              <ScrollArea className="h-[300px] border rounded p-2">
+                <div className="space-y-2">
+                  {images.map(image => (
+                    <div key={image.id} className="flex items-center p-2 border-b">
+                      <Checkbox 
+                        id={`image-${image.id}`}
+                        checked={!!selectedImages[image.id]}
+                        onCheckedChange={(checked) => handleToggleImage(image.id, !!checked)}
+                        disabled={image.status !== "completed" || isRunning}
+                      />
+                      <div className="mr-2 flex-1">
+                        <Label 
+                          htmlFor={`image-${image.id}`}
+                          className={image.status !== "completed" ? "text-muted-foreground" : ""}
+                        >
+                          {image.senderName || "بدون اسم"} - {image.phoneNumber || "بدون رقم"}
+                        </Label>
+                        {image.status !== "completed" && (
+                          <p className="text-xs text-red-500">
+                            (غير مكتمل - لا يمكن تحديده)
+                          </p>
+                        )}
+                        {image.submitted && (
+                          <p className="text-xs text-yellow-500">
+                            (تم إرساله مسبقاً)
+                          </p>
+                        )}
+                      </div>
+                      {results[image.id] && (
+                        <div className="ml-2">
+                          {results[image.id].success ? (
+                            <CheckIcon className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <XIcon className="h-5 w-5 text-red-500" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {images.length === 0 && (
+                    <div className="text-center py-10 text-muted-foreground">
+                      لا توجد صور للعرض
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </div>
             
-            {/* أزرار التحكم */}
-            <div className="flex justify-between items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full"
-                onClick={handleOpenWebsite}
-              >
-                <ExternalLinkIcon className="ml-2 h-4 w-4" />
-                فتح الموقع
-              </Button>
-              
-              <Button 
-                onClick={handleExecuteAutofill}
-                disabled={isExecuting}
-                className="w-full bg-brand-green hover:bg-brand-green/90"
-              >
-                {isExecuting ? (
-                  <span className="flex items-center">
-                    <span className="animate-spin ml-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                    جاري التنفيذ...
+            <div className="mt-4 bg-muted/30 p-2 rounded">
+              <div className="text-sm">
+                الإحصائيات: {stats.completed} / {stats.total} تم معالجتها
+                {stats.completed > 0 && (
+                  <span className="mr-2">
+                    ({stats.success} ناجحة، {stats.failed} فاشلة)
                   </span>
+                )}
+              </div>
+              <Progress value={progress} className="h-2 mt-1" />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="settings" className="flex-1 overflow-auto">
+            <ScrollArea className="h-[300px]">
+              <div className="space-y-4 p-2">
+                <div>
+                  <Label htmlFor="retry-count">عدد المحاولات لكل صورة:</Label>
+                  <div className="flex items-center mt-1">
+                    <Input 
+                      id="retry-count"
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={retryCount}
+                      onChange={(e) => setRetryCount(parseInt(e.target.value) || 3)}
+                      disabled={isRunning}
+                    />
+                    <span className="mr-2 text-muted-foreground text-sm">محاولات</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    عدد المحاولات التي سيتم إجراؤها لملء البيانات في حالة الفشل.
+                  </p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="delay-between-retries">المدة بين المحاولات:</Label>
+                  <div className="flex items-center mt-1">
+                    <Input 
+                      id="delay-between-retries"
+                      type="number"
+                      min={1000}
+                      max={30000}
+                      step={1000}
+                      value={delayBetweenRetries}
+                      onChange={(e) => setDelayBetweenRetries(parseInt(e.target.value) || 5000)}
+                      disabled={isRunning}
+                    />
+                    <span className="mr-2 text-muted-foreground text-sm">مللي ثانية</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    المدة الزمنية بين المحاولات المتتالية لنفس الصورة.
+                  </p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="delay-between-requests">المدة بين الطلبات:</Label>
+                  <div className="flex items-center mt-1">
+                    <Input 
+                      id="delay-between-requests"
+                      type="number"
+                      min={1000}
+                      max={60000}
+                      step={1000}
+                      value={delayBetweenRequests}
+                      onChange={(e) => setDelayBetweenRequests(parseInt(e.target.value) || 5000)}
+                      disabled={isRunning}
+                    />
+                    <span className="mr-2 text-muted-foreground text-sm">مللي ثانية</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    المدة الزمنية بين مجموعات الطلبات المتتالية.
+                  </p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="max-concurrent">أقصى عدد للطلبات المتزامنة:</Label>
+                  <div className="flex items-center mt-1">
+                    <Input 
+                      id="max-concurrent"
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={maxConcurrent}
+                      onChange={(e) => setMaxConcurrent(parseInt(e.target.value) || 2)}
+                      disabled={isRunning}
+                    />
+                    <span className="mr-2 text-muted-foreground text-sm">طلبات</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    عدد الطلبات التي سيتم تنفيذها بشكل متزامن.
+                  </p>
+                </div>
+                
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="click-submit"
+                    checked={clickSubmitButton}
+                    onCheckedChange={(checked) => setClickSubmitButton(!!checked)}
+                    disabled={isRunning}
+                  />
+                  <Label htmlFor="click-submit">النقر تلقائياً على زر الحفظ بعد ملء البيانات</Label>
+                </div>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+          
+          <TabsContent value="results" className="flex-1 overflow-hidden">
+            <ScrollArea className="h-[300px] border rounded p-2">
+              <div className="space-y-2">
+                {Object.keys(results).length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    لم يتم تنفيذ أي عمليات بعد
+                  </div>
                 ) : (
+                  Object.entries(results).map(([imageId, result]) => {
+                    const image = images.find(img => img.id === imageId);
+                    return (
+                      <div key={imageId} className="border rounded p-3 mb-2">
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="font-medium flex items-center">
+                            {result.success ? (
+                              <CheckIcon className="h-4 w-4 text-green-500 ml-1" />
+                            ) : (
+                              <AlertCircleIcon className="h-4 w-4 text-red-500 ml-1" />
+                            )}
+                            {image?.senderName || "بدون اسم"}
+                          </div>
+                          <Badge variant={result.success ? "success" : "destructive"}>
+                            {result.success ? "ناجح" : "فاشل"}
+                          </Badge>
+                        </div>
+                        
+                        <div className="text-sm text-muted-foreground mb-1">
+                          {result.message}
+                        </div>
+                        
+                        {result.fieldsFound !== undefined && (
+                          <div className="text-xs">
+                            الحقول: {result.fieldsFilled || 0} من {result.fieldsFound || 0} تم ملؤها
+                          </div>
+                        )}
+                        
+                        {result.error && (
+                          <div className="text-xs text-red-500 mt-1">
+                            الخطأ: {result.error}
+                          </div>
+                        )}
+                        
+                        {result.retryCount !== undefined && result.retryCount > 0 && (
+                          <div className="text-xs text-yellow-500 mt-1">
+                            تمت المحاولة {result.retryCount} مرة
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
+        
+        <DialogFooter className="pt-4 flex justify-between space-x-2 space-x-reverse">
+          <div className="flex space-x-2 space-x-reverse">
+            <Button
+              variant={isRunning ? "destructive" : "default"}
+              onClick={isRunning ? handleStopProcess : handleStartBatchProcess}
+              disabled={isAutofilling && !isRunning}
+            >
+              {isRunning ? (
+                <>
+                  <StopIcon className="ml-2 h-4 w-4" />
+                  إيقاف
+                </>
+              ) : (
+                <>
+                  <PlayIcon className="ml-2 h-4 w-4" />
+                  بدء
+                </>
+              )}
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isRunning}
+            >
+              إغلاق
+            </Button>
+          </div>
+          
+          <div className="text-sm text-muted-foreground">
+            {stats.total > 0 && (
+              <>
+                {stats.completed} من {stats.total} تم معالجتها
+                {stats.completed > 0 && (
                   <>
-                    <PlayIcon className="ml-2 h-4 w-4" />
-                    تنفيذ مباشرة
+                    {" - "}
+                    <span className="text-green-500">{stats.success} ناجحة</span>
+                    {", "}
+                    <span className="text-red-500">{stats.failed} فاشلة</span>
                   </>
                 )}
-              </Button>
-            </div>
-            
-            {/* تعليمات الاستخدام */}
-            <div className="text-sm text-muted-foreground">
-              <p>يمكنك التنقل بين الصور باستخدام الأزرار أعلاه ومن ثم تنفيذ الإدخال التلقائي لكل صورة.</p>
-            </div>
+              </>
+            )}
           </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            لا توجد صور مكتملة متاحة للإدخال التلقائي
-          </div>
-        )}
-        
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button 
-            variant="outline" 
-            onClick={onClose}
-            disabled={isExecuting}
-          >
-            إغلاق
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

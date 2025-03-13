@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { submitTextToApi } from "@/lib/apiService";
