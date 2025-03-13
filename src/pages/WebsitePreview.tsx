@@ -1,33 +1,14 @@
 
 import React, { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, RefreshCw, ExternalLink, Monitor, Search, Settings } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import BackgroundPattern from "@/components/BackgroundPattern";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import AppHeader from "@/components/AppHeader";
+  WebsitePreviewHeader,
+  PreviewUrlInput,
+  PreviewSettings,
+  PreviewFrame
+} from "@/components/WebsitePreview";
 
 const WebsitePreview = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -145,171 +126,37 @@ const WebsitePreview = () => {
       <BackgroundPattern />
 
       <div className="container px-4 py-8 mx-auto max-w-7xl">
-        <header className="mb-6 animate-slide-up">
-          <Button
-            variant="ghost"
-            className="flex items-center text-brand-brown hover:text-brand-coral mb-4 transition-colors"
-            onClick={() => navigate("/")}
-          >
-            <ArrowLeft className="ml-2" size={16} />
-            <span>العودة إلى الرئيسية</span>
-          </Button>
-          <h1 className="text-3xl font-bold text-brand-brown mb-3">معاينة المواقع الخارجية</h1>
-          <p className="text-muted-foreground">
-            قم بعرض المواقع الخارجية داخل تطبيقك لتسهيل تصدير البيانات المستخرجة
-          </p>
-        </header>
+        <WebsitePreviewHeader />
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="bg-white dark:bg-gray-800/90 rounded-xl shadow-md p-4 mb-4"
+        <PreviewUrlInput
+          url={url}
+          setUrl={setUrl}
+          lastValidUrl={lastValidUrl}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          loadWebsite={loadWebsite}
+          refreshWebsite={refreshWebsite}
+          openExternalUrl={openExternalUrl}
+          handleUrlChange={handleUrlChange}
+          handleKeyDown={handleKeyDown}
         >
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="flex-1 flex">
-              <div className="relative flex-1">
-                <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={url}
-                  onChange={handleUrlChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="أدخل عنوان URL للموقع (مثال: https://example.com)"
-                  className="pr-10 text-right flex-1"
-                  dir="rtl"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Select value={viewMode} onValueChange={(value: "iframe" | "external") => setViewMode(value)}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="طريقة العرض" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="iframe">داخل التطبيق</SelectItem>
-                  <SelectItem value="external">في نافذة جديدة</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="flex-shrink-0">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80" align="end">
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-right">إعدادات متقدمة</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Switch 
-                          id="user-agent"
-                          checked={useUserAgent}
-                          onCheckedChange={handleUseUserAgentChange}
-                        />
-                        <Label htmlFor="user-agent" className="text-right">محاكاة متصفح جوال</Label>
-                      </div>
-                      
-                      <div className="space-y-1">
-                        <Label className="text-right block">إعدادات Sandbox</Label>
-                        <Select value={sandboxMode} onValueChange={handleSandboxModeChange}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="إعدادات Sandbox" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="allow-same-origin allow-scripts allow-popups allow-forms">قياسي</SelectItem>
-                            <SelectItem value="allow-same-origin allow-scripts allow-popups allow-forms allow-modals">سماح بالنوافذ المنبثقة</SelectItem>
-                            <SelectItem value="allow-same-origin allow-scripts allow-popups allow-forms allow-storage-access-by-user-activation">سماح بالوصول للتخزين</SelectItem>
-                            <SelectItem value="allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-storage-access-by-user-activation allow-top-navigation">كامل (غير آمن)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              
-              <Button onClick={() => loadWebsite()} className="bg-brand-brown hover:bg-brand-brown/90 flex-shrink-0">
-                <Monitor className="ml-2 h-4 w-4" />
-                عرض الموقع
-              </Button>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={refreshWebsite}
-                      className="flex-shrink-0"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>تحديث الصفحة</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={openExternalUrl}
-                      className="flex-shrink-0"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>فتح في صفحة جديدة</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
-        </motion.div>
+          <PreviewSettings
+            sandboxMode={sandboxMode}
+            useUserAgent={useUserAgent}
+            handleSandboxModeChange={handleSandboxModeChange}
+            handleUseUserAgentChange={handleUseUserAgentChange}
+          />
+        </PreviewUrlInput>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white dark:bg-gray-800/90 rounded-xl shadow-md overflow-hidden"
-          style={{ height: "calc(100vh - 270px)", minHeight: "500px" }}
-        >
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <RefreshCw className="animate-spin h-8 w-8 mx-auto mb-4 text-brand-brown" />
-                <p className="text-muted-foreground">جاري تحميل الموقع...</p>
-              </div>
-            </div>
-          ) : viewMode === "iframe" && lastValidUrl ? (
-            <iframe
-              ref={iframeRef}
-              src={lastValidUrl}
-              title="معاينة الموقع"
-              className="w-full h-full border-0"
-              sandbox={sandboxMode}
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center max-w-md p-6">
-                <Monitor className="h-12 w-12 mx-auto mb-4 text-brand-brown/50" />
-                <h3 className="text-lg font-medium mb-2">أدخل عنوان URL لعرض الموقع</h3>
-                <p className="text-muted-foreground">
-                  قم بإدخال عنوان URL للموقع الذي تريد معاينته وانقر على "عرض الموقع"
-                </p>
-                {viewMode === "external" && lastValidUrl && (
-                  <Button onClick={openExternalUrl} className="mt-4 bg-brand-brown hover:bg-brand-brown/90">
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                    فتح الموقع في نافذة جديدة
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </motion.div>
+        <PreviewFrame
+          isLoading={isLoading}
+          viewMode={viewMode}
+          lastValidUrl={lastValidUrl}
+          sandboxMode={sandboxMode}
+          useUserAgent={useUserAgent}
+          iframeRef={iframeRef}
+          openExternalUrl={openExternalUrl}
+        />
 
         <div className="mt-4 text-sm text-muted-foreground">
           <p>
