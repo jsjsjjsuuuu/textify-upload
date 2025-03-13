@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -146,8 +147,12 @@ function toast(props: Toast) {
 
   // تحويل الأنواع الإضافية إلى الأنواع المدعومة أساسياً
   let variant = props.variant;
-  if (variant === "info" || variant === "success") {
+  // تعديل نوع الإشعار للتوافق
+  if (variant === "info") {
     variant = "default";
+  } else if (variant === "success") {
+    variant = "default";
+    // يمكننا إضافة كلاس أو نمط خاص للإشعارات الناجحة هنا إذا لزم الأمر
   }
 
   const newToast = {

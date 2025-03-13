@@ -64,7 +64,7 @@ const generateBookmarklet = (
     // تكوين كود JavaScript محسن يعمل على نطاق أوسع من المواقع
     const jsCode = `
       (function() {
-        // حفظ المرجع للنافذة الأصلية
+        // تعريف البيانات مباشرة داخل الكود
         const data = ${JSON.stringify(dataObject)};
         console.log("بيانات الإدخال التلقائي:", data);
         
@@ -74,15 +74,16 @@ const generateBookmarklet = (
           return;
         }
         
-        // وظائف مساعدة للعثور على الحقول وملئها
+        // وظائف مساعدة للعثور على الحقول وملئها - مع تحسينات للعثور على المزيد من الحقول
         function fillField(selectors, value) {
           if (!value) return false;
           
-          // للتوافق مع أكبر عدد من المواقع، نحاول عدة طرق للعثور على الحقول
+          // التأكد من أن selectors هو مصفوفة
           const allSelectors = (typeof selectors === 'string') ? [selectors] : selectors;
           
+          // البحث عن حقول الإدخال باستخدام مجموعة موسعة من المحددات
           for (const selector of allSelectors) {
-            // البحث عن جميع العناصر التي تتطابق مع المحددات
+            // محاولة باستخدام querySelector أولاً
             let elements = [];
             try {
               elements = [...document.querySelectorAll(selector)];
@@ -91,49 +92,101 @@ const generateBookmarklet = (
               continue;
             }
             
-            // محاولة أخرى للبحث عن الحقول حسب النوع أو الاسم أو الملصق
+            // إذا لم نجد عناصر، نحاول البحث بطرق أخرى
             if (elements.length === 0) {
-              elements = [...document.querySelectorAll('input, textarea, select')]
+              // البحث عن العناصر باستخدام الاسم أو النص الوصفي أو معرف العنصر
+              elements = [...document.querySelectorAll('input, textarea, select, [contenteditable="true"]')]
                 .filter(el => {
+                  // البحث في النصوص المرتبطة بالعنصر
                   const labels = document.querySelectorAll('label[for="' + el.id + '"]');
-                  if (labels.length && labels[0].textContent && 
-                      (labels[0].textContent.includes(selector) || 
-                       selector.includes(labels[0].textContent))) {
-                    return true;
+                  let labelText = '';
+                  if (labels.length) {
+                    labelText = labels[0].textContent || '';
                   }
                   
-                  return el.placeholder && 
-                        (el.placeholder.includes(selector) || selector.includes(el.placeholder)) ||
-                         el.name && 
-                        (el.name.includes(selector) || selector.includes(el.name)) ||
-                         el.id && 
-                        (el.id.includes(selector) || selector.includes(el.id));
+                  // التحقق من عدة خصائص للعنصر
+                  return (
+                    // فحص النص الوصفي
+                    (el.placeholder && (
+                      el.placeholder.includes(selector) || 
+                      selector.includes(el.placeholder)
+                    )) ||
+                    // فحص الاسم
+                    (el.name && (
+                      el.name.includes(selector) || 
+                      selector.includes(el.name)
+                    )) ||
+                    // فحص المعرف
+                    (el.id && (
+                      el.id.includes(selector) || 
+                      selector.includes(el.id)
+                    )) ||
+                    // فحص الكلاس
+                    (el.className && (
+                      el.className.includes(selector) || 
+                      selector.includes(el.className)
+                    )) ||
+                    // فحص نص التسمية
+                    (labelText && (
+                      labelText.includes(selector) || 
+                      selector.includes(labelText)
+                    ))
+                  );
                 });
             }
             
+            // بعد العثور على العناصر المرشحة، نحاول ملء القيمة في أول عنصر
             if (elements.length > 0) {
-              // ملء أول عنصر وجدناه
               const element = elements[0];
+              console.log("تم العثور على عنصر لملء القيمة:", element);
               
-              // الإجراء يعتمد على نوع العنصر
+              // التعامل مع العناصر المختلفة بشكل مناسب
               if (element.tagName === 'SELECT') {
-                // للقوائم المنسدلة، محاولة العثور على الخيار المناسب
+                // للقوائم المنسدلة، البحث عن الخيار المناسب
                 const options = [...element.options];
-                const option = options.find(opt => 
-                  opt.text.includes(value) || value.includes(opt.text) || 
-                  opt.value.includes(value) || value.includes(opt.value)
-                );
+                
+                // محاولة العثور على خيار مطابق للقيمة
+                const option = options.find(opt => {
+                  const optText = opt.text.toLowerCase();
+                  const optValue = opt.value.toLowerCase();
+                  const valueToCheck = value.toString().toLowerCase();
+                  
+                  return (
+                    optText.includes(valueToCheck) || 
+                    valueToCheck.includes(optText) || 
+                    optValue.includes(valueToCheck) || 
+                    valueToCheck.includes(optValue)
+                  );
+                });
                 
                 if (option) {
+                  console.log("تم العثور على خيار مناسب:", option.text);
                   element.value = option.value;
+                  // إطلاق حدث التغيير لتحديث النموذج
                   element.dispatchEvent(new Event('change', { bubbles: true }));
                   return true;
                 }
+              } else if (element.hasAttribute('contenteditable')) {
+                // للعناصر القابلة للتحرير
+                element.innerHTML = value;
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                return true;
               } else {
                 // للحقول النصية والمناطق النصية
+                console.log("ملء حقل نصي بالقيمة:", value);
                 element.value = value;
+                // إطلاق أحداث الإدخال والتغيير
                 element.dispatchEvent(new Event('input', { bubbles: true }));
                 element.dispatchEvent(new Event('change', { bubbles: true }));
+                // محاولة تحديث حالة React إذا كانت موجودة
+                try {
+                  const nativeValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+                  if (nativeValueSetter) {
+                    nativeValueSetter.call(element, value);
+                  }
+                } catch (e) {
+                  console.warn("فشل محاولة تحديث قيمة العنصر باستخدام setter:", e);
+                }
                 return true;
               }
             }
@@ -208,40 +261,52 @@ const generateBookmarklet = (
           performFill(data);
         }
         
-        // وظيفة ملء البيانات
+        // وظيفة ملء البيانات محسنة
         function performFill(dataItem) {
           // محاولة ملء البيانات باستخدام عدة استراتيجيات
           let filledFields = 0;
+          console.log("محاولة ملء البيانات:", dataItem);
           
-          // محاولة ملء حقول متعددة باستخدام محددات مختلفة
-          if (dataItem.hasOwnProperty("companyName") && dataItem.companyName) {
-            if (fillField(['input[name*="company"], input[placeholder*="شركة"], input[id*="company"]', 'الشركة', 'شركة', 'company'], dataItem.companyName)) 
-              filledFields++;
-          }
+          // محددات حقول مختلفة لتغطية أكبر عدد من المواقع
+          const fieldSelectors = {
+            companyName: [
+              'input[name*="company"], input[placeholder*="شركة"], input[id*="company"], input[name*="COMPANY"]',
+              'شركة', 'الشركة', 'company', 'COMPANY', 'الجهة', 'جهة', 'المؤسسة'
+            ],
+            code: [
+              'input[name*="code"], input[placeholder*="كود"], input[id*="code"], input[name*="CODE"]',
+              'كود', 'رمز', 'code', 'CODE', 'رقم الطلب', 'رقم الفاتورة', 'رقم البضاعة', 'رقم'
+            ],
+            senderName: [
+              'input[name*="name"], input[placeholder*="اسم"], input[id*="name"], input[name*="NAME"], input[name*="sender"]',
+              'الاسم', 'اسم', 'اسم المرسل', 'sender', 'SENDER', 'customer', 'المرسل', 'العميل', 'الزبون', 'name'
+            ],
+            phoneNumber: [
+              'input[name*="phone"], input[placeholder*="هاتف"], input[id*="phone"], input[type="tel"], input[name*="PHONE"], input[name*="TEL"]',
+              'هاتف', 'رقم الهاتف', 'phone', 'تليفون', 'موبايل', 'جوال', 'الهاتف', 'الجوال', 'mobile', 'MOBILE', 'PHONE'
+            ],
+            province: [
+              'select[name*="province"], select[id*="province"], select[name*="city"], select[id*="city"], select[name*="region"], select[id*="region"]',
+              'input[name*="province"], input[id*="province"], input[name*="city"], input[id*="city"]',
+              'المحافظة', 'محافظة', 'city', 'province', 'region', 'المدينة', 'مدينة', 'المنطقة', 'منطقة'
+            ],
+            price: [
+              'input[name*="price"], input[placeholder*="سعر"], input[id*="price"], input[name*="amount"], input[name*="PRICE"]',
+              'السعر', 'المبلغ', 'price', 'amount', 'cost', 'المبلغ', 'القيمة', 'سعر', 'الكلفة', 'التكلفة'
+            ]
+          };
           
-          if (dataItem.hasOwnProperty("code") && dataItem.code) {
-            if (fillField(['input[name*="code"], input[placeholder*="كود"], input[id*="code"]', 'كود', 'رمز', 'code', 'رقم الطلب'], dataItem.code))
-              filledFields++;
-          }
-          
-          if (dataItem.hasOwnProperty("senderName") && dataItem.senderName) {
-            if (fillField(['input[name*="name"], input[placeholder*="اسم"], input[id*="name"]', 'الاسم', 'اسم المرسل', 'sender', 'customer'], dataItem.senderName))
-              filledFields++;
-          }
-          
-          if (dataItem.hasOwnProperty("phoneNumber") && dataItem.phoneNumber) {
-            if (fillField(['input[name*="phone"], input[placeholder*="هاتف"], input[id*="phone"], input[type="tel"]', 'هاتف', 'رقم الهاتف', 'phone', 'mobile', 'تليفون', 'جوال'], dataItem.phoneNumber))
-              filledFields++;
-          }
-          
-          if (dataItem.hasOwnProperty("province") && dataItem.province) {
-            if (fillField(['select[name*="province"], select[id*="province"]', 'input[name*="province"], input[id*="province"]', 'المحافظة', 'محافظة', 'city', 'province', 'region'], dataItem.province))
-              filledFields++;
-          }
-          
-          if (dataItem.hasOwnProperty("price") && dataItem.price) {
-            if (fillField(['input[name*="price"], input[placeholder*="سعر"], input[id*="price"]', 'السعر', 'المبلغ', 'price', 'amount', 'cost'], dataItem.price))
-              filledFields++;
+          // محاولة ملء كل حقل من البيانات
+          for (const [field, selectors] of Object.entries(fieldSelectors)) {
+            if (dataItem.hasOwnProperty(field) && dataItem[field]) {
+              console.log(\`محاولة ملء الحقل: \${field} بالقيمة: \${dataItem[field]}\`);
+              if (fillField(selectors, dataItem[field])) {
+                console.log(\`تم ملء الحقل: \${field} بنجاح\`);
+                filledFields++;
+              } else {
+                console.log(\`فشل في ملء الحقل: \${field}\`);
+              }
+            }
           }
           
           // إظهار إشعار بعدد الحقول التي تم ملؤها
@@ -249,28 +314,30 @@ const generateBookmarklet = (
           notification.style.position = 'fixed';
           notification.style.top = '10px';
           notification.style.right = '10px';
-          notification.style.padding = '10px';
+          notification.style.padding = '10px 15px';
           notification.style.backgroundColor = filledFields > 0 ? '#4CAF50' : '#FF9800';
           notification.style.color = 'white';
+          notification.style.fontSize = '14px';
+          notification.style.fontWeight = 'bold';
           notification.style.borderRadius = '5px';
-          notification.style.zIndex = '9999';
-          notification.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+          notification.style.zIndex = '999999';
+          notification.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
           notification.style.direction = 'rtl';
           
           if (filledFields > 0) {
-            notification.textContent = \`تم ملء \${filledFields} حقل بنجاح\`;
+            notification.textContent = \`✓ تم ملء \${filledFields} من الحقول بنجاح!\`;
           } else {
-            notification.textContent = 'لم يتم العثور على حقول مناسبة للملء. جرب موقعًا آخر أو املأ البيانات يدويًا.';
+            notification.textContent = '⚠️ لم يتم العثور على حقول مناسبة للملء. جرب موقعاً آخر.';
           }
           
           document.body.appendChild(notification);
           
-          // إخفاء الإشعار بعد 3 ثوانٍ
+          // إخفاء الإشعار بعد 5 ثوانٍ
           setTimeout(() => {
             notification.style.opacity = '0';
-            notification.style.transition = 'opacity 0.5s';
-            setTimeout(() => notification.remove(), 500);
-          }, 3000);
+            notification.style.transition = 'opacity 0.7s';
+            setTimeout(() => notification.remove(), 700);
+          }, 5000);
         }
         
         // حفظ الصفحة الحالية لاستخدامها لاحقًا
@@ -285,7 +352,7 @@ const generateBookmarklet = (
     // تنظيف الكود وإزالة المسافات الزائدة
     const cleanedCode = jsCode
       .replace(/\s{2,}/g, ' ')
-      .replace(/\n/g, '')
+      .replace(/\n/g, ' ')
       .trim();
     
     // تشفير الكود لاستخدامه في الـ bookmarklet URL

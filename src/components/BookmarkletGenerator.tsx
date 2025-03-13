@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CopyIcon, CheckIcon, PlayIcon, AlertCircleIcon } from "lucide-react";
@@ -7,7 +6,7 @@ import { useClipboard } from "@/hooks/useClipboard";
 import { ImageData } from "@/types/ImageData";
 import BookmarkletButton from "./BookmarkletButton";
 import BookmarkletInstructions from "./BookmarkletInstructions";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BookmarkletGeneratorProps {
@@ -45,234 +44,286 @@ const BookmarkletGenerator = ({
   const lastUsedUrl = typeof window !== 'undefined' ? localStorage.getItem('lastAutoFillUrl') || '' : '';
   const isGoogleUrl = lastUsedUrl.includes('google.com') || lastUsedUrl.includes('docs.google.com');
   
-  // محاولة الوصول إلى صفحة ويب مفتوحة
-  useEffect(() => {
-    const checkForOpenedTabs = () => {
-      if (isOpen && bookmarkletUrl && window.opener) {
-        try {
-          // محاولة الوصول إلى النافذة المفتوحة والتحقق من قابليتها للوصول
-          const openerWindow = window.opener;
-          if (openerWindow && !openerWindow.closed) {
-            toast({
-              title: "يمكنك تنفيذ الإدخال التلقائي مباشرة",
-              description: "تم اكتشاف نافذة مفتوحة، يمكنك النقر على 'تنفيذ مباشرة' لتعبئة البيانات",
-              variant: "default"
-            });
-          }
-        } catch (error) {
-          console.error("خطأ في الوصول إلى النافذة المفتوحة:", error);
-        }
-      }
-    };
-    
-    checkForOpenedTabs();
-  }, [isOpen, bookmarkletUrl, toast]);
-  
   // نسخ الرابط إلى الحافظة
   const handleCopyToClipboard = () => {
     copyToClipboard(bookmarkletUrl);
   };
 
-  // إضافة وظيفة تنفيذ سكريبت الإدخال التلقائي في نافذة الحالية
+  // وظيفة تنفيذ سكريبت الإدخال التلقائي محسنة
   const handleExecuteScript = async () => {
     setIsExecuting(true);
     try {
-      // طريقة جديدة محسنة: استخدام بيانات البوكماركلت مباشرة
       console.log("بيانات الإدخال التلقائي:", rawDataObject);
       debugRef.current = JSON.stringify(rawDataObject);
       
-      // حفظ البيانات في localStorage لمشاركتها مع النافذة الجديدة
+      // حفظ البيانات في localStorage لضمان عدم فقدانها
       localStorage.setItem('autofillData', JSON.stringify(rawDataObject));
-
-      // استخدام طريقة جديدة: صفحة وسيطة للإدخال التلقائي
-      const intermediateHtml = `
-        <!DOCTYPE html>
-        <html dir="rtl">
-        <head>
-          <title>جاري تنفيذ الإدخال التلقائي...</title>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial; text-align: center; margin-top: 50px; }
-            .loading { margin: 20px auto; border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 2s linear infinite; }
-            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          </style>
-        </head>
-        <body>
-          <h2>جاري تنفيذ الإدخال التلقائي...</h2>
-          <div class="loading"></div>
-          <p>يرجى الانتظار، سيتم تعبئة البيانات تلقائياً خلال ثوانٍ.</p>
-          <pre id="debug" style="text-align: left; direction: ltr; font-size: 12px; border: 1px solid #ddd; padding: 10px; margin: 20px; max-height: 200px; overflow: auto; display: none"></pre>
+      
+      // استخدام الطريقة المباشرة: تنفيذ السكريبت مباشرة على الصفحة الهدف
+      const targetUrl = lastUsedUrl || 'about:blank';
+      
+      if (targetUrl === 'about:blank') {
+        toast({
+          title: "لا يوجد موقع هدف",
+          description: "يرجى فتح الموقع المستهدف أولاً ثم المحاولة مرة أخرى",
+          variant: "destructive"
+        });
+        setIsExecuting(false);
+        return;
+      }
+      
+      // إنشاء محتوى HTML للصفحة الوسيطة التي ستقوم بتنفيذ السكريبت
+      const scriptToRun = `
+      try {
+        // حفظ البيانات في متغير
+        const autofillData = ${JSON.stringify(rawDataObject)};
+        console.log("بيانات الإدخال التلقائي:", autofillData);
+        
+        // تحديد وظيفة ملء الحقول
+        function fillField(selectors, value) {
+          if (!value) return false;
           
-          <script>
-            // الحصول على البيانات من localStorage
+          // التأكد من أن selectors هو مصفوفة
+          const allSelectors = (typeof selectors === 'string') ? [selectors] : selectors;
+          
+          // البحث عن حقول الإدخال
+          for (const selector of allSelectors) {
+            // محاولة باستخدام querySelector
+            let elements = [];
             try {
-              const autofillData = JSON.parse(localStorage.getItem('autofillData') || '{}');
-              document.getElementById('debug').textContent = JSON.stringify(autofillData, null, 2);
-              
-              // تنفيذ سكريبت البوكماركلت مباشرة بعد فترة قصيرة
-              setTimeout(() => {
-                try {
-                  // تحضير سكريبت الإدخال التلقائي
-                  const targetUrl = '${lastUsedUrl || 'about:blank'}';
-                  
-                  // فتح موقع الهدف أولاً ثم تنفيذ الإدخال التلقائي
-                  const scriptToRun = \`
-                    (function() {
-                      // تحميل البيانات من localStorage
-                      const autofillData = JSON.parse(localStorage.getItem('autofillData') || '{}');
-                      console.log("بيانات الإدخال التلقائي:", autofillData);
-                      
-                      // وظائف مساعدة للعثور على الحقول وملئها
-                      function fillField(selectors, value) {
-                        if (!value) return false;
-                        
-                        // للتوافق مع أكبر عدد من المواقع، نحاول عدة طرق للعثور على الحقول
-                        const allSelectors = (typeof selectors === 'string') ? [selectors] : selectors;
-                        
-                        for (const selector of allSelectors) {
-                          // البحث عن جميع العناصر التي تتطابق مع المحددات
-                          let elements = [];
-                          try {
-                            elements = [...document.querySelectorAll(selector)];
-                          } catch (e) {
-                            console.warn("محدد غير صالح:", selector);
-                            continue;
-                          }
-                          
-                          // محاولة أخرى للبحث عن الحقول حسب النوع أو الاسم أو الملصق
-                          if (elements.length === 0) {
-                            elements = [...document.querySelectorAll('input, textarea, select')]
-                              .filter(el => {
-                                const labels = document.querySelectorAll('label[for="' + el.id + '"]');
-                                if (labels.length && labels[0].textContent && 
-                                    (labels[0].textContent.includes(selector) || 
-                                     selector.includes(labels[0].textContent))) {
-                                  return true;
-                                }
-                                
-                                return el.placeholder && 
-                                      (el.placeholder.includes(selector) || selector.includes(el.placeholder)) ||
-                                       el.name && 
-                                      (el.name.includes(selector) || selector.includes(el.name)) ||
-                                       el.id && 
-                                      (el.id.includes(selector) || selector.includes(el.id));
-                              });
-                          }
-                          
-                          if (elements.length > 0) {
-                            // ملء أول عنصر وجدناه
-                            const element = elements[0];
-                            
-                            // الإجراء يعتمد على نوع العنصر
-                            if (element.tagName === 'SELECT') {
-                              // للقوائم المنسدلة، محاولة العثور على الخيار المناسب
-                              const options = [...element.options];
-                              const option = options.find(opt => 
-                                opt.text.includes(value) || value.includes(opt.text) || 
-                                opt.value.includes(value) || value.includes(opt.value)
-                              );
-                              
-                              if (option) {
-                                element.value = option.value;
-                                element.dispatchEvent(new Event('change', { bubbles: true }));
-                                return true;
-                              }
-                            } else {
-                              // للحقول النصية والمناطق النصية
-                              element.value = value;
-                              element.dispatchEvent(new Event('input', { bubbles: true }));
-                              element.dispatchEvent(new Event('change', { bubbles: true }));
-                              return true;
-                            }
-                          }
-                        }
-                        
-                        return false;
-                      }
-                      
-                      // تأخير قصير للتأكد من تحميل الصفحة بالكامل
-                      setTimeout(() => {
-                        // محاولة ملء البيانات باستخدام عدة استراتيجيات
-                        if (autofillData.hasOwnProperty("companyName")) fillField(['input[name*="company"], input[placeholder*="شركة"], input[id*="company"]', 'الشركة', 'شركة', 'company'], autofillData.companyName);
-                        if (autofillData.hasOwnProperty("code")) fillField(['input[name*="code"], input[placeholder*="كود"], input[id*="code"]', 'كود', 'رمز', 'code', 'رقم الطلب'], autofillData.code);
-                        if (autofillData.hasOwnProperty("senderName")) fillField(['input[name*="name"], input[placeholder*="اسم"], input[id*="name"]', 'الاسم', 'اسم المرسل', 'sender', 'customer'], autofillData.senderName);
-                        if (autofillData.hasOwnProperty("phoneNumber")) fillField(['input[name*="phone"], input[placeholder*="هاتف"], input[id*="phone"], input[type="tel"]', 'هاتف', 'رقم الهاتف', 'phone', 'mobile', 'تليفون', 'جوال'], autofillData.phoneNumber);
-                        if (autofillData.hasOwnProperty("province")) fillField(['select[name*="province"], select[id*="province"]', 'input[name*="province"], input[id*="province"]', 'المحافظة', 'محافظة', 'city', 'province', 'region'], autofillData.province);
-                        if (autofillData.hasOwnProperty("price")) fillField(['input[name*="price"], input[placeholder*="سعر"], input[id*="price"]', 'السعر', 'المبلغ', 'price', 'amount', 'cost'], autofillData.price);
-                        
-                        // إذا كان هناك حقول متعددة، ملء الكل
-                        if (autofillData.multiple && Array.isArray(autofillData.items)) {
-                          // تنفيذ منطق الإدخال المتعدد هنا...
-                        }
-                        
-                        // إضافة عنصر تأكيد للمستخدم
-                        const notification = document.createElement('div');
-                        notification.style.position = 'fixed';
-                        notification.style.top = '10px';
-                        notification.style.right = '10px';
-                        notification.style.padding = '10px';
-                        notification.style.backgroundColor = '#4CAF50';
-                        notification.style.color = 'white';
-                        notification.style.borderRadius = '5px';
-                        notification.style.zIndex = '9999';
-                        notification.textContent = 'تم محاولة ملء البيانات تلقائياً';
-                        document.body.appendChild(notification);
-                        
-                        // إخفاء الإشعار بعد 3 ثوانٍ
-                        setTimeout(() => {
-                          notification.style.opacity = '0';
-                          notification.style.transition = 'opacity 0.5s';
-                          setTimeout(() => notification.remove(), 500);
-                        }, 3000);
-                      }, 1000);
-                    })();
-                  \`;
-                  
-                  // تحويل الموقع المستهدف
-                  if (targetUrl && targetUrl !== 'about:blank') {
-                    window.location.href = targetUrl;
-                    // تنفيذ السكريبت بعد فترة للتأكد من تحميل الصفحة
-                    setTimeout(() => {
-                      eval(scriptToRun);
-                    }, 2000);
-                  } else {
-                    // إذا لم يكن هناك موقع مستهدف، تنفيذ السكريبت مباشرة
-                    eval(scriptToRun);
-                  }
-                } catch (error) {
-                  console.error("خطأ في تنفيذ السكريبت:", error);
-                  document.body.innerHTML += '<div style="color: red; margin-top: 20px;">حدث خطأ في تنفيذ الإدخال التلقائي: ' + error.message + '</div>';
-                }
-              }, 500);
-            } catch (error) {
-              console.error("خطأ في قراءة البيانات:", error);
-              document.body.innerHTML += '<div style="color: red; margin-top: 20px;">خطأ في قراءة البيانات: ' + error.message + '</div>';
+              elements = [...document.querySelectorAll(selector)];
+            } catch (e) {
+              continue;
             }
-          </script>
-        </body>
-        </html>
+            
+            // البحث بطرق أخرى إذا لم نجد
+            if (elements.length === 0) {
+              elements = [...document.querySelectorAll('input, textarea, select, [contenteditable="true"]')]
+                .filter(el => {
+                  // البحث في النصوص المرتبطة بالعنصر
+                  const labels = document.querySelectorAll('label[for="' + el.id + '"]');
+                  let labelText = '';
+                  if (labels.length) {
+                    labelText = labels[0].textContent || '';
+                  }
+                  
+                  return (el.placeholder && (el.placeholder.includes(selector) || selector.includes(el.placeholder))) ||
+                         (el.name && (el.name.includes(selector) || selector.includes(el.name))) ||
+                         (el.id && (el.id.includes(selector) || selector.includes(el.id))) ||
+                         (el.className && (el.className.includes(selector) || selector.includes(el.className))) ||
+                         (labelText && (labelText.includes(selector) || selector.includes(labelText)));
+                });
+            }
+            
+            // ملء أول عنصر وجدناه
+            if (elements.length > 0) {
+              const element = elements[0];
+              
+              // التعامل مع العناصر المختلفة
+              if (element.tagName === 'SELECT') {
+                // القوائم المنسدلة
+                const options = [...element.options];
+                const option = options.find(opt => {
+                  const optText = opt.text.toLowerCase();
+                  const optValue = opt.value.toLowerCase();
+                  const valueToCheck = value.toString().toLowerCase();
+                  
+                  return optText.includes(valueToCheck) || 
+                         valueToCheck.includes(optText) || 
+                         optValue.includes(valueToCheck) || 
+                         valueToCheck.includes(optValue);
+                });
+                
+                if (option) {
+                  element.value = option.value;
+                  element.dispatchEvent(new Event('change', { bubbles: true }));
+                  return true;
+                }
+              } else if (element.hasAttribute('contenteditable')) {
+                // عناصر قابلة للتحرير
+                element.innerHTML = value;
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                return true;
+              } else {
+                // حقول نصية
+                element.value = value;
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+                // محاولة تحديث حالة React
+                try {
+                  const nativeValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+                  if (nativeValueSetter) {
+                    nativeValueSetter.call(element, value);
+                  }
+                } catch (e) {}
+                return true;
+              }
+            }
+          }
+          
+          return false;
+        }
+        
+        // محددات للحقول المختلفة
+        const fieldSelectors = {
+          companyName: [
+            'input[name*="company"], input[placeholder*="شركة"], input[id*="company"], input[name*="COMPANY"]',
+            'شركة', 'الشركة', 'company', 'COMPANY', 'الجهة', 'جهة', 'المؤسسة'
+          ],
+          code: [
+            'input[name*="code"], input[placeholder*="كود"], input[id*="code"], input[name*="CODE"]',
+            'كود', 'رمز', 'code', 'CODE', 'رقم الطلب', 'رقم الفاتورة', 'رقم البضاعة', 'رقم'
+          ],
+          senderName: [
+            'input[name*="name"], input[placeholder*="اسم"], input[id*="name"], input[name*="NAME"], input[name*="sender"]',
+            'الاسم', 'اسم', 'اسم المرسل', 'sender', 'SENDER', 'customer', 'المرسل', 'العميل', 'الزبون', 'name'
+          ],
+          phoneNumber: [
+            'input[name*="phone"], input[placeholder*="هاتف"], input[id*="phone"], input[type="tel"], input[name*="PHONE"], input[name*="TEL"]',
+            'هاتف', 'رقم الهاتف', 'phone', 'تليفون', 'موبايل', 'جوال', 'الهاتف', 'الجوال', 'mobile', 'MOBILE', 'PHONE'
+          ],
+          province: [
+            'select[name*="province"], select[id*="province"], select[name*="city"], select[id*="city"], select[name*="region"], select[id*="region"]',
+            'input[name*="province"], input[id*="province"], input[name*="city"], input[id*="city"]',
+            'المحافظة', 'محافظة', 'city', 'province', 'region', 'المدينة', 'مدينة', 'المنطقة', 'منطقة'
+          ],
+          price: [
+            'input[name*="price"], input[placeholder*="سعر"], input[id*="price"], input[name*="amount"], input[name*="PRICE"]',
+            'السعر', 'المبلغ', 'price', 'amount', 'cost', 'المبلغ', 'القيمة', 'سعر', 'الكلفة', 'التكلفة'
+          ]
+        };
+        
+        // تأخير قصير للتأكد من تحميل الصفحة
+        setTimeout(() => {
+          // ملء الحقول
+          let filledFields = 0;
+          
+          if (autofillData.multiple && Array.isArray(autofillData.items) && autofillData.items.length > 0) {
+            // الوضع المتعدد - نستخدم العنصر الأول فقط الآن
+            const item = autofillData.items[0];
+            
+            for (const [field, selectors] of Object.entries(fieldSelectors)) {
+              if (item[field]) {
+                if (fillField(selectors, item[field])) {
+                  filledFields++;
+                }
+              }
+            }
+          } else {
+            // وضع العنصر الواحد
+            for (const [field, selectors] of Object.entries(fieldSelectors)) {
+              if (autofillData[field]) {
+                if (fillField(selectors, autofillData[field])) {
+                  filledFields++;
+                }
+              }
+            }
+          }
+          
+          // عرض إشعار
+          const notification = document.createElement('div');
+          notification.style.position = 'fixed';
+          notification.style.top = '10px';
+          notification.style.right = '10px';
+          notification.style.padding = '10px 15px';
+          notification.style.backgroundColor = filledFields > 0 ? '#4CAF50' : '#FF9800';
+          notification.style.color = 'white';
+          notification.style.fontSize = '14px';
+          notification.style.fontWeight = 'bold';
+          notification.style.borderRadius = '5px';
+          notification.style.zIndex = '999999';
+          notification.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+          notification.style.direction = 'rtl';
+          
+          if (filledFields > 0) {
+            notification.textContent = \`✓ تم ملء \${filledFields} من الحقول بنجاح!\`;
+          } else {
+            notification.textContent = '⚠️ لم يتم العثور على حقول مناسبة للملء. جرب موقعاً آخر.';
+          }
+          
+          document.body.appendChild(notification);
+          
+          // إخفاء الإشعار بعد 5 ثوانٍ
+          setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.7s';
+            setTimeout(() => notification.remove(), 700);
+          }, 5000);
+        }, 500);
+      } catch (error) {
+        console.error("خطأ في تنفيذ السكريبت:", error);
+        alert("حدث خطأ أثناء تنفيذ السكريبت: " + error.message);
+      }
       `;
       
-      // إنشاء blob لاستخدامه كـ URL للصفحة المؤقتة
-      const blob = new Blob([intermediateHtml], { type: 'text/html' });
-      const intermediateUrl = URL.createObjectURL(blob);
+      // فتح نافذة جديدة بالموقع المستهدف
+      const newWindow = window.open(targetUrl, '_blank');
       
-      // فتح نافذة جديدة باستخدام الصفحة المؤقتة
-      const newWindow = window.open(intermediateUrl, '_blank');
-      
-      if (newWindow) {
+      if (!newWindow) {
         toast({
-          title: "تم بدء الإدخال التلقائي",
-          description: "تم فتح نافذة جديدة وسيتم محاولة تعبئة البيانات",
-          variant: "default"
-        });
-      } else {
-        toast({
-          title: "خطأ في فتح النافذة",
+          title: "تم منع النوافذ المنبثقة",
           description: "يرجى السماح بالنوافذ المنبثقة في متصفحك",
           variant: "destructive"
         });
+        setIsExecuting(false);
+        return;
       }
+      
+      // تنفيذ السكريبت في النافذة المستهدفة بعد فترة قصيرة للسماح بتحميل الصفحة
+      setTimeout(() => {
+        try {
+          // تأكد من أن النافذة لا تزال مفتوحة
+          if (newWindow && !newWindow.closed) {
+            try {
+              // محاولة تنفيذ السكريبت على الصفحة المستهدفة
+              newWindow.eval(scriptToRun);
+              
+              toast({
+                title: "تم تنفيذ الإدخال التلقائي",
+                description: "تمت محاولة ملء البيانات في الصفحة المستهدفة",
+                variant: "default"
+              });
+            } catch (evalError) {
+              console.error("خطأ في تنفيذ السكريبت:", evalError);
+              
+              // في حالة الفشل، جرب طريقة بديلة: إنشاء علامة سكريبت
+              try {
+                const scriptTag = newWindow.document.createElement('script');
+                scriptTag.textContent = scriptToRun;
+                newWindow.document.head.appendChild(scriptTag);
+                
+                toast({
+                  title: "تم تنفيذ الإدخال التلقائي",
+                  description: "تمت محاولة ملء البيانات باستخدام طريقة بديلة",
+                  variant: "default"
+                });
+              } catch (scriptError) {
+                console.error("فشل تنفيذ السكريبت بالطرق البديلة:", scriptError);
+                toast({
+                  title: "فشل تنفيذ الإدخال التلقائي",
+                  description: "يبدو أن الموقع يمنع الوصول إلى السكريبت. حاول استخدام زر المفضلة بدلاً من ذلك.",
+                  variant: "destructive"
+                });
+              }
+            }
+          } else {
+            toast({
+              title: "تم إغلاق النافذة",
+              description: "يبدو أن النافذة المستهدفة تم إغلاقها",
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          console.error("خطأ عام في تنفيذ السكريبت:", error);
+          toast({
+            title: "فشل تنفيذ الإدخال التلقائي",
+            description: "حدث خطأ غير متوقع. حاول استخدام زر المفضلة بدلاً من ذلك.",
+            variant: "destructive"
+          });
+        }
+        
+        setIsExecuting(false);
+      }, 1000);
       
       // إغلاق مربع الحوار بعد التنفيذ
       setTimeout(() => {
@@ -285,7 +336,6 @@ const BookmarkletGenerator = ({
         description: "حدث خطأ: " + (error as Error).message,
         variant: "destructive"
       });
-    } finally {
       setIsExecuting(false);
     }
   };
@@ -297,6 +347,7 @@ const BookmarkletGenerator = ({
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     return !isMobile || (isMobile && !isIOS);
   };
+  
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
