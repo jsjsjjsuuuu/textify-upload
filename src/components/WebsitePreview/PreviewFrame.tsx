@@ -68,63 +68,79 @@ const PreviewFrame = ({
         return;
       }
       
-      // محاولة تمكين سكريبت التفاعل
-      const bridgeScript = `
-        window.addEventListener('message', function(event) {
-          try {
-            console.log('تم استلام رسالة في الإطار:', event.data);
-            
-            if (event.data && event.data.type === 'execute-script') {
-              try {
-                // تعريف currentData بالبيانات المرسلة
-                window.currentData = event.data.data || {};
-                
-                console.log('البيانات المستلمة للإدخال التلقائي:', window.currentData);
-                
-                // تنفيذ السكريبت المرسل
-                const scriptFn = new Function(event.data.script);
-                scriptFn();
-                
-                // إرسال تأكيد للأب
-                window.parent.postMessage({ 
-                  type: 'script-executed', 
-                  message: 'تم تنفيذ السكريبت بنجاح' 
-                }, '*');
-              } catch (error) {
-                console.error('خطأ في تنفيذ السكريبت:', error);
-                window.parent.postMessage({ 
-                  type: 'script-error', 
-                  error: error.message 
-                }, '*');
-              }
-            }
-          } catch (e) {
-            console.error('خطأ عام في معالجة الرسائل:', e);
-          }
-        });
-        
-        // إضافة شارة تدل على تمكين السكريبت
-        document.body.style.position = 'relative';
-        const badge = document.createElement('div');
-        badge.innerHTML = 'السكريبت مُمكّن';
-        badge.style.position = 'fixed';
-        badge.style.bottom = '10px';
-        badge.style.left = '10px';
-        badge.style.backgroundColor = 'rgba(0, 150, 0, 0.7)';
-        badge.style.color = 'white';
-        badge.style.padding = '5px 10px';
-        badge.style.borderRadius = '5px';
-        badge.style.zIndex = '9999';
-        badge.style.fontSize = '12px';
-        document.body.appendChild(badge);
-      `;
-      
-      const scriptTag = document.createElement('script');
-      scriptTag.textContent = bridgeScript;
-      
       try {
-        // محاولة إضافة السكريبت إلى الإطار
-        iframeWindow.document.head.appendChild(scriptTag);
+        // التحقق من إمكانية الوصول إلى الإطار
+        const iframeOrigin = new URL(iframeRef.current.src).origin;
+        const currentOrigin = window.location.origin;
+        
+        // إذا كان الأصل مختلفًا، فلن نتمكن من الوصول إلى محتوى الإطار بسبب سياسة نفس الأصل
+        if (iframeOrigin !== currentOrigin) {
+          toast({
+            title: "تعذر تفعيل السكريبت",
+            description: "لا يمكن تفعيل السكريبت بسبب اختلاف أصل الإطار. استخدم 'فتح في نافذة خارجية' بدلاً من ذلك.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // محاولة تمكين سكريبت التفاعل
+        const bridgeScript = `
+          window.addEventListener('message', function(event) {
+            try {
+              console.log('تم استلام رسالة في الإطار:', event.data);
+              
+              if (event.data && event.data.type === 'execute-script') {
+                try {
+                  // تعريف currentData بالبيانات المرسلة
+                  window.currentData = event.data.data || {};
+                  
+                  console.log('البيانات المستلمة للإدخال التلقائي:', window.currentData);
+                  
+                  // تنفيذ السكريبت المرسل باستخدام عنصر script
+                  const scriptElement = document.createElement('script');
+                  scriptElement.textContent = event.data.script;
+                  document.head.appendChild(scriptElement);
+                  
+                  // إرسال تأكيد للأب
+                  window.parent.postMessage({ 
+                    type: 'script-executed', 
+                    message: 'تم تنفيذ السكريبت بنجاح' 
+                  }, '*');
+                } catch (error) {
+                  console.error('خطأ في تنفيذ السكريبت:', error);
+                  window.parent.postMessage({ 
+                    type: 'script-error', 
+                    error: error.message 
+                  }, '*');
+                }
+              }
+            } catch (e) {
+              console.error('خطأ عام في معالجة الرسائل:', e);
+            }
+          });
+          
+          // إضافة شارة تدل على تمكين السكريبت
+          document.body.style.position = 'relative';
+          const badge = document.createElement('div');
+          badge.innerHTML = 'السكريبت مُمكّن';
+          badge.style.position = 'fixed';
+          badge.style.bottom = '10px';
+          badge.style.left = '10px';
+          badge.style.backgroundColor = 'rgba(0, 150, 0, 0.7)';
+          badge.style.color = 'white';
+          badge.style.padding = '5px 10px';
+          badge.style.borderRadius = '5px';
+          badge.style.zIndex = '9999';
+          badge.style.fontSize = '12px';
+          document.body.appendChild(badge);
+        `;
+        
+        // حل آمن لوصول الإطار: تحديث src مع javascript:
+        const iframeDoc = iframeWindow.document;
+        const scriptTag = iframeDoc.createElement('script');
+        scriptTag.textContent = bridgeScript;
+        iframeDoc.head.appendChild(scriptTag);
+        
         setScriptPermission(true);
         toast({
           title: "تم تفعيل السكريبت",
@@ -132,7 +148,7 @@ const PreviewFrame = ({
           variant: "default",
         });
       } catch (error) {
-        console.error("فشل في إضافة سكريبت الجسر:", error);
+        console.error("فشل في إضافة سكريبت الجسر بسبب قيود الأمان:", error);
         toast({
           title: "تعذر تفعيل السكريبت",
           description: "فشل تمكين السكريبت بسبب قيود أمان الموقع. استخدم 'فتح في نافذة خارجية' بدلاً من ذلك.",

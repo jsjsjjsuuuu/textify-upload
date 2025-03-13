@@ -13,13 +13,17 @@ export interface AutofillResult {
   error?: string;
 }
 
+export interface AutofillOptions {
+  clickSubmitButton?: boolean;
+}
+
 export const useCompanyAutofill = () => {
   const [isAutofilling, setIsAutofilling] = useState(false);
   const [lastResult, setLastResult] = useState<AutofillResult | null>(null);
   const { toast } = useToast();
 
   // إنشاء نص السكريبت للإدخال التلقائي
-  const generateAutofillScript = useCallback((company: DeliveryCompany, imageData: ImageData): string => {
+  const generateAutofillScript = useCallback((company: DeliveryCompany, imageData: ImageData, options?: AutofillOptions): string => {
     if (company.isCustomScript && company.autofillScript) {
       return company.autofillScript;
     }
@@ -34,7 +38,7 @@ export const useCompanyAutofill = () => {
       price: imageData.price || ""
     };
 
-    // إنشاء السكريبت الأساسي للإدخال التلقائي
+    // إنشاء السكريبت الأساسي للإدخال التلقائي مع إضافة وظيفة للنقر على زر الحفظ
     return `
       (function() {
         try {
@@ -66,6 +70,49 @@ export const useCompanyAutofill = () => {
             });
             
             return { found: fieldFound, filled: fieldFilled };
+          }
+          
+          // وظيفة للبحث عن وضغط زر الحفظ/الإرسال
+          function findAndClickSubmitButton() {
+            // كلمات مفتاحية محتملة لأزرار الحفظ بالعربية والإنجليزية
+            const submitKeywords = ['حفظ', 'إرسال', 'ارسال', 'تسجيل', 'إضافة', 'اضافة', 'أضف', 'اضف', 'submit', 'save', 'add', 'create', 'send'];
+            
+            // البحث في الأزرار
+            const buttons = document.querySelectorAll('button, input[type="submit"], input[type="button"]');
+            for (const button of buttons) {
+              // الحصول على النص من السمة value أو innerText
+              const buttonText = button.value || button.innerText || button.textContent || '';
+              
+              // البحث عن كلمة مفتاحية في نص الزر
+              const matchesKeyword = submitKeywords.some(keyword => 
+                buttonText.toLowerCase().includes(keyword.toLowerCase())
+              );
+              
+              if (matchesKeyword) {
+                console.log("تم العثور على زر الحفظ:", buttonText);
+                button.click();
+                return true;
+              }
+            }
+            
+            // البحث في الروابط التي تشبه الأزرار
+            const links = document.querySelectorAll('a.btn, a.button, a[role="button"]');
+            for (const link of links) {
+              const linkText = link.innerText || link.textContent || '';
+              
+              const matchesKeyword = submitKeywords.some(keyword => 
+                linkText.toLowerCase().includes(keyword.toLowerCase())
+              );
+              
+              if (matchesKeyword) {
+                console.log("تم العثور على رابط الحفظ:", linkText);
+                link.click();
+                return true;
+              }
+            }
+            
+            console.log("لم يتم العثور على زر الحفظ");
+            return false;
           }
           
           // ملء جميع الحقول
@@ -117,6 +164,40 @@ export const useCompanyAutofill = () => {
           notification.textContent = \`تم تنفيذ الإدخال التلقائي: \${totalFilled} حقل من أصل \${totalFound} حقل تم العثور عليه\`;
           document.body.appendChild(notification);
           
+          // ضغط زر الحفظ بعد تأخير قصير للسماح للصفحة بالاستجابة للتغييرات في الحقول
+          ${options?.clickSubmitButton ? `
+          setTimeout(() => {
+            const submitResult = findAndClickSubmitButton();
+            if (submitResult) {
+              const submitNotification = document.createElement('div');
+              submitNotification.style = \`
+                position: fixed;
+                top: 50px;
+                right: 10px;
+                z-index: 9999;
+                background-color: rgba(0, 100, 200, 0.8);
+                color: white;
+                padding: 10px 15px;
+                border-radius: 5px;
+                direction: rtl;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+              \`;
+              
+              submitNotification.textContent = "تم الضغط على زر الحفظ/الإرسال تلقائياً";
+              document.body.appendChild(submitNotification);
+              
+              setTimeout(() => {
+                submitNotification.style.opacity = '0';
+                submitNotification.style.transition = 'opacity 0.5s';
+                setTimeout(() => {
+                  submitNotification.parentNode?.removeChild(submitNotification);
+                }, 500);
+              }, 3000);
+            }
+          }, 1000);` : ''}
+          
           setTimeout(() => {
             notification.style.opacity = '0';
             notification.style.transition = 'opacity 0.5s';
@@ -164,7 +245,7 @@ export const useCompanyAutofill = () => {
   }, []);
 
   // وظيفة تنفيذ الإدخال التلقائي
-  const executeAutofill = useCallback(async (companyId: string, imageData: ImageData, targetUrl?: string): Promise<AutofillResult> => {
+  const executeAutofill = useCallback(async (companyId: string, imageData: ImageData, targetUrl?: string, options?: AutofillOptions): Promise<AutofillResult> => {
     setIsAutofilling(true);
     setLastResult(null);
     
@@ -182,8 +263,8 @@ export const useCompanyAutofill = () => {
         return { success: false, message: error, error };
       }
       
-      // إنشاء سكريبت الإدخال التلقائي
-      const script = generateAutofillScript(company, imageData);
+      // إنشاء سكريبت الإدخال التلقائي مع الخيارات
+      const script = generateAutofillScript(company, imageData, options);
       
       // التحقق من وجود عنوان URL للهدف
       const url = targetUrl || company.formUrl || company.websiteUrl;
@@ -220,7 +301,7 @@ export const useCompanyAutofill = () => {
           if (newWindow.closed) {
             clearInterval(checkLoadInterval);
             resolve();
-          } else if (newWindow.document.readyState === 'complete') {
+          } else if (newWindow.document?.readyState === 'complete') {
             clearInterval(checkLoadInterval);
             // تنفيذ السكريبت بعد تأخير صغير للتأكد من تحميل الصفحة بالكامل
             setTimeout(() => {
@@ -248,7 +329,7 @@ export const useCompanyAutofill = () => {
       // اعتبار العملية ناجحة إذا تم فتح النافذة
       result = {
         success: true,
-        message: `تم فتح موقع ${company.name} وتنفيذ الإدخال التلقائي`
+        message: `تم فتح موقع ${company.name} وتنفيذ الإدخال التلقائي${options?.clickSubmitButton ? ' مع محاولة الضغط على زر الحفظ' : ''}`
       };
       
       // تحديث إحصائيات الاستخدام
@@ -289,11 +370,11 @@ export const useCompanyAutofill = () => {
   }, [generateAutofillScript, toast]);
 
   // إنشاء رابط bookmarklet
-  const generateBookmarkletUrl = useCallback((companyId: string, imageData: ImageData): string => {
+  const generateBookmarkletUrl = useCallback((companyId: string, imageData: ImageData, options?: AutofillOptions): string => {
     const company = getDeliveryCompanyById(companyId);
     if (!company) return "";
     
-    const script = generateAutofillScript(company, imageData);
+    const script = generateAutofillScript(company, imageData, { ...options, clickSubmitButton: true });
     return `javascript:${encodeURIComponent(script)}`;
   }, [generateAutofillScript]);
 

@@ -76,8 +76,13 @@ const BookmarkletGenerator = ({
         return;
       }
       
-      // استدعاء وظيفة تنفيذ السكريبت
-      executeScript(targetUrl);
+      // إضافة معلمة للإشارة إلى أنه يجب الضغط على زر الحفظ بعد ملء النموذج
+      const options = {
+        clickSubmitButton: true // معلمة جديدة تشير إلى ضرورة النقر على زر الحفظ
+      };
+      
+      // استدعاء وظيفة تنفيذ السكريبت مع الخيارات الجديدة
+      executeScript(targetUrl, options);
       
       // إغلاق مربع الحوار بعد التنفيذ
       setTimeout(() => {
@@ -179,15 +184,16 @@ const BookmarkletGenerator = ({
             isGoogleUrl={isGoogleUrl}
           />
           
-          {/* اقتراحات إضافية للمستخدم */}
+          {/* اقتراحات إضافية للمستخدم مع إضافة إشعار حول النقر التلقائي على زر الحفظ */}
           <div className="text-sm text-muted-foreground bg-muted/30 p-2 rounded-md border border-muted">
-            <p className="font-semibold mb-1">نصائح حول مشكلة رفض السكريبت:</p>
+            <p className="font-semibold mb-1">ملاحظات مهمة:</p>
             <ul className="mr-4 list-disc space-y-1 text-xs">
+              <li>سيتم النقر تلقائياً على زر الحفظ أو الإضافة بعد ملء النموذج</li>
+              <li>إذا لم يتم النقر تلقائياً، قد يكون هناك حماية في الموقع تمنع ذلك</li>
               <li>بعض المواقع تمنع تنفيذ السكريبت تلقائياً لأسباب أمنية</li>
               <li>جرب فتح الموقع المطلوب في نافذة جديدة ثم استخدم زر المفضلة</li>
               <li>بعض المتصفحات تتطلب تغيير إعدادات الأمان للسماح بتنفيذ السكريبت</li>
               <li>إذا كنت تستخدم موقع Google، حاول استخدام ميزة زر المفضلة بدلاً من زر التنفيذ المباشر</li>
-              <li>يمكنك تجربة نسخ السكريبت ولصقه في شريط العنوان يدوياً بإضافة "javascript:" في البداية</li>
             </ul>
           </div>
         </div>
@@ -197,3 +203,4 @@ const BookmarkletGenerator = ({
 };
 
 export default BookmarkletGenerator;
+

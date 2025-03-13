@@ -1,3 +1,4 @@
+
 // تصدير الوظائف والأنواع من كافة الملفات الفرعية
 
 // Export main API functions
@@ -101,11 +102,72 @@ export const createBookmarkletCode = (imageData: any) => {
           price: fillField(['price', 'سعر', 'المبلغ', 'التكلفة', 'amount', 'total', 'cost'], data.price),
           company: fillField(['company', 'شركة', 'vendor', 'supplier', 'provider'], data.companyName)
         };
+        
+        // وظيفة للبحث عن وضغط زر الحفظ/الإرسال
+        function findAndClickSubmitButton() {
+          // كلمات مفتاحية محتملة لأزرار الحفظ بالعربية والإنجليزية
+          const submitKeywords = ['حفظ', 'إرسال', 'ارسال', 'تسجيل', 'إضافة', 'اضافة', 'أضف', 'اضف', 'submit', 'save', 'add', 'create', 'send'];
+          
+          // البحث في أزرار التقديم (type="submit")
+          const submitButtons = document.querySelectorAll('input[type="submit"], button[type="submit"]');
+          for (const button of submitButtons) {
+            console.log("وجدت زر تقديم:", button);
+            button.click();
+            return true;
+          }
+          
+          // البحث في الأزرار العادية
+          const buttons = document.querySelectorAll('button, input[type="button"]');
+          for (const button of buttons) {
+            // الحصول على النص من السمة value أو innerText
+            const buttonText = button.value || button.innerText || button.textContent || '';
+            
+            // البحث عن كلمة مفتاحية في نص الزر
+            const matchesKeyword = submitKeywords.some(keyword => 
+              buttonText.toLowerCase().includes(keyword.toLowerCase())
+            );
+            
+            if (matchesKeyword) {
+              console.log("تم العثور على زر الحفظ:", buttonText);
+              button.click();
+              return true;
+            }
+          }
+          
+          // البحث في الروابط التي تشبه الأزرار
+          const links = document.querySelectorAll('a.btn, a.button, a[role="button"]');
+          for (const link of links) {
+            const linkText = link.innerText || link.textContent || '';
+            
+            const matchesKeyword = submitKeywords.some(keyword => 
+              linkText.toLowerCase().includes(keyword.toLowerCase())
+            );
+            
+            if (matchesKeyword) {
+              console.log("تم العثور على رابط الحفظ:", linkText);
+              link.click();
+              return true;
+            }
+          }
+          
+          console.log("لم يتم العثور على زر الحفظ");
+          return false;
+        }
 
         // إظهار ملخص للعمليات
         const filledFields = Object.entries(filled).filter(([, success]) => success).length;
         const message = \`تم ملء \${filledFields} حقول من أصل \${Object.keys(filled).length} حقول متاحة.\`;
         alert(message);
+        
+        // محاولة النقر على زر الحفظ بعد تأخير صغير
+        setTimeout(() => {
+          const submitResult = findAndClickSubmitButton();
+          if (submitResult) {
+            alert("تم النقر على زر الحفظ/الإرسال تلقائياً");
+          } else {
+            alert("لم يتم العثور على زر الحفظ. يرجى النقر على زر الحفظ يدوياً.");
+          }
+        }, 1000);
 
       } catch (error) {
         console.error('حدث خطأ:', error);
@@ -219,35 +281,46 @@ export const createBatchBookmarkletCode = (imagesData: any[]) => {
         
         // وظيفة للبحث عن زر الإرسال والضغط عليه
         function findAndClickSubmitButton() {
-          const submitPatterns = ['submit', 'إرسال', 'حفظ', 'تأكيد', 'ارسال', 'save', 'ok', 'نشر'];
+          const submitPatterns = ['submit', 'إرسال', 'حفظ', 'تأكيد', 'ارسال', 'save', 'ok', 'نشر', 'إضافة', 'اضافة', 'أضف', 'اضف'];
           
-          // البحث عن زر الإرسال
-          for (const pattern of submitPatterns) {
-            // البحث في أزرار التقديم
-            const submitButtons = document.querySelectorAll('input[type="submit"]');
-            for (const button of submitButtons) {
-              if (button.value.toLowerCase().includes(pattern)) {
-                button.click();
-                return true;
-              }
-            }
+          // البحث في أزرار التقديم
+          const submitButtons = document.querySelectorAll('input[type="submit"], button[type="submit"]');
+          for (const button of submitButtons) {
+            button.click();
+            return true;
+          }
+          
+          // البحث في الأزرار العادية
+          const buttons = document.querySelectorAll('button, input[type="button"]');
+          for (const button of buttons) {
+            // الحصول على النص من السمة value أو innerText
+            const buttonText = button.value || button.innerText || button.textContent || '';
             
-            // البحث في الأزرار العادية
-            const buttons = document.querySelectorAll('button');
-            for (const button of buttons) {
-              if (button.textContent.toLowerCase().includes(pattern)) {
-                button.click();
-                return true;
-              }
-            }
+            // البحث عن كلمة مفتاحية في نص الزر
+            const matchesKeyword = submitPatterns.some(keyword => 
+              buttonText.toLowerCase().includes(keyword.toLowerCase())
+            );
             
-            // البحث في عناصر a التي تبدو كأزرار
-            const links = document.querySelectorAll('a.btn, a.button');
-            for (const link of links) {
-              if (link.textContent.toLowerCase().includes(pattern)) {
-                link.click();
-                return true;
-              }
+            if (matchesKeyword) {
+              console.log("تم العثور على زر الحفظ:", buttonText);
+              button.click();
+              return true;
+            }
+          }
+          
+          // البحث في الروابط التي تشبه الأزرار
+          const links = document.querySelectorAll('a.btn, a.button, a[role="button"]');
+          for (const link of links) {
+            const linkText = link.innerText || link.textContent || '';
+            
+            const matchesKeyword = submitPatterns.some(keyword => 
+              linkText.toLowerCase().includes(keyword.toLowerCase())
+            );
+            
+            if (matchesKeyword) {
+              console.log("تم العثور على رابط الحفظ:", linkText);
+              link.click();
+              return true;
             }
           }
           
@@ -267,18 +340,26 @@ export const createBatchBookmarkletCode = (imagesData: any[]) => {
           if (success) {
             alert('تم ملء البيانات للسجل ' + (currentIndex + 1) + ' من ' + dataArray.length);
             // محاولة النقر على زر الإرسال
-            const submitted = findAndClickSubmitButton();
-            
-            // زيادة المؤشر للعنصر التالي
-            currentIndex++;
-            
-            // إذا تم النقر على زر الإرسال، ننتظر قليلاً قبل محاولة معالجة النموذج التالي
-            if (submitted) {
-              setTimeout(() => {
-                alert('جاري الانتقال للسجل التالي...');
-                processCurrentForm();
-              }, 2000);
-            }
+            setTimeout(() => {
+              const submitted = findAndClickSubmitButton();
+              
+              if (submitted) {
+                alert('تم النقر على زر الحفظ للسجل ' + (currentIndex + 1));
+              } else {
+                alert('لم يتم العثور على زر الحفظ. يرجى النقر على زر الحفظ يدوياً للسجل ' + (currentIndex + 1));
+              }
+              
+              // زيادة المؤشر للعنصر التالي
+              currentIndex++;
+              
+              // إذا تم النقر على زر الإرسال، ننتظر قليلاً قبل محاولة معالجة النموذج التالي
+              if (submitted) {
+                setTimeout(() => {
+                  alert('جاري الانتقال للسجل التالي...');
+                  processCurrentForm();
+                }, 2000);
+              }
+            }, 1000);
           } else {
             if (confirm('لم يتم العثور على حقول لملئها. هل تريد الانتقال للسجل التالي؟')) {
               currentIndex++;
