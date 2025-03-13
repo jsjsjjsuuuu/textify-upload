@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ImagePreview } from "@/components/ImagePreview";
+import ImageViewer from "@/components/ImagePreview/ImageViewer";
 
 interface ImageViewerProps {
   image: ImageData;
@@ -11,7 +11,7 @@ interface ImageViewerProps {
   onClose: () => void;
 }
 
-const ImageViewer = ({ image, isOpen, onClose }: ImageViewerProps) => {
+const ImageViewerDialog = ({ image, isOpen, onClose }: ImageViewerProps) => {
   const [activeTab, setActiveTab] = useState<string>("image");
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
 
@@ -50,7 +50,7 @@ const ImageViewer = ({ image, isOpen, onClose }: ImageViewerProps) => {
           
           <TabsContent value="image" className="h-[calc(90vh-80px)] overflow-auto">
             <div className="h-full flex items-center justify-center bg-gray-900/5 dark:bg-gray-900/50">
-              <ImagePreview
+              <ImageViewer
                 selectedImage={image}
                 zoomLevel={zoomLevel}
                 onZoomIn={handleZoomIn}
@@ -132,4 +132,4 @@ const ImageViewer = ({ image, isOpen, onClose }: ImageViewerProps) => {
   );
 };
 
-export default ImageViewer;
+export default ImageViewerDialog;
