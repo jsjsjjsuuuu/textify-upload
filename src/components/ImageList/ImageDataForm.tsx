@@ -7,6 +7,7 @@ import {
   PriceField, 
   ExtractedTextDisplay 
 } from "./FormFields";
+import CompanyAutofillButton from "@/components/CompanyAutofill/CompanyAutofillButton";
 
 interface ImageDataFormProps {
   image: ImageData;
@@ -26,7 +27,15 @@ const ImageDataForm = ({
 
   return (
     <div className="p-4">
-      <h3 className="text-lg font-semibold text-brand-brown dark:text-brand-beige mb-3">البيانات المستخرجة</h3>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="text-lg font-semibold text-brand-brown dark:text-brand-beige">البيانات المستخرجة</h3>
+        
+        {/* إضافة زر الإدخال التلقائي للشركات */}
+        <CompanyAutofillButton 
+          imageData={image} 
+          size="sm"
+        />
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* اسم الشركة */}

@@ -7,7 +7,8 @@ import ImageTable from "@/components/ImageTable";
 import BatchExportDialog from "@/components/BatchExportDialog";
 import BatchSubmitDialog from "@/components/BatchSubmitDialog";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, Upload, Send } from "lucide-react";
+import { FileSpreadsheet, Upload, Send, Truck } from "lucide-react";
+import { CompanySelector, BatchCompanyAutofill } from "@/components/CompanyAutofill";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -29,6 +30,9 @@ const ImagePreviewContainer = ({
   const { toast } = useToast();
   const [isBatchExportOpen, setIsBatchExportOpen] = useState(false);
   const [isBatchSubmitOpen, setIsBatchSubmitOpen] = useState(false);
+  const [isCompanySelectorOpen, setIsCompanySelectorOpen] = useState(false);
+  const [isBatchAutofillOpen, setIsBatchAutofillOpen] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
   const handleImageClick = async (image: ImageData) => {
     console.log("Image clicked:", image.id, image.previewUrl);
@@ -45,11 +49,29 @@ const ImagePreviewContainer = ({
     (img.phoneNumber ? img.phoneNumber.replace(/[^\d]/g, '').length === 11 : true)
   ).length;
 
+  // معالج اختيار شركة للإدخال الجماعي
+  const handleSelectCompany = (companyId: string) => {
+    setSelectedCompanyId(companyId);
+    setIsCompanySelectorOpen(false);
+    setIsBatchAutofillOpen(true);
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 gap-8">
         {(completedImagesCount > 1 || submittableImagesCount > 1) && (
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            {completedImagesCount > 1 && (
+              <Button 
+                onClick={() => setIsCompanySelectorOpen(true)} 
+                variant="outline"
+                className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-300 dark:bg-amber-900/20 dark:border-amber-700/30 dark:text-amber-400 dark:hover:bg-amber-900/30 dark:hover:border-amber-700/50"
+              >
+                <Truck size={16} className="ml-2" />
+                إرسال لشركة توصيل ({completedImagesCount} صورة)
+              </Button>
+            )}
+            
             {submittableImagesCount > 1 && (
               <Button 
                 onClick={() => setIsBatchSubmitOpen(true)} 
@@ -106,6 +128,24 @@ const ImagePreviewContainer = ({
         images={images}
         onSubmit={onSubmit}
       />
+
+      <CompanySelector
+        isOpen={isCompanySelectorOpen}
+        onClose={() => setIsCompanySelectorOpen(false)}
+        onSelectCompany={handleSelectCompany}
+      />
+
+      {selectedCompanyId && (
+        <BatchCompanyAutofill
+          isOpen={isBatchAutofillOpen}
+          onClose={() => {
+            setIsBatchAutofillOpen(false);
+            setSelectedCompanyId(null);
+          }}
+          images={images}
+          companyId={selectedCompanyId}
+        />
+      )}
     </>
   );
 };
