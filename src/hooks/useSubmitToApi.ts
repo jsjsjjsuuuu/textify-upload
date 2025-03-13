@@ -20,6 +20,7 @@ export const useSubmitToApi = (updateImage: (id: string, fields: Partial<ImageDa
     
     setIsSubmitting(true);
     try {
+      console.log("جاري إرسال البيانات للصورة:", id);
       // استخدام وظيفة Supabase للإرسال
       const result = await submitImageToExternalApi(id);
       
@@ -28,16 +29,21 @@ export const useSubmitToApi = (updateImage: (id: string, fields: Partial<ImageDa
 
         toast({
           title: "تم الإرسال بنجاح",
-          description: result.message
+          description: result.message || "تم إرسال البيانات إلى النظام"
         });
+        console.log("تم الإرسال بنجاح:", result.message);
       } else {
         toast({
           title: "فشل في الإرسال",
-          description: result.error,
+          description: result.error || "حدث خطأ غير معروف أثناء الإرسال",
           variant: "destructive"
         });
+        console.error("فشل في الإرسال:", result.error);
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("استثناء أثناء الإرسال:", errorMessage);
+      
       toast({
         title: "خطأ في الإرسال",
         description: "حدث خطأ أثناء الاتصال بالخادم",

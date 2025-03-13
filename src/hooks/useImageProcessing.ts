@@ -8,9 +8,11 @@ import { useSubmitToApi } from "@/hooks/useSubmitToApi";
 import { useCustomTextHandlers } from "@/hooks/useCustomTextHandlers";
 import { useDataValidation } from "@/hooks/useDataValidation";
 import { useFileProcessing } from "@/hooks/useFileProcessing";
+import { useToast } from "@/hooks/use-toast";
 
 export const useImageProcessing = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
   
   const { 
     images, 
@@ -23,7 +25,7 @@ export const useImageProcessing = () => {
   
   const { processWithOcr } = useOcrProcessing();
   const { useGemini, processWithGemini } = useGeminiProcessing();
-  const { handleSubmitToApi: submitToApi } = useSubmitToApi(updateImage);
+  const { handleSubmitToApi: submitToApi, isSubmitting: apiSubmitting } = useSubmitToApi(updateImage);
   const { handleCustomTextChange } = useCustomTextHandlers(handleTextChange);
   const { validateImageData } = useDataValidation();
   const { isProcessing, processingProgress, handleFileChange } = useFileProcessing(
@@ -37,15 +39,27 @@ export const useImageProcessing = () => {
 
   const handleSubmitToApi = (id: string) => {
     const image = images.find(img => img.id === id);
-    if (image) {
-      const { isValid } = validateImageData(image);
-      
-      if (!isValid) {
-        return;
-      }
-      
-      submitToApi(id, image);
+    if (!image) {
+      toast({
+        title: "خطأ في الإرسال",
+        description: "الصورة غير موجودة",
+        variant: "destructive"
+      });
+      return;
     }
+    
+    const { isValid, errors } = validateImageData(image);
+    
+    if (!isValid) {
+      toast({
+        title: "بيانات غير مكتملة",
+        description: errors?.join("، ") || "يرجى التأكد من اكتمال جميع البيانات المطلوبة",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    submitToApi(id, image);
   };
 
   return {
@@ -53,7 +67,7 @@ export const useImageProcessing = () => {
     isLoading,
     isProcessing,
     processingProgress,
-    isSubmitting,
+    isSubmitting: apiSubmitting, // استخدام حالة التقديم من useSubmitToApi
     useGemini,
     handleFileChange,
     handleTextChange: handleCustomTextChange,

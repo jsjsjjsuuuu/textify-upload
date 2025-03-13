@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ImageData } from '@/types/ImageData';
 
@@ -6,11 +5,39 @@ import { ImageData } from '@/types/ImageData';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('متغيرات بيئة Supabase غير متوفرة');
-}
+// تحقق من وجود متغيرات البيئة
+const hasSupabaseConfig = supabaseUrl && supabaseKey;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// إنشاء عميل Supabase فقط إذا كانت المتغيرات موجودة
+let supabase: any;
+
+if (hasSupabaseConfig) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+  console.log("تم الاتصال بـ Supabase بنجاح");
+} else {
+  console.warn("متغيرات بيئة Supabase غير متوفرة - سيتم تخزين البيانات محلياً فقط");
+  // إنشاء نسخة وهمية من عميل Supabase
+  supabase = {
+    storage: {
+      from: () => ({
+        upload: async () => ({ data: null, error: null }),
+        getPublicUrl: () => ({ data: { publicUrl: '' } }),
+        remove: async () => ({ error: null })
+      })
+    },
+    from: () => ({
+      select: () => ({
+        order: () => ({ data: [], error: null }),
+        eq: () => ({ data: null, error: null }),
+        single: () => ({ data: null, error: null })
+      }),
+      insert: () => ({ error: null }),
+      upsert: () => ({ error: null }),
+      update: () => ({ error: null }),
+      delete: () => ({ error: null })
+    })
+  };
+}
 
 // واجهة البيانات في قاعدة البيانات
 export interface DbImageData {
@@ -77,9 +104,30 @@ export const fromDbFormat = (dbData: DbImageData, file: File): Partial<ImageData
   };
 };
 
-// وظائف التعامل مع قاعدة البيانات
+// مخزن محلي بديل عند عدم توفر Supabase
+const localStorageDB = {
+  images: [] as DbImageData[],
+  counter: 0
+};
+
+// وظائف التعامل مع قاعدة البيانات مع دعم الوضع المحلي
 export const saveImageData = async (imageData: ImageData): Promise<{ success: boolean; error?: string }> => {
   try {
+    if (!hasSupabaseConfig) {
+      // تخزين محلي بدلاً من Supabase
+      const localData: DbImageData = {
+        ...toDbFormat(imageData),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        file_url: imageData.previewUrl
+      };
+      
+      localStorageDB.images.push(localData);
+      console.log("تم تخزين الصورة محلياً:", localData.id);
+      return { success: true };
+    }
+    
+    // استخدام Supabase إذا كان متاحاً
     // رفع الملف إلى التخزين
     const fileExt = imageData.file.name.split('.').pop();
     const filePath = `images/${imageData.id}.${fileExt}`;
@@ -125,6 +173,35 @@ export const saveImageData = async (imageData: ImageData): Promise<{ success: bo
 
 export const updateImageData = async (id: string, updatedFields: Partial<ImageData>): Promise<{ success: boolean; error?: string }> => {
   try {
+    if (!hasSupabaseConfig) {
+      // تحديث محلي بدلاً من Supabase
+      const imageIndex = localStorageDB.images.findIndex(img => img.id === id);
+      if (imageIndex !== -1) {
+        const dbFields: Record<string, any> = {};
+        
+        if (updatedFields.code !== undefined) dbFields.code = updatedFields.code;
+        if (updatedFields.senderName !== undefined) dbFields.sender_name = updatedFields.senderName;
+        if (updatedFields.phoneNumber !== undefined) dbFields.phone_number = updatedFields.phoneNumber;
+        if (updatedFields.secondaryPhoneNumber !== undefined) dbFields.secondary_phone_number = updatedFields.secondaryPhoneNumber;
+        if (updatedFields.province !== undefined) dbFields.province = updatedFields.province;
+        if (updatedFields.price !== undefined) dbFields.price = updatedFields.price;
+        if (updatedFields.companyName !== undefined) dbFields.company_name = updatedFields.companyName;
+        if (updatedFields.status !== undefined) dbFields.status = updatedFields.status;
+        if (updatedFields.submitted !== undefined) dbFields.submitted = updatedFields.submitted;
+        if (updatedFields.extractionMethod !== undefined) dbFields.extraction_method = updatedFields.extractionMethod;
+        
+        localStorageDB.images[imageIndex] = {
+          ...localStorageDB.images[imageIndex],
+          ...dbFields,
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log("تم تحديث الصورة محلياً:", id);
+      }
+      return { success: true };
+    }
+    
+    // استخدام Supabase إذا كان متاحاً
     // تحويل الحقول المحدثة إلى تنسيق قاعدة البيانات
     const dbFields: Record<string, any> = {};
     
@@ -159,6 +236,21 @@ export const updateImageData = async (id: string, updatedFields: Partial<ImageDa
 
 export const deleteImageData = async (id: string): Promise<{ success: boolean; error?: string }> => {
   try {
+    if (!hasSupabaseConfig) {
+      // حذف محلي بدلاً من Supabase
+      const initialLength = localStorageDB.images.length;
+      localStorageDB.images = localStorageDB.images.filter(img => img.id !== id);
+      
+      if (localStorageDB.images.length < initialLength) {
+        console.log("تم حذف الصورة محلياً:", id);
+      } else {
+        console.warn("لم يتم العثور على الصورة للحذف:", id);
+      }
+      
+      return { success: true };
+    }
+    
+    // استخدام Supabase إذا كان متاحاً
     // الحصول على مسار الملف أولاً
     const { data, error: fetchError } = await supabase
       .from('image_data')
@@ -208,6 +300,13 @@ export const deleteImageData = async (id: string): Promise<{ success: boolean; e
 
 export const fetchAllImages = async (): Promise<{ success: boolean; data?: DbImageData[]; error?: string }> => {
   try {
+    if (!hasSupabaseConfig) {
+      // استرجاع محلي بدلاً من Supabase
+      console.log("استرجاع الصور من المخزن المحلي -", localStorageDB.images.length, "صورة");
+      return { success: true, data: localStorageDB.images };
+    }
+    
+    // استخدام Supabase إذا كان متاحاً
     const { data, error } = await supabase
       .from('image_data')
       .select('*')
@@ -218,7 +317,7 @@ export const fetchAllImages = async (): Promise<{ success: boolean; data?: DbIma
       return { success: false, error: error.message };
     }
     
-    return { success: true, data };
+    return { success: true, data: [] };
   } catch (error) {
     console.error('خطأ غير متوقع:', error);
     return { success: false, error: String(error) };
@@ -227,6 +326,28 @@ export const fetchAllImages = async (): Promise<{ success: boolean; data?: DbIma
 
 export const submitImageToExternalApi = async (id: string): Promise<{ success: boolean; message?: string; error?: string }> => {
   try {
+    if (!hasSupabaseConfig) {
+      // تقديم محلي بدلاً من Supabase
+      const imageIndex = localStorageDB.images.findIndex(img => img.id === id);
+      
+      if (imageIndex === -1) {
+        return { success: false, error: 'لم يتم العثور على الصورة المطلوبة' };
+      }
+      
+      // محاكاة إرسال البيانات إلى API خارجي مع تأخير
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // تحديث حالة التقديم
+      localStorageDB.images[imageIndex].submitted = true;
+      
+      console.log("تم تقديم الصورة محلياً:", id);
+      return { 
+        success: true, 
+        message: 'تم إرسال البيانات بنجاح (وضع محلي)'
+      };
+    }
+    
+    // استخدام Supabase إذا كان متاحاً
     // استرجاع بيانات الصورة
     const { data, error: fetchError } = await supabase
       .from('image_data')
