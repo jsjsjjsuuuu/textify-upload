@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 
@@ -192,7 +191,7 @@ export const useBookmarkletGenerator = (
               form.style.maxWidth = '400px';
               form.style.direction = 'rtl';
               
-              form.innerHTML = \`
+              form.innerHTML = \\`
                 <h3 style="margin-top: 0; text-align: center; margin-bottom: 15px;">حفظ بيانات تسجيل الدخول</h3>
                 <div style="margin-bottom: 10px;">
                   <label style="display: block; margin-bottom: 5px;">اسم المستخدم / البريد الإلكتروني:</label>
@@ -206,7 +205,7 @@ export const useBookmarkletGenerator = (
                   <button id="save-credentials-cancel" style="padding: 8px 16px; background-color: #f1f1f1; border: none; border-radius: 4px; cursor: pointer;">إلغاء</button>
                   <button id="save-credentials-submit" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">حفظ</button>
                 </div>
-              \`;
+              \\`;
               
               document.body.appendChild(form);
               
@@ -276,24 +275,24 @@ export const useBookmarkletGenerator = (
               const arabicLabel = label.includes('_') || label.includes('-') ? label.replace(/[_-]/g, '') : label;
               
               const fieldSelectors = [
-                `input[name*="${label}"]`,
-                `input[id*="${label}"]`,
-                `input[placeholder*="${label}"]`,
-                `textarea[name*="${label}"]`,
-                `textarea[id*="${label}"]`,
-                `textarea[placeholder*="${label}"]`,
-                `input[name*="${lowerLabel}"]`,
-                `input[id*="${lowerLabel}"]`,
-                `input[placeholder*="${lowerLabel}"]`,
-                `textarea[name*="${lowerLabel}"]`,
-                `textarea[id*="${lowerLabel}"]`,
-                `textarea[placeholder*="${lowerLabel}"]`,
-                `input[data-input-type*="${label}"]`,
-                `input[data-input-type*="${lowerLabel}"]`,
-                `input[data-id*="${label}"]`,
-                `input[data-id*="${lowerLabel}"]`,
-                `input[name*="${arabicLabel}"]`,
-                `input[id*="${arabicLabel}"]`
+                'input[name*="' + label + '"]',
+                'input[id*="' + label + '"]',
+                'input[placeholder*="' + label + '"]',
+                'textarea[name*="' + label + '"]',
+                'textarea[id*="' + label + '"]',
+                'textarea[placeholder*="' + label + '"]',
+                'input[name*="' + lowerLabel + '"]',
+                'input[id*="' + lowerLabel + '"]',
+                'input[placeholder*="' + lowerLabel + '"]',
+                'textarea[name*="' + lowerLabel + '"]',
+                'textarea[id*="' + lowerLabel + '"]',
+                'textarea[placeholder*="' + lowerLabel + '"]',
+                'input[data-input-type*="' + label + '"]',
+                'input[data-input-type*="' + lowerLabel + '"]',
+                'input[data-id*="' + label + '"]',
+                'input[data-id*="' + lowerLabel + '"]',
+                'input[name*="' + arabicLabel + '"]',
+                'input[id*="' + arabicLabel + '"]'
               ];
               
               fieldSelectors.forEach(selector => {
@@ -357,16 +356,16 @@ export const useBookmarkletGenerator = (
                 if (bestMatch) {
                   input.value = bestMatch.value;
                   input.dispatchEvent(new Event('change', { bubbles: true }));
-                  console.log(\`تم ملء حقل القائمة المنسدلة: \${input.name || input.id}\`);
-                  showNotification(\`تم ملء حقل: \${labels[0]}\`, 'success');
+                  console.log(\\`تم ملء حقل القائمة المنسدلة: \\${input.name || input.id}\\`);
+                  showNotification(\\`تم ملء حقل: \\${labels[0]}\\`, 'success');
                   return true;
                 }
               } else {
                 input.value = value;
                 input.dispatchEvent(new Event('input', { bubbles: true }));
                 input.dispatchEvent(new Event('change', { bubbles: true }));
-                console.log(\`تم ملء الحقل: \${input.name || input.id}\`);
-                showNotification(\`تم ملء حقل: \${labels[0]}\`, 'success');
+                console.log(\\`تم ملء الحقل: \\${input.name || input.id}\\`);
+                showNotification(\\`تم ملء حقل: \\${labels[0]}\\`, 'success');
                 return true;
               }
             }
@@ -389,7 +388,7 @@ export const useBookmarkletGenerator = (
           const totalFields = Object.values(exportData).filter(Boolean).length;
           
           if (filledCount > 0) {
-            showNotification(\`تم ملء \${filledCount} من \${totalFields} حقول\`, 'success');
+            showNotification(\\`تم ملء \\${filledCount} من \\${totalFields} حقول\\`, 'success');
           } else {
             // إذا لم يتم العثور على أي حقول، عرض رسالة
             showNotification('لم يتم العثور على حقول مطابقة لملء البيانات', 'error');
@@ -586,24 +585,24 @@ export const useBookmarkletGenerator = (
               const arabicLabel = label.includes('_') || label.includes('-') ? label.replace(/[_-]/g, '') : label;
               
               const fieldSelectors = [
-                \`input[name*="\${label}"]\`,
-                \`input[id*="\${label}"]\`,
-                \`input[placeholder*="\${label}"]\`,
-                \`textarea[name*="\${label}"]\`,
-                \`textarea[id*="\${label}"]\`,
-                \`textarea[placeholder*="\${label}"]\`,
-                \`input[name*="\${lowerLabel}"]\`,
-                \`input[id*="\${lowerLabel}"]\`,
-                \`input[placeholder*="\${lowerLabel}"]\`,
-                \`textarea[name*="\${lowerLabel}"]\`,
-                \`textarea[id*="\${lowerLabel}"]\`,
-                \`textarea[placeholder*="\${lowerLabel}"]\`,
-                \`input[data-input-type*="\${label}"]\`,
-                \`input[data-input-type*="\${lowerLabel}"]\`,
-                \`input[data-id*="\${label}"]\`,
-                \`input[data-id*="\${lowerLabel}"]\`,
-                \`input[name*="\${arabicLabel}"]\`,
-                \`input[id*="\${arabicLabel}"]\`
+                'input[name*="' + label + '"]',
+                'input[id*="' + label + '"]',
+                'input[placeholder*="' + label + '"]',
+                'textarea[name*="' + label + '"]',
+                'textarea[id*="' + label + '"]',
+                'textarea[placeholder*="' + label + '"]',
+                'input[name*="' + lowerLabel + '"]',
+                'input[id*="' + lowerLabel + '"]',
+                'input[placeholder*="' + lowerLabel + '"]',
+                'textarea[name*="' + lowerLabel + '"]',
+                'textarea[id*="' + lowerLabel + '"]',
+                'textarea[placeholder*="' + lowerLabel + '"]',
+                'input[data-input-type*="' + label + '"]',
+                'input[data-input-type*="' + lowerLabel + '"]',
+                'input[data-id*="' + label + '"]',
+                'input[data-id*="' + lowerLabel + '"]',
+                'input[name*="' + arabicLabel + '"]',
+                'input[id*="' + arabicLabel + '"]'
               ];
               
               fieldSelectors.forEach(selector => {
@@ -667,14 +666,14 @@ export const useBookmarkletGenerator = (
                 if (bestMatch) {
                   input.value = bestMatch.value;
                   input.dispatchEvent(new Event('change', { bubbles: true }));
-                  console.log(\`تم ملء حقل القائمة المنسدلة: \${input.name || input.id}\`);
+                  console.log(\\`تم ملء حقل القائمة المنسدلة: \\${input.name || input.id}\\`);
                   return true;
                 }
               } else {
                 input.value = value;
                 input.dispatchEvent(new Event('input', { bubbles: true }));
                 input.dispatchEvent(new Event('change', { bubbles: true }));
-                console.log(\`تم ملء الحقل: \${input.name || input.id}\`);
+                console.log(\\`تم ملء الحقل: \\${input.name || input.id}\\`);
                 return true;
               }
             }
@@ -684,7 +683,7 @@ export const useBookmarkletGenerator = (
           
           // دالة لملء بيانات صورة واحدة
           function fillData(data) {
-            showNotification(\`جاري ملء بيانات السجل رقم \${currentIndex + 1}\`, 'info');
+            showNotification(\\`جاري ملء بيانات السجل رقم \\${currentIndex + 1}\\`, 'info');
             
             const filledFields = {
               code: findAndFillField(['code', 'الكود', 'رمز', 'رقم_الطلب', 'رقم', 'orderid', 'order', 'order-number', 'orderNumber', 'ordernumber', 'shipment', 'tracking'], data.code),
@@ -700,7 +699,7 @@ export const useBookmarkletGenerator = (
             const totalFields = Object.values(data).filter(Boolean).length;
             
             if (filledCount > 0) {
-              showNotification(\`تم ملء \${filledCount} من \${totalFields} حقول\`, 'success');
+              showNotification(\\`تم ملء \\${filledCount} من \\${totalFields} حقول\\`, 'success');
               return true;
             } else {
               // إذا لم يتم العثور على أي حقول، عرض رسالة
@@ -726,62 +725,62 @@ export const useBookmarkletGenerator = (
             panel.style.minWidth = '280px';
             
             const title = document.createElement('div');
-            title.innerHTML = \`
+            title.innerHTML = \\`
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: move;">
                 <h3 style="margin: 0; font-size: 16px; font-weight: bold; color: #333;">أداة ملء البيانات تلقائياً</h3>
                 <span id="panel-close" style="cursor: pointer; font-size: 18px; color: #777;">&times;</span>
               </div>
-            \`;
+            \\`;
             panel.appendChild(title);
             
             const info = document.createElement('div');
-            info.innerHTML = \`
+            info.innerHTML = \\`
               <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <span>السجل: <span id="current-index" style="font-weight: bold;">\${currentIndex + 1}</span> من <span style="font-weight: bold;">\${allExportData.length}</span></span>
+                <span>السجل: <span id="current-index" style="font-weight: bold;">\\${currentIndex + 1}</span> من <span style="font-weight: bold;">\\${allExportData.length}</span></span>
                 <span id="progress-info" style="font-size: 12px; color: #777;"></span>
               </div>
-            \`;
+            \\`;
             panel.appendChild(info);
             
             const progressBar = document.createElement('div');
-            progressBar.innerHTML = \`
+            progressBar.innerHTML = \\`
               <div style="height: 6px; background-color: #f0f0f0; border-radius: 3px; margin-bottom: 12px; overflow: hidden;">
-                <div id="progress-bar" style="height: 100%; width: \${((currentIndex + 1) / allExportData.length) * 100}%; background-color: #4CAF50; transition: width 0.3s;"></div>
+                <div id="progress-bar" style="height: 100%; width: \\${((currentIndex + 1) / allExportData.length) * 100}%; background-color: #4CAF50; transition: width 0.3s;"></div>
               </div>
-            \`;
+            \\`;
             panel.appendChild(progressBar);
             
             const dataDisplay = document.createElement('div');
-            dataDisplay.innerHTML = \`
+            dataDisplay.innerHTML = \\`
               <div id="current-data" style="margin-bottom: 12px; font-size: 13px; background-color: #f9f9f9; padding: 8px; border-radius: 4px; max-height: 120px; overflow-y: auto;">
-                <div><strong>الكود:</strong> <span id="data-code">\${allExportData[currentIndex].code || '-'}</span></div>
-                <div><strong>الاسم:</strong> <span id="data-name">\${allExportData[currentIndex].senderName || '-'}</span></div>
-                <div><strong>الهاتف:</strong> <span id="data-phone">\${allExportData[currentIndex].phoneNumber || '-'}</span></div>
-                <div><strong>المحافظة:</strong> <span id="data-province">\${allExportData[currentIndex].province || '-'}</span></div>
-                <div><strong>السعر:</strong> <span id="data-price">\${allExportData[currentIndex].price || '-'}</span></div>
-                <div><strong>الشركة:</strong> <span id="data-company">\${allExportData[currentIndex].companyName || '-'}</span></div>
+                <div><strong>الكود:</strong> <span id="data-code">\\${allExportData[currentIndex].code || '-'}</span></div>
+                <div><strong>الاسم:</strong> <span id="data-name">\\${allExportData[currentIndex].senderName || '-'}</span></div>
+                <div><strong>الهاتف:</strong> <span id="data-phone">\\${allExportData[currentIndex].phoneNumber || '-'}</span></div>
+                <div><strong>المحافظة:</strong> <span id="data-province">\\${allExportData[currentIndex].province || '-'}</span></div>
+                <div><strong>السعر:</strong> <span id="data-price">\\${allExportData[currentIndex].price || '-'}</span></div>
+                <div><strong>الشركة:</strong> <span id="data-company">\\${allExportData[currentIndex].companyName || '-'}</span></div>
               </div>
-            \`;
+            \\`;
             panel.appendChild(dataDisplay);
             
             const buttonsContainer = document.createElement('div');
             buttonsContainer.style.display = 'flex';
             buttonsContainer.style.gap = '8px';
             
-            const controlButtons = \`
-              <button id="prev-button" \${currentIndex === 0 ? 'disabled' : ''} style="flex: 1; padding: 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: \${currentIndex === 0 ? '0.5' : '1'};">السابق</button>
+            const controlButtons = \\`
+              <button id="prev-button" \\${currentIndex === 0 ? 'disabled' : ''} style="flex: 1; padding: 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: \\${currentIndex === 0 ? '0.5' : '1'};">السابق</button>
               <button id="fill-button" style="flex: 1; padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">ملء</button>
-              <button id="next-button" \${currentIndex >= allExportData.length - 1 ? 'disabled' : ''} style="flex: 1; padding: 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: \${currentIndex >= allExportData.length - 1 ? '0.5' : '1'};">التالي</button>
-            \`;
+              <button id="next-button" \\${currentIndex >= allExportData.length - 1 ? 'disabled' : ''} style="flex: 1; padding: 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: \\${currentIndex >= allExportData.length - 1 ? '0.5' : '1'};">التالي</button>
+            \\`;
             
             buttonsContainer.innerHTML = controlButtons;
             panel.appendChild(buttonsContainer);
             
             const submitContainer = document.createElement('div');
             submitContainer.style.marginTop = '8px';
-            submitContainer.innerHTML = \`
+            submitContainer.innerHTML = \\`
               <button id="submit-button" style="width: 100%; padding: 8px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 4px;">حفظ/إرسال النموذج</button>
-            \`;
+            \\`;
             panel.appendChild(submitContainer);
             
             document.body.appendChild(panel);
@@ -859,8 +858,8 @@ export const useBookmarkletGenerator = (
             // وظيفة تحديث معلومات اللوحة
             function updatePanelInfo() {
               document.getElementById('current-index').textContent = (currentIndex + 1).toString();
-              document.getElementById('progress-bar').style.width = \`\${((currentIndex + 1) / allExportData.length) * 100}%\`;
-              document.getElementById('progress-info').textContent = \`\${Math.round(((currentIndex + 1) / allExportData.length) * 100)}%\`;
+              document.getElementById('progress-bar').style.width = \\`\\${((currentIndex + 1) / allExportData.length) * 100}%\\`;
+              document.getElementById('progress-info').textContent = \\`\\${Math.round(((currentIndex + 1) / allExportData.length) * 100)}%\\`;
               
               // تحديث بيانات السجل الحالي
               document.getElementById('data-code').textContent = allExportData[currentIndex].code || '-';
