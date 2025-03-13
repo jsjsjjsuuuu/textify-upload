@@ -34,6 +34,7 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
       code: image.code || "",
       senderName: image.senderName || "",
       phoneNumber: image.phoneNumber || "",
+      secondaryPhoneNumber: image.secondaryPhoneNumber || "",
       province: image.province || "",
       price: image.price || "",
       companyName: image.companyName || ""
