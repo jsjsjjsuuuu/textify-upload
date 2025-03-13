@@ -8,7 +8,7 @@ export const useDataValidation = () => {
   const validateImageData = (image: ImageData) => {
     // التحقق من صحة البيانات قبل الإرسال
     let hasErrors = false;
-    let errorMessages = [];
+    let errorMessages: string[] = [];
     
     // التحقق من رقم الهاتف
     if (image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, '').length !== 11) {

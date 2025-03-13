@@ -45,10 +45,10 @@ export const useImageProcessing = () => {
         return;
       }
       
-      const { isValid, errors } = validateImageData(image);
+      const { isValid, errorMessages } = validateImageData(image);
       
       if (!isValid) {
-        const errorMessage = errors.join("، ");
+        const errorMessage = errorMessages.join("، ");
         toast({
           title: "بيانات غير صالحة",
           description: errorMessage,
