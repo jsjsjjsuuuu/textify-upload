@@ -56,6 +56,41 @@ const ImagePreviewContainer = ({
     setIsBatchAutofillOpen(true);
   };
 
+  // وظيفة تحديث الصور
+  const updateImage = (id: string, fields: Partial<ImageData>) => {
+    // ننفذ تحديث الحقول من خلال وظيفة onTextChange لكل حقل
+    if (fields.senderName !== undefined) {
+      onTextChange(id, 'senderName', fields.senderName);
+    }
+    if (fields.phoneNumber !== undefined) {
+      onTextChange(id, 'phoneNumber', fields.phoneNumber);
+    }
+    if (fields.province !== undefined) {
+      onTextChange(id, 'province', fields.province);
+    }
+    if (fields.price !== undefined) {
+      onTextChange(id, 'price', fields.price);
+    }
+    if (fields.code !== undefined) {
+      onTextChange(id, 'code', fields.code);
+    }
+    
+    // إذا كان هناك نتائج للإدخال التلقائي، نقوم بتحديث الصورة كاملة
+    // هذا يتم معالجته في التطبيق الرئيسي
+    if (fields.autoFillResult !== undefined) {
+      // إرسال حدث تحديث الصورة
+      const event = new CustomEvent('image-update', { 
+        detail: {
+          id,
+          fields: {
+            ...fields
+          }
+        }
+      });
+      window.dispatchEvent(event);
+    }
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 gap-8">
@@ -143,7 +178,7 @@ const ImagePreviewContainer = ({
             setSelectedCompanyId(null);
           }}
           images={images}
-          companyId={selectedCompanyId}
+          updateImage={updateImage}
         />
       )}
     </>

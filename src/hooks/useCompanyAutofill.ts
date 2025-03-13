@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { ImageData } from "@/types/ImageData";
 import { DeliveryCompany } from "@/types/DeliveryCompany";
@@ -11,6 +10,7 @@ export interface AutofillResult {
   fieldsFound?: number;
   fieldsFilled?: number;
   error?: string;
+  retryCount?: number;
 }
 
 export interface AutofillOptions {
@@ -607,14 +607,19 @@ export const useCompanyAutofill = () => {
       const timestamp = new Date().toISOString();
       const result: AutofillResult = {
         ...autoFillResult,
-        message: autoFillResult.message || `تم تنفيذ الإدخال التلقائي في موقع ${company.name}`
+        message: autoFillResult.message || `تم تنفيذ الإدخال التلقائي في موقع ${company.name}`,
+        // نضمن وجود القيم الإلزامية
+        fieldsFound: autoFillResult.fieldsFound || 0,
+        fieldsFilled: autoFillResult.fieldsFilled || 0
       };
       
       // إضافة نتيجة الإدخال التلقائي إلى البيانات
       const autoFillResultWithMeta = {
         ...result,
         company: company.name,
-        timestamp
+        timestamp,
+        fieldsFound: result.fieldsFound || 0,
+        fieldsFilled: result.fieldsFilled || 0
       };
       
       // تحديث بيانات الصورة
@@ -647,7 +652,9 @@ export const useCompanyAutofill = () => {
       const result = { 
         success: false, 
         message: "فشل في تنفيذ الإدخال التلقائي", 
-        error: errorMsg 
+        error: errorMsg,
+        fieldsFound: 0,
+        fieldsFilled: 0
       };
       
       setLastResult(result);
@@ -695,7 +702,13 @@ export const useCompanyAutofill = () => {
         success: false, 
         results: imagesData.reduce((acc, img) => ({ 
           ...acc, 
-          [img.id]: { success: false, message: error, error } 
+          [img.id]: { 
+            success: false, 
+            message: error, 
+            error,
+            fieldsFound: 0,
+            fieldsFilled: 0
+          } 
         }), {})
       };
     }
@@ -752,7 +765,9 @@ export const useCompanyAutofill = () => {
             const errorResult: AutofillResult = {
               success: false,
               message: "حدث خطأ أثناء تنفيذ الإدخال التلقائي",
-              error: error instanceof Error ? error.message : "خطأ غير معروف"
+              error: error instanceof Error ? error.message : "خطأ غير معروف",
+              fieldsFound: 0,
+              fieldsFilled: 0
             };
             
             // تسجيل النتيجة
@@ -789,7 +804,7 @@ export const useCompanyAutofill = () => {
       toast({
         title: allSuccess ? "تم اكتمال الإدخال التلقائي المجمع" : "اكتمال الإدخال التلقائي المجمع مع وجود أخطاء",
         description: `تم معالجة ${completed} من أصل ${total} عنصر`,
-        variant: allSuccess ? "success" : "warning"
+        variant: allSuccess ? "default" : "destructive"
       });
       
       return {

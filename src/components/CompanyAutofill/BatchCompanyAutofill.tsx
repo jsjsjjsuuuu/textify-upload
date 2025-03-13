@@ -12,7 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { PlayIcon, PauseIcon, StopIcon, Settings2Icon, CheckIcon, XIcon, AlertCircleIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Play, Pause, Square, Settings2, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 interface BatchCompanyAutofillProps {
   isOpen: boolean;
@@ -303,9 +304,9 @@ const BatchCompanyAutofill: React.FC<BatchCompanyAutofillProps> = ({
                       {results[image.id] && (
                         <div className="ml-2">
                           {results[image.id].success ? (
-                            <CheckIcon className="h-5 w-5 text-green-500" />
+                            <CheckCircle className="h-5 w-5 text-green-500" />
                           ) : (
-                            <XIcon className="h-5 w-5 text-red-500" />
+                            <XCircle className="h-5 w-5 text-red-500" />
                           )}
                         </div>
                       )}
@@ -443,9 +444,9 @@ const BatchCompanyAutofill: React.FC<BatchCompanyAutofillProps> = ({
                         <div className="flex justify-between items-center mb-2">
                           <div className="font-medium flex items-center">
                             {result.success ? (
-                              <CheckIcon className="h-4 w-4 text-green-500 ml-1" />
+                              <CheckCircle className="h-4 w-4 text-green-500 ml-1" />
                             ) : (
-                              <AlertCircleIcon className="h-4 w-4 text-red-500 ml-1" />
+                              <AlertCircle className="h-4 w-4 text-red-500 ml-1" />
                             )}
                             {image?.senderName || "بدون اسم"}
                           </div>
@@ -493,12 +494,12 @@ const BatchCompanyAutofill: React.FC<BatchCompanyAutofillProps> = ({
             >
               {isRunning ? (
                 <>
-                  <StopIcon className="ml-2 h-4 w-4" />
+                  <Square className="ml-2 h-4 w-4" />
                   إيقاف
                 </>
               ) : (
                 <>
-                  <PlayIcon className="ml-2 h-4 w-4" />
+                  <Play className="ml-2 h-4 w-4" />
                   بدء
                 </>
               )}
