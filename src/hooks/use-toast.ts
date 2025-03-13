@@ -1,4 +1,3 @@
-
 import * as React from "react"
 
 import type {
@@ -6,8 +5,10 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_LIMIT = 20
+const TOAST_REMOVE_DELAY = 1000
+
+export type ToastVariant = NonNullable<ToastProps["variant"]> | "info" | "success"
 
 type ToasterToast = ToastProps & {
   id: string
@@ -26,7 +27,7 @@ const actionTypes = {
 let count = 0
 
 function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  count = (count + 1) % Number.MAX_VALUE
   return count.toString()
 }
 
@@ -43,11 +44,11 @@ type Action =
     }
   | {
       type: ActionType["DISMISS_TOAST"]
-      toastId?: ToasterToast["id"]
+      toastId?: string
     }
   | {
       type: ActionType["REMOVE_TOAST"]
-      toastId?: ToasterToast["id"]
+      toastId?: string
     }
 
 interface State {
@@ -138,38 +139,40 @@ function dispatch(action: Action) {
   })
 }
 
-type ToastVariant = "default" | "destructive" | "warning" | "success" | "info";
+type Toast = Omit<ToasterToast, "id">
 
-type Toast = Omit<ToasterToast, "id"> & {
-  variant?: ToastVariant;
-};
-
-function toast({ ...props }: Toast) {
+function toast(props: Toast) {
   const id = genId()
 
-  const update = (props: ToasterToast) =>
-    dispatch({
-      type: "UPDATE_TOAST",
-      toast: { ...props, id },
-    })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+  // تحويل الأنواع الإضافية إلى الأنواع المدعومة أساسياً
+  let variant = props.variant;
+  if (variant === "info" || variant === "success") {
+    variant = "default";
+  }
+
+  const newToast = {
+    ...props,
+    id,
+    variant,
+    open: true,
+    onOpenChange: (open: boolean) => {
+      if (!open) dispatch({ type: "DISMISS_TOAST", toastId: id })
+    },
+  }
 
   dispatch({
     type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      open: true,
-      onOpenChange: (open) => {
-        if (!open) dismiss()
-      },
-    },
+    toast: newToast,
   })
 
   return {
     id: id,
-    dismiss,
-    update,
+    dismiss: () => dispatch({ type: "DISMISS_TOAST", toastId: id }),
+    update: (props: ToasterToast) =>
+      dispatch({
+        type: "UPDATE_TOAST",
+        toast: { ...props, id },
+      }),
   }
 }
 
@@ -193,4 +196,4 @@ function useToast() {
   }
 }
 
-export { useToast, toast, type ToastVariant }
+export { useToast, toast }
