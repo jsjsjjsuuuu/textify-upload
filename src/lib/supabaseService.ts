@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { ImageData } from '@/types/ImageData';
 import { Company } from '@/types/Company';
@@ -17,6 +16,7 @@ let supabase: any;
 if (hasSupabaseConfig) {
   supabase = createClient(supabaseUrl, supabaseKey);
   console.log("تم الاتصال بـ Supabase بنجاح");
+  console.log("عنوان URL:", supabaseUrl); // سجل عنوان URL للتحقق
 } else {
   console.warn("متغيرات بيئة Supabase غير متوفرة - سيتم تخزين البيانات محلياً فقط");
   // إنشاء نسخة وهمية من عميل Supabase
@@ -152,6 +152,7 @@ export const fetchCompanies = async (): Promise<{ success: boolean; data?: DbCom
       return { success: false, error: error.message };
     }
     
+    console.log('تم استرجاع الشركات بنجاح:', data?.length || 0, 'شركة');
     return { success: true, data };
   } catch (error) {
     console.error('خطأ غير متوقع:', error);
@@ -424,7 +425,8 @@ export const fetchAllImages = async (companyId?: string): Promise<{ success: boo
       return { success: false, error: error.message };
     }
     
-    return { success: true, data: [] };
+    console.log('تم استرجاع البيانات بنجاح:', data?.length || 0, 'صورة');
+    return { success: true, data }; // تصحيح هنا: إرجاع البيانات الفعلية بدلاً من مصفوفة فارغة
   } catch (error) {
     console.error('خطأ غير متوقع:', error);
     return { success: false, error: String(error) };

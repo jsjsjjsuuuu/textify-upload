@@ -25,10 +25,12 @@ export const useImageState = () => {
       try {
         // استخدام معرف الشركة النشطة من المستخدم الحالي إذا كان متاحًا
         const companyId = user?.activeCompanyId;
+        console.log("محاولة تحميل الصور للشركة:", companyId || "جميع الشركات");
         
         const { success, data, error } = await fetchAllImages(companyId);
         
         if (success && data) {
+          console.log("تم استرجاع", data.length, "صورة من قاعدة البيانات");
           // تحويل البيانات من قاعدة البيانات إلى نموذج ImageData
           const loadedImages: ImageData[] = [];
           
@@ -53,6 +55,7 @@ export const useImageState = () => {
           }
           
           setImages(loadedImages);
+          console.log("تم تحميل", loadedImages.length, "صورة بنجاح");
         } else if (error) {
           console.error('خطأ في جلب الصور:', error);
           toast({
