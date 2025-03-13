@@ -5,6 +5,7 @@ import Records from './pages/Records';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import ApiSettings from './pages/ApiSettings';
+import WebsitePreview from './pages/WebsitePreview';
 import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './hooks/useAuth';
 import AuthGuard from './components/AuthGuard';
@@ -28,6 +29,11 @@ function App() {
           <Route path="/api" element={
             <AuthGuard>
               <ApiSettings />
+            </AuthGuard>
+          } />
+          <Route path="/preview" element={
+            <AuthGuard>
+              <WebsitePreview />
             </AuthGuard>
           } />
           <Route path="*" element={<NotFound />} />

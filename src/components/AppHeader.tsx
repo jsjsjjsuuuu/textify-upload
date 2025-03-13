@@ -1,3 +1,4 @@
+
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -32,6 +33,12 @@ const AppHeader = () => {
           className="text-brand-brown dark:text-brand-beige font-medium cursor-pointer hover:text-brand-coral transition-colors duration-200"
         >
           السجلات
+        </a>
+        <a
+          onClick={() => navigate('/preview')}
+          className="text-brand-brown dark:text-brand-beige font-medium cursor-pointer hover:text-brand-coral transition-colors duration-200"
+        >
+          معاينة المواقع
         </a>
         <a
           onClick={() => navigate('/api')}

@@ -10,7 +10,8 @@ import BookmarkletGenerator from "@/components/BookmarkletGenerator";
 import { autoFillWebsiteForm } from "@/lib/apiService";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
+import { Send, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface CardItemProps {
   image: ImageData;
@@ -35,6 +36,7 @@ const CardItem = ({
   const [isBookmarkletOpen, setIsBookmarkletOpen] = useState(false);
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const handleExport = (imageId: string) => {
     if (imageId === image.id) {
@@ -50,6 +52,7 @@ const CardItem = ({
     
     // حفظ URL في localStorage للاستخدام القادم
     localStorage.setItem('lastAutoFillUrl', url);
+    localStorage.setItem('lastPreviewUrl', url);
     
     setIsAutoFilling(true);
     
@@ -195,6 +198,20 @@ const CardItem = ({
     }
   };
 
+  const navigateToPreview = () => {
+    const lastUsedUrl = localStorage.getItem('lastAutoFillUrl');
+    if (lastUsedUrl) {
+      localStorage.setItem('lastPreviewUrl', lastUsedUrl);
+      navigate('/preview');
+    } else {
+      toast({
+        title: "لم يتم تحديد موقع",
+        description: "الرجاء استخدام خاصية الإدخال التلقائي أولًا لتحديد الموقع",
+        variant: "default"
+      });
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -236,17 +253,28 @@ const CardItem = ({
                 onExport={handleExport}
               />
               
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex items
-                -center gap-1 text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-900/30"
-                onClick={handleAutoFill}
-                disabled={isAutoFilling || !image.extractedText}
-              >
-                <Send className="h-3.5 w-3.5" />
-                {isAutoFilling ? "جاري الإدخال..." : "إدخال تلقائي"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-900/30"
+                  onClick={handleAutoFill}
+                  disabled={isAutoFilling || !image.extractedText}
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  {isAutoFilling ? "جاري الإدخال..." : "إدخال تلقائي"}
+                </Button>
+                
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30"
+                  onClick={navigateToPreview}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  معاينة الموقع
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
