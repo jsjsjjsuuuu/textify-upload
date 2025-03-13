@@ -25,6 +25,7 @@ const WebsitePreview = () => {
   const { toast } = useToast();
   const [lastValidUrl, setLastValidUrl] = useState<string>("");
   const [autoFillScript, setAutoFillScript] = useState<string>("");
+  const [autoFillApplied, setAutoFillApplied] = useState<boolean>(false);
 
   // استعادة آخر عنوان URL مستخدم من التخزين المحلي عند تحميل الصفحة
   useEffect(() => {
@@ -62,13 +63,13 @@ const WebsitePreview = () => {
   
   // تنفيذ سكريبت الإدخال التلقائي بعد تحميل الصفحة
   useEffect(() => {
-    if (autoFillScript && iframeRef.current) {
-      // انتظار تحميل الإطار
+    if (autoFillScript && iframeRef.current && !autoFillApplied) {
       const handleIframeLoad = () => {
         try {
           // التحقق من أن الصفحة تحميلت بشكل كامل
           setTimeout(() => {
             executeAutoFillScript();
+            setAutoFillApplied(true);
           }, 2000); // انتظار 2 ثانية بعد تحميل الإطار
         } catch (error) {
           console.error("Error executing autofill script:", error);
@@ -89,7 +90,7 @@ const WebsitePreview = () => {
         };
       }
     }
-  }, [autoFillScript, iframeRef.current]);
+  }, [autoFillScript, iframeRef.current, autoFillApplied]);
   
   const executeAutoFillScript = () => {
     if (!iframeRef.current || !autoFillScript) return;
@@ -99,6 +100,17 @@ const WebsitePreview = () => {
       const iframeWindow = iframeRef.current.contentWindow;
       if (!iframeWindow) {
         throw new Error("لا يمكن الوصول إلى نافذة الإطار");
+      }
+      
+      // للمواقع التي تمنع الوصول مثل مواقع Google
+      if (lastValidUrl.includes('google.com') || lastValidUrl.includes('docs.google.com')) {
+        window.open(`javascript:${autoFillScript.replace('javascript:', '')}`, '_blank');
+        toast({
+          title: "تم فتح موقع Google في نافذة جديدة",
+          description: "تم فتح موقع Google في نافذة جديدة. الرجاء تنفيذ سكريبت الإدخال هناك يدوياً.",
+          variant: "warning"
+        });
+        return;
       }
       
       // إنشاء عنصر <script> وإضافته إلى محتوى الإطار
@@ -124,10 +136,12 @@ const WebsitePreview = () => {
       }, 100);
     } catch (error) {
       console.error("Error executing script in iframe:", error);
+      // إذا فشل التنفيذ داخل الإطار، نفتح الموقع في نافذة جديدة
+      window.open(`${lastValidUrl}#${autoFillScript}`, '_blank');
       toast({
-        title: "تعذر تنفيذ الإدخال التلقائي",
-        description: "يبدو أن الموقع يمنع تنفيذ السكريبتات. حاول استخدام خيار 'فتح في نافذة خارجية' بدلاً من ذلك.",
-        variant: "destructive"
+        title: "تم فتح الموقع في نافذة جديدة",
+        description: "تعذر تنفيذ السكريبت في الإطار. تم فتح الموقع في نافذة جديدة.",
+        variant: "warning"
       });
     }
   };
@@ -301,11 +315,12 @@ const WebsitePreview = () => {
               مواقع تسجيل الدخول - نصائح للمعاينة
             </h3>
             <ul className="mr-6 list-disc text-sm space-y-2">
+              <li>الآن يمكنك تسجيل الدخول تلقائيًا إذا كنت قد حفظت بيانات الدخول من قبل</li>
               <li>إذا كنت تواجه مشكلة في تسجيل الدخول، استخدم خيار "فتح في نافذة خارجية" لفتح الموقع في تبويب جديد</li>
               <li>جرب تغيير إعدادات الـ Sandbox إلى "كامل الصلاحيات" لتمكين تخزين الكوكيز وتتبع الجلسة</li>
               <li>في بعض الحالات، قد تحتاج لاستخدام "فتح في نافذة خارجية" ثم الرجوع بعد تسجيل الدخول</li>
               <li>بعض المواقع تحتوي على حماية ضد الـ iframe وقد لا تعمل داخل المعاينة على الإطلاق</li>
-              <li>لمواقع Google مثل Sheets وDocs، استخدم خيار "تصدير" لإنشاء bookmarklet واستخدمه في المتصفح</li>
+              <li>لمواقع Google مثل Sheets وDocs، يتم فتح الموقع في نافذة جديدة تلقائيًا</li>
             </ul>
           </div>
         </div>

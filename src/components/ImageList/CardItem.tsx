@@ -49,32 +49,36 @@ const CardItem = ({
   };
 
   const handleAutoFill = async () => {
-    // حفظ الإعداد الافتراضي في localStorage
-    const lastUsedUrl = localStorage.getItem('lastAutoFillUrl');
-    const url = prompt("أدخل عنوان URL للموقع الذي تريد ملء البيانات فيه:", lastUsedUrl || "https://");
-    if (!url) return;
-    
-    // التحقق مما إذا كان عنوان URL هو Google Sheets أو مستندات Google
-    if (isGoogleUrl(url)) {
-      toast({
-        title: "تنبيه - مواقع Google",
-        description: "مواقع Google مثل Sheets لا تدعم الإدخال التلقائي داخل التطبيق. استخدم خيار 'تصدير' لإنشاء bookmarklet ثم استخدمه في المتصفح.",
-        variant: "warning",
-        duration: 7000
-      });
-      
-      // عرض مربع حوار تصدير الـ bookmarklet مباشرة
-      setIsBookmarkletOpen(true);
-      return;
-    }
-    
-    // حفظ URL في localStorage للاستخدام القادم
-    localStorage.setItem('lastAutoFillUrl', url);
-    localStorage.setItem('lastPreviewUrl', url);
-    
     setIsAutoFilling(true);
     
     try {
+      // استعادة آخر URL مستخدم من التخزين المحلي
+      const lastUsedUrl = localStorage.getItem('lastAutoFillUrl');
+      
+      // إذا لم يكن هناك URL سابق، نطلب من المستخدم إدخاله
+      let targetUrl = lastUsedUrl;
+      if (!targetUrl) {
+        targetUrl = prompt("أدخل عنوان URL للموقع الذي تريد ملء البيانات فيه:", "https://");
+        if (!targetUrl) {
+          setIsAutoFilling(false);
+          return;
+        }
+        // حفظ URL في التخزين المحلي للاستخدام القادم
+        localStorage.setItem('lastAutoFillUrl', targetUrl);
+      }
+      
+      localStorage.setItem('lastPreviewUrl', targetUrl);
+      
+      // التحقق مما إذا كان عنوان URL هو Google Sheets أو مستندات Google
+      if (isGoogleUrl(targetUrl)) {
+        toast({
+          title: "تنبيه - مواقع Google",
+          description: "مواقع Google مثل Sheets لا تدعم الإدخال التلقائي داخل التطبيق. سيتم فتح الموقع وتنفيذ سكريبت الإدخال تلقائياً.",
+          variant: "warning",
+          duration: 5000
+        });
+      }
+      
       // إعداد البيانات للإرسال
       const formData = {
         senderName: image.senderName || "",
@@ -137,30 +141,126 @@ const CardItem = ({
             }
           };
           
-          // وظيفة للتحقق من نوع الصفحة
-          const checkPageType = () => {
-            // التحقق من مواقع Google
-            if (window.location.hostname.includes('google.com')) {
-              showNotification('مواقع Google لا تدعم الإدخال التلقائي بشكل كامل، حاول استخدام أزرار الإدخال اليدوية', false);
-              return false;
+          // التحقق من الحاجة لتسجيل الدخول
+          const checkForLoginForm = () => {
+            updateProgress(20);
+            const possibleLoginSelectors = [
+              'input[type="password"]',
+              'form[action*="login"]', 
+              'form[action*="signin"]', 
+              'form[id*="login"]', 
+              'form[id*="signin"]', 
+              'form[class*="login"]', 
+              'form[class*="signin"]'
+            ];
+            
+            const loginForm = possibleLoginSelectors.some(selector => document.querySelector(selector));
+            if (loginForm) {
+              showNotification('تم اكتشاف نموذج تسجيل دخول. سيتم محاولة تعبئة معلومات الدخول إذا كانت متوفرة.', true);
+              
+              // البحث عن حقول اسم المستخدم وكلمة المرور
+              const possibleUsernameSelectors = [
+                'input[name*="user"]', 'input[name*="email"]', 'input[id*="user"]', 
+                'input[id*="email"]', 'input[type="email"]', 'input[placeholder*="بريد"]', 
+                'input[placeholder*="اسم المستخدم"]'
+              ];
+              
+              const usernameField = possibleUsernameSelectors
+                .map(selector => document.querySelector(selector))
+                .find(field => field);
+                
+              const passwordField = document.querySelector('input[type="password"]');
+              
+              if (usernameField && passwordField) {
+                // محاولة استرجاع بيانات تسجيل الدخول المحفوظة محليًا
+                const savedLogin = localStorage.getItem('savedLoginCredentials');
+                if (savedLogin) {
+                  try {
+                    const credentials = JSON.parse(savedLogin);
+                    usernameField.value = credentials.username || '';
+                    passwordField.value = credentials.password || '';
+                    
+                    usernameField.dispatchEvent(new Event('input', { bubbles: true }));
+                    passwordField.dispatchEvent(new Event('input', { bubbles: true }));
+                    
+                    // البحث عن زر تسجيل الدخول
+                    const loginButton = 
+                      document.querySelector('button[type="submit"]') || 
+                      document.querySelector('input[type="submit"]') ||
+                      Array.from(document.querySelectorAll('button')).find(btn => 
+                        btn.innerText.toLowerCase().includes('login') || 
+                        btn.innerText.toLowerCase().includes('sign in') ||
+                        btn.innerText.includes('تسجيل') || 
+                        btn.innerText.includes('دخول')
+                      );
+                      
+                    if (loginButton) {
+                      // عرض رسالة للمستخدم وتنفيذ النقر بعد فترة
+                      showNotification('سيتم تسجيل الدخول خلال 3 ثوان. انقر أي مكان لإلغاء العملية.', true);
+                      
+                      const cancelClickHandler = () => {
+                        clearTimeout(loginTimeout);
+                        document.removeEventListener('click', cancelClickHandler);
+                        showNotification('تم إلغاء تسجيل الدخول التلقائي', false);
+                      };
+                      
+                      document.addEventListener('click', cancelClickHandler);
+                      
+                      const loginTimeout = setTimeout(() => {
+                        document.removeEventListener('click', cancelClickHandler);
+                        loginButton.click();
+                        updateProgress(40);
+                        
+                        // انتظار انتهاء تسجيل الدخول
+                        setTimeout(() => {
+                          document.removeEventListener('click', cancelClickHandler);
+                          fillFields();
+                        }, 3000);
+                      }, 3000);
+                      
+                      return true;
+                    }
+                  } catch (e) {
+                    console.error('خطأ في استرجاع بيانات تسجيل الدخول:', e);
+                  }
+                } else {
+                  // اقتراح حفظ بيانات الدخول
+                  showNotification('لم يتم العثور على بيانات تسجيل دخول محفوظة. قم بتسجيل الدخول يدويًا ثم حدث الصفحة.', false);
+                  
+                  // إضافة زر لحفظ بيانات تسجيل الدخول
+                  const saveButton = document.createElement('button');
+                  saveButton.textContent = 'حفظ بيانات الدخول للمستقبل';
+                  saveButton.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #2196F3; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; z-index: 10000; font-family: Arial;';
+                  saveButton.onclick = () => {
+                    const username = usernameField.value;
+                    const password = passwordField.value;
+                    if (username && password) {
+                      localStorage.setItem('savedLoginCredentials', JSON.stringify({ username, password }));
+                      showNotification('تم حفظ بيانات تسجيل الدخول بنجاح!', true);
+                      saveButton.remove();
+                    } else {
+                      showNotification('الرجاء إدخال اسم المستخدم وكلمة المرور أولاً', false);
+                    }
+                  };
+                  document.body.appendChild(saveButton);
+                  
+                  return true;
+                }
+              }
             }
-            return true;
+            return false;
           };
-          
-          if (!checkPageType()) {
-            updateProgress(100);
-            return;
-          }
           
           // وظيفة للبحث عن الحقول وملئها
           const fillFields = () => {
+            updateProgress(60);
             const fields = {
-              'senderName': ['sender', 'name', 'الاسم', 'المرسل', 'إسم'],
+              'senderName': ['sender', 'name', 'الاسم', 'المرسل', 'إسم', 'customer', 'client'],
               'phoneNumber': ['phone', 'tel', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم'],
-              'province': ['province', 'city', 'region', 'محافظة', 'المحافظة', 'المدينة', 'منطقة'],
-              'price': ['price', 'cost', 'amount', 'سعر', 'المبلغ', 'التكلفة', 'قيمة'],
-              'companyName': ['company', 'vendor', 'شركة', 'المورد', 'البائع'],
-              'code': ['code', 'id', 'number', 'رقم', 'كود', 'معرف']
+              'province': ['province', 'city', 'region', 'محافظة', 'المحافظة', 'المدينة', 'منطقة', 'address', 'عنوان'],
+              'price': ['price', 'cost', 'amount', 'سعر', 'المبلغ', 'التكلفة', 'قيمة', 'total'],
+              'companyName': ['company', 'vendor', 'شركة', 'المورد', 'البائع', 'supplier', 'provider'],
+              'code': ['code', 'id', 'number', 'رقم', 'كود', 'معرف', 'reference', 'order']
             };
             
             let filledCount = 0;
@@ -223,7 +323,7 @@ const CardItem = ({
                 
                 if (fieldFilled) {
                   filledCount++;
-                  updateProgress((filledCount / totalFields) * 100);
+                  updateProgress(60 + (filledCount / totalFields) * 30);
                   break;
                 }
               }
@@ -247,7 +347,7 @@ const CardItem = ({
                           input.dispatchEvent(new Event('input', { bubbles: true }));
                           input.dispatchEvent(new Event('change', { bubbles: true }));
                           filledCount++;
-                          updateProgress((filledCount / totalFields) * 100);
+                          updateProgress(60 + (filledCount / totalFields) * 30);
                         } catch (e) {
                           console.error('Error filling field by label:', e);
                         }
@@ -258,47 +358,145 @@ const CardItem = ({
               }
             }
             
-            // إذا تم ملء كل الحقول المطلوبة
-            if (filledCount > 0) {
-              navigator.clipboard.writeText(JSON.stringify(data, null, 2))
-                .then(() => console.log('تم نسخ البيانات إلى الحافظة'))
-                .catch(() => console.warn('فشل نسخ البيانات إلى الحافظة'));
-              showNotification(\`تم ملء \${filledCount} حقول بنجاح\`, true);
-            } else {
-              showNotification('لم يتم العثور على حقول متطابقة في هذه الصفحة', false);
-            }
+            // البحث عن أزرار الإرسال أو حفظ النموذج
+            setTimeout(() => {
+              updateProgress(95);
+              const submitButtonSelectors = [
+                'button[type="submit"]',
+                'input[type="submit"]',
+                'button:contains("حفظ")',
+                'button:contains("إرسال")',
+                'button:contains("تأكيد")',
+                'button:contains("إضافة")',
+                'button:contains("submit")',
+                'button:contains("save")',
+                'button:contains("confirm")',
+                'button:contains("add")'
+              ];
+              
+              const containsText = (element, text) => {
+                return element.innerText.toLowerCase().includes(text.toLowerCase());
+              };
+              
+              let submitButton = null;
+              
+              // تجربة المحددات المباشرة أولاً
+              for (const selector of submitButtonSelectors) {
+                if (selector.includes(':contains')) {
+                  const text = selector.match(/:contains\\("(.+)"\\)/)[1];
+                  submitButton = Array.from(document.querySelectorAll('button')).find(btn => containsText(btn, text));
+                } else {
+                  submitButton = document.querySelector(selector);
+                }
+                if (submitButton) break;
+              }
+              
+              // إذا لم يتم العثور على زر، ابحث عن أي زر يحتوي على نص دال
+              if (!submitButton) {
+                const buttons = Array.from(document.querySelectorAll('button'));
+                const submitTexts = ['حفظ', 'إرسال', 'تأكيد', 'إضافة', 'submit', 'save', 'confirm', 'add'];
+                submitButton = buttons.find(btn => submitTexts.some(text => containsText(btn, text)));
+              }
+              
+              if (submitButton) {
+                // عرض إشعار للتحذير قبل النقر على زر الإرسال
+                const clickConfirmation = document.createElement('div');
+                clickConfirmation.style.cssText = \`
+                  position: fixed;
+                  bottom: 20px;
+                  right: 20px;
+                  background: rgba(0, 0, 0, 0.8);
+                  color: white;
+                  padding: 15px 20px;
+                  border-radius: 5px;
+                  z-index: 10000;
+                  direction: rtl;
+                  font-family: Arial;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 10px;
+                \`;
+                
+                const message = document.createElement('div');
+                message.textContent = 'سيتم إرسال النموذج تلقائياً خلال 5 ثوان. انقر "إلغاء" لإيقاف العملية';
+                clickConfirmation.appendChild(message);
+                
+                const buttonContainer = document.createElement('div');
+                buttonContainer.style.cssText = 'display: flex; gap: 10px; justify-content: flex-end;';
+                
+                const cancelButton = document.createElement('button');
+                cancelButton.textContent = 'إلغاء';
+                cancelButton.style.cssText = 'padding: 5px 15px; background: #f44336; border: none; border-radius: 3px; color: white; cursor: pointer;';
+                
+                const confirmButton = document.createElement('button');
+                confirmButton.textContent = 'إرسال الآن';
+                confirmButton.style.cssText = 'padding: 5px 15px; background: #4CAF50; border: none; border-radius: 3px; color: white; cursor: pointer;';
+                
+                buttonContainer.appendChild(cancelButton);
+                buttonContainer.appendChild(confirmButton);
+                clickConfirmation.appendChild(buttonContainer);
+                
+                document.body.appendChild(clickConfirmation);
+                
+                const submitTimeout = setTimeout(() => {
+                  submitButton.click();
+                  clickConfirmation.remove();
+                  updateProgress(100);
+                  showNotification('تم إرسال النموذج بنجاح', true);
+                }, 5000);
+                
+                cancelButton.addEventListener('click', () => {
+                  clearTimeout(submitTimeout);
+                  clickConfirmation.remove();
+                  updateProgress(100);
+                  showNotification('تم إلغاء إرسال النموذج', false);
+                });
+                
+                confirmButton.addEventListener('click', () => {
+                  clearTimeout(submitTimeout);
+                  submitButton.click();
+                  clickConfirmation.remove();
+                  updateProgress(100);
+                  showNotification('تم إرسال النموذج بنجاح', true);
+                });
+              } else {
+                updateProgress(100);
+                if (filledCount > 0) {
+                  navigator.clipboard.writeText(JSON.stringify(data, null, 2))
+                    .then(() => console.log('تم نسخ البيانات إلى الحافظة'))
+                    .catch(() => console.warn('فشل نسخ البيانات إلى الحافظة'));
+                  showNotification(\`تم ملء \${filledCount} حقول بنجاح. لم يتم العثور على زر إرسال.\`, true);
+                } else {
+                  showNotification('لم يتم العثور على حقول متطابقة في هذه الصفحة', false);
+                }
+              }
+            }, 1000);
             
             return filledCount;
           };
           
-          // تنفيذ عملية الملء
-          const filledCount = fillFields();
-          updateProgress(100);
+          // البدء بفحص وجود صفحة تسجيل دخول
+          updateProgress(10);
+          const isLoginPage = checkForLoginForm();
           
-          return filledCount;
+          // إذا لم تكن صفحة تسجيل دخول، ابدأ بملء الحقول مباشرة
+          if (!isLoginPage) {
+            setTimeout(fillFields, 500);
+          }
         })();
       `;
       
       // تنفيذ السكريبت
       const bookmarkletUrl = `javascript:${encodeURIComponent(scriptText)}`;
       
-      // استخدام iframe للتنفيذ إذا لم يكن موقع Google
-      if (!isGoogleUrl(url)) {
-        const previewUrl = url;
-        localStorage.setItem('lastPreviewUrl', previewUrl);
-        
-        // تحويل المستخدم لصفحة المعاينة
-        navigate('/preview?url=' + encodeURIComponent(previewUrl) + '&autoFill=true&script=' + encodeURIComponent(bookmarkletUrl));
-        
-        toast({
-          title: "تم التحويل إلى صفحة المعاينة",
-          description: "سيتم فتح الموقع وتنفيذ الإدخال التلقائي هناك. قد تحتاج لتسجيل الدخول أولاً.",
-          variant: "default"
-        });
-      } else {
-        // استخدام bookmarklet مباشرة للمواقع المقيدة
-        setIsBookmarkletOpen(true);
-      }
+      // تحويل المستخدم لصفحة المعاينة
+      navigate('/preview?url=' + encodeURIComponent(targetUrl) + '&autoFill=true&script=' + encodeURIComponent(bookmarkletUrl));
+      
+      toast({
+        title: "تم التحويل إلى صفحة المعاينة",
+        description: "سيتم فتح الموقع وتنفيذ الإدخال التلقائي هناك تلقائياً.",
+        variant: "default"
+      });
     } catch (error) {
       console.error("خطأ في الإدخال التلقائي:", error);
       toast({
