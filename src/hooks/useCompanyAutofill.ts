@@ -225,10 +225,10 @@ export const useCompanyAutofill = () => {
             // تنفيذ السكريبت بعد تأخير صغير للتأكد من تحميل الصفحة بالكامل
             setTimeout(() => {
               try {
-                // استخدام Function بدلاً من eval
-                const scriptFunction = new Function(script);
-                // تنفيذ السكريبت في سياق النافذة الجديدة
-                newWindow.Function('return ' + script)();
+                // إنشاء عنصر script وإضافته إلى النافذة المستهدفة
+                const scriptElement = newWindow.document.createElement('script');
+                scriptElement.textContent = script;
+                newWindow.document.head.appendChild(scriptElement);
                 resolve();
               } catch (e) {
                 console.error("خطأ في تنفيذ السكريبت:", e);
