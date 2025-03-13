@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -137,7 +138,11 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+type ToastVariant = "default" | "destructive" | "warning" | "success" | "info";
+
+type Toast = Omit<ToasterToast, "id"> & {
+  variant?: ToastVariant;
+};
 
 function toast({ ...props }: Toast) {
   const id = genId()
@@ -188,4 +193,4 @@ function useToast() {
   }
 }
 
-export { useToast, toast }
+export { useToast, toast, type ToastVariant }

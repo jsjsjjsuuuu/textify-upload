@@ -33,6 +33,10 @@ const toastVariants = cva(
           "destructive group border-destructive bg-destructive text-destructive-foreground",
         warning:
           "warning group border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300",
+        success:
+          "success group border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300",
+        info:
+          "info group border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300",
       },
     },
     defaultVariants: {
@@ -63,7 +67,7 @@ const ToastAction = React.forwardRef<
   <ToastPrimitives.Action
     ref={ref}
     className={cn(
-      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive group-[.warning]:border-yellow-200 group-[.warning]:hover:border-yellow-300 group-[.warning]:hover:bg-yellow-100 group-[.warning]:hover:text-yellow-800 group-[.warning]:focus:ring-yellow-400 dark:group-[.warning]:border-yellow-800 dark:group-[.warning]:hover:border-yellow-700 dark:group-[.warning]:hover:bg-yellow-800/30 dark:group-[.warning]:hover:text-yellow-300",
+      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive group-[.warning]:border-yellow-200 group-[.warning]:hover:border-yellow-300 group-[.warning]:hover:bg-yellow-100 group-[.warning]:hover:text-yellow-800 group-[.warning]:focus:ring-yellow-400 dark:group-[.warning]:border-yellow-800 dark:group-[.warning]:hover:border-yellow-700 dark:group-[.warning]:hover:bg-yellow-800/30 dark:group-[.warning]:hover:text-yellow-300 group-[.success]:border-green-200 group-[.success]:hover:border-green-300 group-[.success]:hover:bg-green-100 group-[.success]:hover:text-green-800 group-[.success]:focus:ring-green-400 dark:group-[.success]:border-green-800 dark:group-[.success]:hover:border-green-700 dark:group-[.success]:hover:bg-green-800/30 dark:group-[.success]:hover:text-green-300 group-[.info]:border-blue-200 group-[.info]:hover:border-blue-300 group-[.info]:hover:bg-blue-100 group-[.info]:hover:text-blue-800 group-[.info]:focus:ring-blue-400 dark:group-[.info]:border-blue-800 dark:group-[.info]:hover:border-blue-700 dark:group-[.info]:hover:bg-blue-800/30 dark:group-[.info]:hover:text-blue-300",
       className
     )}
     {...props}
@@ -78,7 +82,7 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600 group-[.warning]:text-yellow-600 group-[.warning]:hover:text-yellow-700 group-[.warning]:focus:ring-yellow-400 dark:group-[.warning]:text-yellow-400 dark:group-[.warning]:hover:text-yellow-300",
+      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600 group-[.warning]:text-yellow-600 group-[.warning]:hover:text-yellow-700 group-[.warning]:focus:ring-yellow-400 dark:group-[.warning]:text-yellow-400 dark:group-[.warning]:hover:text-yellow-300 group-[.success]:text-green-600 group-[.success]:hover:text-green-700 group-[.success]:focus:ring-green-400 dark:group-[.success]:text-green-400 dark:group-[.success]:hover:text-green-300 group-[.info]:text-blue-600 group-[.info]:hover:text-blue-700 group-[.info]:focus:ring-blue-400 dark:group-[.info]:text-blue-400 dark:group-[.info]:hover:text-blue-300",
       className
     )}
     toast-close=""

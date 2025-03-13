@@ -55,7 +55,7 @@ const BookmarkletGenerator = ({
             toast({
               title: "يمكنك تنفيذ الإدخال التلقائي مباشرة",
               description: "تم اكتشاف نافذة مفتوحة، يمكنك النقر على 'تنفيذ مباشرة' لتعبئة البيانات",
-              variant: "info"
+              variant: "default"
             });
           }
         } catch (error) {
@@ -101,7 +101,7 @@ const BookmarkletGenerator = ({
             toast({
               title: "تم تنفيذ الإدخال التلقائي",
               description: "تم إدخال البيانات في النافذة المفتوحة بنجاح",
-              variant: "success"
+              variant: "default"
             });
           } else {
             throw new Error("فشل تنفيذ السكريبت في النافذة المفتوحة");
@@ -113,7 +113,7 @@ const BookmarkletGenerator = ({
           toast({
             title: "تم فتح نافذة جديدة",
             description: "سيتم تنفيذ الإدخال التلقائي في نافذة جديدة",
-            variant: "info"
+            variant: "default"
           });
         }
       } else {
@@ -122,7 +122,7 @@ const BookmarkletGenerator = ({
         toast({
           title: "تم فتح نافذة جديدة",
           description: "سيتم تنفيذ الإدخال التلقائي في نافذة جديدة",
-          variant: "info"
+          variant: "default"
         });
       }
       
