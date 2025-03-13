@@ -10,7 +10,7 @@ import {
   PreviewFrame
 } from "@/components/WebsitePreview";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { ExternalLink, RefreshCw, AlertCircle } from "lucide-react";
 import AuthGuard from "@/components/AuthGuard";
 
 const WebsitePreview = () => {
@@ -24,6 +24,7 @@ const WebsitePreview = () => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { toast } = useToast();
   const [lastValidUrl, setLastValidUrl] = useState<string>("");
+  const [autoFillScript, setAutoFillScript] = useState<string>("");
 
   // استعادة آخر عنوان URL مستخدم من التخزين المحلي عند تحميل الصفحة
   useEffect(() => {
@@ -50,7 +51,86 @@ const WebsitePreview = () => {
     if (savedAllowFullAccess) {
       setAllowFullAccess(savedAllowFullAccess === "true");
     }
+    
+    // التحقق من وجود نص autoFill في المعلمات
+    const autoFill = searchParams.get("autoFill");
+    const script = searchParams.get("script");
+    if (autoFill === "true" && script) {
+      setAutoFillScript(decodeURIComponent(script));
+    }
   }, [searchParams]);
+  
+  // تنفيذ سكريبت الإدخال التلقائي بعد تحميل الصفحة
+  useEffect(() => {
+    if (autoFillScript && iframeRef.current) {
+      // انتظار تحميل الإطار
+      const handleIframeLoad = () => {
+        try {
+          // التحقق من أن الصفحة تحميلت بشكل كامل
+          setTimeout(() => {
+            executeAutoFillScript();
+          }, 2000); // انتظار 2 ثانية بعد تحميل الإطار
+        } catch (error) {
+          console.error("Error executing autofill script:", error);
+          toast({
+            title: "خطأ في الإدخال التلقائي",
+            description: "تعذر تنفيذ الإدخال التلقائي في الإطار. قد تحتاج لفتح الموقع في نافذة خارجية.",
+            variant: "destructive"
+          });
+        }
+      };
+      
+      if (iframeRef.current.contentDocument?.readyState === 'complete') {
+        handleIframeLoad();
+      } else {
+        iframeRef.current.addEventListener('load', handleIframeLoad);
+        return () => {
+          iframeRef.current?.removeEventListener('load', handleIframeLoad);
+        };
+      }
+    }
+  }, [autoFillScript, iframeRef.current]);
+  
+  const executeAutoFillScript = () => {
+    if (!iframeRef.current || !autoFillScript) return;
+    
+    try {
+      // محاولة تنفيذ السكريبت داخل الإطار
+      const iframeWindow = iframeRef.current.contentWindow;
+      if (!iframeWindow) {
+        throw new Error("لا يمكن الوصول إلى نافذة الإطار");
+      }
+      
+      // إنشاء عنصر <script> وإضافته إلى محتوى الإطار
+      const scriptElement = iframeWindow.document.createElement('script');
+      scriptElement.textContent = decodeURIComponent(autoFillScript.replace('javascript:', ''));
+      iframeWindow.document.body.appendChild(scriptElement);
+      
+      // حذف عنصر السكريبت بعد التنفيذ
+      setTimeout(() => {
+        iframeWindow.document.body.removeChild(scriptElement);
+        
+        // تنظيف عنوان URL بعد التنفيذ
+        setSearchParams(
+          searchParams => {
+            searchParams.delete('autoFill');
+            searchParams.delete('script');
+            return searchParams;
+          },
+          { replace: true }
+        );
+        
+        setAutoFillScript("");
+      }, 100);
+    } catch (error) {
+      console.error("Error executing script in iframe:", error);
+      toast({
+        title: "تعذر تنفيذ الإدخال التلقائي",
+        description: "يبدو أن الموقع يمنع تنفيذ السكريبتات. حاول استخدام خيار 'فتح في نافذة خارجية' بدلاً من ذلك.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
@@ -79,6 +159,16 @@ const WebsitePreview = () => {
     setIsLoading(true);
     const validatedUrl = validateUrl(urlToLoad);
     setUrl(validatedUrl);
+    
+    // التحقق مما إذا كان عنوان URL هو Google Sheets
+    const isGoogleSheets = validatedUrl.includes('docs.google.com/spreadsheets');
+    if (isGoogleSheets && viewMode === 'iframe') {
+      toast({
+        title: "تنبيه",
+        description: "قد لا يعمل بعض مواقع Google بشكل صحيح داخل الإطار. استخدم 'فتح في نافذة خارجية' للتجربة الأفضل.",
+        variant: "warning",
+      });
+    }
     
     // حفظ URL في التخزين المحلي للاستخدام المستقبلي
     localStorage.setItem("lastPreviewUrl", validatedUrl);
@@ -133,6 +223,9 @@ const WebsitePreview = () => {
     setAllowFullAccess(checked);
     localStorage.setItem("previewAllowFullAccess", checked.toString());
   };
+  
+  // التحقق مما إذا كان العنوان هو Google Sheets
+  const isGoogleSheetsUrl = lastValidUrl.includes('docs.google.com/spreadsheets');
 
   return (
     <AuthGuard>
@@ -182,6 +275,15 @@ const WebsitePreview = () => {
               تحديث الصفحة
             </Button>
           </div>
+          
+          {isGoogleSheetsUrl && (
+            <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 ml-2 flex-shrink-0" />
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                مستندات Google قد لا تعمل بشكل صحيح داخل الإطار. ننصح باستخدام زر "فتح في نافذة خارجية" للحصول على تجربة أفضل.
+              </p>
+            </div>
+          )}
 
           <PreviewFrame
             isLoading={isLoading}
@@ -203,6 +305,7 @@ const WebsitePreview = () => {
               <li>جرب تغيير إعدادات الـ Sandbox إلى "كامل الصلاحيات" لتمكين تخزين الكوكيز وتتبع الجلسة</li>
               <li>في بعض الحالات، قد تحتاج لاستخدام "فتح في نافذة خارجية" ثم الرجوع بعد تسجيل الدخول</li>
               <li>بعض المواقع تحتوي على حماية ضد الـ iframe وقد لا تعمل داخل المعاينة على الإطلاق</li>
+              <li>لمواقع Google مثل Sheets وDocs، استخدم خيار "تصدير" لإنشاء bookmarklet واستخدمه في المتصفح</li>
             </ul>
           </div>
         </div>

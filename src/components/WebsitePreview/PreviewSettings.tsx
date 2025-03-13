@@ -1,95 +1,119 @@
 
 import React from "react";
-import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Settings2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { 
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger
-} from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface PreviewSettingsProps {
   sandboxMode: string;
   useUserAgent: boolean;
-  allowFullAccess?: boolean;
+  allowFullAccess: boolean;
   handleSandboxModeChange: (value: string) => void;
   handleUseUserAgentChange: (checked: boolean) => void;
-  handleAllowFullAccessChange?: (checked: boolean) => void;
+  handleAllowFullAccessChange: (checked: boolean) => void;
 }
 
-const PreviewSettings = ({ 
-  sandboxMode, 
-  useUserAgent, 
-  allowFullAccess = false,
-  handleSandboxModeChange, 
+const PreviewSettings = ({
+  sandboxMode,
+  useUserAgent,
+  allowFullAccess,
+  handleSandboxModeChange,
   handleUseUserAgentChange,
-  handleAllowFullAccessChange 
+  handleAllowFullAccessChange,
 }: PreviewSettingsProps) => {
-  const [isOpen, setIsOpen] = React.useState(false);
-
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full mt-2">
-      <CollapsibleTrigger className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
-        إعدادات متقدمة
-        <ChevronDown className="h-4 w-4 mr-1 transition-transform" 
-          style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-        />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="pt-2">
-        <div className="space-y-3 rounded-md border p-3 text-sm">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">خيارات Sandbox:</Label>
-            <RadioGroup 
-              value={sandboxMode} 
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="icon">
+          <Settings2 className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="end">
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm">إعدادات المعاينة</h4>
+          
+          <div className="space-y-2">
+            <Label htmlFor="sandbox-mode">وضع الصندوق الرملي</Label>
+            <Select
+              value={sandboxMode}
               onValueChange={handleSandboxModeChange}
-              className="grid grid-cols-1 gap-2"
+              disabled={allowFullAccess}
             >
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <RadioGroupItem value="allow-same-origin allow-scripts allow-popups allow-forms" id="option1" />
-                <Label htmlFor="option1" className="text-xs">افتراضي (آمن)</Label>
-              </div>
-              
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <RadioGroupItem value="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-popups-to-escape-sandbox" id="option2" />
-                <Label htmlFor="option2" className="text-xs">متوسط (يسمح بالنوافذ المنبثقة)</Label>
-              </div>
-              
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <RadioGroupItem value="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" id="option3" />
-                <Label htmlFor="option3" className="text-xs">موسع (يسمح بتخزين البيانات)</Label>
-              </div>
-              
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <RadioGroupItem value="" id="option4" />
-                <Label htmlFor="option4" className="text-xs">كامل الصلاحيات (غير آمن)</Label>
-              </div>
-            </RadioGroup>
+              <SelectTrigger id="sandbox-mode">
+                <SelectValue placeholder="اختر وضع الصندوق الرملي" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="allow-same-origin allow-scripts allow-popups allow-forms">
+                  متوسط (الافتراضي)
+                </SelectItem>
+                <SelectItem value="allow-same-origin allow-scripts allow-popups allow-forms allow-modals">
+                  موسع
+                </SelectItem>
+                <SelectItem value="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation">
+                  متقدم (مع التنقل)
+                </SelectItem>
+                <SelectItem value="">
+                  آمن (مقيد)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              يؤثر على قدرة الصفحة على تنفيذ البرامج النصية والنوافذ المنبثقة
+            </p>
           </div>
           
           <div className="flex items-center justify-between">
-            <Label htmlFor="use-ua" className="text-xs">محاكاة متصفح جوال</Label>
-            <Switch 
-              id="use-ua" 
+            <div className="space-y-0.5">
+              <Label htmlFor="user-agent-switch">تغيير وكيل المستخدم</Label>
+              <p className="text-xs text-muted-foreground">
+                استخدام وكيل مستخدم للأجهزة المحمولة
+              </p>
+            </div>
+            <Switch
+              id="user-agent-switch"
               checked={useUserAgent}
               onCheckedChange={handleUseUserAgentChange}
             />
           </div>
-
-          {handleAllowFullAccessChange && (
-            <div className="flex items-center justify-between">
-              <Label htmlFor="allow-full-access" className="text-xs">السماح بالوصول الكامل (مناسب لمواقع تسجيل الدخول)</Label>
-              <Switch 
-                id="allow-full-access" 
-                checked={allowFullAccess}
-                onCheckedChange={handleAllowFullAccessChange}
-              />
+          
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="full-access-switch" className="text-amber-600 dark:text-amber-400">
+                كامل الصلاحيات
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                تعطيل قيود الصندوق الرملي (مخاطر أمنية)
+              </p>
+            </div>
+            <Switch
+              id="full-access-switch"
+              checked={allowFullAccess}
+              onCheckedChange={handleAllowFullAccessChange}
+              className="data-[state=checked]:bg-amber-500"
+            />
+          </div>
+          
+          {allowFullAccess && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 p-2 rounded-md border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
+              تحذير: وضع كامل الصلاحيات يتجاوز حماية الصندوق الرملي، مما قد يسمح للمواقع غير الموثوقة بالوصول إلى بيانات التطبيق. استخدم هذا الخيار فقط مع المواقع الموثوقة.
             </div>
           )}
         </div>
-      </CollapsibleContent>
-    </Collapsible>
+      </PopoverContent>
+    </Popover>
   );
 };
 

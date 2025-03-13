@@ -44,11 +44,29 @@ const CardItem = ({
     }
   };
 
+  const isGoogleUrl = (url: string) => {
+    return url.includes('google.com') || url.includes('docs.google.com');
+  };
+
   const handleAutoFill = async () => {
     // حفظ الإعداد الافتراضي في localStorage
     const lastUsedUrl = localStorage.getItem('lastAutoFillUrl');
     const url = prompt("أدخل عنوان URL للموقع الذي تريد ملء البيانات فيه:", lastUsedUrl || "https://");
     if (!url) return;
+    
+    // التحقق مما إذا كان عنوان URL هو Google Sheets أو مستندات Google
+    if (isGoogleUrl(url)) {
+      toast({
+        title: "تنبيه - مواقع Google",
+        description: "مواقع Google مثل Sheets لا تدعم الإدخال التلقائي داخل التطبيق. استخدم خيار 'تصدير' لإنشاء bookmarklet ثم استخدمه في المتصفح.",
+        variant: "warning",
+        duration: 7000
+      });
+      
+      // عرض مربع حوار تصدير الـ bookmarklet مباشرة
+      setIsBookmarkletOpen(true);
+      return;
+    }
     
     // حفظ URL في localStorage للاستخدام القادم
     localStorage.setItem('lastAutoFillUrl', url);
@@ -68,10 +86,43 @@ const CardItem = ({
         extractedText: image.extractedText || ""
       };
       
+      // فحص ما إذا كان هناك بيانات كافية للإدخال التلقائي
+      const dataFields = Object.values(formData).filter(Boolean);
+      if (dataFields.length <= 1) { // إذا كان هناك حقل واحد فقط أو لا يوجد حقول
+        toast({
+          title: "لا توجد بيانات كافية",
+          description: "لا يوجد ما يكفي من البيانات المستخرجة للإدخال التلقائي. الرجاء استخراج المزيد من البيانات أولاً.",
+          variant: "destructive"
+        });
+        setIsAutoFilling(false);
+        return;
+      }
+      
       // إنشاء نص البرمجة النصية مباشرة
       const scriptText = `
         (function() {
           const data = ${JSON.stringify(formData)};
+          
+          // عرض إشعار حول النجاح أو الفشل
+          const showNotification = (message, isSuccess) => {
+            const notification = document.createElement('div');
+            notification.style.cssText = \`
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              background: \${isSuccess ? '#4CAF50' : '#F44336'};
+              color: white;
+              padding: 15px 20px;
+              border-radius: 5px;
+              z-index: 10000;
+              direction: rtl;
+              font-family: Arial;
+              box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            \`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 5000);
+          };
           
           // إنشاء عنصر لعرض حالة التقدم
           const progressBar = document.createElement('div');
@@ -86,55 +137,122 @@ const CardItem = ({
             }
           };
           
+          // وظيفة للتحقق من نوع الصفحة
+          const checkPageType = () => {
+            // التحقق من مواقع Google
+            if (window.location.hostname.includes('google.com')) {
+              showNotification('مواقع Google لا تدعم الإدخال التلقائي بشكل كامل، حاول استخدام أزرار الإدخال اليدوية', false);
+              return false;
+            }
+            return true;
+          };
+          
+          if (!checkPageType()) {
+            updateProgress(100);
+            return;
+          }
+          
           // وظيفة للبحث عن الحقول وملئها
           const fillFields = () => {
             const fields = {
-              'senderName': ['sender', 'name', 'الاسم', 'المرسل'],
-              'phoneNumber': ['phone', 'tel', 'mobile', 'هاتف', 'موبايل', 'جوال'],
-              'province': ['province', 'city', 'region', 'محافظة', 'المحافظة', 'المدينة'],
-              'price': ['price', 'cost', 'amount', 'سعر', 'المبلغ', 'التكلفة'],
-              'companyName': ['company', 'vendor', 'شركة', 'المورد'],
-              'code': ['code', 'id', 'number', 'رقم', 'كود']
+              'senderName': ['sender', 'name', 'الاسم', 'المرسل', 'إسم'],
+              'phoneNumber': ['phone', 'tel', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم'],
+              'province': ['province', 'city', 'region', 'محافظة', 'المحافظة', 'المدينة', 'منطقة'],
+              'price': ['price', 'cost', 'amount', 'سعر', 'المبلغ', 'التكلفة', 'قيمة'],
+              'companyName': ['company', 'vendor', 'شركة', 'المورد', 'البائع'],
+              'code': ['code', 'id', 'number', 'رقم', 'كود', 'معرف']
             };
             
             let filledCount = 0;
             const totalFields = Object.keys(fields).length;
             
+            // البحث عن وسوم الإدخال ذات الصلة
+            const findRelevantElements = (selector) => {
+              return [
+                ...document.querySelectorAll(\`input[id*="\${selector}"i]\`),
+                ...document.querySelectorAll(\`input[name*="\${selector}"i]\`),
+                ...document.querySelectorAll(\`input[placeholder*="\${selector}"i]\`),
+                ...document.querySelectorAll(\`textarea[id*="\${selector}"i]\`),
+                ...document.querySelectorAll(\`textarea[name*="\${selector}"i]\`),
+                ...document.querySelectorAll(\`textarea[placeholder*="\${selector}"i]\`),
+                ...document.querySelectorAll(\`select[id*="\${selector}"i]\`),
+                ...document.querySelectorAll(\`select[name*="\${selector}"i]\`),
+                ...document.querySelectorAll(\`div[role="textbox"][aria-label*="\${selector}"i]\`)
+              ];
+            };
+            
             for (const [dataKey, selectors] of Object.entries(fields)) {
               if (!data[dataKey]) continue;
               
+              let fieldFilled = false;
               for (const selector of selectors) {
-                const elements = [
-                  ...document.querySelectorAll(\`input[id*="\${selector}"i]\`),
-                  ...document.querySelectorAll(\`input[name*="\${selector}"i]\`),
-                  ...document.querySelectorAll(\`input[placeholder*="\${selector}"i]\`),
-                  ...document.querySelectorAll(\`textarea[id*="\${selector}"i]\`),
-                  ...document.querySelectorAll(\`textarea[name*="\${selector}"i]\`),
-                  ...document.querySelectorAll(\`select[id*="\${selector}"i]\`)
-                ];
+                const elements = findRelevantElements(selector);
                 
                 for (const element of elements) {
                   if (element.disabled || element.readOnly) continue;
                   
-                  if (element instanceof HTMLSelectElement) {
-                    const options = Array.from(element.options);
-                    const bestMatch = options.find(opt => 
-                      opt.text.toLowerCase().includes(data[dataKey].toLowerCase())
-                    );
-                    if (bestMatch) {
-                      element.value = bestMatch.value;
+                  try {
+                    if (element instanceof HTMLSelectElement) {
+                      const options = Array.from(element.options);
+                      const bestMatch = options.find(opt => 
+                        opt.text.toLowerCase().includes(data[dataKey].toLowerCase())
+                      );
+                      if (bestMatch) {
+                        element.value = bestMatch.value;
+                        element.dispatchEvent(new Event('change', { bubbles: true }));
+                        fieldFilled = true;
+                        break;
+                      }
+                    } else if (element.getAttribute('role') === 'textbox') {
+                      // للتعامل مع حقول النص في Google Docs/Sheets
+                      element.textContent = data[dataKey];
+                      element.dispatchEvent(new Event('input', { bubbles: true }));
+                      fieldFilled = true;
+                      break;
+                    } else {
+                      element.value = data[dataKey];
+                      element.dispatchEvent(new Event('input', { bubbles: true }));
                       element.dispatchEvent(new Event('change', { bubbles: true }));
-                      filledCount++;
-                      updateProgress((filledCount / totalFields) * 100);
+                      fieldFilled = true;
                       break;
                     }
-                  } else {
-                    element.value = data[dataKey];
-                    element.dispatchEvent(new Event('input', { bubbles: true }));
-                    element.dispatchEvent(new Event('change', { bubbles: true }));
-                    filledCount++;
-                    updateProgress((filledCount / totalFields) * 100);
-                    break;
+                  } catch (e) {
+                    console.error('Error filling field:', e);
+                  }
+                }
+                
+                if (fieldFilled) {
+                  filledCount++;
+                  updateProgress((filledCount / totalFields) * 100);
+                  break;
+                }
+              }
+            }
+            
+            // البحث عن الحقول بناءً على التسميات (labels)
+            if (filledCount < totalFields) {
+              const labels = document.querySelectorAll('label');
+              
+              for (const [dataKey, selectors] of Object.entries(fields)) {
+                if (!data[dataKey] || selectors.some(s => findRelevantElements(s).length > 0)) continue;
+                
+                for (const label of labels) {
+                  if (selectors.some(s => label.textContent.toLowerCase().includes(s.toLowerCase()))) {
+                    const forAttr = label.getAttribute('for');
+                    if (forAttr) {
+                      const input = document.getElementById(forAttr);
+                      if (input && !input.disabled && !input.readOnly) {
+                        try {
+                          input.value = data[dataKey];
+                          input.dispatchEvent(new Event('input', { bubbles: true }));
+                          input.dispatchEvent(new Event('change', { bubbles: true }));
+                          filledCount++;
+                          updateProgress((filledCount / totalFields) * 100);
+                        } catch (e) {
+                          console.error('Error filling field by label:', e);
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -145,52 +263,47 @@ const CardItem = ({
               navigator.clipboard.writeText(JSON.stringify(data, null, 2))
                 .then(() => console.log('تم نسخ البيانات إلى الحافظة'))
                 .catch(() => console.warn('فشل نسخ البيانات إلى الحافظة'));
+              showNotification(\`تم ملء \${filledCount} حقول بنجاح\`, true);
+            } else {
+              showNotification('لم يتم العثور على حقول متطابقة في هذه الصفحة', false);
             }
             
             return filledCount;
           };
           
-          // تنفيذ عملية الملء والتحقق من النجاح
+          // تنفيذ عملية الملء
           const filledCount = fillFields();
-          if (filledCount > 0) {
-            const notification = document.createElement('div');
-            notification.style.cssText = \`
-              position: fixed;
-              top: 20px;
-              right: 20px;
-              background: #4CAF50;
-              color: white;
-              padding: 15px 20px;
-              border-radius: 5px;
-              z-index: 10000;
-              direction: rtl;
-              font-family: Arial;
-              box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            \`;
-            notification.textContent = \`تم ملء \${filledCount} حقول بنجاح\`;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
-          }
+          updateProgress(100);
+          
+          return filledCount;
         })();
       `;
       
-      // إنشاء وصلة bookmarklet وتنفيذها
+      // تنفيذ السكريبت
       const bookmarkletUrl = `javascript:${encodeURIComponent(scriptText)}`;
-      const scriptElement = document.createElement('script');
-      scriptElement.textContent = decodeURIComponent(bookmarkletUrl.replace('javascript:', ''));
-      document.body.appendChild(scriptElement);
-      document.body.removeChild(scriptElement);
       
-      toast({
-        title: "تم تنفيذ الإدخال التلقائي",
-        description: "تم محاولة ملء البيانات في النموذج",
-        variant: "default"
-      });
+      // استخدام iframe للتنفيذ إذا لم يكن موقع Google
+      if (!isGoogleUrl(url)) {
+        const previewUrl = url;
+        localStorage.setItem('lastPreviewUrl', previewUrl);
+        
+        // تحويل المستخدم لصفحة المعاينة
+        navigate('/preview?url=' + encodeURIComponent(previewUrl) + '&autoFill=true&script=' + encodeURIComponent(bookmarkletUrl));
+        
+        toast({
+          title: "تم التحويل إلى صفحة المعاينة",
+          description: "سيتم فتح الموقع وتنفيذ الإدخال التلقائي هناك. قد تحتاج لتسجيل الدخول أولاً.",
+          variant: "default"
+        });
+      } else {
+        // استخدام bookmarklet مباشرة للمواقع المقيدة
+        setIsBookmarkletOpen(true);
+      }
     } catch (error) {
       console.error("خطأ في الإدخال التلقائي:", error);
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء محاولة الإدخال التلقائي",
+        description: "حدث خطأ أثناء محاولة الإدخال التلقائي: " + (error as Error).message,
         variant: "destructive"
       });
     } finally {
@@ -206,7 +319,7 @@ const CardItem = ({
     } else {
       toast({
         title: "لم يتم تحديد موقع",
-        description: "الرجاء استخدام خاصية الإدخال التلقائي أولًا لتحديد الموقع",
+        description: "الرجاء استخدام خاصية الإدخال التلقائي أولاً لتحديد الموقع",
         variant: "default"
       });
     }
