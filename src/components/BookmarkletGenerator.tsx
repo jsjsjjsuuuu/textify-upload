@@ -1,14 +1,10 @@
 
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CopyIcon, CheckIcon, PlayIcon, AlertCircleIcon } from "lucide-react";
-import { useBookmarkletGenerator } from "@/hooks/useBookmarkletGenerator";
-import { useClipboard } from "@/hooks/useClipboard";
-import { ImageData } from "@/types/ImageData";
-import BookmarkletButton from "./BookmarkletButton";
-import BookmarkletInstructions from "./BookmarkletInstructions";
-import { useState, useEffect } from "react";
+import { CopyIcon, CheckIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ImageData } from "@/types/ImageData";
 
 interface BookmarkletGeneratorProps {
   isOpen: boolean;
@@ -25,136 +21,339 @@ const BookmarkletGenerator = ({
   multipleImages = [], 
   isMultiMode = false 
 }: BookmarkletGeneratorProps) => {
-  // استخدام الهوك الخاص بإنشاء الـ bookmarklet
-  const { 
-    bookmarkletUrl, 
-    bookmarkletCode, 
-    rawDataObject,
-    executeScript 
-  } = useBookmarkletGenerator(
-    imageData,
-    multipleImages,
-    isMultiMode,
-    isOpen
-  );
-  
-  // استخدام الهوك الخاص بنسخ النص
-  const { copied, copyToClipboard } = useClipboard();
   const { toast } = useToast();
-  
-  // إضافة حالة لتتبع تنفيذ السكريبت
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [executionStatus, setExecutionStatus] = useState<string | null>(null);
-  const [executionAttempts, setExecutionAttempts] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const [bookmarkletCode, setBookmarkletCode] = useState("");
+  const [bookmarkletUrl, setBookmarkletUrl] = useState("");
 
-  // التحقق مما إذا كان آخر URL مستخدم هو موقع Google
-  const lastUsedUrl = typeof window !== 'undefined' ? localStorage.getItem('lastAutoFillUrl') || '' : '';
-  const isGoogleUrl = lastUsedUrl.includes('google.com') || lastUsedUrl.includes('docs.google.com');
-  
-  // متابعة حالة التنفيذ
   useEffect(() => {
-    if (isExecuting && executionAttempts > 0) {
-      const timer = setTimeout(() => {
-        if (executionAttempts < 5) {
-          // محاولة النقر على زر الحفظ مرة أخرى بعد ثانيتين
-          setExecutionStatus(`محاولة النقر على زر الحفظ (${executionAttempts + 1}/5)...`);
-          setExecutionAttempts(prev => prev + 1);
-          
-          // استدعاء وظيفة النقر على زر الحفظ
-          const targetUrl = lastUsedUrl || 'about:blank';
-          if (targetUrl !== 'about:blank') {
-            const options = {
-              clickSubmitButton: true,
-              waitBeforeClick: 2000,
-              retryAttempt: executionAttempts
-            };
-            executeScript(targetUrl, options);
-          }
-        } else {
-          // إنهاء المحاولات بعد 5 مرات
-          setIsExecuting(false);
-          setExecutionStatus("انتهت المحاولات. يرجى التحقق من نجاح الإضافة أو النقر يدوياً على زر الحفظ.");
-          
-          toast({
-            title: "اكتملت محاولات النقر التلقائي",
-            description: "تمت محاولة النقر على زر الحفظ 5 مرات. يرجى التحقق من نجاح الإضافة.",
-            variant: "default"
-          });
-        }
-      }, 3000); // انتظر 3 ثوانٍ بين المحاولات
-      
-      return () => clearTimeout(timer);
+    if (isOpen) {
+      if (isMultiMode && multipleImages.length > 0) {
+        generateMultiBookmarklet(multipleImages);
+      } else if (imageData) {
+        generateBookmarklet(imageData);
+      }
     }
-  }, [isExecuting, executionAttempts, executeScript, lastUsedUrl, toast]);
-  
-  // نسخ الرابط إلى الحافظة
-  const handleCopyToClipboard = () => {
-    copyToClipboard(bookmarkletUrl);
+  }, [imageData, multipleImages, isOpen, isMultiMode]);
+
+  const generateBookmarklet = (data: ImageData) => {
+    // إنشاء الأوبجكت الذي سيتم تصديره
+    const exportData = {
+      code: data.code || "",
+      senderName: data.senderName || "",
+      phoneNumber: data.phoneNumber || "",
+      province: data.province || "",
+      price: data.price || "",
+      companyName: data.companyName || ""
+    };
+    
+    // إنشاء كود جافاسكريبت للـ bookmarklet
+    const bookmarkletScript = `
+      (function() {
+        try {
+          // البيانات المستخرجة من الصورة
+          const exportData = ${JSON.stringify(exportData)};
+          console.log("تم استيراد البيانات:", exportData);
+          
+          // البحث عن الحقول في الصفحة الحالية
+          const findAndFillField = (labels, value) => {
+            if (!value) return;
+            
+            for (const label of labels) {
+              // البحث عن حقل الإدخال بعدة طرق
+              const inputField = 
+                document.querySelector(\`input[name*="\${label}"]\`) || 
+                document.querySelector(\`input[id*="\${label}"]\`) ||
+                document.querySelector(\`input[placeholder*="\${label}"]\`) ||
+                document.querySelector(\`textarea[name*="\${label}"]\`) ||
+                document.querySelector(\`textarea[id*="\${label}"]\`) ||
+                document.querySelector(\`textarea[placeholder*="\${label}"]\`);
+                
+              if (inputField) {
+                // ملء الحقل بالقيمة
+                inputField.value = value;
+                inputField.dispatchEvent(new Event('input', { bubbles: true }));
+                console.log(\`تم ملء حقل \${label} بالقيمة \${value}\`);
+                return true;
+              }
+            }
+            
+            // إذا لم يتم العثور على أي حقل، حاول البحث عن التسميات
+            const allLabels = document.querySelectorAll('label');
+            for (const labelElement of allLabels) {
+              if (labels.some(l => labelElement.textContent.toLowerCase().includes(l.toLowerCase()))) {
+                const labelFor = labelElement.getAttribute('for');
+                if (labelFor) {
+                  const input = document.getElementById(labelFor);
+                  if (input) {
+                    input.value = value;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    console.log(\`تم ملء حقل \${labelElement.textContent} بالقيمة \${value}\`);
+                    return true;
+                  }
+                }
+              }
+            }
+            
+            return false;
+          };
+          
+          // محاولة ملء الحقول مع عدة محاولات للعثور على الأسماء المناسبة
+          findAndFillField(['code', 'الكود', 'رمز', 'رقم الطلب', 'order-id'], exportData.code);
+          findAndFillField(['name', 'الاسم', 'اسم', 'اسم المرسل', 'sender', 'customer'], exportData.senderName);
+          findAndFillField(['phone', 'هاتف', 'رقم الهاتف', 'جوال', 'موبايل', 'mobile'], exportData.phoneNumber);
+          findAndFillField(['province', 'محافظة', 'المحافظة', 'city', 'مدينة', 'المدينة', 'region'], exportData.province);
+          findAndFillField(['price', 'سعر', 'السعر', 'المبلغ', 'التكلفة', 'amount', 'cost'], exportData.price);
+          findAndFillField(['company', 'شركة', 'اسم الشركة', 'الشركة', 'vendor'], exportData.companyName);
+          
+          alert('تم ملء البيانات المستخرجة في الصفحة الحالية');
+        } catch (error) {
+          console.error('حدث خطأ أثناء ملء البيانات:', error);
+          alert('حدث خطأ أثناء ملء البيانات: ' + error.message);
+        }
+      })();
+    `;
+    
+    // تنظيف الكود وتحويله ليناسب الـ bookmarklet
+    const cleanCode = bookmarkletScript
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/[\n\r]/g, '');
+    
+    // إنشاء رابط الـ bookmarklet
+    const bookmarklet = `javascript:${encodeURIComponent(cleanCode)}`;
+    
+    setBookmarkletCode(cleanCode);
+    setBookmarkletUrl(bookmarklet);
   };
 
-  // وظيفة تنفيذ سكريبت الإدخال التلقائي محسنة
-  const handleExecuteScript = async () => {
-    setIsExecuting(true);
-    setExecutionStatus("جاري تنفيذ الإدخال التلقائي...");
-    setExecutionAttempts(1);
+  const generateMultiBookmarklet = (images: ImageData[]) => {
+    // تجميع بيانات الصور
+    const allExportData = images.map(img => ({
+      code: img.code || "",
+      senderName: img.senderName || "",
+      phoneNumber: img.phoneNumber || "",
+      province: img.province || "",
+      price: img.price || "",
+      companyName: img.companyName || "",
+      number: img.number || 0
+    }));
     
+    // إنشاء كود جافاسكريبت للـ bookmarklet متعدد البيانات
+    const bookmarkletScript = `
+      (function() {
+        try {
+          // جميع البيانات المستخرجة من الصور
+          const allExportData = ${JSON.stringify(allExportData)};
+          console.log("تم استيراد البيانات لـ", allExportData.length, "صورة");
+          
+          // الفهرس الحالي للصورة التي سيتم ملء بياناتها
+          let currentIndex = 0;
+          
+          // دالة للبحث عن الحقول وملئها
+          const findAndFillField = (labels, value) => {
+            if (!value) return;
+            
+            for (const label of labels) {
+              // البحث عن حقل الإدخال بعدة طرق
+              const inputField = 
+                document.querySelector(\`input[name*="\${label}"]\`) || 
+                document.querySelector(\`input[id*="\${label}"]\`) ||
+                document.querySelector(\`input[placeholder*="\${label}"]\`) ||
+                document.querySelector(\`textarea[name*="\${label}"]\`) ||
+                document.querySelector(\`textarea[id*="\${label}"]\`) ||
+                document.querySelector(\`textarea[placeholder*="\${label}"]\`);
+                
+              if (inputField) {
+                // ملء الحقل بالقيمة
+                inputField.value = value;
+                inputField.dispatchEvent(new Event('input', { bubbles: true }));
+                console.log(\`تم ملء حقل \${label} بالقيمة \${value}\`);
+                return true;
+              }
+            }
+            
+            // إذا لم يتم العثور على أي حقل، حاول البحث عن التسميات
+            const allLabels = document.querySelectorAll('label');
+            for (const labelElement of allLabels) {
+              if (labels.some(l => labelElement.textContent.toLowerCase().includes(l.toLowerCase()))) {
+                const labelFor = labelElement.getAttribute('for');
+                if (labelFor) {
+                  const input = document.getElementById(labelFor);
+                  if (input) {
+                    input.value = value;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    console.log(\`تم ملء حقل \${labelElement.textContent} بالقيمة \${value}\`);
+                    return true;
+                  }
+                }
+              }
+            }
+            
+            return false;
+          };
+          
+          // دالة لملء بيانات صورة واحدة
+          const fillData = (data) => {
+            findAndFillField(['code', 'الكود', 'رمز', 'رقم الطلب', 'order-id'], data.code);
+            findAndFillField(['name', 'الاسم', 'اسم', 'اسم المرسل', 'sender', 'customer'], data.senderName);
+            findAndFillField(['phone', 'هاتف', 'رقم الهاتف', 'جوال', 'موبايل', 'mobile'], data.phoneNumber);
+            findAndFillField(['province', 'محافظة', 'المحافظة', 'city', 'مدينة', 'المدينة', 'region'], data.province);
+            findAndFillField(['price', 'سعر', 'السعر', 'المبلغ', 'التكلفة', 'amount', 'cost'], data.price);
+            findAndFillField(['company', 'شركة', 'اسم الشركة', 'الشركة', 'vendor'], data.companyName);
+          };
+          
+          // إنشاء لوحة تحكم متحركة
+          const createPanel = () => {
+            const panel = document.createElement('div');
+            panel.style.position = 'fixed';
+            panel.style.top = '10px';
+            panel.style.right = '10px';
+            panel.style.backgroundColor = '#f8f9fa';
+            panel.style.border = '1px solid #dee2e6';
+            panel.style.borderRadius = '5px';
+            panel.style.padding = '10px';
+            panel.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+            panel.style.zIndex = '9999';
+            panel.style.direction = 'rtl';
+            panel.style.fontFamily = 'Arial, sans-serif';
+            
+            const title = document.createElement('h3');
+            title.textContent = 'أداة ملء البيانات تلقائياً';
+            title.style.margin = '0 0 10px 0';
+            title.style.fontSize = '16px';
+            title.style.fontWeight = 'bold';
+            panel.appendChild(title);
+            
+            const info = document.createElement('div');
+            info.innerHTML = \`الصورة: <span id="current-index">\${currentIndex + 1}</span> من \${allExportData.length}\`;
+            info.style.marginBottom = '10px';
+            info.style.fontSize = '14px';
+            panel.appendChild(info);
+            
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.style.display = 'flex';
+            buttonsContainer.style.gap = '5px';
+            
+            const prevButton = document.createElement('button');
+            prevButton.textContent = 'السابق';
+            prevButton.style.padding = '5px 10px';
+            prevButton.style.backgroundColor = '#6c757d';
+            prevButton.style.color = 'white';
+            prevButton.style.border = 'none';
+            prevButton.style.borderRadius = '3px';
+            prevButton.style.cursor = 'pointer';
+            prevButton.onclick = () => {
+              if (currentIndex > 0) {
+                currentIndex--;
+                document.getElementById('current-index').textContent = (currentIndex + 1).toString();
+                fillData(allExportData[currentIndex]);
+              }
+            };
+            buttonsContainer.appendChild(prevButton);
+            
+            const nextButton = document.createElement('button');
+            nextButton.textContent = 'التالي';
+            nextButton.style.padding = '5px 10px';
+            nextButton.style.backgroundColor = '#28a745';
+            nextButton.style.color = 'white';
+            nextButton.style.border = 'none';
+            nextButton.style.borderRadius = '3px';
+            nextButton.style.cursor = 'pointer';
+            nextButton.onclick = () => {
+              if (currentIndex < allExportData.length - 1) {
+                currentIndex++;
+                document.getElementById('current-index').textContent = (currentIndex + 1).toString();
+                fillData(allExportData[currentIndex]);
+              }
+            };
+            buttonsContainer.appendChild(nextButton);
+            
+            const closeButton = document.createElement('button');
+            closeButton.textContent = 'إغلاق';
+            closeButton.style.padding = '5px 10px';
+            closeButton.style.backgroundColor = '#dc3545';
+            closeButton.style.color = 'white';
+            closeButton.style.border = 'none';
+            closeButton.style.borderRadius = '3px';
+            closeButton.style.cursor = 'pointer';
+            closeButton.onclick = () => {
+              document.body.removeChild(panel);
+            };
+            buttonsContainer.appendChild(closeButton);
+            
+            panel.appendChild(buttonsContainer);
+            
+            // جعل اللوحة قابلة للسحب
+            let isDragging = false;
+            let offsetX, offsetY;
+            
+            title.style.cursor = 'move';
+            title.addEventListener('mousedown', (e) => {
+              isDragging = true;
+              offsetX = e.clientX - panel.getBoundingClientRect().left;
+              offsetY = e.clientY - panel.getBoundingClientRect().top;
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+              if (isDragging) {
+                panel.style.right = 'auto';
+                panel.style.left = (e.clientX - offsetX) + 'px';
+                panel.style.top = (e.clientY - offsetY) + 'px';
+              }
+            });
+            
+            document.addEventListener('mouseup', () => {
+              isDragging = false;
+            });
+            
+            return panel;
+          };
+          
+          // إضافة لوحة التحكم إلى الصفحة
+          const panel = createPanel();
+          document.body.appendChild(panel);
+          
+          // ملء البيانات الأولى تلقائياً
+          fillData(allExportData[currentIndex]);
+          
+        } catch (error) {
+          console.error('حدث خطأ أثناء ملء البيانات:', error);
+          alert('حدث خطأ أثناء ملء البيانات: ' + error.message);
+        }
+      })();
+    `;
+    
+    // تنظيف الكود وتحويله ليناسب الـ bookmarklet
+    const cleanCode = bookmarkletScript
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/[\n\r]/g, '');
+    
+    // إنشاء رابط الـ bookmarklet
+    const bookmarklet = `javascript:${encodeURIComponent(cleanCode)}`;
+    
+    setBookmarkletCode(cleanCode);
+    setBookmarkletUrl(bookmarklet);
+  };
+  
+  const copyToClipboard = async () => {
     try {
-      console.log("بيانات الإدخال التلقائي:", rawDataObject);
-      
-      // حفظ البيانات في localStorage لضمان عدم فقدانها
-      localStorage.setItem('autofillData', JSON.stringify(rawDataObject));
-      
-      // استخدام الطريقة المباشرة: تنفيذ السكريبت مباشرة على الصفحة الهدف
-      const targetUrl = lastUsedUrl || 'about:blank';
-      
-      if (targetUrl === 'about:blank') {
-        toast({
-          title: "لا يوجد موقع هدف",
-          description: "يرجى فتح الموقع المستهدف أولاً ثم المحاولة مرة أخرى",
-          variant: "destructive"
-        });
-        setIsExecuting(false);
-        setExecutionStatus(null);
-        return;
-      }
-      
-      // إضافة خيارات محسنة لزيادة فرص النجاح
-      const options = {
-        clickSubmitButton: true,
-        waitBeforeClick: 1500,      // انتظار 1.5 ثانية قبل النقر
-        forceSubmit: true,          // الإجبار على محاولة النقر
-        useRobustClickMethod: true, // استخدام طريقة أكثر قوة للنقر
-        retryAttempt: 1             // محاولة أولى
-      };
-      
-      // استدعاء وظيفة تنفيذ السكريبت مع الخيارات المحسنة
-      executeScript(targetUrl, options);
-      
+      await navigator.clipboard.writeText(bookmarkletUrl);
+      setCopied(true);
       toast({
-        title: "تم بدء الإدخال التلقائي",
-        description: "سيتم محاولة النقر على زر الحفظ عدة مرات لضمان تسجيل البيانات",
-        variant: "default"
+        title: "تم النسخ",
+        description: "تم نسخ رابط الـ Bookmarklet بنجاح"
       });
       
-      // سيتم إغلاق مربع الحوار عبر useEffect الذي يراقب عدد المحاولات
-    } catch (error) {
-      console.error("خطأ في تنفيذ السكريبت:", error);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
       toast({
-        title: "خطأ في تنفيذ الإدخال التلقائي",
-        description: "حدث خطأ: " + (error as Error).message,
+        title: "خطأ في النسخ",
+        description: "لم يتم نسخ الرابط. يرجى المحاولة مرة أخرى.",
         variant: "destructive"
       });
-      setIsExecuting(false);
-      setExecutionStatus(null);
     }
-  };
-  
-  // التحقق من دعم خاصية Bookmarklet في المتصفح
-  const isBookmarkletSupported = () => {
-    // التحقق من عدم استخدام متصفح جوال أو iOS
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    return !isMobile || (isMobile && !isIOS);
   };
   
   return (
@@ -164,104 +363,55 @@ const BookmarkletGenerator = ({
           <DialogTitle className="text-center text-xl mb-2">
             {isMultiMode 
               ? `أداة ملء البيانات المتعددة (${multipleImages.length} صورة)` 
-              : isGoogleUrl
-                ? 'أداة ملء بيانات Google Sheets/Docs'
-                : 'أداة ملء البيانات تلقائياً'
+              : 'أداة ملء البيانات تلقائياً'
             }
           </DialogTitle>
           <DialogDescription className="text-center">
-            {isBookmarkletSupported() ? (
-              <>
-                اسحب الزر أدناه إلى شريط المفضلة في متصفحك، ثم انقر عليه في أي موقع تريد ملء البيانات فيه.
-                {isGoogleUrl && <p className="mt-2 text-amber-500 font-semibold">ملاحظة: قد تحتاج للانتقال إلى Google Sheets في متصفحك واستخدام الـ bookmarklet من هناك</p>}
-                {isMultiMode && <p className="mt-2 text-amber-500 font-semibold">ملاحظة: سيظهر لك شريط تحكم يمكنك من خلاله التنقل بين البيانات</p>}
-              </>
-            ) : (
-              <div className="text-amber-500 font-semibold">
-                <AlertCircleIcon className="inline-block ml-1 h-4 w-4" />
-                يبدو أنك تستخدم متصفح جوال، قد لا يكون دعم Bookmarklet متاحاً. يمكنك استخدام زر "تنفيذ مباشرة" بدلاً من ذلك.
-              </div>
-            )}
+            اسحب الزر أدناه إلى شريط المفضلة في متصفحك، ثم انقر عليه في أي موقع تريد ملء البيانات فيه.
+            {isMultiMode && <p className="mt-2 text-amber-500 font-semibold">ملاحظة: سيظهر لك شريط تحكم يمكنك من خلاله التنقل بين البيانات</p>}
           </DialogDescription>
         </DialogHeader>
         
         <div className="flex flex-col space-y-4 mt-4">
-          {/* زر الـ bookmarklet */}
-          <BookmarkletButton 
-            url={bookmarkletUrl} 
-            isMultiMode={isMultiMode}
-            isGoogleMode={isGoogleUrl}
-            imagesCount={multipleImages.length} 
-          />
+          <div className="border border-border rounded-md p-4 bg-muted/20 text-center">
+            <a 
+              href={bookmarkletUrl} 
+              className="inline-block bg-brand-green text-white py-2 px-4 rounded-md hover:bg-brand-green/90 transition-colors"
+              onClick={(e) => e.preventDefault()}
+              title="اسحب هذا الزر إلى شريط المفضلة"
+            >
+              {isMultiMode ? `ملء البيانات المتعددة (${multipleImages.length})` : 'ملء البيانات تلقائياً'}
+            </a>
+            <p className="mt-2 text-sm text-muted-foreground">اسحب هذا الزر إلى شريط المفضلة في متصفحك</p>
+          </div>
           
-          {/* أزرار التحكم */}
-          <div className="flex justify-between items-center gap-2">
+          <div className="flex justify-between items-center">
             <Button 
               variant="outline" 
               size="sm" 
               className="w-full"
-              onClick={handleCopyToClipboard}
+              onClick={copyToClipboard}
             >
               {copied ? <CheckIcon className="ml-2 h-4 w-4" /> : <CopyIcon className="ml-2 h-4 w-4" />}
               {copied ? "تم النسخ" : "نسخ الرابط"}
             </Button>
-            
-            <Button 
-              variant="default" 
-              size="sm" 
-              className="w-full bg-brand-green hover:bg-brand-green/90"
-              onClick={handleExecuteScript}
-              disabled={isExecuting}
-            >
-              {isExecuting ? (
-                <span className="flex items-center">
-                  <span className="animate-spin ml-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                  جاري التنفيذ...
-                </span>
-              ) : (
-                <>
-                  <PlayIcon className="ml-2 h-4 w-4" />
-                  تنفيذ مباشرة
-                </>
-              )}
-            </Button>
           </div>
           
-          {/* حالة التنفيذ */}
-          {executionStatus && (
-            <div className={`text-sm p-2 rounded-md ${
-              executionStatus.includes("خطأ") ? 
-                "bg-red-50 text-red-700 border border-red-200" : 
-                "bg-blue-50 text-blue-700 border border-blue-200"
-            }`}>
-              <p>{executionStatus}</p>
-              {executionAttempts > 0 && executionAttempts <= 5 && (
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                  <div 
-                    className="bg-blue-600 h-1.5 rounded-full" 
-                    style={{ width: `${(executionAttempts / 5) * 100}%` }}
-                  ></div>
-                </div>
+          <div className="text-sm mt-2 space-y-2">
+            <h4 className="font-medium">كيفية الاستخدام:</h4>
+            <ol className="list-decimal list-inside space-y-1 text-muted-foreground text-xs">
+              <li>اسحب الزر الأخضر أعلاه إلى شريط المفضلة في متصفحك</li>
+              <li>انتقل إلى الموقع الذي تريد ملء البيانات فيه</li>
+              <li>انقر على الزر في شريط المفضلة</li>
+              {isMultiMode ? (
+                <>
+                  <li>سيظهر شريط تحكم يمكنك من خلاله التنقل بين البيانات باستخدام أزرار "التالي" و"السابق"</li>
+                  <li>يمكنك سحب شريط التحكم وتحريكه في أي مكان على الصفحة</li>
+                </>
+              ) : (
+                <li>سيتم ملء الحقول المتطابقة تلقائياً</li>
               )}
-            </div>
-          )}
-          
-          {/* تعليمات الاستخدام */}
-          <BookmarkletInstructions 
-            isMultiMode={isMultiMode} 
-            isGoogleUrl={isGoogleUrl}
-          />
-          
-          {/* اقتراحات إضافية للمستخدم مع إشعار حول النقر التلقائي على زر الحفظ */}
-          <div className="text-sm text-muted-foreground bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-md border border-yellow-200 dark:border-yellow-700/30">
-            <p className="font-semibold mb-1 text-yellow-700 dark:text-yellow-400">ملاحظات مهمة عن حفظ البيانات:</p>
-            <ul className="mr-4 list-disc space-y-1 text-xs">
-              <li><strong>نظام محسن جديد:</strong> سيحاول النقر على زر الحفظ تلقائياً <strong>5 مرات متتالية</strong> بفواصل زمنية لضمان نجاح الحفظ</li>
-              <li>إذا لم تنجح المحاولات التلقائية، يرجى النقر يدوياً على زر الحفظ/الإضافة في الموقع</li>
-              <li>تأكد من ظهور رسالة تأكيد من الموقع بعد الحفظ للتأكد من نجاح العملية</li>
-              <li>قد تحتاج لتحديث صفحة الموقع وتسجيل الدخول مجدداً إذا كانت هناك مشكلة في الحفظ</li>
-              <li>في حالة استمرار المشكلة، جرب استخدام زر المفضلة بدلاً من التنفيذ المباشر</li>
-            </ul>
+            </ol>
           </div>
         </div>
       </DialogContent>

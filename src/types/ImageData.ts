@@ -14,16 +14,6 @@ export interface ImageData {
   date: Date;
   status: "processing" | "completed" | "error";
   submitted?: boolean;
-  submissionTime?: string; // إضافة حقل وقت الإرسال
   number?: number;
   extractionMethod?: "ocr" | "gemini";
-  autoFillResult?: {
-    success: boolean;
-    company: string;
-    fieldsFound: number;
-    fieldsFilled: number;
-    timestamp: string;
-    error?: string;
-    retryCount?: number;
-  }[];
 }
