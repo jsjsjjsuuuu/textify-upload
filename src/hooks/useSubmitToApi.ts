@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { submitTextToApi } from "@/lib/apiService";
@@ -150,7 +149,7 @@ export const useSubmitToApi = (updateImage: (id: string, fields: Partial<ImageDa
         const submissionTime = new Date().toISOString();
         updateImage(id, { 
           submitted: true,
-          submissionTime
+          submissionTime: submissionTime
         });
         
         submissionReport.finalStatus = "completed";

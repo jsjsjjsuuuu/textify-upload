@@ -14,6 +14,7 @@ export interface ImageData {
   date: Date;
   status: "processing" | "completed" | "error";
   submitted?: boolean;
+  submissionTime?: string; // إضافة حقل وقت الإرسال
   number?: number;
   extractionMethod?: "ocr" | "gemini";
 }
