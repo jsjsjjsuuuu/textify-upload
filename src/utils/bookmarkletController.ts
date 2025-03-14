@@ -472,7 +472,7 @@ export const fillForm = (item: BookmarkletItem) => {
             case 'senderName': value = item.senderName || ''; break;
             case 'phoneNumber': value = item.phoneNumber ? item.phoneNumber.replace(/\D/g, '') : ''; break;
             case 'province': value = item.province || ''; break;
-            case 'price': value = item.price ? item.price.replace(/[^\d.]/g='') : ''; break;
+            case 'price': value = item.price ? item.price.replace(/[^\d.]/g, '') : ''; break;
             default: break;
           }
           
