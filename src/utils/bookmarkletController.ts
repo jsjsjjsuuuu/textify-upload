@@ -18,14 +18,12 @@ export const findFormFields = () => {
 /**
  * وظيفة تخمين نوع الحقل بناء على السمات المختلفة
  */
-export const guessFieldType = (field: HTMLElement): string => {
-  const element = field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
-  
+export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement): string => {
   // جمع كل المعرّفات المحتملة للحقل
-  const name = element.name ? element.name.toLowerCase() : '';
-  const id = element.id ? element.id.toLowerCase() : '';
-  const className = element.className ? element.className.toLowerCase() : '';
-  const placeholderText = 'placeholder' in element ? (element.placeholder || '').toLowerCase() : '';
+  const name = field.name ? field.name.toLowerCase() : '';
+  const id = field.id ? field.id.toLowerCase() : '';
+  const className = field.className ? field.className.toLowerCase() : '';
+  const placeholderText = 'placeholder' in field ? (field.placeholder || '').toLowerCase() : '';
   
   // البحث عن الـ label المرتبط
   let labelText = '';
@@ -38,7 +36,7 @@ export const guessFieldType = (field: HTMLElement): string => {
   
   // فحص النص المحيط
   let surroundingText = '';
-  let parent = element.parentElement;
+  let parent = field.parentElement;
   for (let i = 0; i < 3 && parent; i++) {
     surroundingText += parent.textContent ? parent.textContent.toLowerCase() : '';
     parent = parent.parentElement;
@@ -71,12 +69,10 @@ export const guessFieldType = (field: HTMLElement): string => {
 /**
  * وظيفة ملء الحقل بالقيمة المناسبة وإطلاق أحداث التغيير
  */
-export const fillField = (field: HTMLElement, value: string) => {
-  const element = field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
-  
+export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, value: string) => {
   // التعامل مع القوائم المنسدلة
-  if (element.tagName === 'SELECT') {
-    const select = element as HTMLSelectElement;
+  if (field.tagName === 'SELECT') {
+    const select = field as HTMLSelectElement;
     
     // محاولة العثور على الخيار المطابق
     const options = Array.from(select.options);
@@ -100,14 +96,14 @@ export const fillField = (field: HTMLElement, value: string) => {
     }
   } else {
     // التعامل مع حقول النص والإدخال العادية
-    element.value = value;
+    field.value = value;
   }
   
   // إطلاق أحداث تغيير الحقل
   const events = ['input', 'change', 'blur'];
   events.forEach(eventType => {
     const event = new Event(eventType, { bubbles: true });
-    element.dispatchEvent(event);
+    field.dispatchEvent(event);
   });
   
   return true;
@@ -126,7 +122,9 @@ export const fillForm = (item: BookmarkletItem) => {
   
   // محاولة تخمين وملء كل حقل
   fields.forEach(field => {
-    const fieldType = guessFieldType(field);
+    // تحويل العنصر إلى النوع المناسب
+    const inputElement = field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+    const fieldType = guessFieldType(inputElement);
     
     if (fieldType !== 'unknown') {
       let value = '';
@@ -155,7 +153,7 @@ export const fillForm = (item: BookmarkletItem) => {
           break;
       }
       
-      if (value && fillField(field, value)) {
+      if (value && fillField(inputElement, value)) {
         filledFields[fieldType] = true;
       }
     }
@@ -196,4 +194,5 @@ export const extractPageInfo = () => {
     inputCount: document.querySelectorAll('input').length
   };
 };
+
 
