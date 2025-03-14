@@ -50,18 +50,24 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   
   if ('id' in field) {
     id = field.id.toLowerCase();
-  } else if (field instanceof HTMLElement && field.getAttribute && field.getAttribute('id')) {
-    id = field.getAttribute('id')!.toLowerCase();
+  } else if ('getAttribute' in field && typeof field.getAttribute === 'function') {
+    const idAttr = field.getAttribute('id');
+    if (idAttr) {
+      id = idAttr.toLowerCase();
+    }
   }
   
-  if (field instanceof HTMLElement && field.className) {
+  if ('className' in field && typeof field.className === 'string') {
     className = field.className.toLowerCase();
   }
   
   if ('placeholder' in field && field.placeholder) {
     placeholderText = field.placeholder.toLowerCase();
-  } else if (field instanceof HTMLElement && field.getAttribute && field.getAttribute('placeholder')) {
-    placeholderText = field.getAttribute('placeholder')!.toLowerCase();
+  } else if ('getAttribute' in field && typeof field.getAttribute === 'function') {
+    const placeholderAttr = field.getAttribute('placeholder');
+    if (placeholderAttr) {
+      placeholderText = placeholderAttr.toLowerCase();
+    }
   }
   
   // البحث عن الـ label المرتبط
