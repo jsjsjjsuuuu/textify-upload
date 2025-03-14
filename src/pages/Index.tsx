@@ -9,6 +9,7 @@ import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 import { getStorageStats } from "@/utils/bookmarklet";
 import { useEffect, useState } from "react";
+import { ImageData } from "@/types/ImageData";
 
 const Index = () => {
   const {
@@ -68,6 +69,11 @@ const Index = () => {
     };
   }, [images]);
 
+  // وظيفة wrapper لمعالجة توقيع الدالة للحفاظ على التوافق مع واجهة ImagePreviewContainer
+  const handleDeleteImage = (id: string) => {
+    handleDelete(id);
+  };
+
   return (
     <div className="relative min-h-screen pb-20">
       <BackgroundPattern />
@@ -105,7 +111,7 @@ const Index = () => {
               images={images}
               isSubmitting={isSubmitting}
               onTextChange={handleTextChange}
-              onDelete={handleDelete}
+              onDelete={handleDeleteImage}
               onSubmit={handleSubmitToApi}
               formatDate={formatDate}
             />

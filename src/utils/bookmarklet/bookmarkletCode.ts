@@ -1,5 +1,4 @@
 
-import { fillFormFields } from './fieldFiller';
 import { STORAGE_KEY, BookmarkletItem, BookmarkletExportData } from './types';
 import { updateItemStatus } from './storage';
 
@@ -151,136 +150,190 @@ export const generateBookmarkletCode = (): string => {
       }, 5000);
     }
     
-    // البحث عن عنصر واجهة المستخدم
-    function findElement(selectors) {
-      for (const selector of selectors) {
-        try {
-          const element = document.querySelector(selector);
-          if (element) return element;
-        } catch (error) {
-          console.warn(\`فشل في العثور على عنصر باستخدام المحدد: \${selector}\`, error);
-        }
-      }
-      return null;
-    }
-    
-    // التحقق من صحة القيمة لنوع الإدخال
-    function checkInputTypeCompatibility(element, value) {
-      if (element.tagName === 'INPUT') {
-        const type = element.getAttribute('type')?.toLowerCase() || 'text';
-        
-        if (type === 'number' && isNaN(Number(value))) {
-          return false;
-        }
-        
-        if (type === 'tel' && !/^[\\d\\s+\\-()]+$/.test(value)) {
-          return false;
-        }
-        
-        if (type === 'email' && !value.includes('@')) {
-          return false;
-        }
-        
-        if (type === 'date' && isNaN(Date.parse(value))) {
-          return false;
-        }
-      }
-      return true;
-    }
-    
-    // ملء حقل إدخال
-    function fillInputField(element, value) {
-      if (!element || !value) return false;
-      
-      try {
-        if (!checkInputTypeCompatibility(element, value)) {
-          return false;
-        }
-        
-        // محاولة تعيين القيمة مباشرة
-        element.value = value;
-        
-        // محاكاة كتابة المستخدم
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-          window.HTMLInputElement.prototype,
-          "value"
-        )?.set;
-        
-        if (nativeInputValueSetter) {
-          nativeInputValueSetter.call(element, value);
-        }
-        
-        // إطلاق الأحداث
-        ['input', 'change', 'blur'].forEach(eventType => {
-          const event = new Event(eventType, { bubbles: true });
-          element.dispatchEvent(event);
-        });
-        
-        return true;
-      } catch (error) {
-        console.error(\`خطأ في ملء الحقل: \${error}\`);
-        return false;
-      }
-    }
-    
-    // البحث عن وملء الحقول
+    // تعبئة الحقول في النموذج
     function fillFormFields(item) {
+      // تضمين تنفيذ دالة fillFormFields هنا مباشرة
+      if (!item) return { filled: [], failed: [], message: 'لا توجد بيانات', success: false, attempted: 0 };
+      
+      console.log("بدء ملء النموذج بالبيانات:", item);
+      
+      // تعريف خريطة الحقول
       const fieldMappings = [
         {
-          key: 'customerName',
+          key: 'code',
+          label: 'رقم الوصل',
+          value: item.code || '',
           selectors: [
-            'input[name*="customer"][name*="name"]',
-            'input[id*="customer"][id*="name"]',
-            'input[name*="sender"]',
-            'input[placeholder*="اسم العميل"]',
-            'input[placeholder*="اسم المرسل"]'
+            'input[name*="code"]',
+            'input[id*="code"]',
+            'input[placeholder*="رقم الوصل"]',
+            'input[placeholder*="رقم البوليصة"]'
           ]
         },
         {
-          key: 'customerPhone',
+          key: 'phoneNumber',
+          label: 'رقم الهاتف',
+          value: item.phoneNumber ? item.phoneNumber.replace(/\\D/g, '') : '',
           selectors: [
             'input[name*="phone"]',
+            'input[id*="phone"]',
             'input[type="tel"]',
             'input[placeholder*="رقم الهاتف"]',
-            'input[placeholder*="الموبايل"]'
+            'input[placeholder*="موبايل"]'
           ]
         },
         {
-          key: 'area',
+          key: 'senderName',
+          label: 'اسم المرسل',
+          value: item.senderName || item.customerName || '',
           selectors: [
-            'select[name*="area"]',
-            'select[name*="city"]',
+            'input[name*="sender"]',
+            'input[name*="customer"]',
+            'input[id*="sender"]',
+            'input[placeholder*="اسم المرسل"]',
+            'input[placeholder*="اسم العميل"]'
+          ]
+        },
+        {
+          key: 'recipientName',
+          label: 'اسم المستلم',
+          value: item.recipientName || '',
+          selectors: [
+            'input[name*="recipient"]',
+            'input[name*="receiver"]',
+            'input[id*="recipient"]',
+            'input[placeholder*="اسم المستلم"]'
+          ]
+        },
+        {
+          key: 'province',
+          label: 'المحافظة',
+          value: item.province || '',
+          selectors: [
             'select[name*="province"]',
+            'select[id*="province"]',
+            'select[name*="city"]',
             'select[placeholder*="المحافظة"]'
           ]
         },
         {
-          key: 'totalAmount',
+          key: 'price',
+          label: 'المبلغ',
+          value: item.price ? item.price.replace(/[^\\d.]/g, '') : '',
           selectors: [
-            'input[name*="amount"]',
             'input[name*="price"]',
-            'input[placeholder*="المبلغ"]'
+            'input[name*="amount"]',
+            'input[id*="price"]',
+            'input[placeholder*="المبلغ"]',
+            'input[type="number"]'
           ]
         }
       ];
       
+      // تتبع الحقول المملوءة والفاشلة
       const results = {
         filled: [],
         failed: [],
         message: '',
-        success: false
+        success: false,
+        attempted: 0
       };
       
+      // البحث في عناصر الصفحة ومحاولة ملئها
       fieldMappings.forEach(mapping => {
-        const element = findElement(mapping.selectors);
-        if (element && item[mapping.key]) {
-          const success = fillInputField(element, item[mapping.key]);
-          if (success) {
-            results.filled.push(mapping.key);
-          } else {
+        results.attempted++;
+        
+        // البحث عن العنصر في الصفحة
+        let foundElement = null;
+        
+        for (const selector of mapping.selectors) {
+          try {
+            const element = document.querySelector(selector);
+            if (element) {
+              foundElement = element;
+              break;
+            }
+          } catch (error) {
+            console.warn(\`خطأ في البحث عن العنصر: \${selector}\`, error);
+          }
+        }
+        
+        // إذا وجدنا عنصرًا وكان لدينا قيمة، نحاول ملئه
+        if (foundElement && mapping.value) {
+          try {
+            // تحديد نوع العنصر وملئه بالطريقة المناسبة
+            const tagName = foundElement.tagName.toLowerCase();
+            
+            if (tagName === 'select') {
+              // للقوائم المنسدلة
+              const options = Array.from(foundElement.options);
+              
+              // البحث عن تطابق دقيق أو جزئي
+              const exactMatch = options.find(opt => 
+                opt.text.trim().toLowerCase() === mapping.value.toLowerCase() || 
+                opt.value.toLowerCase() === mapping.value.toLowerCase()
+              );
+              
+              if (exactMatch) {
+                // تعيين القيمة باستخدام قيمة الخيار
+                foundElement.value = exactMatch.value;
+                console.log(\`تم ملء القائمة المنسدلة: \${mapping.key} بالقيمة: \${exactMatch.text}\`);
+                results.filled.push(mapping.key);
+              } else {
+                // البحث عن تطابق جزئي
+                const partialMatch = options.find(opt => 
+                  opt.text.trim().toLowerCase().includes(mapping.value.toLowerCase()) || 
+                  mapping.value.toLowerCase().includes(opt.text.trim().toLowerCase())
+                );
+                
+                if (partialMatch) {
+                  foundElement.value = partialMatch.value;
+                  console.log(\`تم ملء القائمة المنسدلة (تطابق جزئي): \${mapping.key} بالقيمة: \${partialMatch.text}\`);
+                  results.filled.push(mapping.key);
+                } else {
+                  console.log(\`لم يتم العثور على خيار مطابق للقيمة: \${mapping.value}\`);
+                  results.failed.push(mapping.key);
+                }
+              }
+              
+              // إطلاق حدث التغيير
+              const event = new Event('change', { bubbles: true });
+              foundElement.dispatchEvent(event);
+            } else if (tagName === 'input' || tagName === 'textarea') {
+              // للحقول النصية
+              if (foundElement.type === 'checkbox' || foundElement.type === 'radio') {
+                // للمربعات أو أزرار الاختيار
+                const shouldCheck = mapping.value === 'true' || mapping.value === '1' || mapping.value.toLowerCase() === 'نعم';
+                foundElement.checked = shouldCheck;
+              } else {
+                // للحقول النصية العادية
+                foundElement.value = mapping.value;
+              }
+              
+              // إطلاق أحداث التغيير والإدخال
+              ['input', 'change', 'blur'].forEach(eventType => {
+                const event = new Event(eventType, { bubbles: true });
+                foundElement.dispatchEvent(event);
+              });
+              
+              console.log(\`تم ملء الحقل: \${mapping.key} بالقيمة: \${mapping.value}\`);
+              results.filled.push(mapping.key);
+            } else {
+              // لأنواع الحقول الأخرى
+              console.log(\`نوع حقل غير معروف: \${tagName}\`);
+              results.failed.push(mapping.key);
+            }
+          } catch (error) {
+            console.error(\`خطأ في ملء الحقل \${mapping.key}:\`, error);
             results.failed.push(mapping.key);
           }
         } else {
+          // إذا لم نجد العنصر أو لم تكن هناك قيمة
+          if (!foundElement) {
+            console.log(\`لم يتم العثور على عنصر للحقل: \${mapping.key}\`);
+          } else {
+            console.log(\`لا توجد قيمة للحقل: \${mapping.key}\`);
+          }
           results.failed.push(mapping.key);
         }
       });
