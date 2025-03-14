@@ -1,6 +1,6 @@
 
-import { IRAQ_PROVINCES, PROVINCE_CORRECTIONS } from './provinceData';
-import { calculateStringSimilarity } from './stringSimilarity';
+import { IRAQ_PROVINCES, PROVINCE_CORRECTIONS } from './provinces/provinceData';
+import { calculateStringSimilarity } from './provinces/stringSimilarity';
 
 /**
  * تصحيح اسم المحافظة عن طريق مقارنتها بقائمة المحافظات العراقية
