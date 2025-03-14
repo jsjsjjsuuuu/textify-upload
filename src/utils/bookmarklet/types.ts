@@ -41,6 +41,13 @@ export interface BookmarkletItem {
   paymentStatus?: string; // حالة الدفع
   deliveryDate?: string; // تاريخ التسليم
   delegateName?: string; // اسم المندوب
+  
+  // إضافة حقول إضافية لتتبع آخر تحديث وعمليات الكتابة
+  fieldsFilled?: number; // عدد الحقول التي تم ملؤها
+  fieldsAttempted?: number; // عدد الحقول التي تمت محاولة ملئها
+  errorFields?: string[]; // أسماء الحقول التي فشل ملؤها
+  successFields?: string[]; // أسماء الحقول التي نجح ملؤها
+  fillAttemptDate?: string; // تاريخ آخر محاولة ملء
 }
 
 // نوع بيانات التصدير

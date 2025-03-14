@@ -31,6 +31,9 @@ export const findFormFields = () => {
     }
   }
   
+  // تحسين: طباعة عدد الحقول التي تم العثور عليها للتشخيص
+  console.log(`[Bookmarklet] تم العثور على ${allFields.length} حقل في الصفحة`);
+  
   return allFields;
 };
 
@@ -499,115 +502,150 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
     return false;
   }
   
-  // تعامل خاص مع القوائم المنسدلة
-  if (field instanceof HTMLSelectElement) {
-    const select = field as HTMLSelectElement;
-    const bestOption = findBestSelectOption(select, value);
+  try {
+    // محاولة تعديل الحقل بشكل مباشر
+    // تحسين العملية: محاولة طرق متعددة لملء الحقل
     
-    if (bestOption) {
-      select.value = bestOption.value;
-      console.log(`[Bookmarklet] تم ملء القائمة المنسدلة بالقيمة: ${bestOption.text}`);
+    // تعامل خاص مع القوائم المنسدلة
+    if (field instanceof HTMLSelectElement) {
+      const select = field as HTMLSelectElement;
+      const bestOption = findBestSelectOption(select, value);
       
-      // إطلاق حدث التغيير
+      if (bestOption) {
+        // تحديث القيمة للقائمة المنسدلة
+        select.value = bestOption.value;
+        console.log(`[Bookmarklet] تم ملء القائمة المنسدلة بالقيمة: ${bestOption.text} (القيمة: ${bestOption.value})`);
+        
+        // إطلاق حدث التغيير
+        try {
+          ['input', 'change', 'blur'].forEach(eventType => {
+            const event = new Event(eventType, { bubbles: true });
+            select.dispatchEvent(event);
+          });
+        } catch (e) {
+          console.warn("[Bookmarklet] خطأ في إطلاق أحداث التغيير:", e);
+        }
+        
+        return true;
+      } else {
+        console.log(`[Bookmarklet] لم يتم العثور على تطابق في القائمة المنسدلة للقيمة: ${value}`);
+        return false;
+      }
+    } 
+    // تعامل مع حقول النصوص والمدخلات
+    else if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
+      let processedValue = value;
+      
+      // تعديل القيمة حسب نوع الإدخال
+      if (field instanceof HTMLInputElement) {
+        const inputElement = field as HTMLInputElement;
+        
+        switch (inputElement.type.toLowerCase()) {
+          case 'tel':
+            // تنظيف رقم الهاتف من الأحرف غير الرقمية
+            processedValue = value.replace(/\D/g, '');
+            break;
+          case 'number':
+            // تنظيف القيمة العددية
+            processedValue = value.replace(/[^\d.]/g, '');
+            break;
+          case 'date':
+            // تحويل التاريخ إلى التنسيق المناسب
+            try {
+              const dateValue = new Date(value);
+              if (!isNaN(dateValue.getTime())) {
+                // تنسيق YYYY-MM-DD
+                const formattedDate = dateValue.toISOString().split('T')[0];
+                processedValue = formattedDate;
+              }
+            } catch (e) {
+              // الإبقاء على القيمة الأصلية في حالة الخطأ
+            }
+            break;
+          case 'checkbox':
+          case 'radio':
+            // تعيين حالة الاختيار بناءً على القيمة
+            const shouldCheck = value === 'true' || value === '1' || value.toLowerCase() === 'نعم';
+            field.checked = shouldCheck;
+            console.log(`[Bookmarklet] تم تعيين خانة الاختيار: ${shouldCheck ? 'محدد' : 'غير محدد'}`);
+            
+            // إطلاق أحداث التغيير والنقر
+            try {
+              ['input', 'change', 'click'].forEach(eventType => {
+                const event = new Event(eventType, { bubbles: true });
+                field.dispatchEvent(event);
+              });
+            } catch (e) {
+              console.warn("[Bookmarklet] خطأ في إطلاق أحداث خانة الاختيار:", e);
+            }
+            
+            return true;
+        }
+      }
+      
+      // طريقة 1: تعيين القيمة مباشرة
+      field.value = processedValue;
+      
+      let fieldIdentifier = 'غير معروف';
+      if ('name' in field && field.name) {
+        fieldIdentifier = field.name;
+      } else if ('id' in field && field.id) {
+        fieldIdentifier = field.id;
+      }
+      
+      console.log(`[Bookmarklet] تم ملء الحقل: ${fieldIdentifier} بالقيمة: ${processedValue}`);
+      
+      // طريقة 2: محاكاة الكتابة
       try {
-        const event = new Event('change', { bubbles: true });
-        select.dispatchEvent(event);
+        // إطلاق أحداث متعددة
+        ['focus', 'input', 'change', 'blur'].forEach(eventType => {
+          const event = new Event(eventType, { bubbles: true });
+          field.dispatchEvent(event);
+        });
+      } catch (e) {
+        console.warn("[Bookmarklet] خطأ في إطلاق أحداث التغيير:", e);
+      }
+      
+      // طريقة 3: استخدام خاصية defaultValue للتغلب على بعض المشاكل
+      if ('defaultValue' in field) {
+        field.defaultValue = processedValue;
+      }
+      
+      return true;
+    } 
+    // تعامل مع العناصر ذات المحتوى القابل للتحرير
+    else if ('contentEditable' in field && field.contentEditable === 'true') {
+      // ملء العناصر ذات المحتوى القابل للتحرير
+      field.textContent = value;
+      console.log(`[Bookmarklet] تم ملء عنصر المحتوى القابل للتحرير بالقيمة: ${value}`);
+      
+      try {
+        const event = new Event('input', { bubbles: true });
+        field.dispatchEvent(event);
       } catch (e) {
         console.warn("[Bookmarklet] خطأ في إطلاق حدث التغيير:", e);
       }
       
       return true;
     } else {
-      console.log(`[Bookmarklet] لم يتم العثور على تطابق في القائمة المنسدلة للقيمة: ${value}`);
-      return false;
-    }
-  } else if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
-    // تعديل القيمة حسب نوع الإدخال
-    if (field instanceof HTMLInputElement) {
-      const inputElement = field as HTMLInputElement;
+      console.log(`[Bookmarklet] نوع حقل غير معروف: ${field.tagName}`);
       
-      switch (inputElement.type.toLowerCase()) {
-        case 'tel':
-          // تنظيف رقم الهاتف من الأحرف غير الرقمية
-          field.value = value.replace(/\D/g, '');
-          break;
-        case 'number':
-          // تنظيف القيمة العددية
-          field.value = value.replace(/[^\d.]/g, '');
-          break;
-        case 'date':
-          // تحويل التاريخ إلى التنسيق المناسب
-          try {
-            const dateValue = new Date(value);
-            if (!isNaN(dateValue.getTime())) {
-              // تنسيق YYYY-MM-DD
-              const formattedDate = dateValue.toISOString().split('T')[0];
-              field.value = formattedDate;
-            } else {
-              field.value = value;
-            }
-          } catch (e) {
-            field.value = value;
-          }
-          break;
-        case 'checkbox':
-        case 'radio':
-          // تعيين حالة الاختيار بناءً على القيمة
-          const shouldCheck = value === 'true' || value === '1' || value.toLowerCase() === 'نعم';
-          field.checked = shouldCheck;
-          break;
-        default:
-          field.value = value;
+      // محاولة أخيرة: استخدام خصائص DOM العامة للعناصر
+      try {
+        const htmlElement = field as HTMLElement;
+        // محاولة تعيين القيمة من خلال setAttribute
+        htmlElement.setAttribute('value', value);
+        console.log(`[Bookmarklet] تم محاولة تعيين القيمة باستخدام setAttribute: ${value}`);
+        return true;
+      } catch (e) {
+        console.warn("[Bookmarklet] فشلت محاولة تعيين القيمة باستخدام setAttribute:", e);
+        return false;
       }
-    } else {
-      field.value = value;
     }
-    
-    // استخدام معرف مناسب لتسجيل الإجراء
-    let fieldIdentifier = 'غير معروف';
-    
-    if ('name' in field && field.name) {
-      fieldIdentifier = field.name;
-    } else if ('id' in field && field.id) {
-      fieldIdentifier = field.id;
-    }
-    
-    console.log(`[Bookmarklet] تم ملء الحقل: ${fieldIdentifier} بالقيمة: ${field.value}`);
-    
-    // إطلاق أحداث التغيير والإدخال
-    try {
-      ['input', 'change', 'blur'].forEach(eventType => {
-        const event = new Event(eventType, { bubbles: true });
-        field.dispatchEvent(event);
-      });
-    } catch (e) {
-      console.warn("[Bookmarklet] خطأ في إطلاق أحداث التغيير:", e);
-    }
-  } else if ('contentEditable' in field && field.contentEditable === 'true') {
-    // ملء العناصر ذات المحتوى القابل للتحرير
-    field.textContent = value;
-    console.log(`[Bookmarklet] تم ملء عنصر المحتوى القابل للتحرير بالقيمة: ${value}`);
-    
-    try {
-      const event = new Event('input', { bubbles: true });
-      field.dispatchEvent(event);
-    } catch (e) {
-      console.warn("[Bookmarklet] خطأ في إطلاق حدث التغيير:", e);
-    }
-  } else {
-    console.log(`[Bookmarklet] نوع حقل غير معروف: ${field.tagName}`);
+  } catch (e) {
+    console.error("[Bookmarklet] خطأ عام أثناء محاولة ملء الحقل:", e);
     return false;
   }
-  
-  // محاولة تنشيط الحقول للمواقع التي تعتمد على أحداث التركيز والنقر
-  try {
-    field.focus();
-    field.click();
-  } catch (e) {
-    console.warn("[Bookmarklet] تعذر تنشيط الحقل بالكامل:", e);
-  }
-  
-  return true;
 };
 
 /**
@@ -764,3 +802,50 @@ export const findAndClickSaveButton = (): boolean => {
   console.log("[Bookmarklet] لم يتم العثور على زر حفظ مناسب");
   return false;
 };
+
+/**
+ * وظيفة جديدة لمعالجة الحالات الخاصة بالمواقع المحددة
+ */
+export const handleSpecialCases = () => {
+  // تنفيذ إجراءات خاصة للتغلب على مشاكل محددة في بعض المواقع
+  
+  // 1. التعامل مع الحقول المخفية التي تستخدم النصوص المشفرة
+  const hiddenFields = document.querySelectorAll('input[type="hidden"]');
+  console.log(`[Bookmarklet] تم العثور على ${hiddenFields.length} حقل مخفي`);
+  
+  // 2. التعامل مع المحررات المتقدمة (مثل CKEditor، TinyMCE)
+  const richEditors = document.querySelectorAll('.ck-editor, .mce-editor, [contenteditable="true"]');
+  if (richEditors.length > 0) {
+    console.log(`[Bookmarklet] تم العثور على ${richEditors.length} محرر متقدم`);
+  }
+  
+  // 3. محاولة تنشيط العناصر المختفية التي قد تحتوي على حقول
+  const collapsedSections = document.querySelectorAll('.collapsed, .collapse:not(.show), [aria-expanded="false"]');
+  for (const section of Array.from(collapsedSections)) {
+    try {
+      // محاولة توسيع القسم المطوي
+      const controlElement = document.querySelector(`[data-toggle="collapse"][aria-controls="${section.id}"], [data-bs-toggle="collapse"][aria-controls="${section.id}"]`);
+      if (controlElement) {
+        (controlElement as HTMLElement).click();
+        console.log(`[Bookmarklet] تم توسيع قسم مطوي: ${section.id}`);
+      }
+    } catch (e) {
+      console.warn(`[Bookmarklet] خطأ أثناء محاولة توسيع قسم مطوي: ${e}`);
+    }
+  }
+  
+  // 4. فحص إذا كانت الصفحة تستخدم إطارات shadow DOM
+  const shadowRoots = [];
+  const checkForShadowRoots = (element: Element) => {
+    if (element.shadowRoot) {
+      shadowRoots.push(element.shadowRoot);
+    }
+    Array.from(element.children).forEach(checkForShadowRoots);
+  };
+  
+  checkForShadowRoots(document.body);
+  if (shadowRoots.length > 0) {
+    console.log(`[Bookmarklet] تم العثور على ${shadowRoots.length} جذر shadow DOM`);
+  }
+};
+
