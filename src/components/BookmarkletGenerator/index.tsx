@@ -3,13 +3,12 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { BookmarkIcon, FileBox, ServerIcon } from "lucide-react";
+import { BookmarkIcon, FileBox } from "lucide-react";
 import { motion } from "framer-motion";
 import { ImageData } from "@/types/ImageData";
 import { useBookmarklet } from "@/hooks/useBookmarklet";
 import ExportDataSection from "./ExportDataSection";
 import BookmarkletSection from "./BookmarkletSection";
-import FastAPIInfo from "../FastAPIInfo";
 
 // تحديث واجهة الخصائص
 interface BookmarkletGeneratorProps {
@@ -64,7 +63,7 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
             <div>
               <CardTitle className="text-xl font-bold text-brand-brown dark:text-brand-beige flex items-center">
                 <BookmarkIcon className="mr-2 h-5 w-5 text-brand-coral" />
-                أدوات نقل البيانات
+                أداة نقل البيانات (Bookmarklet)
               </CardTitle>
               <CardDescription className="mt-1">
                 نقل البيانات المستخرجة تلقائيًا إلى مواقع شركات التوصيل
@@ -81,10 +80,9 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
         
         <CardContent>
           <Tabs defaultValue="export" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 mb-4">
+            <TabsList className="grid grid-cols-2 mb-4">
               <TabsTrigger value="export">تصدير البيانات</TabsTrigger>
-              <TabsTrigger value="bookmarklet">البوكماركلت</TabsTrigger>
-              <TabsTrigger value="fastapi">FastAPI</TabsTrigger>
+              <TabsTrigger value="bookmarklet">إعداد الـ Bookmarklet</TabsTrigger>
             </TabsList>
             
             {/* قسم تصدير البيانات */}
@@ -110,17 +108,12 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
                 onToggleAdvanced={toggleAdvancedOptions}
               />
             </TabsContent>
-            
-            {/* قسم FastAPI الجديد */}
-            <TabsContent value="fastapi">
-              <FastAPIInfo />
-            </TabsContent>
           </Tabs>
         </CardContent>
         
         <CardFooter className="border-t pt-4 text-xs text-muted-foreground">
           <p>
-            ملاحظة: يوفر النظام خيارات متعددة لنقل البيانات من التطبيق إلى أنظمة شركات التوصيل
+            ملاحظة: تعمل هذه الأداة في المتصفح فقط ولا يتم إرسال بياناتك إلى أي خادم خارجي
           </p>
         </CardFooter>
       </Card>
