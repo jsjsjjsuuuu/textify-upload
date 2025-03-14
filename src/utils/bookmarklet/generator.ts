@@ -1,9 +1,10 @@
+
 /**
  * توليد شفرة البوكماركلت
  */
 
-import { converter } from './converter';
-import { loadStoredItems, storageKey } from './storage';
+import { convertCodeToBookmarklet } from './converter';
+import { getFromLocalStorage, STORAGE_KEY } from './storage';
 import { initEnhancedFormFiller } from './enhancedFormFiller';
 import { fillFormFields } from './fieldFiller';
 
@@ -13,7 +14,7 @@ export function generateBookmarkletCode(): string {
 (function() {
   try {
     // التحقق من وجود البيانات
-    const storageKey = "${storageKey}";
+    const storageKey = "${STORAGE_KEY}";
     const data = localStorage.getItem(storageKey);
     
     if (!data) {
@@ -97,7 +98,7 @@ export function generateBookmarkletCode(): string {
 `;
 
   // تحويل الشفرة إلى رابط JavaScript
-  return converter.codeToBookmarklet(code);
+  return convertCodeToBookmarklet(code);
 }
 
 // إنشاء شفرة البوكماركلت المحسّن
@@ -117,5 +118,5 @@ export function generateEnhancedBookmarkletCode(): string {
 `;
 
   // تحويل الشفرة إلى رابط JavaScript
-  return converter.codeToBookmarklet(code);
+  return convertCodeToBookmarklet(code);
 }

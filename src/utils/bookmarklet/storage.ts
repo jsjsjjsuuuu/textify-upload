@@ -3,6 +3,9 @@ import { ImageData } from "@/types/ImageData";
 import { STORAGE_KEY, STORAGE_VERSION, BookmarkletExportData, BookmarkletItem, StorageStats } from "./types";
 import { convertImagesToBookmarkletItems } from "./converter";
 
+// تصدير الثابت STORAGE_KEY للاستخدام في الوحدات الأخرى
+export { STORAGE_KEY } from "./types";
+
 /**
  * حفظ بيانات الصور في localStorage
  */
