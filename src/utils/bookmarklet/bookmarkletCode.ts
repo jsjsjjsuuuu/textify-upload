@@ -254,7 +254,7 @@ export const generateBookmarkletCode = (): string => {
               break;
             }
           } catch (error) {
-            console.warn(\`خطأ في البحث عن العنصر: \${selector}\`, error);
+            console.warn("خطأ في البحث عن العنصر: " + selector, error);
           }
         }
         
@@ -277,7 +277,7 @@ export const generateBookmarkletCode = (): string => {
               if (exactMatch) {
                 // تعيين القيمة باستخدام قيمة الخيار
                 foundElement.value = exactMatch.value;
-                console.log(\`تم ملء القائمة المنسدلة: \${mapping.key} بالقيمة: \${exactMatch.text}\`);
+                console.log("تم ملء القائمة المنسدلة: " + mapping.key + " بالقيمة: " + exactMatch.text);
                 results.filled.push(mapping.key);
               } else {
                 // البحث عن تطابق جزئي
@@ -288,10 +288,10 @@ export const generateBookmarkletCode = (): string => {
                 
                 if (partialMatch) {
                   foundElement.value = partialMatch.value;
-                  console.log(\`تم ملء القائمة المنسدلة (تطابق جزئي): \${mapping.key} بالقيمة: \${partialMatch.text}\`);
+                  console.log("تم ملء القائمة المنسدلة (تطابق جزئي): " + mapping.key + " بالقيمة: " + partialMatch.text);
                   results.filled.push(mapping.key);
                 } else {
-                  console.log(\`لم يتم العثور على خيار مطابق للقيمة: \${mapping.value}\`);
+                  console.log("لم يتم العثور على خيار مطابق للقيمة: " + mapping.value);
                   results.failed.push(mapping.key);
                 }
               }
@@ -316,23 +316,23 @@ export const generateBookmarkletCode = (): string => {
                 foundElement.dispatchEvent(event);
               });
               
-              console.log(\`تم ملء الحقل: \${mapping.key} بالقيمة: \${mapping.value}\`);
+              console.log("تم ملء الحقل: " + mapping.key + " بالقيمة: " + mapping.value);
               results.filled.push(mapping.key);
             } else {
               // لأنواع الحقول الأخرى
-              console.log(\`نوع حقل غير معروف: \${tagName}\`);
+              console.log("نوع حقل غير معروف: " + tagName);
               results.failed.push(mapping.key);
             }
           } catch (error) {
-            console.error(\`خطأ في ملء الحقل \${mapping.key}:\`, error);
+            console.error("خطأ في ملء الحقل " + mapping.key + ":", error);
             results.failed.push(mapping.key);
           }
         } else {
           // إذا لم نجد العنصر أو لم تكن هناك قيمة
           if (!foundElement) {
-            console.log(\`لم يتم العثور على عنصر للحقل: \${mapping.key}\`);
+            console.log("لم يتم العثور على عنصر للحقل: " + mapping.key);
           } else {
-            console.log(\`لا توجد قيمة للحقل: \${mapping.key}\`);
+            console.log("لا توجد قيمة للحقل: " + mapping.key);
           }
           results.failed.push(mapping.key);
         }
@@ -341,7 +341,7 @@ export const generateBookmarkletCode = (): string => {
       // تحديث حالة النتائج
       if (results.filled.length > 0) {
         results.success = true;
-        results.message = \`تم ملء \${results.filled.length} حقول بنجاح\`;
+        results.message = "تم ملء " + results.filled.length + " حقول بنجاح";
       } else {
         results.success = false;
         results.message = "لم يتم العثور على حقول مطابقة أو ملؤها";
@@ -395,7 +395,7 @@ export const generateBookmarkletCode = (): string => {
   const cleanCode = bookmarkletCode
     .trim()
     .replace(/^\s+/gm, '')
-    .replace(/\n/g, '');
+    .replace(/\n/g, ' ');
   
   // إنشاء رابط البوكماركلت
   return `javascript:${encodeURIComponent(cleanCode)}`;

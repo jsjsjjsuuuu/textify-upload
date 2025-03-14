@@ -8,7 +8,7 @@ export const generateBookmarkletCode = (): string => {
   const code = `
   (function() {
     // التحقق من وجود البيانات
-    const storageKey = "bookmarklet_data";
+    const storageKey = "bookmarklet_data_v1";
     const data = localStorage.getItem(storageKey);
     
     if (!data) {
@@ -407,7 +407,7 @@ export const generateBookmarkletCode = (): string => {
             if (value && field.tagName) {
               if (field.tagName === 'SELECT') {
                 // للقوائم المنسدلة
-                const select = field as HTMLSelectElement;
+                const select = field;
                 const options = Array.from(select.options);
                 
                 // البحث عن تطابق دقيق أو جزئي
@@ -444,7 +444,7 @@ export const generateBookmarkletCode = (): string => {
                 filledFields++;
               } else if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
                 // للحقول النصية
-                const input = field as HTMLInputElement | HTMLTextAreaElement;
+                const input = field;
                 
                 if (input.type === 'checkbox' || input.type === 'radio') {
                   // للمربعات أو أزرار الاختيار
@@ -508,7 +508,7 @@ export const generateBookmarkletCode = (): string => {
                 if (value && field.tagName) {
                   if (field.tagName === 'SELECT') {
                     // للقوائم المنسدلة
-                    const select = field as HTMLSelectElement;
+                    const select = field;
                     const options = Array.from(select.options);
                     
                     const exactMatch = options.find(opt => 
@@ -535,7 +535,7 @@ export const generateBookmarkletCode = (): string => {
                     filledFields++;
                   } else if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
                     // للحقول النصية
-                    const input = field as HTMLInputElement | HTMLTextAreaElement;
+                    const input = field;
                     
                     if (input.type === 'checkbox' || input.type === 'radio') {
                       const shouldCheck = value === 'true' || value === '1' || value.toLowerCase() === 'نعم';
