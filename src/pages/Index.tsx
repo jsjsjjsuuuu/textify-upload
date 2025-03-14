@@ -74,6 +74,15 @@ const Index = () => {
     handleDelete(id);
   };
 
+  // تعديل وظيفة wrapper للإرسال لتتوافق مع واجهة ImagePreviewContainer
+  const handleSubmit = (id: string) => {
+    // البحث عن الصورة المطلوبة باستخدام المعرف
+    const image = images.find(img => img.id === id);
+    if (image) {
+      handleSubmitToApi(id, image);
+    }
+  };
+
   return (
     <div className="relative min-h-screen pb-20">
       <BackgroundPattern />
@@ -112,7 +121,7 @@ const Index = () => {
               isSubmitting={isSubmitting}
               onTextChange={handleTextChange}
               onDelete={handleDeleteImage}
-              onSubmit={handleSubmitToApi}
+              onSubmit={handleSubmit}
               formatDate={formatDate}
             />
           </div>

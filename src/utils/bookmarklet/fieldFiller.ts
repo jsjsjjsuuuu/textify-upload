@@ -123,8 +123,9 @@ export const fillFormFields = (item: any) => {
         const tagName = foundElement.tagName.toLowerCase();
         
         if (tagName === 'select') {
-          // للقوائم المنسدلة
-          const options = Array.from((foundElement as HTMLSelectElement).options);
+          // للقوائم المنسدلة - تحويل العنصر بشكل صريح
+          const selectElement = foundElement as unknown as HTMLSelectElement;
+          const options = Array.from(selectElement.options);
           
           // البحث عن تطابق دقيق أو جزئي
           const exactMatch = options.find(opt => 
@@ -134,7 +135,7 @@ export const fillFormFields = (item: any) => {
           
           if (exactMatch) {
             // تعيين القيمة باستخدام قيمة الخيار
-            (foundElement as HTMLSelectElement).value = exactMatch.value;
+            selectElement.value = exactMatch.value;
             console.log(`تم ملء القائمة المنسدلة: ${mapping.key} بالقيمة: ${exactMatch.text}`);
             results.filled.push(mapping.key);
           } else {
@@ -145,7 +146,7 @@ export const fillFormFields = (item: any) => {
             );
             
             if (partialMatch) {
-              (foundElement as HTMLSelectElement).value = partialMatch.value;
+              selectElement.value = partialMatch.value;
               console.log(`تم ملء القائمة المنسدلة (تطابق جزئي): ${mapping.key} بالقيمة: ${partialMatch.text}`);
               results.filled.push(mapping.key);
             } else {
