@@ -6,11 +6,19 @@ interface ElementWithValue extends HTMLElement {
   type?: string;
   name?: string;
   placeholder?: string;
-  options?: HTMLOptionElement[];
+}
+
+// النتائج المُرجعة من محاولة ملء النموذج
+interface FormFillerResults {
+  filled: string[];
+  failed: string[];
+  message: string;
+  success: boolean;
+  attempted: number;
 }
 
 // تعبئة الحقول في الصفحة المستهدفة
-export const fillFormFields = (item: any) => {
+export const fillFormFields = (item: any): FormFillerResults => {
   if (!item) return { filled: [], failed: [], message: 'لا توجد بيانات', success: false, attempted: 0 };
   
   console.log("بدء ملء النموذج بالبيانات:", item);
@@ -89,9 +97,9 @@ export const fillFormFields = (item: any) => {
   ];
   
   // تتبع الحقول المملوءة والفاشلة
-  const results = {
-    filled: [] as string[],
-    failed: [] as string[],
+  const results: FormFillerResults = {
+    filled: [],
+    failed: [],
     message: '',
     success: false,
     attempted: 0
@@ -101,98 +109,14 @@ export const fillFormFields = (item: any) => {
   fieldMappings.forEach(mapping => {
     results.attempted++;
     
-    // البحث عن العنصر في الصفحة
-    let foundElement: ElementWithValue | null = null;
-    
-    for (const selector of mapping.selectors) {
-      try {
-        const element = document.querySelector(selector) as ElementWithValue;
-        if (element) {
-          foundElement = element;
-          break;
-        }
-      } catch (error) {
-        console.warn(`خطأ في البحث عن العنصر: ${selector}`, error);
-      }
-    }
-    
-    // إذا وجدنا عنصرًا وكان لدينا قيمة، نحاول ملئه
-    if (foundElement && mapping.value) {
-      try {
-        // تحديد نوع العنصر وملئه بالطريقة المناسبة
-        const tagName = foundElement.tagName.toLowerCase();
-        
-        if (tagName === 'select') {
-          // للقوائم المنسدلة - تحويل العنصر بشكل صريح
-          const selectElement = foundElement as unknown as HTMLSelectElement;
-          const options = Array.from(selectElement.options);
-          
-          // البحث عن تطابق دقيق أو جزئي
-          const exactMatch = options.find(opt => 
-            opt.text.trim().toLowerCase() === mapping.value.toLowerCase() || 
-            opt.value.toLowerCase() === mapping.value.toLowerCase()
-          );
-          
-          if (exactMatch) {
-            // تعيين القيمة باستخدام قيمة الخيار
-            selectElement.value = exactMatch.value;
-            console.log(`تم ملء القائمة المنسدلة: ${mapping.key} بالقيمة: ${exactMatch.text}`);
-            results.filled.push(mapping.key);
-          } else {
-            // البحث عن تطابق جزئي
-            const partialMatch = options.find(opt => 
-              opt.text.trim().toLowerCase().includes(mapping.value.toLowerCase()) || 
-              mapping.value.toLowerCase().includes(opt.text.trim().toLowerCase())
-            );
-            
-            if (partialMatch) {
-              selectElement.value = partialMatch.value;
-              console.log(`تم ملء القائمة المنسدلة (تطابق جزئي): ${mapping.key} بالقيمة: ${partialMatch.text}`);
-              results.filled.push(mapping.key);
-            } else {
-              console.log(`لم يتم العثور على خيار مطابق للقيمة: ${mapping.value}`);
-              results.failed.push(mapping.key);
-            }
-          }
-          
-          // إطلاق حدث التغيير
-          const event = new Event('change', { bubbles: true });
-          foundElement.dispatchEvent(event);
-        } else if (tagName === 'input' || tagName === 'textarea') {
-          // للحقول النصية
-          if (foundElement.type === 'checkbox' || foundElement.type === 'radio') {
-            // للمربعات أو أزرار الاختيار
-            const shouldCheck = mapping.value === 'true' || mapping.value === '1' || mapping.value.toLowerCase() === 'نعم';
-            (foundElement as HTMLInputElement).checked = shouldCheck;
-          } else {
-            // للحقول النصية العادية
-            (foundElement as HTMLInputElement).value = mapping.value;
-          }
-          
-          // إطلاق أحداث التغيير والإدخال
-          ['input', 'change', 'blur'].forEach(eventType => {
-            const event = new Event(eventType, { bubbles: true });
-            foundElement!.dispatchEvent(event);
-          });
-          
-          console.log(`تم ملء الحقل: ${mapping.key} بالقيمة: ${mapping.value}`);
-          results.filled.push(mapping.key);
-        } else {
-          // لأنواع الحقول الأخرى
-          console.log(`نوع حقل غير معروف: ${tagName}`);
-          results.failed.push(mapping.key);
-        }
-      } catch (error) {
-        console.error(`خطأ في ملء الحقل ${mapping.key}:`, error);
+    try {
+      // محاولة ملء الحقل
+      const filledStatus = fillSingleField(mapping, results);
+      if (!filledStatus) {
         results.failed.push(mapping.key);
       }
-    } else {
-      // إذا لم نجد العنصر أو لم تكن هناك قيمة
-      if (!foundElement) {
-        console.log(`لم يتم العثور على عنصر للحقل: ${mapping.key}`);
-      } else {
-        console.log(`لا توجد قيمة للحقل: ${mapping.key}`);
-      }
+    } catch (error) {
+      console.error(`خطأ عام في معالجة الحقل ${mapping.key}:`, error);
       results.failed.push(mapping.key);
     }
   });
@@ -207,4 +131,121 @@ export const fillFormFields = (item: any) => {
   }
   
   return results;
+};
+
+// دالة مساعدة لملء حقل واحد
+const fillSingleField = (mapping: any, results: FormFillerResults): boolean => {
+  // البحث عن العنصر في الصفحة
+  let foundElement: ElementWithValue | null = null;
+  
+  for (const selector of mapping.selectors) {
+    try {
+      const element = document.querySelector(selector) as ElementWithValue;
+      if (element) {
+        foundElement = element;
+        break;
+      }
+    } catch (error) {
+      console.warn(`خطأ في البحث عن العنصر: ${selector}`, error);
+    }
+  }
+  
+  // إذا وجدنا عنصرًا وكان لدينا قيمة، نحاول ملئه
+  if (foundElement && mapping.value) {
+    try {
+      // تحديد نوع العنصر وملئه بالطريقة المناسبة
+      const tagName = foundElement.tagName.toLowerCase();
+      
+      if (tagName === 'select') {
+        return fillSelectField(foundElement, mapping, results);
+      } else if (tagName === 'input' || tagName === 'textarea') {
+        return fillInputField(foundElement, mapping, results);
+      } else {
+        // لأنواع الحقول الأخرى
+        console.log(`نوع حقل غير معروف: ${tagName}`);
+        return false;
+      }
+    } catch (error) {
+      console.error(`خطأ في ملء الحقل ${mapping.key}:`, error);
+      return false;
+    }
+  } else {
+    // إذا لم نجد العنصر أو لم تكن هناك قيمة
+    if (!foundElement) {
+      console.log(`لم يتم العثور على عنصر للحقل: ${mapping.key}`);
+    } else {
+      console.log(`لا توجد قيمة للحقل: ${mapping.key}`);
+    }
+    return false;
+  }
+};
+
+// دالة مساعدة لملء حقول القائمة المنسدلة
+const fillSelectField = (element: ElementWithValue, mapping: any, results: FormFillerResults): boolean => {
+  // للقوائم المنسدلة - تحويل العنصر بشكل صريح
+  const selectElement = element as unknown as HTMLSelectElement;
+  const options = Array.from(selectElement.options);
+  
+  // البحث عن تطابق دقيق أو جزئي
+  const exactMatch = options.find(opt => 
+    opt.text.trim().toLowerCase() === mapping.value.toLowerCase() || 
+    opt.value.toLowerCase() === mapping.value.toLowerCase()
+  );
+  
+  if (exactMatch) {
+    // تعيين القيمة باستخدام قيمة الخيار
+    selectElement.value = exactMatch.value;
+    console.log(`تم ملء القائمة المنسدلة: ${mapping.key} بالقيمة: ${exactMatch.text}`);
+    results.filled.push(mapping.key);
+    
+    // إطلاق حدث التغيير
+    triggerEvents(element);
+    return true;
+  }
+  
+  // البحث عن تطابق جزئي
+  const partialMatch = options.find(opt => 
+    opt.text.trim().toLowerCase().includes(mapping.value.toLowerCase()) || 
+    mapping.value.toLowerCase().includes(opt.text.trim().toLowerCase())
+  );
+  
+  if (partialMatch) {
+    selectElement.value = partialMatch.value;
+    console.log(`تم ملء القائمة المنسدلة (تطابق جزئي): ${mapping.key} بالقيمة: ${partialMatch.text}`);
+    results.filled.push(mapping.key);
+    
+    // إطلاق حدث التغيير
+    triggerEvents(element);
+    return true;
+  }
+  
+  console.log(`لم يتم العثور على خيار مطابق للقيمة: ${mapping.value}`);
+  return false;
+};
+
+// دالة مساعدة لملء حقول الإدخال النصية
+const fillInputField = (element: ElementWithValue, mapping: any, results: FormFillerResults): boolean => {
+  if (element.type === 'checkbox' || element.type === 'radio') {
+    // للمربعات أو أزرار الاختيار
+    const shouldCheck = mapping.value === 'true' || mapping.value === '1' || mapping.value.toLowerCase() === 'نعم';
+    (element as HTMLInputElement).checked = shouldCheck;
+  } else {
+    // للحقول النصية العادية
+    (element as HTMLInputElement).value = mapping.value;
+  }
+  
+  // إطلاق أحداث التغيير والإدخال
+  triggerEvents(element);
+  
+  console.log(`تم ملء الحقل: ${mapping.key} بالقيمة: ${mapping.value}`);
+  results.filled.push(mapping.key);
+  return true;
+};
+
+// دالة مساعدة لإطلاق أحداث DOM على العنصر
+const triggerEvents = (element: ElementWithValue): void => {
+  ['input', 'change', 'blur'].forEach(eventType => {
+    const event = new Event(eventType, { bubbles: true });
+    element.dispatchEvent(event);
+  });
 };

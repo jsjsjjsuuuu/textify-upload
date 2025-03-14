@@ -5,7 +5,7 @@ import { ImageData } from "@/types/ImageData";
 import { useImageState } from "@/hooks/useImageState";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { useSubmission } from "@/hooks/useSubmission";
-import { saveToLocalStorage, getStorageStats } from "@/utils/bookmarklet";
+import { saveToLocalStorage } from "@/utils/bookmarklet";
 
 export const useImageProcessingCore = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
@@ -56,7 +56,7 @@ export const useImageProcessingCore = () => {
     isSubmitting,
     useGemini,
     handleFileChange,
-    handleTextChange: handleTextChange,
+    handleTextChange,
     handleDelete: deleteImage,
     handleSubmitToApi
   };
