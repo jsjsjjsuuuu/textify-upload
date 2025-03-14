@@ -1,4 +1,3 @@
-
 import { BookmarkletItem, BookmarkletExportData } from "@/types/ImageData";
 import { getFromLocalStorage, updateItemStatus } from "@/utils/bookmarkletService";
 
@@ -231,7 +230,14 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
   // إذا كانت القيمة فارغة، لا تملأ الحقل
   if (!value || value.trim() === '') {
     // هنا نحتاج إلى التحقق من الخاصية الصحيحة للعنصر
-    const fieldIdentifier = 'id' in field ? field.id : ('name' in field ? field.name : '') || 'غير معروف';
+    let fieldIdentifier = 'غير معروف';
+    
+    if ('id' in field && field.id) {
+      fieldIdentifier = field.id;
+    } else if ('name' in field && field.name) {
+      fieldIdentifier = field.name;
+    }
+    
     console.log(`[Bookmarklet] تخطي ملء الحقل لأن القيمة فارغة: ${fieldIdentifier}`);
     return false;
   }
@@ -303,7 +309,14 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
     }
     
     // استخدام معرف مناسب لتسجيل الإجراء
-    const fieldIdentifier = ('name' in field ? field.name : '') || ('id' in field ? field.id : '') || 'غير معروف';
+    let fieldIdentifier = 'غير معروف';
+    
+    if ('name' in field && field.name) {
+      fieldIdentifier = field.name;
+    } else if ('id' in field && field.id) {
+      fieldIdentifier = field.id;
+    }
+    
     console.log(`[Bookmarklet] تم ملء الحقل: ${fieldIdentifier} بالقيمة: ${field.value}`);
   } else if ('contentEditable' in field && field.contentEditable === 'true') {
     // ملء العناصر ذات المحتوى القابل للتحرير
@@ -459,7 +472,7 @@ export const fillForm = (item: BookmarkletItem) => {
             case 'senderName': value = item.senderName || ''; break;
             case 'phoneNumber': value = item.phoneNumber ? item.phoneNumber.replace(/\D/g, '') : ''; break;
             case 'province': value = item.province || ''; break;
-            case 'price': value = item.price ? item.price.replace(/[^\d.]/g, '') : ''; break;
+            case 'price': value = item.price ? item.price.replace(/[^\d.]/g='') : ''; break;
             default: break;
           }
           
@@ -612,4 +625,3 @@ export const startDynamicFieldDetection = (callback: (fields: Element[]) => void
   // إرجاع وظيفة لإيقاف المراقبة
   return () => observer.disconnect();
 };
-
