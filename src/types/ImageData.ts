@@ -12,7 +12,7 @@ export interface ImageData {
   price?: string;
   companyName?: string;
   date: Date;
-  status: "processing" | "completed" | "error";
+  status: "processing" | "pending" | "completed" | "error";
   submitted?: boolean;
   number?: number;
   extractionMethod?: "ocr" | "gemini";
