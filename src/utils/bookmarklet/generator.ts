@@ -4,7 +4,7 @@
  */
 
 import { convertCodeToBookmarklet } from './converter';
-import { getFromLocalStorage, STORAGE_KEY } from './storage';
+import { STORAGE_KEY } from '../bookmarkletService';
 import { initEnhancedFormFiller } from './enhancedFormFiller';
 import { fillFormFields } from './fieldFiller';
 

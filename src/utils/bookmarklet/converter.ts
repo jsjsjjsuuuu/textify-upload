@@ -1,3 +1,4 @@
+
 /**
  * وحدة تحويل البيانات للبوكماركلت
  */
@@ -39,18 +40,22 @@ const generateId = (): string => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
-// تصدير وظيفة تحويل الكود إلى bookmarklet
+/**
+ * تحويل شفرة جافاسكريبت إلى bookmarklet
+ */
 export const convertCodeToBookmarklet = (code: string): string => {
   // إزالة المسافات الزائدة والعودات السطرية
   const minifiedCode = code.trim().replace(/\s+/g, ' ');
   
   // تحويل إلى رابط مباشر للتنفيذ
-  const bookmarklet = `javascript:(${encodeURIComponent(minifiedCode)})`;
+  const bookmarklet = `javascript:(function(){${encodeURIComponent(minifiedCode)}})();`;
   
   return bookmarklet;
 };
 
-// كائن يحتوي على وظائف التحويل المختلفة
+/**
+ * كائن يجمع وظائف التحويل المختلفة
+ */
 export const converter = {
   codeToBookmarklet: convertCodeToBookmarklet,
   imagesToBookmarkletItems: convertImagesToBookmarkletItems
