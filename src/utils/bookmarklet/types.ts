@@ -1,8 +1,25 @@
 
-export const STORAGE_KEY = "bookmarklet_data";
-export const STORAGE_VERSION = "1.0";
+// أنواع البيانات المشتركة للبوكماركلت
 
-// نوع بيانات عنصر البوكماركلت
+// نتائج ملء النموذج
+export interface FormFillerResults {
+  filled: string[];
+  failed: string[];
+  message: string;
+  success: boolean;
+  attempted: number;
+}
+
+// تعريف حقل إدخال
+export interface FieldMapping {
+  key: string;
+  selectors: string[];
+  aliases?: string[];
+  required?: boolean;
+  transform?: (value: string) => string;
+}
+
+// عنصر البوكماركلت (العناصر المخزنة في localStorage)
 export interface BookmarkletItem {
   id: string;
   code: string;
@@ -12,83 +29,26 @@ export interface BookmarkletItem {
   price: string;
   companyName: string;
   exportDate: string;
-  status: "ready" | "pending" | "success" | "error";
-  message?: string;
-  lastUpdated?: string;
-  
-  // حقول إضافية اختيارية
+  status: 'ready' | 'success' | 'error';
   address?: string;
   notes?: string;
-  customerCode?: string;
   recipientName?: string;
-  category?: string;
-  region?: string;
-  
-  // حقول مطابقة للموقع المستهدف
-  customerName?: string; // اسم العميل/الزبون
-  customerPhone?: string; // هاتف الزبون
-  totalAmount?: string; // المبلغ الكلي
-  receiverName?: string; // اسم المستلم
-  area?: string; // المنطقة
-  packageType?: string; // نوع البضاعة
-  pieceCount?: string; // عدد القطع
-  customerFee?: string; // زيادة أجرة العميل
-  deliveryAgentFee?: string; // زيادة أجرة المندوب
-  notes1?: string; // ملاحظات
-  notes2?: string; // ملاحظات خاصة
-  status1?: string; // الحالة
-  exchangeStatus?: string; // استبدال
-  paymentStatus?: string; // حالة الدفع
-  deliveryDate?: string; // تاريخ التسليم
-  delegateName?: string; // اسم المندوب
-  
-  // إضافة حقول إضافية لتتبع آخر تحديث وعمليات الكتابة
-  fieldsFilled?: number; // عدد الحقول التي تم ملؤها
-  fieldsAttempted?: number; // عدد الحقول التي تمت محاولة ملئها
-  errorFields?: string[]; // أسماء الحقول التي فشل ملؤها
-  successFields?: string[]; // أسماء الحقول التي نجح ملؤها
-  fillAttemptDate?: string; // تاريخ آخر محاولة ملء
-  
-  // معلومات إضافية لتحسين عملية تتبع الأخطاء
-  debugInfo?: string; // معلومات التصحيح
-  lastFieldTried?: string; // آخر حقل تمت محاولة ملئه
-  fieldSelectors?: {[key: string]: string}; // المحددات المستخدمة للعثور على الحقول
-  domInfo?: string; // معلومات عن هيكل DOM للصفحة المستهدفة
+  // بيانات إضافية يمكن استخدامها في ملء النماذج
+  [key: string]: any;
 }
 
-// نوع بيانات التصدير
+// بيانات التصدير للبوكماركلت
 export interface BookmarkletExportData {
   version: string;
   exportDate: string;
-  lastUpdated?: string;
   items: BookmarkletItem[];
 }
 
-// نوع بيانات إحصائيات التخزين
+// إحصائيات التخزين
 export interface StorageStats {
   total: number;
   ready: number;
   success: number;
   error: number;
-  lastUpdate: Date | null;
-}
-
-// تعريف حقول الإدخال المطابقة وكيفية العثور عليها
-export interface FieldMapping {
-  key: string;               // مفتاح البيانات
-  selectors: string[];       // المحددات للعثور على الحقل
-  aliases: string[];         // أسماء بديلة للحقل
-  valueAccessor?: string;    // الوصول إلى القيمة (مثل value, innerText)
-  required?: boolean;        // هل الحقل مطلوب
-  transform?: (value: string) => string; // دالة تحويل القيمة قبل الإدخال
-}
-
-// فئة لتخزين معلومات محاولة ملء الحقول
-export interface FillAttemptInfo {
-  timestamp: string;
-  itemId: string;
-  fieldsAttempted: string[];
-  fieldsSucceeded: string[];
-  fieldsFailed: string[];
-  errorMessages: string[];
+  lastUpdate?: Date;
 }
