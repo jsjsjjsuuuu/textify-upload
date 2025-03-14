@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -11,19 +10,22 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { ArrowDown, Copy, Trash, BookmarkIcon, Save, FileBox, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react";
 
+// تحديث واجهة الخصائص لتشمل storedCount و readyCount
 interface BookmarkletGeneratorProps {
   images: ImageData[];
+  storedCount?: number;
+  readyCount?: number;
 }
 
-const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
+const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, readyCount: initialReadyCount = 0 }: BookmarkletGeneratorProps) => {
   const { toast } = useToast();
-  const [storedCount, setStoredCount] = useState(0);
+  const [storedCount, setStoredCount] = useState(initialStoredCount);
   const [bookmarkletUrl, setBookmarkletUrl] = useState("");
   const [activeTab, setActiveTab] = useState("export");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [stats, setStats] = useState({
-    total: 0,
-    ready: 0,
+    total: initialStoredCount,
+    ready: initialReadyCount,
     success: 0,
     error: 0,
     lastUpdate: null as Date | null
@@ -35,6 +37,18 @@ const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
     updateStats();
     setBookmarkletUrl(generateBookmarkletCode());
   }, []);
+
+  // تحديث الإحصائيات عندما تتغير الخصائص
+  useEffect(() => {
+    if (initialStoredCount > 0) {
+      setStoredCount(initialStoredCount);
+      setStats(prev => ({
+        ...prev,
+        total: initialStoredCount,
+        ready: initialReadyCount
+      }));
+    }
+  }, [initialStoredCount, initialReadyCount]);
 
   // تحديث عدد العناصر المخزنة
   const updateStoredCount = () => {
@@ -315,4 +329,3 @@ const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
 };
 
 export default BookmarkletGenerator;
-
