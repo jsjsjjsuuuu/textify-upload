@@ -109,7 +109,11 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   
   // تجميع كل النصوص المتاحة للبحث
   const searchText = `${name} ${id} ${className} ${placeholderText} ${labelText} ${surroundingText} ${siblingsText}`;
-  console.log(`[Bookmarklet] تحليل الحقل: ${id || name || 'غير معروف'}, النص: ${searchText.substring(0, 100)}...`);
+  
+  // هنا، نحتاج إلى التحقق من الخاصية الصحيحة للعنصر الذي نحاول تسجيله
+  // نستخدم إما معرف (ID) أو الاسم (name) إذا كان متاحًا، وإلا نستخدم "غير معروف"
+  const fieldIdentifier = id || ('name' in field ? field.name : '') || 'غير معروف';
+  console.log(`[Bookmarklet] تحليل الحقل: ${fieldIdentifier}, النص: ${searchText.substring(0, 100)}...`);
   
   // مصفوفة من الكلمات المفتاحية والأنماط - مع تحسين الكلمات المفتاحية للموقع المحدد
   const patterns = [
@@ -216,7 +220,7 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
     }
   }
   
-  console.log(`[Bookmarklet] لم يتم التعرف على نوع الحقل: ${id || name || 'غير معروف'}`);
+  console.log(`[Bookmarklet] لم يتم التعرف على نوع الحقل: ${fieldIdentifier}`);
   return 'unknown';
 };
 
@@ -226,7 +230,9 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
 export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLElement, value: string) => {
   // إذا كانت القيمة فارغة، لا تملأ الحقل
   if (!value || value.trim() === '') {
-    console.log(`[Bookmarklet] تخطي ملء الحقل لأن القيمة فارغة: ${field.id || field.name || 'غير معروف'}`);
+    // هنا نحتاج إلى التحقق من الخاصية الصحيحة للعنصر
+    const fieldIdentifier = 'id' in field ? field.id : ('name' in field ? field.name : 'غير معروف');
+    console.log(`[Bookmarklet] تخطي ملء الحقل لأن القيمة فارغة: ${fieldIdentifier}`);
     return false;
   }
   
@@ -296,7 +302,9 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
       field.value = value;
     }
     
-    console.log(`[Bookmarklet] تم ملء الحقل: ${field.name || field.id || 'غير معروف'} بالقيمة: ${field.value}`);
+    // استخدام معرف مناسب لتسجيل الإجراء
+    const fieldIdentifier = field.name || field.id || 'غير معروف';
+    console.log(`[Bookmarklet] تم ملء الحقل: ${fieldIdentifier} بالقيمة: ${field.value}`);
   } else if ('contentEditable' in field && field.contentEditable === 'true') {
     // ملء العناصر ذات المحتوى القابل للتحرير
     field.textContent = value;
