@@ -46,11 +46,11 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   
   // التحقق من نوع العنصر قبل الوصول إلى الخصائص الخاصة به
   if ('name' in field) {
-    name = field.name.toLowerCase();
+    name = field.name ? field.name.toLowerCase() : '';
   }
   
   if ('id' in field) {
-    id = field.id.toLowerCase();
+    id = field.id ? field.id.toLowerCase() : '';
   } else {
     // تحقق أن field هو من نوع HTMLElement
     const elem = field as HTMLElement;
@@ -115,23 +115,23 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   const patterns = [
     { 
       type: 'code', 
-      keywords: ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة', 'رقم الطلب', 'order', 'tracking', 'reference', 'ref', 'الوصل', 'الطلب', 'الشحنة', 'المرجع', 'تتبع', 'الرمز', 'تعقب', 'كود العميل', 'track', 'tracking number', 'shipment number', 'waybill']
+      keywords: ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة', 'رقم الطلب', 'order', 'tracking', 'reference', 'ref', 'الوصل', 'الطلب', 'الشحنة', 'المرجع', 'تتبع', 'الرمز', 'تعقب', 'كود العميل', 'track', 'tracking number', 'shipment number', 'waybill', 'رقم التتبع', 'رقم المرجع', 'رقم الإشارة']
     },
     { 
       type: 'senderName', 
-      keywords: ['sender', 'name', 'customer', 'اسم', 'المرسل', 'الزبون', 'العميل', 'المستلم', 'الاسم', 'اسم المستلم', 'اسم العميل', 'recipient', 'customer name', 'full name', 'الاسم الكامل', 'الشخص', 'المستفيد', 'consignee', 'اسم الزبون', 'حدد العميل']
+      keywords: ['sender', 'name', 'customer', 'اسم', 'المرسل', 'الزبون', 'العميل', 'المستلم', 'الاسم', 'اسم المستلم', 'اسم العميل', 'recipient', 'customer name', 'full name', 'الاسم الكامل', 'الشخص', 'المستفيد', 'consignee', 'اسم الزبون', 'حدد العميل', 'اسم المستفيد', 'client name']
     },
     { 
       type: 'phoneNumber', 
-      keywords: ['phone', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم الهاتف', 'تليفون', 'رقم الجوال', 'tel', 'telephone', 'contact', 'cell', 'رقم الاتصال', 'رقم التواصل', 'اتصال', 'رقم المحمول', 'هاتف الزبون']
+      keywords: ['phone', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم الهاتف', 'تليفون', 'رقم الجوال', 'tel', 'telephone', 'contact', 'cell', 'رقم الاتصال', 'رقم التواصل', 'اتصال', 'رقم المحمول', 'هاتف الزبون', 'الرقم', 'الموبايل', 'للتواصل']
     },
     { 
       type: 'province', 
-      keywords: ['province', 'state', 'city', 'region', 'محافظة', 'المحافظة', 'مدينة', 'منطقة', 'المدينة', 'المنطقة', 'الولاية', 'البلدة', 'البلد', 'country', 'المكان', 'الموقع', 'location', 'منطقة التسليم', 'area', 'delivery area', 'destination']
+      keywords: ['province', 'state', 'city', 'region', 'محافظة', 'المحافظة', 'مدينة', 'منطقة', 'المدينة', 'المنطقة', 'الولاية', 'البلدة', 'البلد', 'country', 'المكان', 'الموقع', 'location', 'منطقة التسليم', 'area', 'delivery area', 'destination', 'مكان التسليم']
     },
     { 
       type: 'price', 
-      keywords: ['price', 'amount', 'cost', 'سعر', 'المبلغ', 'التكلفة', 'قيمة', 'دينار', 'المال', 'النقود', 'الثمن', 'الكلفة', 'القيمة', 'value', 'money', 'currency', 'العملة', 'cod', 'cash on delivery', 'الدفع عند الاستلام', 'مبلغ التحصيل', 'مبلغ', 'المبلغ الكلي']
+      keywords: ['price', 'amount', 'cost', 'سعر', 'المبلغ', 'التكلفة', 'قيمة', 'دينار', 'المال', 'النقود', 'الثمن', 'الكلفة', 'القيمة', 'value', 'money', 'currency', 'العملة', 'cod', 'cash on delivery', 'الدفع عند الاستلام', 'مبلغ التحصيل', 'مبلغ', 'المبلغ الكلي', 'قيمة البضاعة']
     },
     { 
       type: 'companyName', 
@@ -139,55 +139,55 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
     },
     {
       type: 'address',
-      keywords: ['address', 'location', 'street', 'عنوان', 'الموقع', 'الشارع', 'التفاصيل', 'details', 'delivery address', 'shipping address', 'عنوان التسليم', 'عنوان الشحن', 'العنوان', 'مكان التسليم', 'تفاصيل العنوان', 'delivery location', 'المنطقة']
+      keywords: ['address', 'location', 'street', 'عنوان', 'الموقع', 'الشارع', 'التفاصيل', 'details', 'delivery address', 'shipping address', 'عنوان التسليم', 'عنوان الشحن', 'العنوان', 'مكان التسليم', 'تفاصيل العنوان', 'delivery location', 'المنطقة', 'التفاصيل', 'العنوان بالتفصيل']
     },
     {
       type: 'notes',
-      keywords: ['notes', 'comments', 'ملاحظات', 'تعليقات', 'توضيح', 'explanation', 'additional', 'extra', 'إضافي', 'delivery notes', 'ملاحظات التسليم', 'ملاحظة', 'شرح', 'تفاصيل إضافية', 'additional details', 'ملاحظات خاصة', 'المحلظات']
+      keywords: ['notes', 'comments', 'ملاحظات', 'تعليقات', 'توضيح', 'explanation', 'additional', 'extra', 'إضافي', 'delivery notes', 'ملاحظات التسليم', 'ملاحظة', 'شرح', 'تفاصيل إضافية', 'additional details', 'ملاحظات خاصة', 'المحلظات', 'تعليمات خاصة']
     },
     {
       type: 'productType',
-      keywords: ['product', 'item', 'منتج', 'صنف', 'نوع البضاعة', 'نوع المنتج', 'نوع', 'البضاعة', 'المنتج', 'بضاعة', 'سلعة', 'commodity', 'goods', 'merchandise', 'product type', 'item type']
+      keywords: ['product', 'item', 'منتج', 'صنف', 'نوع البضاعة', 'نوع المنتج', 'نوع', 'البضاعة', 'المنتج', 'بضاعة', 'سلعة', 'commodity', 'goods', 'merchandise', 'product type', 'item type', 'محتويات', 'وصف المنتج', 'طبيعة الشحنة']
     },
     {
       type: 'orderNumber',
-      keywords: ['order number', 'invoice number', 'receipt number', 'رقم الطلب', 'رقم الفاتورة', 'رقم الإيصال', 'رقم الوصل', 'الوصل', 'رقم العملية', 'رقم التتبع', 'tracking number', 'waybill', 'رقم البوليصة']
+      keywords: ['order number', 'invoice number', 'receipt number', 'رقم الطلب', 'رقم الفاتورة', 'رقم الإيصال', 'رقم الوصل', 'الوصل', 'رقم العملية', 'رقم التتبع', 'tracking number', 'waybill', 'رقم البوليصة', 'رقم الشحنة', 'رقم الشحن']
     },
     {
       type: 'customerCode',
-      keywords: ['customer code', 'client id', 'كود العميل', 'رمز العميل', 'رقم العميل', 'الكود', 'customer id', 'client code', 'user id', 'معرف العميل']
+      keywords: ['customer code', 'client id', 'كود العميل', 'رمز العميل', 'رقم العميل', 'الكود', 'customer id', 'client code', 'user id', 'معرف العميل', 'رقم الزبون']
     },
     {
       type: 'recipientName',
-      keywords: ['recipient name', 'اسم المستلم', 'المستلم', 'receiver', 'receiver name', 'consignee name', 'من يستلم', 'الشخص المستلم']
+      keywords: ['recipient name', 'اسم المستلم', 'المستلم', 'receiver', 'receiver name', 'consignee name', 'من يستلم', 'الشخص المستلم', 'اسم المستفيد']
     },
     {
       type: 'delegateName',
-      keywords: ['delegate', 'اسم المندوب', 'المندوب', 'delivery agent', 'agent name', 'courier', 'driver', 'delivery person', 'السائق', 'الموصل']
+      keywords: ['delegate', 'اسم المندوب', 'المندوب', 'delivery agent', 'agent name', 'courier', 'driver', 'delivery person', 'السائق', 'الموصل', 'الشخص المسؤول']
     },
     {
       type: 'packageCount',
-      keywords: ['package count', 'عدد القطع', 'قطع', 'عدد الطرود', 'pieces', 'quantity', 'count', 'number of items', 'عدد', 'كمية', 'الكمية', 'عدد المنتجات']
+      keywords: ['package count', 'عدد القطع', 'قطع', 'عدد الطرود', 'pieces', 'quantity', 'count', 'number of items', 'عدد', 'كمية', 'الكمية', 'عدد المنتجات', 'عدد القطع']
     },
     {
       type: 'reference',
-      keywords: ['reference', 'المرجع', 'ref', 'رقم المرجع', 'reference number', 'reference id', 'الرقم المرجعي']
+      keywords: ['reference', 'المرجع', 'ref', 'رقم المرجع', 'reference number', 'reference id', 'الرقم المرجعي', 'المرجع']
     },
     {
       type: 'shippingType',
-      keywords: ['shipping type', 'نوع الشحن', 'طريقة الشحن', 'delivery method', 'shipping method', 'وسيلة الشحن', 'طريقة التوصيل']
+      keywords: ['shipping type', 'نوع الشحن', 'طريقة الشحن', 'delivery method', 'shipping method', 'وسيلة الشحن', 'طريقة التوصيل', 'نوع التوصيل']
     },
     {
       type: 'paymentType',
-      keywords: ['payment type', 'نوع الدفع', 'طريقة الدفع', 'payment method', 'الدفع', 'كيفية الدفع', 'وسيلة الدفع']
+      keywords: ['payment type', 'نوع الدفع', 'طريقة الدفع', 'payment method', 'الدفع', 'كيفية الدفع', 'وسيلة الدفع', 'طريقة السداد']
     },
     {
       type: 'deliveryTime',
-      keywords: ['delivery time', 'وقت التسليم', 'زمن التوصيل', 'موعد التسليم', 'وقت التوصيل', 'delivery schedule', 'time of delivery']
+      keywords: ['delivery time', 'وقت التسليم', 'زمن التوصيل', 'موعد التسليم', 'وقت التوصيل', 'delivery schedule', 'time of delivery', 'موعد الشحن']
     },
     {
       type: 'region',
-      keywords: ['region', 'المنطقة', 'منطقة', 'الحي', 'القطاع', 'الناحية', 'القضاء', 'district', 'zone', 'area', 'sector']
+      keywords: ['region', 'المنطقة', 'منطقة', 'الحي', 'القطاع', 'الناحية', 'القضاء', 'district', 'zone', 'area', 'sector', 'الموقع', 'المكان']
     }
   ];
   
@@ -224,6 +224,12 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
  * وظيفة ملء الحقل بالقيمة المناسبة وإطلاق أحداث التغيير
  */
 export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLElement, value: string) => {
+  // إذا كانت القيمة فارغة، لا تملأ الحقل
+  if (!value || value.trim() === '') {
+    console.log(`[Bookmarklet] تخطي ملء الحقل لأن القيمة فارغة: ${field.id || field.name || 'غير معروف'}`);
+    return false;
+  }
+  
   // التعامل مع القوائم المنسدلة
   if (field instanceof HTMLSelectElement) {
     const select = field;
@@ -303,9 +309,32 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
   // إطلاق أحداث تغيير الحقل
   const events = ['input', 'change', 'blur', 'keyup'];
   events.forEach(eventType => {
-    const event = new Event(eventType, { bubbles: true });
-    field.dispatchEvent(event);
+    try {
+      const event = new Event(eventType, { bubbles: true });
+      field.dispatchEvent(event);
+    } catch (error) {
+      console.error(`خطأ في إطلاق حدث ${eventType}:`, error);
+      // نحاول مرة أخرى بطريقة قديمة متوافقة مع IE للمتصفحات القديمة
+      try {
+        const ieEvent = document.createEvent('Event');
+        ieEvent.initEvent(eventType, true, true);
+        field.dispatchEvent(ieEvent);
+      } catch (e) {
+        console.error("فشل أيضًا في إطلاق الحدث بالطريقة القديمة");
+      }
+    }
   });
+  
+  // محاولة تنشيط الحقول للمواقع التي تعتمد على أحداث التركيز والنقر
+  try {
+    field.focus();
+    field.click();
+    // إطلاق حدث React غير القياسي لبعض مكتبات React
+    const reactChangeEvent = new Event('reactChange', { bubbles: true });
+    field.dispatchEvent(reactChangeEvent);
+  } catch (e) {
+    console.warn("تعذر تنشيط الحقل بالكامل:", e);
+  }
   
   return true;
 };
@@ -314,9 +343,23 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
  * وظيفة ملء النموذج بالبيانات
  */
 export const fillForm = (item: BookmarkletItem) => {
+  console.log("[Bookmarklet] بدء عملية ملء النموذج بالبيانات:", item);
+  
+  // التحقق من صحة البيانات
+  if (!item || !item.id) {
+    console.error("[Bookmarklet] خطأ: عنصر البيانات غير صالح");
+    return 0;
+  }
+  
   // البحث عن حقول النموذج
   const fields = findFormFields();
   console.log(`[Bookmarklet] وجدت ${fields.length} حقل إدخال`);
+  
+  if (fields.length === 0) {
+    console.error("[Bookmarklet] لم يتم العثور على أي حقول في الصفحة");
+    updateItemStatus(item.id, 'error', 'لم يتم العثور على أي حقول في الصفحة');
+    return 0;
+  }
   
   // تتبع الحقول التي تم ملؤها
   const filledFields: Record<string, boolean> = {};
@@ -333,28 +376,28 @@ export const fillForm = (item: BookmarkletItem) => {
       // تحديد القيمة المناسبة بناءً على نوع الحقل
       switch (fieldType) {
         case 'code':
-          value = item.code;
+          value = item.code || '';
           break;
         case 'senderName':
-          value = item.senderName;
+          value = item.senderName || '';
           break;
         case 'phoneNumber':
           // تنسيق رقم الهاتف (إزالة المسافات والرموز غير الرقمية)
-          value = item.phoneNumber.replace(/\D/g, '');
+          value = item.phoneNumber ? item.phoneNumber.replace(/\D/g, '') : '';
           break;
         case 'province':
-          value = item.province;
+          value = item.province || '';
           break;
         case 'price':
           // تنسيق السعر (إزالة العملة والرموز)
-          value = item.price.replace(/[^\d.]/g, '');
+          value = item.price ? item.price.replace(/[^\d.]/g, '') : '';
           break;
         case 'companyName':
-          value = item.companyName;
+          value = item.companyName || '';
           break;
         case 'address':
           // استخدام المحافظة والملاحظات معًا إذا وجدت
-          value = `${item.province}${item.notes ? ' - ' + item.notes : ''}`;
+          value = `${item.province || ''}${item.notes ? ' - ' + item.notes : ''}`;
           break;
         case 'notes':
           value = item.notes || '';
@@ -365,35 +408,89 @@ export const fillForm = (item: BookmarkletItem) => {
           break;
         case 'orderNumber':
           // استخدام رمز الوصل
-          value = item.code;
+          value = item.code || '';
+          break;
+        case 'customerCode':
+          value = item.customerCode || item.code || '';
+          break;
+        case 'recipientName':
+          value = item.recipientName || item.senderName || '';
+          break;
+        case 'region':
+          value = item.region || item.province || '';
           break;
       }
       
       if (value && fillField(inputElement, value)) {
         filledFields[fieldType] = true;
+        console.log(`[Bookmarklet] تم ملء حقل ${fieldType} بنجاح: ${value}`);
       }
     }
   });
   
-  // حساب عدد الحقول التي تم ملؤها
-  const filledCount = Object.keys(filledFields).length;
+  // إضافة تأخير قصير ومحاولة ثانية للحقول التي قد تظهر بعد التفاعل مع الصفحة
+  setTimeout(() => {
+    const newFields = findFormFields();
+    if (newFields.length > fields.length) {
+      console.log(`[Bookmarklet] تم اكتشاف ${newFields.length - fields.length} حقول إضافية بعد التأخير`);
+      
+      // تحديد الحقول الجديدة فقط
+      const existingIds = new Set(Array.from(fields).map(f => f.id || Math.random().toString()));
+      const additionalFields = Array.from(newFields).filter(f => !existingIds.has(f.id || ''));
+      
+      // ملء الحقول الجديدة
+      additionalFields.forEach(field => {
+        const inputElement = field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLElement;
+        const fieldType = guessFieldType(inputElement);
+        
+        if (fieldType !== 'unknown' && !filledFields[fieldType]) {
+          let value = '';
+          
+          switch (fieldType) {
+            case 'code': value = item.code || ''; break;
+            case 'senderName': value = item.senderName || ''; break;
+            case 'phoneNumber': value = item.phoneNumber ? item.phoneNumber.replace(/\D/g, '') : ''; break;
+            case 'province': value = item.province || ''; break;
+            case 'price': value = item.price ? item.price.replace(/[^\d.]/g, '') : ''; break;
+            default: break;
+          }
+          
+          if (value && fillField(inputElement, value)) {
+            filledFields[fieldType] = true;
+          }
+        }
+      });
+    }
+    
+    // حساب عدد الحقول التي تم ملؤها
+    const filledCount = Object.keys(filledFields).length;
+    
+    // تحديث حالة العنصر
+    updateItemStatus(
+      item.id, 
+      filledCount > 0 ? 'success' : 'error',
+      filledCount > 0 
+        ? `تم ملء ${filledCount} حقول بنجاح` 
+        : 'فشل في العثور على حقول مناسبة'
+    );
+    
+    console.log(`[Bookmarklet] اكتمال ملء النموذج: تم ملء ${filledCount} حقول`);
+  }, 1000);
   
-  // تحديث حالة العنصر
-  updateItemStatus(
-    item.id, 
-    filledCount > 0 ? 'success' : 'error',
-    filledCount > 0 
-      ? `تم ملء ${filledCount} حقول بنجاح` 
-      : 'فشل في العثور على حقول مناسبة'
-  );
-  
-  return filledCount;
+  // حساب العدد المبدئي للحقول التي تم ملؤها
+  return Object.keys(filledFields).length;
 };
 
 /**
  * إنشاء واجهة تحكم البوكماركلت
  */
 export const createBookmarkletUI = () => {
+  // التحقق مما إذا كانت واجهة المستخدم موجودة بالفعل
+  if (document.getElementById('bookmarklet-ui-container')) {
+    console.log('[Bookmarklet] واجهة المستخدم موجودة بالفعل');
+    return null;
+  }
+  
   // إنشاء عنصر الحاوية
   const container = document.createElement('div');
   container.id = 'bookmarklet-ui-container';

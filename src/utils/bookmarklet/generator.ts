@@ -152,6 +152,20 @@ export const generateBookmarkletCode = (): string => {
           background: #ffebee;
           color: #e64a4a;
         }
+        .bm-loader {
+          display: inline-block;
+          width: 12px;
+          height: 12px;
+          border: 2px solid rgba(0,0,0,0.1);
+          border-radius: 50%;
+          border-top-color: #4CAF50;
+          animation: bm-spin 1s linear infinite;
+          margin-left: 8px;
+        }
+        @keyframes bm-spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
       \`;
       document.head.appendChild(styles);
       
@@ -198,12 +212,23 @@ export const generateBookmarkletCode = (): string => {
       fillFirstButton.innerHTML = '<span>إدخال بيانات أول عنصر</span>';
       fillFirstButton.onclick = function() {
         if (items.length > 0) {
-          fillForm(items[0]);
+          fillFirstButton.innerHTML = '<span>جاري ملء البيانات</span><span class="bm-loader"></span>';
+          fillFirstButton.disabled = true;
+          
+          setTimeout(() => {
+            const result = fillForm(items[0]);
+            fillFirstButton.innerHTML = '<span>إدخال بيانات أول عنصر</span>';
+            fillFirstButton.disabled = false;
+            
+            if (result === 0) {
+              showNotification("لم نتمكن من العثور على حقول مناسبة. حاول الانتقال إلى صفحة إضافة شحنة أولاً.", "error");
+            }
+          }, 500);
         }
       };
       actionsDiv.appendChild(fillFirstButton);
       
-      // إضافة زر "إدخال جميع البيانات"
+      // إضافة زر "إظهار جميع العناصر"
       const fillAllButton = document.createElement("button");
       fillAllButton.className = "bm-btn bm-btn-secondary";
       fillAllButton.innerHTML = '<span>إظهار جميع العناصر</span>';
@@ -227,119 +252,256 @@ export const generateBookmarkletCode = (): string => {
       // وظيفة تعبئة النموذج بشكل محسن
       function fillForm(item) {
         // البحث عن حقول النموذج استنادًا إلى السمات والأسماء الشائعة
-        const fields = document.querySelectorAll('input, select, textarea');
+        const fields = document.querySelectorAll('input, select, textarea, [contenteditable="true"]');
         console.log("وجدت", fields.length, "حقل إدخال");
         
         // تتبع ما إذا تم ملء أي حقول
         let filledFields = 0;
         
         fields.forEach(field => {
-          // تجميع كل المعرّفات المحتملة للحقل
-          const name = field.name ? field.name.toLowerCase() : '';
-          const id = field.id ? field.id.toLowerCase() : '';
-          const className = field.className ? field.className.toLowerCase() : '';
-          const placeholderText = field.placeholder ? field.placeholder.toLowerCase() : '';
-          const labelFor = field.labels && field.labels[0] ? field.labels[0].textContent.toLowerCase() : '';
-          
-          // إيجاد عنصر label المرتبط بالحقل إذا كان موجودًا
-          let labelText = '';
-          if (field.id) {
-            const associatedLabel = document.querySelector('label[for="' + field.id + '"]');
-            if (associatedLabel) {
-              labelText = associatedLabel.textContent.toLowerCase();
+          // تحديد نوع الحقل
+          const fieldType = guessFieldType(field);
+          if (fieldType !== 'unknown') {
+            let value = '';
+            
+            switch (fieldType) {
+              case 'code': value = item.code || ''; break;
+              case 'senderName': value = item.senderName || ''; break;
+              case 'phoneNumber': value = item.phoneNumber ? item.phoneNumber.replace(/\\D/g, '') : ''; break;
+              case 'province': value = item.province || ''; break;
+              case 'price': value = item.price ? item.price.replace(/[^\\d.]/g, '') : ''; break;
+              case 'companyName': value = item.companyName || ''; break;
+              case 'address': value = \`\${item.province || ''}\${item.notes ? ' - ' + item.notes : ''}\`; break;
+              case 'notes': value = item.notes || ''; break;
+              case 'productType': value = item.category || item.notes || 'بضائع متنوعة'; break;
+              case 'orderNumber': value = item.code || ''; break;
+              case 'customerCode': value = item.customerCode || item.code || ''; break;
+              case 'recipientName': value = item.recipientName || item.senderName || ''; break;
+              case 'region': value = item.region || item.province || ''; break;
             }
-          }
-          
-          // البحث في النص المجاور عن أدلة على محتوى الحقل
-          let nearbyText = '';
-          let parent = field.parentElement;
-          for (let i = 0; i < 3 && parent; i++) {
-            nearbyText += parent.textContent ? parent.textContent.toLowerCase() : '';
-            parent = parent.parentElement;
-          }
-          
-          // جمع كل المدخلات المحتملة للبحث
-          const searchables = [name, id, className, placeholderText, labelText, labelFor, nearbyText];
-          
-          // مطابقة الحقول بشكل أكثر تفصيلاً
-          if (matchesAny(searchables, ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة'])) {
-            field.value = item.code;
-            triggerInputEvents(field);
-            filledFields++;
-          }
-          else if (matchesAny(searchables, ['sender', 'name', 'customer', 'اسم', 'المرسل', 'الزبون', 'العميل'])) {
-            field.value = item.senderName;
-            triggerInputEvents(field);
-            filledFields++;
-          }
-          else if (matchesAny(searchables, ['phone', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم الهاتف'])) {
-            // تنسيق رقم الهاتف (إزالة المسافات والرموز غير الرقمية)
-            const formattedPhone = item.phoneNumber.replace(/\\D/g, '');
-            field.value = formattedPhone;
-            triggerInputEvents(field);
-            filledFields++;
-          }
-          else if (matchesAny(searchables, ['province', 'state', 'city', 'region', 'محافظة', 'المحافظة', 'مدينة', 'منطقة'])) {
-            if (field.tagName === 'SELECT') {
-              // محاولة مطابقة قيمة المحافظة مع الخيارات المتاحة
-              let found = false;
-              Array.from(field.options).forEach(option => {
-                const optionText = option.text.toLowerCase();
-                if (optionText.includes(item.province.toLowerCase())) {
-                  field.value = option.value;
-                  found = true;
-                }
-              });
-              
-              // إذا لم نجد تطابقًا مباشرًا، نحاول البحث عن تطابق مرن
-              if (!found) {
-                const provinceWords = item.province.toLowerCase().split(' ');
-                Array.from(field.options).forEach(option => {
-                  const optionText = option.text.toLowerCase();
-                  if (provinceWords.some(word => optionText.includes(word) && word.length > 2)) {
-                    field.value = option.value;
-                  }
-                });
-              }
-            } else {
-              field.value = item.province;
+            
+            if (value && fillField(field, value)) {
+              filledFields++;
             }
-            triggerInputEvents(field);
-            filledFields++;
-          }
-          else if (matchesAny(searchables, ['price', 'amount', 'cost', 'سعر', 'المبلغ', 'التكلفة', 'قيمة'])) {
-            // تنسيق السعر (إزالة العملة والرموز)
-            const formattedPrice = item.price.replace(/[^\\d.]/g, '');
-            field.value = formattedPrice;
-            triggerInputEvents(field);
-            filledFields++;
-          }
-          else if (matchesAny(searchables, ['company', 'business', 'vendor', 'شركة', 'الشركة', 'المتجر', 'البائع'])) {
-            field.value = item.companyName;
-            triggerInputEvents(field);
-            filledFields++;
           }
         });
         
-        // إظهار رسالة نجاح أو فشل
-        if (filledFields > 0) {
-          showNotification("تم ملء " + filledFields + " حقول بنجاح", "success");
-        } else {
-          showNotification("لم نتمكن من العثور على حقول مناسبة. حاول ملء البيانات يدويًا", "error");
+        // إضافة تأخير قصير ومحاولة ثانية للحقول التي قد تظهر بعد التفاعل مع الصفحة
+        setTimeout(() => {
+          const newFields = document.querySelectorAll('input, select, textarea, [contenteditable="true"]');
+          if (newFields.length > fields.length) {
+            console.log("تم اكتشاف", newFields.length - fields.length, "حقول جديدة بعد التأخير");
+            
+            // تحديد الحقول الجديدة فقط
+            const existingIds = new Set(Array.from(fields).map(f => f.id || Math.random().toString()));
+            const additionalFields = Array.from(newFields).filter(f => !existingIds.has(f.id || ''));
+            
+            additionalFields.forEach(field => {
+              const fieldType = guessFieldType(field);
+              if (fieldType !== 'unknown') {
+                let value = '';
+                
+                switch (fieldType) {
+                  case 'code': value = item.code || ''; break;
+                  case 'senderName': value = item.senderName || ''; break;
+                  case 'phoneNumber': value = item.phoneNumber ? item.phoneNumber.replace(/\\D/g, '') : ''; break;
+                  case 'province': value = item.province || ''; break;
+                  case 'price': value = item.price ? item.price.replace(/[^\\d.]/g, '') : ''; break;
+                  default: break;
+                }
+                
+                if (value && fillField(field, value)) {
+                  filledFields++;
+                }
+              }
+            });
+          }
+          
+          // إظهار رسالة نجاح أو فشل
+          if (filledFields > 0) {
+            showNotification("تم ملء " + filledFields + " حقول بنجاح", "success");
+            
+            // تحديث حالة العنصر في localStorage
+            updateItemStatus(item.id, "success", "تم إدخال البيانات بنجاح");
+          } else {
+            showNotification("لم نتمكن من العثور على حقول مناسبة. حاول الانتقال إلى صفحة إضافة شحنة أولاً.", "error");
+            
+            // تحديث حالة العنصر في localStorage
+            updateItemStatus(item.id, "error", "فشل في إدخال البيانات");
+          }
+        }, 1000);
+        
+        return filledFields;
+      }
+      
+      // وظيفة لتحديث حالة العنصر في localStorage
+      function updateItemStatus(itemId, status, message) {
+        try {
+          const storageData = JSON.parse(localStorage.getItem(storageKey) || '{}');
+          if (storageData.items && Array.isArray(storageData.items)) {
+            const updatedItems = storageData.items.map(item => {
+              if (item.id === itemId) {
+                const now = new Date();
+                return {
+                  ...item,
+                  status: status,
+                  statusMessage: message,
+                  lastUpdated: now.toISOString()
+                };
+              }
+              return item;
+            });
+            
+            // تحديث الإحصائيات
+            const stats = {
+              total: updatedItems.length,
+              ready: updatedItems.filter(i => !i.status || i.status === 'ready').length,
+              success: updatedItems.filter(i => i.status === 'success').length,
+              error: updatedItems.filter(i => i.status === 'error').length,
+              lastUpdate: new Date().toISOString()
+            };
+            
+            storageData.items = updatedItems;
+            storageData.stats = stats;
+            
+            localStorage.setItem(storageKey, JSON.stringify(storageData));
+            console.log("تم تحديث حالة العنصر:", itemId, status);
+          }
+        } catch (e) {
+          console.error("خطأ في تحديث حالة العنصر:", e);
         }
       }
       
-      // وظيفة لإطلاق أحداث تغيير وإدخال لتحديث الحقل
-      function triggerInputEvents(field) {
-        // تشغيل أحداث متعددة لضمان تحديث الحقل بشكل صحيح
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-        field.dispatchEvent(new Event('change', { bubbles: true }));
-        field.dispatchEvent(new Event('blur', { bubbles: true }));
+      // وظيفة تخمين نوع الحقل
+      function guessFieldType(field) {
+        // جمع كل المعرّفات المحتملة للحقل
+        const name = field.name ? field.name.toLowerCase() : '';
+        const id = field.id ? field.id.toLowerCase() : '';
+        const className = typeof field.className === 'string' ? field.className.toLowerCase() : '';
+        const placeholderText = field.placeholder ? field.placeholder.toLowerCase() : '';
         
-        // محاولة تشغيل أحداث React الافتراضية
-        if (typeof React !== 'undefined' && React.events) {
-          const reactEvent = new Event('reactInput', { bubbles: true });
-          field.dispatchEvent(reactEvent);
+        // البحث عن عنصر label المرتبط بالحقل إذا كان موجودًا
+        let labelText = '';
+        if (field.id) {
+          const associatedLabel = document.querySelector('label[for="' + field.id + '"]');
+          if (associatedLabel) {
+            labelText = associatedLabel.textContent ? associatedLabel.textContent.toLowerCase() : '';
+          }
+        }
+        
+        // البحث في النص المجاور عن أدلة على محتوى الحقل
+        let nearbyText = '';
+        let parent = field.parentElement;
+        for (let i = 0; i < 3 && parent; i++) {
+          nearbyText += parent.textContent ? parent.textContent.toLowerCase() : '';
+          parent = parent.parentElement;
+        }
+        
+        // جمع كل المدخلات المحتملة للبحث
+        const searchables = [name, id, className, placeholderText, labelText, nearbyText];
+        const searchText = searchables.join(' ');
+        
+        // الكلمات المفتاحية للبحث
+        const patterns = [
+          { type: 'code', keywords: ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة', 'رقم الطلب', 'order', 'tracking', 'reference', 'ref', 'الوصل', 'الطلب', 'الشحنة', 'المرجع', 'تتبع', 'الرمز', 'تعقب', 'كود العميل', 'track', 'tracking number', 'shipment number', 'waybill', 'رقم التتبع', 'رقم المرجع'] },
+          { type: 'senderName', keywords: ['sender', 'name', 'customer', 'اسم', 'المرسل', 'الزبون', 'العميل', 'المستلم', 'الاسم', 'اسم المستلم', 'اسم العميل', 'recipient', 'customer name', 'full name', 'الاسم الكامل', 'الشخص', 'المستفيد', 'consignee', 'اسم الزبون', 'حدد العميل', 'اسم المستفيد'] },
+          { type: 'phoneNumber', keywords: ['phone', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم الهاتف', 'تليفون', 'رقم الجوال', 'tel', 'telephone', 'contact', 'cell', 'رقم الاتصال', 'رقم التواصل', 'اتصال', 'رقم المحمول', 'هاتف الزبون', 'الرقم', 'الموبايل'] },
+          { type: 'province', keywords: ['province', 'state', 'city', 'region', 'محافظة', 'المحافظة', 'مدينة', 'منطقة', 'المدينة', 'المنطقة', 'الولاية', 'البلدة', 'البلد', 'country', 'المكان', 'الموقع', 'location', 'منطقة التسليم', 'area', 'delivery area', 'destination', 'مكان التسليم'] },
+          { type: 'price', keywords: ['price', 'amount', 'cost', 'سعر', 'المبلغ', 'التكلفة', 'قيمة', 'دينار', 'المال', 'النقود', 'الثمن', 'الكلفة', 'القيمة', 'value', 'money', 'currency', 'العملة', 'cod', 'cash on delivery', 'الدفع عند الاستلام', 'مبلغ التحصيل', 'مبلغ', 'المبلغ الكلي', 'قيمة البضاعة'] },
+          { type: 'address', keywords: ['address', 'location', 'street', 'عنوان', 'الموقع', 'الشارع', 'التفاصيل', 'details', 'delivery address', 'shipping address', 'عنوان التسليم', 'عنوان الشحن', 'العنوان', 'مكان التسليم', 'تفاصيل العنوان', 'delivery location', 'المنطقة', 'التفاصيل', 'العنوان بالتفصيل'] },
+          { type: 'notes', keywords: ['notes', 'comments', 'ملاحظات', 'تعليقات', 'توضيح', 'explanation', 'additional', 'extra', 'إضافي', 'delivery notes', 'ملاحظات التسليم', 'ملاحظة', 'شرح', 'تفاصيل إضافية', 'additional details', 'ملاحظات خاصة', 'المحلظات', 'تعليمات خاصة'] },
+          { type: 'productType', keywords: ['product', 'item', 'منتج', 'صنف', 'نوع البضاعة', 'نوع المنتج', 'نوع', 'البضاعة', 'المنتج', 'بضاعة', 'سلعة', 'commodity', 'goods', 'merchandise', 'product type', 'item type', 'محتويات', 'وصف المنتج', 'طبيعة الشحنة'] },
+          { type: 'orderNumber', keywords: ['order number', 'invoice number', 'receipt number', 'رقم الطلب', 'رقم الفاتورة', 'رقم الإيصال', 'رقم الوصل', 'الوصل', 'رقم العملية', 'رقم التتبع', 'tracking number', 'waybill', 'رقم البوليصة', 'رقم الشحنة', 'رقم الشحن'] },
+        ];
+        
+        // البحث عن أفضل تطابق - مع تحسين آلية المطابقة
+        for (const pattern of patterns) {
+          for (const keyword of pattern.keywords) {
+            if (searchText.includes(keyword)) {
+              return pattern.type;
+            }
+          }
+        }
+        
+        // إذا لم نجد تطابقًا واضحًا، نحاول تخمين النوع من خصائص الحقل
+        if (field.type === 'tel' || name.includes('phone') || name.includes('mobile')) {
+          return 'phoneNumber';
+        } else if (field.type === 'number' && (name.includes('price') || name.includes('amount'))) {
+          return 'price';
+        }
+        
+        return 'unknown';
+      }
+      
+      // وظيفة ملء الحقل بالقيمة وإثارة الأحداث المناسبة
+      function fillField(field, value) {
+        if (!value || value.trim() === '') {
+          return false;
+        }
+        
+        try {
+          // التعامل مع القوائم المنسدلة
+          if (field.tagName === 'SELECT') {
+            const select = field;
+            const options = Array.from(select.options);
+            const cleanValue = value.trim().toLowerCase();
+            
+            // محاولة العثور على تطابق دقيق أولاً
+            let found = false;
+            options.forEach(option => {
+              const optionText = option.text.toLowerCase();
+              if (optionText === cleanValue || optionText.includes(cleanValue)) {
+                select.value = option.value;
+                found = true;
+              }
+            });
+            
+            // إذا لم نجد تطابقًا دقيقًا، نبحث عن تطابق جزئي
+            if (!found) {
+              const words = cleanValue.split(' ');
+              for (const option of options) {
+                const optionText = option.text.toLowerCase();
+                for (const word of words) {
+                  if (word.length > 2 && optionText.includes(word)) {
+                    select.value = option.value;
+                    found = true;
+                    break;
+                  }
+                }
+                if (found) break;
+              }
+            }
+            
+            if (!found) return false;
+          } else {
+            // للحقول العادية
+            if (field.type === 'tel') {
+              field.value = value.replace(/\\D/g, '');
+            } else if (field.type === 'number') {
+              field.value = value.replace(/[^\\d.]/g, '');
+            } else if (field.contentEditable === 'true') {
+              field.textContent = value;
+            } else {
+              field.value = value;
+            }
+          }
+          
+          // إطلاق الأحداث
+          ['input', 'change', 'blur'].forEach(eventType => {
+            const event = new Event(eventType, { bubbles: true });
+            field.dispatchEvent(event);
+          });
+          
+          // محاولة تنشيط الحقل (للمواقع التي قد تتطلب ذلك)
+          try {
+            field.focus();
+            field.click();
+          } catch (e) {}
+          
+          return true;
+        } catch (e) {
+          console.error("خطأ في ملء الحقل:", e);
+          return false;
         }
       }
       
@@ -370,7 +532,9 @@ export const generateBookmarkletCode = (): string => {
         document.body.appendChild(notification);
         
         setTimeout(() => {
-          document.body.removeChild(notification);
+          notification.style.opacity = "0";
+          notification.style.transition = "opacity 0.5s";
+          setTimeout(() => document.body.removeChild(notification), 500);
         }, 3000);
       }
       
@@ -392,14 +556,15 @@ export const generateBookmarkletCode = (): string => {
             
             const title = document.createElement("div");
             title.className = "bm-item-title";
-            title.textContent = \`\${index + 1}. \${item.senderName} - \${item.code}\`;
+            title.textContent = \`\${index + 1}. \${item.senderName || 'بدون اسم'} - \${item.code || 'بدون كود'}\`;
             
             const details = document.createElement("div");
             details.className = "bm-item-detail";
             details.innerHTML = \`
-              رقم الهاتف: \${item.phoneNumber}<br>
-              المحافظة: \${item.province}<br>
+              رقم الهاتف: \${item.phoneNumber || 'غير محدد'}<br>
+              المحافظة: \${item.province || 'غير محددة'}<br>
               \${item.price ? 'السعر: ' + item.price : ''}
+              \${item.status ? '<br>الحالة: ' + (item.status === 'success' ? 'تم الإدخال' : item.status === 'error' ? 'فشل الإدخال' : 'جاهز') : ''}
             \`;
             
             const actionBtn = document.createElement("button");
@@ -408,7 +573,14 @@ export const generateBookmarkletCode = (): string => {
             actionBtn.style.marginTop = "8px";
             actionBtn.onclick = function(e) {
               e.preventDefault();
-              fillForm(item);
+              actionBtn.textContent = "جاري الإدخال...";
+              actionBtn.disabled = true;
+              
+              setTimeout(() => {
+                fillForm(item);
+                actionBtn.textContent = "إدخال هذا الوصل";
+                actionBtn.disabled = false;
+              }, 500);
             };
             
             itemElement.appendChild(title);
@@ -421,20 +593,6 @@ export const generateBookmarkletCode = (): string => {
           fillAllButton.innerHTML = '<span>إظهار جميع العناصر</span>';
         }
       }
-      
-      // وظيفة للتحقق مما إذا كانت أي قيمة تطابق أحد المفاتيح
-      function matchesAny(values, keys) {
-        for (const value of values) {
-          if (!value) continue;
-          for (const key of keys) {
-            if (value.includes(key)) {
-              return true;
-            }
-          }
-        }
-        return false;
-      }
-      
     } catch (error) {
       console.error("خطأ في تنفيذ البوكماركلت:", error);
       alert("حدث خطأ في تنفيذ الأداة: " + error.message);
