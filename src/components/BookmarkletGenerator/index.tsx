@@ -1,138 +1,290 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { BookmarkIcon, FileBox } from "lucide-react";
-import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
 import { ImageData } from "@/types/ImageData";
-import { useBookmarklet } from "@/hooks/useBookmarklet";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  generateBookmarkletCode, 
+  generateEnhancedBookmarkletCode,
+  clearStoredItems,
+  getStorageStats 
+} from "@/utils/bookmarkletService";
 import ExportDataSection from "./ExportDataSection";
 import BookmarkletSection from "./BookmarkletSection";
 import ImprovedFormFillerSection from "./ImprovedFormFillerSection";
+import DirectExportTools from "../DataExport/DirectExportTools";
+import { Download, Upload, Database } from 'lucide-react';
 
-// تحديث واجهة الخصائص
 interface BookmarkletGeneratorProps {
   images: ImageData[];
-  storedCount?: number;
-  readyCount?: number;
+  storedCount: number;
+  readyCount: number;
 }
 
-const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, readyCount: initialReadyCount = 0 }: BookmarkletGeneratorProps) => {
+const BookmarkletGenerator: React.FC<BookmarkletGeneratorProps> = ({
+  images, 
+  storedCount,
+  readyCount
+}) => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("export");
+  const [bookmarkletUrl, setBookmarkletUrl] = useState("");
+  const [enhancedBookmarkletUrl, setEnhancedBookmarkletUrl] = useState("");
+  const [isGeneratingUrl, setIsGeneratingUrl] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [stats, setStats] = useState({
+    total: storedCount || 0,
+    ready: readyCount || 0,
+    success: 0,
+    error: 0,
+    lastUpdate: null as Date | null
+  });
 
-  // استخدام الهوك المخصص للتعامل مع البوكماركلت
-  const {
-    storedCount,
-    bookmarkletUrl,
-    enhancedBookmarkletUrl,
-    isGeneratingUrl,
-    showAdvanced,
-    stats,
-    handleExport,
-    handleClear,
-    handleCopyBookmarklet,
-    handleCopyEnhancedBookmarklet,
-    handleRegenerateBookmarklet,
-    toggleAdvancedOptions
-  } = useBookmarklet(images);
-
-  // تحديث التبويب الفعال عند تغيير البيانات
+  // تحديث الإحصائيات عند تغيير الخصائص
   useEffect(() => {
-    // تبديل تلقائي للتبويب المناسب بناءً على البيانات المتاحة
-    if (storedCount > 0 && activeTab === "export") {
-      // إذا كان هناك بيانات مخزنة وكنا في تبويب التصدير، نسأل المستخدم عما إذا كان يريد الانتقال للبوكماركلت
-      const timer = setTimeout(() => {
-        setActiveTab("improved-filler");
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [storedCount, activeTab]);
+    setStats(prev => ({
+      ...prev,
+      total: storedCount || 0,
+      ready: readyCount || 0
+    }));
+  }, [storedCount, readyCount]);
 
-  // حساب عدد الصور المكتملة (التي تحتوي على البيانات الأساسية)
-  const validImagesCount = images.filter(img => img.code && img.senderName && img.phoneNumber).length || 0;
-  
+  // استرجاع الإحصائيات الكاملة
+  useEffect(() => {
+    const fetchStats = async () => {
+      const statsData = getStorageStats();
+      setStats({
+        total: statsData.total || 0,
+        ready: statsData.ready || 0,
+        success: statsData.success || 0,
+        error: statsData.error || 0,
+        lastUpdate: statsData.lastUpdate
+      });
+    };
+    
+    fetchStats();
+  }, []);
+
+  // إنشاء عنوان URL للبوكماركلت عند تحميل المكون
+  useEffect(() => {
+    generateUrls();
+  }, []);
+
+  // إنشاء عناوين URL للبوكماركلت
+  const generateUrls = async () => {
+    setIsGeneratingUrl(true);
+    try {
+      const bookmarkletCode = generateBookmarkletCode();
+      const enhancedCode = generateEnhancedBookmarkletCode();
+      
+      setBookmarkletUrl(bookmarkletCode);
+      setEnhancedBookmarkletUrl(enhancedCode);
+    } catch (error) {
+      console.error("Error generating bookmarklet URLs:", error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء إنشاء روابط البوكماركلت",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingUrl(false);
+    }
+  };
+
+  // نسخ رابط البوكماركلت
+  const copyBookmarkletToClipboard = () => {
+    navigator.clipboard.writeText(bookmarkletUrl)
+      .then(() => {
+        toast({
+          title: "تم النسخ",
+          description: "تم نسخ رابط البوكماركلت إلى الحافظة"
+        });
+      })
+      .catch(() => {
+        toast({
+          title: "فشل النسخ",
+          description: "حدث خطأ أثناء محاولة نسخ الرابط",
+          variant: "destructive"
+        });
+      });
+  };
+
+  // نسخ رابط البوكماركلت المحسّن
+  const copyEnhancedBookmarkletToClipboard = () => {
+    navigator.clipboard.writeText(enhancedBookmarkletUrl)
+      .then(() => {
+        toast({
+          title: "تم النسخ",
+          description: "تم نسخ رابط أداة الإدخال المحسّنة إلى الحافظة"
+        });
+      })
+      .catch(() => {
+        toast({
+          title: "فشل النسخ",
+          description: "حدث خطأ أثناء محاولة نسخ الرابط",
+          variant: "destructive"
+        });
+      });
+  };
+
+  // تصدير البيانات إلى localStorage
+  const handleExportData = () => {
+    const validImages = images.filter(img => 
+      img.status === "completed" && img.code && img.senderName && img.phoneNumber
+    );
+    
+    if (validImages.length === 0) {
+      toast({
+        title: "لا توجد بيانات صالحة للتصدير",
+        description: "يرجى التأكد من إكمال معالجة الصور واستخراج البيانات الأساسية أولاً.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // استدعاء خدمة التصدير
+      const savedCount = saveToLocalStorage(validImages);
+      
+      // تحديث الإحصائيات
+      const updatedStats = getStorageStats();
+      setStats({
+        total: updatedStats.total || 0,
+        ready: updatedStats.ready || 0,
+        success: updatedStats.success || 0,
+        error: updatedStats.error || 0,
+        lastUpdate: updatedStats.lastUpdate
+      });
+      
+      // عرض رسالة نجاح
+      toast({
+        title: "تم التصدير بنجاح",
+        description: `تم تصدير ${savedCount} سجل من البيانات إلى ذاكرة المتصفح`,
+      });
+    } catch (error) {
+      console.error("خطأ في تصدير البيانات:", error);
+      toast({
+        title: "فشل التصدير",
+        description: "حدث خطأ أثناء محاولة تصدير البيانات. يرجى المحاولة مرة أخرى.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // مسح البيانات المخزنة
+  const handleClearData = () => {
+    try {
+      clearStoredItems();
+      
+      // تحديث الإحصائيات
+      setStats({
+        total: 0,
+        ready: 0,
+        success: 0,
+        error: 0,
+        lastUpdate: null
+      });
+      
+      toast({
+        title: "تم المسح",
+        description: "تم مسح جميع البيانات المخزنة"
+      });
+    } catch (error) {
+      console.error("خطأ في مسح البيانات:", error);
+      toast({
+        title: "فشل المسح",
+        description: "حدث خطأ أثناء محاولة مسح البيانات. يرجى المحاولة مرة أخرى.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="max-w-4xl mx-auto"
-    >
-      <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm shadow-sm">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle className="text-xl font-bold text-brand-brown dark:text-brand-beige flex items-center">
-                <BookmarkIcon className="mr-2 h-5 w-5 text-brand-coral" />
-                أداة نقل البيانات (محسّنة)
-              </CardTitle>
-              <CardDescription className="mt-1">
-                نقل البيانات المستخرجة تلقائيًا إلى مواقع شركات التوصيل
-              </CardDescription>
-            </div>
-            {storedCount > 0 && (
-              <Badge variant="outline" className="bg-brand-green/10 text-brand-green border-brand-green/20">
-                <FileBox className="h-3.5 w-3.5 mr-1" />
-                {storedCount} عنصر مخزن
-              </Badge>
-            )}
-          </div>
-        </CardHeader>
-        
-        <CardContent>
-          <Tabs defaultValue="export" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 mb-4">
-              <TabsTrigger value="export">تصدير البيانات</TabsTrigger>
-              <TabsTrigger value="improved-filler">طريقة الإدخال المحسّنة</TabsTrigger>
-              <TabsTrigger value="bookmarklet">الإدخال التقليدي</TabsTrigger>
-            </TabsList>
-            
-            {/* قسم تصدير البيانات */}
-            <TabsContent value="export">
+    <Card className="overflow-hidden bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+      <CardContent className="p-0">
+        <Tabs defaultValue="export" value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full rounded-none grid grid-cols-4">
+            <TabsTrigger value="export" data-value="export" className="rounded-none data-[state=active]:bg-background">
+              <Database className="h-4 w-4 ml-2" />
+              تصدير البيانات
+            </TabsTrigger>
+            <TabsTrigger value="direct-export" className="rounded-none data-[state=active]:bg-background">
+              <Download className="h-4 w-4 ml-2" />
+              التصدير المباشر
+            </TabsTrigger>
+            <TabsTrigger value="bookmarklet" className="rounded-none data-[state=active]:bg-background">
+              <Upload className="h-4 w-4 ml-2" />
+              البوكماركلت التقليدي
+            </TabsTrigger>
+            <TabsTrigger value="enhanced" className="rounded-none data-[state=active]:bg-background">
+              <EnhancedIcon className="h-4 w-4 ml-2" />
+              الإدخال المحسّن
+            </TabsTrigger>
+          </TabsList>
+          
+          <div className="p-4">
+            <TabsContent value="export" className="mt-0">
               <ExportDataSection 
                 stats={stats}
                 imagesCount={images.length}
-                validImagesCount={validImagesCount}
-                storedCount={storedCount}
-                onExport={handleExport}
-                onClear={handleClear}
+                validImagesCount={images.filter(img => img.status === "completed").length}
+                storedCount={stats.total}
+                onExport={handleExportData}
+                onClear={handleClearData}
               />
             </TabsContent>
             
-            {/* قسم طريقة الإدخال المحسّنة */}
-            <TabsContent value="improved-filler">
-              <ImprovedFormFillerSection 
-                enhancedBookmarkletUrl={enhancedBookmarkletUrl}
-                isGeneratingUrl={isGeneratingUrl}
-                onCopyEnhancedBookmarklet={handleCopyEnhancedBookmarklet}
-                storedCount={storedCount}
-              />
+            <TabsContent value="direct-export" className="mt-0">
+              <DirectExportTools images={images} />
             </TabsContent>
             
-            {/* قسم إعداد Bookmarklet التقليدي */}
-            <TabsContent value="bookmarklet">
+            <TabsContent value="bookmarklet" className="mt-0">
               <BookmarkletSection 
                 bookmarkletUrl={bookmarkletUrl}
                 isGeneratingUrl={isGeneratingUrl}
                 showAdvanced={showAdvanced}
-                onCopyBookmarklet={handleCopyBookmarklet}
-                onRegenerateBookmarklet={handleRegenerateBookmarklet}
-                onToggleAdvanced={toggleAdvancedOptions}
+                onCopyBookmarklet={copyBookmarkletToClipboard}
+                onRegenerateBookmarklet={generateUrls}
+                onToggleAdvanced={() => setShowAdvanced(!showAdvanced)}
               />
             </TabsContent>
-          </Tabs>
-        </CardContent>
-        
-        <CardFooter className="border-t pt-4 text-xs text-muted-foreground">
-          <p>
-            ملاحظة: تعمل هذه الأداة في المتصفح فقط ولا يتم إرسال بياناتك إلى أي خادم خارجي
-          </p>
-        </CardFooter>
-      </Card>
-    </motion.div>
+            
+            <TabsContent value="enhanced" className="mt-0">
+              <ImprovedFormFillerSection 
+                enhancedBookmarkletUrl={enhancedBookmarkletUrl}
+                isGeneratingUrl={isGeneratingUrl}
+                onCopyEnhancedBookmarklet={copyEnhancedBookmarkletToClipboard}
+                storedCount={stats.total}
+              />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
 
+// أيقونة محسّنة
+const EnhancedIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="24" 
+    height="24" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    {...props}
+  >
+    <path d="M12 2v4c0 1.1.9 2 2 2h4" />
+    <path d="M20 8v14H4V4h12l4 4Z" />
+    <path d="m17 15-2 2-2-2" />
+    <path d="M13 15v-3h4" />
+  </svg>
+);
+
 export default BookmarkletGenerator;
+
