@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,19 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
     handleRegenerateBookmarklet,
     toggleAdvancedOptions
   } = useBookmarklet(images);
+
+  // تحديث التبويب الفعال عند تغيير البيانات
+  useEffect(() => {
+    // تبديل تلقائي للتبويب المناسب بناءً على البيانات المتاحة
+    if (storedCount > 0 && activeTab === "export") {
+      // إذا كان هناك بيانات مخزنة وكنا في تبويب التصدير، نسأل المستخدم عما إذا كان يريد الانتقال للبوكماركلت
+      const timer = setTimeout(() => {
+        setActiveTab("bookmarklet");
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [storedCount, activeTab]);
 
   // حساب عدد الصور المكتملة (التي تحتوي على البيانات الأساسية)
   const validImagesCount = images.filter(img => img.code && img.senderName && img.phoneNumber).length || 0;

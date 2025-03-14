@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { 
@@ -31,9 +31,15 @@ export const useBookmarklet = (images: ImageData[]) => {
     generateBookmarkletUrlWithDelay();
     updateStats();
   }, []); 
+  
+  // تحديث البيانات عند تغيير الصور
+  useEffect(() => {
+    console.log("تحديث إحصائيات البوكماركلت بعد تغيير الصور");
+    updateStats();
+  }, [images]);
 
   // توليد رابط البوكماركلت مع تأخير
-  const generateBookmarkletUrlWithDelay = () => {
+  const generateBookmarkletUrlWithDelay = useCallback(() => {
     setIsGeneratingUrl(true);
     setTimeout(() => {
       try {
@@ -51,31 +57,32 @@ export const useBookmarklet = (images: ImageData[]) => {
         setIsGeneratingUrl(false);
       }
     }, 500);
-  };
+  }, [toast]);
 
   // تحديث عدد العناصر المخزنة
-  const updateStoredCount = () => {
+  const updateStoredCount = useCallback(() => {
     const count = getStoredItemsCount();
     console.log("تحديث عدد العناصر المخزنة:", count);
     setStoredCount(count);
-  };
+  }, []);
   
   // تحديث إحصائيات التخزين
-  const updateStats = () => {
+  const updateStats = useCallback(() => {
     const currentStats = getStorageStats();
     console.log("تحديث إحصائيات التخزين:", currentStats);
-    // تأكد من أن التاريخ ليس فارغًا
+    
+    // تأكد من أن lastUpdate هو Date أو null
     setStats({
       total: currentStats.total,
       ready: currentStats.ready,
       success: currentStats.success,
       error: currentStats.error,
-      lastUpdate: currentStats.lastUpdate || null
+      lastUpdate: currentStats.lastUpdate ? new Date(currentStats.lastUpdate) : null
     });
-  };
+  }, []);
 
   // تصدير البيانات إلى localStorage
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     console.log("تصدير البيانات:", images.length, "صورة");
     
     // تصفية الصور للتأكد من وجود البيانات الأساسية
@@ -108,10 +115,10 @@ export const useBookmarklet = (images: ImageData[]) => {
         variant: "destructive"
       });
     }
-  };
+  }, [images, toast, updateStoredCount, updateStats]);
 
   // مسح البيانات المخزنة
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     clearStoredItems();
     updateStoredCount();
     updateStats();
@@ -120,10 +127,10 @@ export const useBookmarklet = (images: ImageData[]) => {
       description: "تم مسح جميع البيانات المخزنة من ذاكرة المتصفح",
       variant: "default"
     });
-  };
+  }, [toast, updateStoredCount, updateStats]);
 
   // نسخ رابط Bookmarklet
-  const handleCopyBookmarklet = () => {
+  const handleCopyBookmarklet = useCallback(() => {
     if (!bookmarkletUrl) {
       toast({
         title: "الرابط غير جاهز",
@@ -140,10 +147,10 @@ export const useBookmarklet = (images: ImageData[]) => {
         variant: "default"
       });
     });
-  };
+  }, [bookmarkletUrl, toast]);
   
   // إعادة إنشاء كود Bookmarklet
-  const handleRegenerateBookmarklet = () => {
+  const handleRegenerateBookmarklet = useCallback(() => {
     try {
       setIsGeneratingUrl(true);
       const newUrl = generateBookmarkletCode();
@@ -165,12 +172,12 @@ export const useBookmarklet = (images: ImageData[]) => {
         variant: "destructive"
       });
     }
-  };
+  }, [toast]);
 
   // تغيير حالة إظهار الخيارات المتقدمة
-  const toggleAdvancedOptions = () => {
+  const toggleAdvancedOptions = useCallback(() => {
     setShowAdvanced(prev => !prev);
-  };
+  }, []);
 
   return {
     storedCount,

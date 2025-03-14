@@ -4,7 +4,7 @@
  * مع تحسين واجهة المستخدم وزيادة التوافق مع المواقع المختلفة
  */
 export const generateBookmarkletCode = (): string => {
-  // الكود المحسن للـ Bookmarklet - يجب تقليصه قدر الإمكان مع الحفاظ على وظائفه
+  // الكود المحسن للـ Bookmarklet - تم تحسينه لحل مشاكل التوافق
   const code = `
   (function() {
     // التحقق من وجود البيانات
@@ -46,6 +46,7 @@ export const generateBookmarkletCode = (): string => {
         .bm-badge{display:inline-block;padding:2px 6px;border-radius:12px;font-size:11px;font-weight:500}
         .bm-loader{display:inline-block;width:12px;height:12px;border:2px solid rgba(0,0,0,0.1);border-radius:50%;border-top-color:#4CAF50;animation:bm-spin 1s linear infinite;margin-left:8px}
         @keyframes bm-spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+        .bm-debug{background:#f5f5f5;padding:8px;margin:10px 0;border-radius:4px;font-size:11px;max-height:120px;overflow-y:auto;color:#666}
       \`;
       document.head.appendChild(styles);
       
@@ -96,12 +97,41 @@ export const generateBookmarkletCode = (): string => {
           fillFirstButton.disabled = true;
           
           setTimeout(() => {
-            const result = fillForm(items[0]);
-            fillFirstButton.innerHTML = '<span>إدخال بيانات أول عنصر</span>';
-            fillFirstButton.disabled = false;
-            
-            if (result === 0) {
-              showNotification("لم نتمكن من العثور على حقول مناسبة. حاول الانتقال إلى صفحة إضافة شحنة أولاً.", "error");
+            // تأكد من اكتمال تحميل الصفحة
+            if (document.readyState === 'complete') {
+              runWithRetry(() => fillForm(items[0]), 3)
+                .then(result => {
+                  fillFirstButton.innerHTML = '<span>إدخال بيانات أول عنصر</span>';
+                  fillFirstButton.disabled = false;
+                  
+                  if (result === 0) {
+                    showNotification("لم نتمكن من العثور على حقول مناسبة. حاول الانتقال إلى صفحة إضافة شحنة أولاً.", "error");
+                  }
+                })
+                .catch(error => {
+                  console.error("فشل محاولات ملء النموذج:", error);
+                  fillFirstButton.innerHTML = '<span>إدخال بيانات أول عنصر</span>';
+                  fillFirstButton.disabled = false;
+                  showNotification("حدث خطأ أثناء ملء النموذج", "error");
+                });
+            } else {
+              window.addEventListener('load', () => {
+                runWithRetry(() => fillForm(items[0]), 3)
+                  .then(result => {
+                    fillFirstButton.innerHTML = '<span>إدخال بيانات أول عنصر</span>';
+                    fillFirstButton.disabled = false;
+                    
+                    if (result === 0) {
+                      showNotification("لم نتمكن من العثور على حقول مناسبة. حاول الانتقال إلى صفحة إضافة شحنة أولاً.", "error");
+                    }
+                  })
+                  .catch(error => {
+                    console.error("فشل محاولات ملء النموذج:", error);
+                    fillFirstButton.innerHTML = '<span>إدخال بيانات أول عنصر</span>';
+                    fillFirstButton.disabled = false;
+                    showNotification("حدث خطأ أثناء ملء النموذج", "error");
+                  });
+              });
             }
           }, 500);
         }
@@ -118,27 +148,69 @@ export const generateBookmarkletCode = (): string => {
           fillAndSaveButton.disabled = true;
           
           setTimeout(() => {
-            const result = fillForm(items[0]);
-            
-            if (result > 0) {
-              // ابحث عن زر الحفظ وانقر عليه
-              setTimeout(() => {
-                const saveButtonResult = clickSaveButton();
-                
-                if (saveButtonResult) {
-                  showNotification("تم ملء البيانات والضغط على زر الحفظ بنجاح!", "success");
-                  updateItemStatus(items[0].id, "success", "تم إدخال البيانات والحفظ بنجاح");
-                } else {
-                  showNotification("تم ملء البيانات لكن لم نتمكن من العثور على زر الحفظ.", "error");
-                }
-                
-                fillAndSaveButton.innerHTML = '<span>إدخال البيانات والضغط على حفظ</span>';
-                fillAndSaveButton.disabled = false;
-              }, 1000);
+            // تأكد من اكتمال تحميل الصفحة
+            if (document.readyState === 'complete') {
+              runWithRetry(() => fillForm(items[0]), 3)
+                .then(result => {
+                  if (result > 0) {
+                    // ابحث عن زر الحفظ وانقر عليه
+                    setTimeout(() => {
+                      const saveButtonResult = findAndClickSaveButton();
+                      
+                      if (saveButtonResult) {
+                        showNotification("تم ملء البيانات والضغط على زر الحفظ بنجاح!", "success");
+                        updateItemStatus(items[0].id, "success", "تم إدخال البيانات والحفظ بنجاح");
+                      } else {
+                        showNotification("تم ملء البيانات لكن لم نتمكن من العثور على زر الحفظ.", "error");
+                      }
+                      
+                      fillAndSaveButton.innerHTML = '<span>إدخال البيانات والضغط على حفظ</span>';
+                      fillAndSaveButton.disabled = false;
+                    }, 1000);
+                  } else {
+                    showNotification("لم نتمكن من العثور على حقول مناسبة. تأكد من أنك في صفحة إضافة شحنة.", "error");
+                    fillAndSaveButton.innerHTML = '<span>إدخال البيانات والضغط على حفظ</span>';
+                    fillAndSaveButton.disabled = false;
+                  }
+                })
+                .catch(error => {
+                  console.error("فشل محاولات ملء النموذج وحفظه:", error);
+                  fillAndSaveButton.innerHTML = '<span>إدخال البيانات والضغط على حفظ</span>';
+                  fillAndSaveButton.disabled = false;
+                  showNotification("حدث خطأ أثناء ملء النموذج", "error");
+                });
             } else {
-              showNotification("لم نتمكن من العثور على حقول مناسبة. تأكد من أنك في صفحة إضافة شحنة.", "error");
-              fillAndSaveButton.innerHTML = '<span>إدخال البيانات والضغط على حفظ</span>';
-              fillAndSaveButton.disabled = false;
+              window.addEventListener('load', () => {
+                runWithRetry(() => fillForm(items[0]), 3)
+                  .then(result => {
+                    if (result > 0) {
+                      // ابحث عن زر الحفظ وانقر عليه
+                      setTimeout(() => {
+                        const saveButtonResult = findAndClickSaveButton();
+                        
+                        if (saveButtonResult) {
+                          showNotification("تم ملء البيانات والضغط على زر الحفظ بنجاح!", "success");
+                          updateItemStatus(items[0].id, "success", "تم إدخال البيانات والحفظ بنجاح");
+                        } else {
+                          showNotification("تم ملء البيانات لكن لم نتمكن من العثور على زر الحفظ.", "error");
+                        }
+                        
+                        fillAndSaveButton.innerHTML = '<span>إدخال البيانات والضغط على حفظ</span>';
+                        fillAndSaveButton.disabled = false;
+                      }, 1000);
+                    } else {
+                      showNotification("لم نتمكن من العثور على حقول مناسبة. تأكد من أنك في صفحة إضافة شحنة.", "error");
+                      fillAndSaveButton.innerHTML = '<span>إدخال البيانات والضغط على حفظ</span>';
+                      fillAndSaveButton.disabled = false;
+                    }
+                  })
+                  .catch(error => {
+                    console.error("فشل محاولات ملء النموذج وحفظه:", error);
+                    fillAndSaveButton.innerHTML = '<span>إدخال البيانات والضغط على حفظ</span>';
+                    fillAndSaveButton.disabled = false;
+                    showNotification("حدث خطأ أثناء ملء النموذج", "error");
+                  });
+              });
             }
           }, 500);
         }
@@ -156,6 +228,14 @@ export const generateBookmarkletCode = (): string => {
       
       content.appendChild(actionsDiv);
       
+      // إضافة قسم تصحيح الأخطاء (للمطورين)
+      const debugContainer = document.createElement("div");
+      debugContainer.id = "bm-debug-container";
+      debugContainer.className = "bm-debug";
+      debugContainer.style.display = "none";
+      debugContainer.innerHTML = "<strong>معلومات التصحيح:</strong>";
+      content.appendChild(debugContainer);
+      
       // قسم عرض العناصر (مخفي افتراضيًا)
       const itemsContainer = document.createElement("div");
       itemsContainer.id = "bm-items-container";
@@ -165,190 +245,219 @@ export const generateBookmarkletCode = (): string => {
       
       controlPanel.appendChild(content);
       document.body.appendChild(controlPanel);
+      
+      // وظيفة تجربة الوظيفة عدة مرات مع تأخير متزايد
+      async function runWithRetry(fn, maxRetries = 3, initialDelay = 500) {
+        let lastError;
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            const result = fn();
+            if (result > 0) return result; // نجاح
+            
+            // تأخير قبل المحاولة التالية
+            await new Promise(resolve => setTimeout(resolve, initialDelay * Math.pow(2, attempt)));
+          } catch (error) {
+            console.error(\`محاولة \${attempt + 1} فشلت:\`, error);
+            lastError = error;
+          }
+        }
+        throw lastError || new Error("فشلت جميع المحاولات");
+      }
+      
+      // وظيفة إضافة معلومات التصحيح
+      function addDebugInfo(message) {
+        const debugContainer = document.getElementById("bm-debug-container");
+        if (debugContainer) {
+          const debugLine = document.createElement("div");
+          debugLine.textContent = "• " + message;
+          debugContainer.appendChild(debugLine);
+          debugContainer.style.display = "block";
+          
+          // حفظ آخر 10 سطور فقط لتجنب الحمل الزائد
+          const lines = debugContainer.querySelectorAll("div");
+          if (lines.length > 10) {
+            debugContainer.removeChild(lines[1]); // إزالة أقدم سطر (الأول هو العنوان)
+          }
+        }
+      }
 
       // وظيفة البحث عن زر الحفظ والضغط عليه
-      function clickSaveButton() {
-        console.log("البحث عن زر الحفظ...");
-        
-        // طرق مختلفة للعثور على زر الحفظ
+      function findAndClickSaveButton() {
+        // محاولات متعددة للعثور على زر الحفظ
         const saveButtonSelectors = [
-          // البحث عن زر النص "حفظ" أو "احفظ" أو "تأكيد"
+          // البحث عن النص المباشر
           'button:contains("حفظ")', 
-          'input[type="submit"][value*="حفظ"]',
           'button:contains("احفظ")',
           'button:contains("تأكيد")',
-          'button:contains("حفط")',
+          'button:contains("إضافة")',
+          'input[type="submit"][value*="حفظ"]',
           'input[type="button"][value*="حفظ"]',
-          // البحث بواسطة الكلاس
+          // البحث باستخدام السمات
+          'button[type="submit"]',
           '.save-button', 
           '.btn-save',
           '.submit-btn',
-          // خاص بالموقع المستهدف
-          'button.حفظ',
-          // أي زر في أسفل النموذج
-          'form button[type="submit"]',
-          // محاولة العثور على أي زر في أسفل الصفحة
-          'button', 
-          'input[type="submit"]',
-          'input[type="button"]'
+          '.btn-primary',
+          // محددات أخرى
+          'form button:last-child',
+          'form input[type="submit"]:last-child',
+          'button.btn-success'
         ];
         
-        // محاولة العثور على زر الحفظ باستخدام المحددات المختلفة
-        let saveButton;
+        // تحسين البحث عن النص داخل الأزرار
+        const getAllButtons = () => document.querySelectorAll('button, input[type="submit"], input[type="button"]');
+        const allButtons = getAllButtons();
         
-        for (const selector of saveButtonSelectors) {
-          // استخدام document.querySelectorAll ثم التصفية بناءً على النص المرئي
-          const buttons = document.querySelectorAll(selector.replace(':contains(', '['));
+        // البحث عن الأزرار بالنص المناسب
+        for (const button of Array.from(allButtons)) {
+          const buttonText = button.textContent?.trim().toLowerCase() || '';
+          const buttonValue = button.getAttribute('value')?.toLowerCase() || '';
           
-          // تخمين زر الحفظ بناء على موقعه (غالبًا في أسفل النموذج) أو النص المعروض
-          for (const button of Array.from(buttons)) {
-            const buttonText = button.textContent?.trim().toLowerCase() || '';
-            const buttonType = button.getAttribute('type')?.toLowerCase() || '';
-            const buttonValue = button.getAttribute('value')?.toLowerCase() || '';
-            
-            if (
-              (buttonText.includes('حفظ') || buttonText.includes('تأكيد') || 
-               buttonText.includes('احفظ') || buttonText.includes('إرسال') || 
-               buttonText.includes('تخزين') || buttonText.includes('إضافة') || 
-               buttonText === 'حفظ') || 
-              (buttonValue.includes('حفظ') || buttonValue.includes('تأكيد')) ||
-              (buttonType === 'submit')
-            ) {
-              saveButton = button;
-              console.log("تم العثور على زر الحفظ المحتمل:", buttonText || buttonValue || buttonType);
-              break;
-            }
-          }
-          
-          if (saveButton) break;
-        }
-        
-        // إذا لم يتم العثور على زر محدد، ابحث عن آخر زر في الصفحة (احتمالية أنه زر الحفظ)
-        if (!saveButton) {
-          const allButtons = document.querySelectorAll('button, input[type="submit"], input[type="button"]');
-          // ابحث عن زر في أسفل الصفحة
-          const bottomButtons = Array.from(allButtons).filter(button => {
-            const rect = button.getBoundingClientRect();
-            return rect.top > window.innerHeight * 0.6; // في النصف السفلي من الصفحة
-          });
-          
-          if (bottomButtons.length > 0) {
-            // رتب الأزرار حسب موضعها من الأسفل إلى الأعلى
-            bottomButtons.sort((a, b) => {
-              const rectA = a.getBoundingClientRect();
-              const rectB = b.getBoundingClientRect();
-              return rectB.top - rectA.top;
-            });
-            
-            saveButton = bottomButtons[0];
-            console.log("تم اختيار آخر زر في الصفحة كزر حفظ محتمل");
-          }
-        }
-        
-        // محاولة استخدام خاصة بالموقع المستهدف
-        if (!saveButton) {
-          // في بعض المواقع، قد يكون هناك عناصر divs تتصرف كأزرار
-          const potentialButtons = document.querySelectorAll('.حفظ, .btn, .button, [role="button"]');
-          for (const btn of Array.from(potentialButtons)) {
-            const btnText = btn.textContent?.trim().toLowerCase() || '';
-            if (btnText.includes('حفظ') || btnText.includes('تأكيد') || btnText === 'حفظ') {
-              saveButton = btn;
-              console.log("تم العثور على عنصر يتصرف كزر:", btnText);
-              break;
+          if (buttonText.includes('حفظ') || buttonText.includes('تأكيد') || buttonText.includes('إضافة') ||
+              buttonValue.includes('حفظ') || buttonValue.includes('تأكيد')) {
+            try {
+              console.log("وجدت زر الحفظ:", buttonText || buttonValue);
+              button.click();
+              return true;
+            } catch (e) {
+              console.warn("خطأ أثناء النقر على الزر:", e);
             }
           }
         }
         
-        // إذا وجدنا زر الحفظ، انقر عليه
-        if (saveButton) {
+        // البحث عن زر في أسفل النموذج
+        const forms = document.querySelectorAll('form');
+        for (const form of Array.from(forms)) {
+          const formButtons = form.querySelectorAll('button, input[type="submit"], input[type="button"]');
+          if (formButtons.length > 0) {
+            try {
+              console.log("النقر على آخر زر في النموذج");
+              formButtons[formButtons.length - 1].click();
+              return true;
+            } catch (e) {
+              console.warn("خطأ أثناء النقر على آخر زر في النموذج:", e);
+            }
+          }
+        }
+        
+        // محاولة أخيرة - البحث عن أي زر submit
+        const submitButtons = document.querySelectorAll('button[type="submit"]');
+        if (submitButtons.length > 0) {
           try {
-            console.log("جاري النقر على زر الحفظ...");
-            saveButton.click();
-            
-            // التحقق من نجاح النقر
-            setTimeout(() => {
-              console.log("تم النقر على زر الحفظ بنجاح!");
-            }, 100);
-            
+            console.log("النقر على زر submit");
+            submitButtons[0].click();
             return true;
-          } catch (error) {
-            console.error("خطأ أثناء النقر على زر الحفظ:", error);
-            return false;
+          } catch (e) {
+            console.warn("خطأ أثناء النقر على زر submit:", e);
           }
-        } else {
-          console.warn("لم يتم العثور على زر الحفظ");
-          return false;
         }
+        
+        return false;
       }
 
       // وظيفة تعبئة النموذج بشكل محسن
       function fillForm(item) {
         console.log("بدء ملء النموذج بالبيانات:", item);
+        addDebugInfo("بدء ملء النموذج للعنصر: " + (item.code || "بدون كود"));
+        
         // البحث عن حقول النموذج
         const fields = document.querySelectorAll('input, select, textarea, [contenteditable="true"]');
         console.log("وجدت", fields.length, "حقل إدخال");
+        addDebugInfo("تم العثور على " + fields.length + " حقل إدخال");
+        
+        if (fields.length === 0) {
+          addDebugInfo("لم يتم العثور على حقول! تأكد من أنك في صفحة النموذج");
+          return 0;
+        }
         
         // تتبع ما إذا تم ملء أي حقول
         let filledFields = 0;
+        let attemptedFields = 0;
         
-        // تعيين الحقول المرئية في الصورة المرفقة
+        // تعيين الحقول المرئية في الصورة المرفقة - أضفنا المزيد من الوسوم لزيادة فرص المطابقة
         const fieldMappings = {
           'كود العميل': { key: 'customerCode', value: item.code || item.customerCode || '' },
           'رقم العميل': { key: 'customerCode', value: item.code || item.customerCode || '' },
           'رقم الوصل': { key: 'code', value: item.code || '' },
           'رقم البوليصة': { key: 'code', value: item.code || '' },
+          'الرقم المرجعي': { key: 'code', value: item.code || '' },
+          'الرمز': { key: 'code', value: item.code || '' },
+          'رقم': { key: 'code', value: item.code || '' },
           'هاتف الزبون': { key: 'phoneNumber', value: item.phoneNumber ? item.phoneNumber.replace(/\\D/g, '') : '' },
-          'المحافظة': { key: 'province', value: item.province || '' },
-          'اسم العميل': { key: 'customerName', value: item.senderName || item.recipientName || '' },
-          'اسم المستلم': { key: 'recipientName', value: item.recipientName || item.senderName || '' },
-          'المبلغ الكلي': { key: 'totalAmount', value: item.price ? item.price.replace(/[^\\d.]/g, '') : '' },
+          'رقم الهاتف': { key: 'phoneNumber', value: item.phoneNumber ? item.phoneNumber.replace(/\\D/g, '') : '' },
+          'الهاتف': { key: 'phoneNumber', value: item.phoneNumber ? item.phoneNumber.replace(/\\D/g, '') : '' },
+          'موبايل': { key: 'phoneNumber', value: item.phoneNumber ? item.phoneNumber.replace(/\\D/g, '') : '' },
+          'المحافظة': { key: 'province', value: item.province || item.area || '' },
+          'محافظة': { key: 'province', value: item.province || item.area || '' },
+          'المدينة': { key: 'province', value: item.province || item.area || '' },
+          'اسم العميل': { key: 'customerName', value: item.senderName || item.recipientName || item.customerName || '' },
+          'اسم المستلم': { key: 'recipientName', value: item.recipientName || item.senderName || item.customerName || '' },
+          'المبلغ الكلي': { key: 'totalAmount', value: item.price || item.totalAmount || '' },
+          'المبلغ': { key: 'totalAmount', value: item.price || item.totalAmount || '' },
+          'السعر': { key: 'totalAmount', value: item.price || item.totalAmount || '' },
           'عدد القطع': { key: 'pieceCount', value: item.packageCount || item.pieceCount || '1' },
-          'المنطقة': { key: 'area', value: item.region || item.province || '' },
-          'اسم الزبون': { key: 'customerName', value: item.senderName || '' },
-          'نوع البضاعة': { key: 'packageType', value: item.productType || item.category || 'بضائع متنوعة' },
-          'زيادة أجرة العميل': { key: 'customerFee', value: '' },
-          'زيادة أجرة المندوب': { key: 'deliveryAgentFee', value: '' },
-          'ملاحظات': { key: 'notes1', value: item.notes || '' },
-          'ملاحظات خاصة': { key: 'notes2', value: '' },
-          'الحالة': { key: 'status1', value: 'قيد التنفيذ' },
-          'استبدال': { key: 'exchangeStatus', value: '' },
-          'اسم المندوب': { key: 'delegateName', value: item.delegateName || '' }
+          'عدد': { key: 'pieceCount', value: item.packageCount || item.pieceCount || '1' },
+          'المنطقة': { key: 'area', value: item.region || item.area || item.province || '' },
+          'منطقة': { key: 'area', value: item.region || item.area || item.province || '' },
+          'اسم الزبون': { key: 'customerName', value: item.senderName || item.customerName || '' },
+          'نوع البضاعة': { key: 'packageType', value: item.productType || item.packageType || item.category || 'بضائع متنوعة' },
+          'نوع': { key: 'packageType', value: item.productType || item.packageType || item.category || 'بضائع متنوعة' },
+          'البضاعة': { key: 'packageType', value: item.productType || item.packageType || item.category || 'بضائع متنوعة' },
+          'زيادة أجرة العميل': { key: 'customerFee', value: item.customerFee || '0' },
+          'أجرة العميل': { key: 'customerFee', value: item.customerFee || '0' },
+          'زيادة أجرة المندوب': { key: 'deliveryAgentFee', value: item.deliveryAgentFee || '0' },
+          'أجرة المندوب': { key: 'deliveryAgentFee', value: item.deliveryAgentFee || '0' },
+          'ملاحظات': { key: 'notes1', value: item.notes || item.notes1 || '' },
+          'ملاحظة': { key: 'notes1', value: item.notes || item.notes1 || '' },
+          'ملاحظات خاصة': { key: 'notes2', value: item.notes2 || '' },
+          'الحالة': { key: 'status1', value: item.status1 || 'قيد التنفيذ' },
+          'حالة': { key: 'status1', value: item.status1 || 'قيد التنفيذ' },
+          'استبدال': { key: 'exchangeStatus', value: item.exchangeStatus || 'لا' },
+          'تبديل': { key: 'exchangeStatus', value: item.exchangeStatus || 'لا' },
+          'حالة الدفع': { key: 'paymentStatus', value: item.paymentStatus || 'نقدي' },
+          'الدفع': { key: 'paymentStatus', value: item.paymentStatus || 'نقدي' },
+          'تاريخ التسليم': { key: 'deliveryDate', value: item.deliveryDate || '' },
+          'التسليم': { key: 'deliveryDate', value: item.deliveryDate || '' },
+          'اسم المندوب': { key: 'delegateName', value: item.delegateName || '' },
+          'المندوب': { key: 'delegateName', value: item.delegateName || '' }
         };
         
-        // للبحث في النص المحيط بالحقل
+        // للبحث في النص المحيط بالحقل - تحسين للحصول على تسميات أكثر دقة
         function getFieldLabel(field) {
-          // محاولة العثور على التسمية المرتبطة مباشرة بالحقل
+          let labels = [];
+          
+          // 1. محاولة العثور على التسمية المرتبطة مباشرة بالحقل
           if (field.id) {
             const labelElement = document.querySelector(\`label[for="\${field.id}"]\`);
             if (labelElement) {
-              return labelElement.textContent?.trim() || '';
+              labels.push(labelElement.textContent?.trim() || '');
             }
           }
           
-          // البحث في العناصر المجاورة عن تسمية محتملة
+          // 2. البحث في العناصر المجاورة عن تسمية محتملة
           let current = field.previousElementSibling;
           while (current && current.tagName !== 'INPUT' && current.tagName !== 'SELECT' && current.tagName !== 'TEXTAREA') {
             // إذا كان العنصر الحالي نص (td, div, span, label, etc)
             if (current.textContent) {
               const text = current.textContent.trim();
               if (text && text.length < 50) { // تجنب النصوص الطويلة جدًا
-                return text;
+                labels.push(text);
               }
             }
             current = current.previousElementSibling;
           }
           
-          // البحث في العنصر الأب
+          // 3. البحث في العنصر الأب
           if (field.parentElement) {
             // ابحث عن أي عنصر نصي مباشر في العنصر الأب
-            const parentText = Array.from(field.parentElement.childNodes)
-              .filter(node => node.nodeType === 3) // الأنواع النصية فقط
-              .map(node => node.textContent?.trim())
-              .filter(text => text && text.length > 0 && text.length < 50)
-              .join(' ');
+            const parentTextNodes = Array.from(field.parentElement.childNodes)
+              .filter(node => node.nodeType === 3); // الأنواع النصية فقط
               
-            if (parentText) {
-              return parentText;
+            for (const textNode of parentTextNodes) {
+              const text = textNode.textContent?.trim();
+              if (text && text.length > 0 && text.length < 50) {
+                labels.push(text);
+              }
             }
             
             // ابحث عن أي span أو div أو label داخل الأب قبل الحقل
@@ -360,27 +469,118 @@ export const generateBookmarkletCode = (): string => {
               if (sibling.tagName === 'SPAN' || sibling.tagName === 'DIV' || sibling.tagName === 'LABEL') {
                 const text = sibling.textContent?.trim();
                 if (text && text.length < 50) {
-                  return text;
+                  labels.push(text);
                 }
-              }
-            }
-            
-            // ابحث عن النص في العنصر الأب نفسه
-            const parentElement = field.parentElement;
-            if (parentElement.childNodes.length <= 3) { // لتجنب العناصر المعقدة
-              const text = parentElement.textContent?.trim() || '';
-              // استبعاد النص إذا كان يحتوي فقط على نص الحقل نفسه
-              if (text && text !== field.value && text.length < 50) {
-                return text;
               }
             }
           }
           
-          // إذا لم نجد أي شيء، أعد الاسم أو المعرف أو الفئة
-          return field.name || field.id || field.className || '';
+          // 4. إضافة جميع السمات المفيدة للحقل
+          if (field.name) labels.push(field.name);
+          if (field.id) labels.push(field.id);
+          if (field.placeholder) labels.push(field.placeholder);
+          if (field.title) labels.push(field.title);
+          if ('ariaLabel' in field && field.ariaLabel) labels.push(field.ariaLabel);
+          
+          // إذا لم نجد أي تسميات، أعد الخصائص الأساسية
+          if (labels.length === 0) {
+            return field.name || field.id || field.className || '';
+          }
+          
+          // أعد التسمية الأكثر احتمالا (الأولى)
+          return labels.join(' ');
         }
         
+        // وظيفة تحسين ملء القيم في الحقول لزيادة فرص النجاح
+        function fillFieldValue(field, value) {
+          if (!value || value.trim() === '') {
+            return false; // لا فائدة من ملء قيمة فارغة
+          }
+          
+          try {
+            // سجل القيمة الأصلية للحقل للمقارنة لاحقًا
+            const originalValue = field.value;
+            addDebugInfo("محاولة ملء الحقل: " + (field.name || field.id || "بدون اسم") + " بالقيمة: " + value);
+            
+            // طريقة 1: الإسناد المباشر
+            field.value = value;
+            
+            // طريقة 2: استخدام إعادة تعريف الخاصية
+            try {
+              // أعد تعريف خاصية القيمة
+              Object.defineProperty(field, 'value', {
+                writable: true,
+                value: value
+              });
+            } catch (propError) {
+              console.warn("خطأ في إعادة تعريف الخاصية:", propError);
+            }
+            
+            // طريقة 3: محاكاة كتابة المستخدم
+            try {
+              // تحديث القيمة بطريقة مختلفة
+              if (field.tagName === 'SELECT') {
+                const options = Array.from(field.options);
+                const bestOption = options.find(opt => 
+                  opt.text.toLowerCase().includes(value.toLowerCase()) || 
+                  opt.value.toLowerCase().includes(value.toLowerCase())
+                );
+                
+                if (bestOption) {
+                  field.selectedIndex = bestOption.index;
+                }
+              } else if (field.type !== 'file') {
+                // محاكاة النقر على الحقل أولاً
+                field.focus();
+                field.select();
+                
+                // محاكاة كتابة المستخدم
+                if (typeof InputEvent === 'function') {
+                  const inputEvent = new InputEvent('input', {
+                    bubbles: true,
+                    cancelable: true,
+                    inputType: 'insertText',
+                    data: value
+                  });
+                  field.dispatchEvent(inputEvent);
+                }
+                
+                // تعيين القيمة مرة أخرى للتأكد
+                field.value = value;
+              }
+            } catch (simulationError) {
+              console.warn("خطأ في محاكاة كتابة المستخدم:", simulationError);
+            }
+            
+            // طريقة 4: إطلاق أحداث متنوعة لضمان تعرف النموذج على التغيير
+            try {
+              ['focus', 'input', 'change', 'blur'].forEach(eventType => {
+                const event = new Event(eventType, { bubbles: true });
+                field.dispatchEvent(event);
+              });
+            } catch (eventError) {
+              console.warn("خطأ في إطلاق الأحداث:", eventError);
+            }
+            
+            // تحقق مما إذا تم تغيير القيمة بالفعل
+            const valueChanged = field.value !== originalValue;
+            addDebugInfo(valueChanged ? "تم تغيير القيمة بنجاح" : "لم يتم تغيير القيمة");
+            
+            return valueChanged;
+          } catch (error) {
+            console.error("خطأ أثناء ملء الحقل:", error);
+            addDebugInfo("خطأ في ملء الحقل: " + error.message);
+            return false;
+          }
+        }
+        
+        // هنا نبدأ ملء الحقول
         fields.forEach(field => {
+          // تجاهل الحقول المخفية وحقول الملفات
+          if ((field.type === 'hidden' || field.type === 'file') && field.tagName !== 'SELECT') {
+            return;
+          }
+          
           // تحديد تسمية الحقل
           const fieldLabel = getFieldLabel(field);
           console.log("الحقل:", field.tagName, "الاسم:", field.name || field.id, "التسمية:", fieldLabel);
@@ -396,6 +596,7 @@ export const generateBookmarkletCode = (): string => {
             ) {
               foundMapping = mapping;
               console.log("تم العثور على تطابق:", label, "->", mapping.key);
+              addDebugInfo("تطابق: " + label + " -> " + mapping.key);
               break;
             }
           }
@@ -405,10 +606,15 @@ export const generateBookmarkletCode = (): string => {
             const value = foundMapping.value;
             
             if (value && field.tagName) {
+              attemptedFields++;
+              
               if (field.tagName === 'SELECT') {
                 // للقوائم المنسدلة
                 const select = field;
                 const options = Array.from(select.options);
+                
+                console.log("خيارات القائمة المنسدلة:", options.map(o => o.text));
+                addDebugInfo("القائمة المنسدلة تحتوي على " + options.length + " خيار");
                 
                 // البحث عن تطابق دقيق أو جزئي
                 const exactMatch = options.find(opt => 
@@ -420,6 +626,18 @@ export const generateBookmarkletCode = (): string => {
                   // تعيين القيمة باستخدام قيمة الخيار
                   select.value = exactMatch.value;
                   console.log("تم ملء القائمة المنسدلة:", foundMapping.key, "بالقيمة:", exactMatch.text);
+                  addDebugInfo("تم اختيار: " + exactMatch.text);
+                  
+                  // إطلاق حدث التغيير
+                  try {
+                    ['input', 'change', 'blur'].forEach(eventType => {
+                      const event = new Event(eventType, { bubbles: true });
+                      select.dispatchEvent(event);
+                    });
+                    filledFields++;
+                  } catch (e) {
+                    console.warn("خطأ في إطلاق أحداث التغيير:", e);
+                  }
                 } else {
                   // البحث عن تطابق جزئي
                   const partialMatch = options.find(opt => 
@@ -430,18 +648,36 @@ export const generateBookmarkletCode = (): string => {
                   if (partialMatch) {
                     select.value = partialMatch.value;
                     console.log("تم ملء القائمة المنسدلة (تطابق جزئي):", foundMapping.key, "بالقيمة:", partialMatch.text);
+                    addDebugInfo("تم اختيار (تطابق جزئي): " + partialMatch.text);
+                    
+                    // إطلاق حدث التغيير
+                    try {
+                      ['input', 'change', 'blur'].forEach(eventType => {
+                        const event = new Event(eventType, { bubbles: true });
+                        select.dispatchEvent(event);
+                      });
+                      filledFields++;
+                    } catch (e) {
+                      console.warn("خطأ في إطلاق أحداث التغيير:", e);
+                    }
                   } else if (options.length > 0 && foundMapping.key === 'status1') {
                     // للحالة، اختر الخيار الأول إذا لم نجد تطابقًا
                     select.value = options[0].value;
                     console.log("تم ملء القائمة المنسدلة (الخيار الأول):", foundMapping.key, "بالقيمة:", options[0].text);
+                    addDebugInfo("تم اختيار (أول خيار): " + options[0].text);
+                    
+                    // إطلاق حدث التغيير
+                    try {
+                      ['input', 'change', 'blur'].forEach(eventType => {
+                        const event = new Event(eventType, { bubbles: true });
+                        select.dispatchEvent(event);
+                      });
+                      filledFields++;
+                    } catch (e) {
+                      console.warn("خطأ في إطلاق أحداث التغيير:", e);
+                    }
                   }
                 }
-                
-                // إطلاق حدث التغيير
-                const event = new Event('change', { bubbles: true });
-                select.dispatchEvent(event);
-                
-                filledFields++;
               } else if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
                 // للحقول النصية
                 const input = field;
@@ -450,130 +686,69 @@ export const generateBookmarkletCode = (): string => {
                   // للمربعات أو أزرار الاختيار
                   const shouldCheck = value === 'true' || value === '1' || value.toLowerCase() === 'نعم';
                   input.checked = shouldCheck;
+                  
+                  // إطلاق أحداث التغيير والنقر
+                  try {
+                    ['input', 'change', 'click'].forEach(eventType => {
+                      const event = new Event(eventType, { bubbles: true });
+                      input.dispatchEvent(event);
+                    });
+                    
+                    filledFields++;
+                    addDebugInfo("تم تعيين خانة الاختيار: " + (shouldCheck ? "محددة" : "غير محددة"));
+                  } catch (e) {
+                    console.warn("خطأ في إطلاق أحداث خانة الاختيار:", e);
+                  }
                 } else {
                   // للحقول النصية العادية
-                  input.value = value;
+                  if (input.type === 'number') {
+                    // تنظيف القيمة العددية
+                    const numericValue = value.replace(/[^\\d.]/g, '');
+                    if (fillFieldValue(input, numericValue)) {
+                      filledFields++;
+                    }
+                  } else if (input.type === 'tel') {
+                    // تنظيف رقم الهاتف
+                    const phoneValue = value.replace(/\\D/g, '');
+                    if (fillFieldValue(input, phoneValue)) {
+                      filledFields++;
+                    }
+                  } else {
+                    // للحقول النصية العادية
+                    if (fillFieldValue(input, value)) {
+                      filledFields++;
+                    }
+                  }
                 }
-                
-                // إطلاق أحداث التغيير والإدخال
-                ['input', 'change', 'blur'].forEach(eventType => {
-                  const event = new Event(eventType, { bubbles: true });
-                  input.dispatchEvent(event);
-                });
-                
-                console.log("تم ملء الحقل:", foundMapping.key, "بالقيمة:", value);
-                filledFields++;
               } else if (field.contentEditable === 'true') {
                 // للعناصر القابلة للتحرير
                 field.textContent = value;
                 const event = new Event('input', { bubbles: true });
                 field.dispatchEvent(event);
                 console.log("تم ملء العنصر القابل للتحرير:", foundMapping.key, "بالقيمة:", value);
+                addDebugInfo("تم ملء العنصر القابل للتحرير بقيمة: " + value);
                 filledFields++;
               }
             }
           }
         });
         
-        // إضافة تأخير قصير ومحاولة ثانية للحقول
-        setTimeout(() => {
-          const newFields = document.querySelectorAll('input, select, textarea, [contenteditable="true"]');
-          if (newFields.length > fields.length) {
-            console.log("تم اكتشاف", newFields.length - fields.length, "حقول جديدة");
-            
-            // تحديد الحقول الجديدة فقط
-            const existingIds = new Set(Array.from(fields).map(f => f.id || Math.random().toString()));
-            const additionalFields = Array.from(newFields).filter(f => !existingIds.has(f.id || ''));
-            
-            additionalFields.forEach(field => {
-              const fieldLabel = getFieldLabel(field);
-              
-              // البحث عن تطابق في خريطة الحقول
-              let foundMapping = null;
-              for (const [label, mapping] of Object.entries(fieldMappings)) {
-                if (
-                  fieldLabel.includes(label) || 
-                  (field.placeholder && field.placeholder.includes(label)) ||
-                  (field.name && field.name.includes(label)) ||
-                  (field.id && field.id.includes(label))
-                ) {
-                  foundMapping = mapping;
-                  break;
-                }
-              }
-              
-              if (foundMapping) {
-                const value = foundMapping.value;
-                
-                if (value && field.tagName) {
-                  if (field.tagName === 'SELECT') {
-                    // للقوائم المنسدلة
-                    const select = field;
-                    const options = Array.from(select.options);
-                    
-                    const exactMatch = options.find(opt => 
-                      opt.text.trim().toLowerCase() === value.toLowerCase() || 
-                      opt.value.toLowerCase() === value.toLowerCase()
-                    );
-                    
-                    if (exactMatch) {
-                      select.value = exactMatch.value;
-                    } else {
-                      const partialMatch = options.find(opt => 
-                        opt.text.trim().toLowerCase().includes(value.toLowerCase()) || 
-                        value.toLowerCase().includes(opt.text.trim().toLowerCase())
-                      );
-                      
-                      if (partialMatch) {
-                        select.value = partialMatch.value;
-                      }
-                    }
-                    
-                    const event = new Event('change', { bubbles: true });
-                    select.dispatchEvent(event);
-                    
-                    filledFields++;
-                  } else if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
-                    // للحقول النصية
-                    const input = field;
-                    
-                    if (input.type === 'checkbox' || input.type === 'radio') {
-                      const shouldCheck = value === 'true' || value === '1' || value.toLowerCase() === 'نعم';
-                      input.checked = shouldCheck;
-                    } else {
-                      input.value = value;
-                    }
-                    
-                    ['input', 'change', 'blur'].forEach(eventType => {
-                      const event = new Event(eventType, { bubbles: true });
-                      input.dispatchEvent(event);
-                    });
-                    
-                    filledFields++;
-                  } else if (field.contentEditable === 'true') {
-                    field.textContent = value;
-                    const event = new Event('input', { bubbles: true });
-                    field.dispatchEvent(event);
-                    filledFields++;
-                  }
-                }
-              }
-            });
-          }
+        // سجل معلومات عن عملية الملء
+        console.log("تم ملء", filledFields, "من", attemptedFields, "حقل محاول");
+        addDebugInfo("النتيجة: تم ملء " + filledFields + " من " + attemptedFields + " حقل محاول");
+        
+        // إذا تم ملء حقول، أظهر إشعارًا بالنجاح
+        if (filledFields > 0) {
+          showNotification("تم ملء " + filledFields + " حقول بنجاح", "success");
           
-          // إظهار رسالة نجاح أو فشل
-          if (filledFields > 0) {
-            showNotification("تم ملء " + filledFields + " حقول بنجاح", "success");
-            
-            // تحديث حالة العنصر في localStorage
-            updateItemStatus(item.id, "success", "تم إدخال البيانات بنجاح");
-          } else {
-            showNotification("لم نتمكن من العثور على حقول مناسبة. تأكد من أنك في صفحة إضافة شحنة.", "error");
-            
-            // تحديث حالة العنصر في localStorage
-            updateItemStatus(item.id, "error", "فشل في إدخال البيانات");
-          }
-        }, 500);
+          // تحديث حالة العنصر في localStorage
+          updateItemStatus(item.id, "success", "تم إدخال البيانات بنجاح");
+        } else {
+          showNotification("لم نتمكن من العثور على حقول مناسبة أو ملئها. تأكد من أنك في صفحة إضافة شحنة.", "error");
+          
+          // تحديث حالة العنصر في localStorage
+          updateItemStatus(item.id, "error", "فشل في إدخال البيانات");
+        }
         
         return filledFields;
       }
@@ -702,9 +877,9 @@ export const generateBookmarkletCode = (): string => {
   `;
   
   // استخدام تنسيق مباشر وبسيط للرابط
-  // هذا يتجنب استخدام encodeURIComponent الذي قد يسبب مشاكل في بعض الأحيان
-  const cleanedCode = code.replace(/\s{2,}/g, ' ').replace(/\n/g, '').trim();
+  const cleanedCode = code.replace(/\\s{2,}/g, ' ').replace(/\\n/g, '').trim();
   const bookmarkletCode = `javascript:${cleanedCode}`;
   
   return bookmarkletCode;
 };
+
