@@ -8,7 +8,12 @@ export const useImageState = () => {
   const { toast } = useToast();
 
   const addImage = (newImage: ImageData) => {
-    setImages(prev => [newImage, ...prev]);
+    // التأكد من أن الصورة الجديدة تحتوي على حقل status بشكل افتراضي
+    const imageWithDefaults: ImageData = {
+      status: "pending", // قيمة افتراضية
+      ...newImage
+    };
+    setImages(prev => [imageWithDefaults, ...prev]);
   };
 
   const updateImage = (id: string, updatedFields: Partial<ImageData>) => {
@@ -42,7 +47,11 @@ export const useImageState = () => {
   // Clean up object URLs when component unmounts
   useEffect(() => {
     return () => {
-      images.forEach(img => URL.revokeObjectURL(img.previewUrl));
+      images.forEach(img => {
+        if (img.previewUrl) {
+          URL.revokeObjectURL(img.previewUrl);
+        }
+      });
     };
   }, [images]);
 

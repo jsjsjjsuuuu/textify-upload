@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -32,16 +31,19 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
     lastUpdate: null as Date | null
   });
 
-  // تحديث عدد العناصر المخزنة والكود عند التحميل
+  // تحديث عدد العناصر المخزنة والكود عند التحميل مرة واحدة فقط
   useEffect(() => {
-    updateStoredCount();
-    updateStats();
+    const currentCount = getStoredItemsCount();
+    setStoredCount(currentCount);
     setBookmarkletUrl(generateBookmarkletCode());
-  }, []);
+    
+    const currentStats = getStorageStats();
+    setStats(currentStats);
+  }, []); // مصفوفة تبعيات فارغة تعني أن هذا الكود يعمل مرة واحدة فقط عند تحميل المكون
 
-  // تحديث الإحصائيات عندما تتغير الخصائص
+  // تحديث القيم عندما تتغير الخصائص من الأعلى
   useEffect(() => {
-    if (initialStoredCount > 0) {
+    if (initialStoredCount !== storedCount) {
       setStoredCount(initialStoredCount);
       setStats(prev => ({
         ...prev,
@@ -49,16 +51,18 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
         ready: initialReadyCount
       }));
     }
-  }, [initialStoredCount, initialReadyCount]);
+  }, [initialStoredCount, initialReadyCount]); // التبعيات الصحيحة
 
   // تحديث عدد العناصر المخزنة
   const updateStoredCount = () => {
-    setStoredCount(getStoredItemsCount());
+    const count = getStoredItemsCount();
+    setStoredCount(count);
   };
   
   // تحديث إحصائيات التخزين
   const updateStats = () => {
-    setStats(getStorageStats());
+    const currentStats = getStorageStats();
+    setStats(currentStats);
   };
 
   // تصدير البيانات إلى localStorage
@@ -173,7 +177,7 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
                     <div className="flex items-center">
                       <span className="text-muted-foreground">العناصر المكتملة:</span>
                       <Badge variant="outline" className="ml-2">
-                        {images.filter(img => img.status === "completed").length}
+                        {images.filter(img => img.status === "completed").length || 0}
                       </Badge>
                     </div>
                     <div className="flex items-center">

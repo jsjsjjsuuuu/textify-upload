@@ -28,14 +28,15 @@ const Index = () => {
     ready: 0
   });
 
-  // تحديث إحصائيات البوكماركلت عند تحميل الصفحة وعند تغيير الصور
+  // تحديث إحصائيات البوكماركلت عند تحميل الصفحة فقط، وليس عند كل تغيير في الصور
   useEffect(() => {
     const stats = getStorageStats();
     setBookmarkletStats({
       total: stats.total,
       ready: stats.ready
     });
-  }, [images]);
+    // نضيف مصفوفة تبعيات فارغة لتشغيل الكود مرة واحدة فقط عند تحميل المكون
+  }, []);
 
   return (
     <div className="relative min-h-screen pb-20">
