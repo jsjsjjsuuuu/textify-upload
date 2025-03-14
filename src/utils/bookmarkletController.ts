@@ -1,4 +1,3 @@
-
 import { BookmarkletItem, BookmarkletExportData } from "@/types/ImageData";
 import { getFromLocalStorage, updateItemStatus } from "@/utils/bookmarkletService";
 
@@ -37,7 +36,7 @@ export const findFormFields = () => {
 /**
  * وظيفة تخمين نوع الحقل بناء على السمات المختلفة
  */
-export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement): string => {
+export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLElement): string => {
   // جمع كل المعرّفات المحتملة للحقل
   const name = field.name ? field.name.toLowerCase() : '';
   const id = field.id ? field.id.toLowerCase() : '';
@@ -128,7 +127,7 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   }
   
   // إذا لم نجد تطابقًا، حاول التخمين بناءً على خصائص الحقل
-  if ('type' in field) {
+  if (field instanceof HTMLInputElement && field.type) {
     const inputType = field.type.toLowerCase();
     if (inputType === 'tel' || name.includes('phone') || name.includes('mobile')) {
       return 'phoneNumber';
@@ -144,10 +143,10 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
 /**
  * وظيفة ملء الحقل بالقيمة المناسبة وإطلاق أحداث التغيير
  */
-export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, value: string) => {
+export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLElement, value: string) => {
   // التعامل مع القوائم المنسدلة
-  if (field.tagName === 'SELECT') {
-    const select = field as HTMLSelectElement;
+  if (field instanceof HTMLSelectElement) {
+    const select = field;
     
     // محاولة العثور على الخيار المطابق
     const options = Array.from(select.options);
@@ -190,10 +189,10 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
         return false;
       }
     }
-  } else if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
+  } else if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
     // تعديل القيمة حسب نوع الإدخال
-    if ('type' in field) {
-      const inputElement = field as HTMLInputElement;
+    if (field instanceof HTMLInputElement && field.type) {
+      const inputElement = field;
       
       switch (inputElement.type.toLowerCase()) {
         case 'tel':
@@ -245,7 +244,7 @@ export const fillForm = (item: BookmarkletItem) => {
   // محاولة تخمين وملء كل حقل
   fields.forEach(field => {
     // تحويل العنصر إلى النوع المناسب
-    const inputElement = field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+    const inputElement = field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLElement;
     const fieldType = guessFieldType(inputElement);
     
     if (fieldType !== 'unknown') {
