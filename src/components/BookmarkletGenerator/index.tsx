@@ -5,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { saveToLocalStorage, getStoredItemsCount, clearStoredItems, generateBookmarkletCode } from "@/utils/bookmarkletService";
+import { saveToLocalStorage, getStoredItemsCount, clearStoredItems, generateBookmarkletCode, getStorageStats } from "@/utils/bookmarkletService";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { ArrowDown, Copy, Trash, BookmarkIcon, Save, FileBox } from "lucide-react";
+import { ArrowDown, Copy, Trash, BookmarkIcon, Save, FileBox, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 interface BookmarkletGeneratorProps {
   images: ImageData[];
@@ -20,10 +20,19 @@ const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
   const [storedCount, setStoredCount] = useState(0);
   const [bookmarkletUrl, setBookmarkletUrl] = useState("");
   const [activeTab, setActiveTab] = useState("export");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    ready: 0,
+    success: 0,
+    error: 0,
+    lastUpdate: null as Date | null
+  });
 
   // تحديث عدد العناصر المخزنة والكود عند التحميل
   useEffect(() => {
     updateStoredCount();
+    updateStats();
     setBookmarkletUrl(generateBookmarkletCode());
   }, []);
 
@@ -31,11 +40,17 @@ const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
   const updateStoredCount = () => {
     setStoredCount(getStoredItemsCount());
   };
+  
+  // تحديث إحصائيات التخزين
+  const updateStats = () => {
+    setStats(getStorageStats());
+  };
 
   // تصدير البيانات إلى localStorage
   const handleExport = () => {
     const count = saveToLocalStorage(images);
     updateStoredCount();
+    updateStats();
     
     if (count > 0) {
       toast({
@@ -56,6 +71,7 @@ const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
   const handleClear = () => {
     clearStoredItems();
     updateStoredCount();
+    updateStats();
     toast({
       title: "تم مسح البيانات",
       description: "تم مسح جميع البيانات المخزنة من ذاكرة المتصفح",
@@ -71,6 +87,16 @@ const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
         description: "تم نسخ رابط Bookmarklet إلى الحافظة",
         variant: "default"
       });
+    });
+  };
+  
+  // إعادة إنشاء كود Bookmarklet
+  const handleRegenerateBookmarklet = () => {
+    setBookmarkletUrl(generateBookmarkletCode());
+    toast({
+      title: "تم إعادة إنشاء الرابط",
+      description: "تم تحديث رمز Bookmarklet بأحدث التغييرات",
+      variant: "default"
     });
   };
 
@@ -112,8 +138,16 @@ const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
             {/* قسم تصدير البيانات */}
             <TabsContent value="export">
               <div className="space-y-4">
+                {/* جزء عرض الإحصائيات */}
                 <div className="bg-secondary/30 rounded-lg p-4">
-                  <h3 className="text-sm font-medium mb-2">حالة البيانات:</h3>
+                  <h3 className="text-sm font-medium mb-2 flex items-center justify-between">
+                    <span>حالة البيانات:</span>
+                    {stats.lastUpdate && (
+                      <span className="text-xs text-muted-foreground">
+                        آخر تحديث: {stats.lastUpdate.toLocaleTimeString()}
+                      </span>
+                    )}
+                  </h3>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex items-center">
                       <span className="text-muted-foreground">إجمالي الصور:</span>
@@ -129,11 +163,36 @@ const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
                     </div>
                     <div className="flex items-center">
                       <span className="text-muted-foreground">العناصر المخزنة:</span>
-                      <Badge variant={storedCount > 0 ? "default" : "outline"} className={storedCount > 0 ? "ml-2 bg-brand-green" : "ml-2"}>
-                        {storedCount}
+                      <Badge variant={stats.total > 0 ? "default" : "outline"} className={stats.total > 0 ? "ml-2 bg-brand-green" : "ml-2"}>
+                        {stats.total}
                       </Badge>
                     </div>
+                    {stats.total > 0 && (
+                      <div className="flex items-center">
+                        <span className="text-muted-foreground">جاهزة للإدخال:</span>
+                        <Badge variant="outline" className="ml-2 bg-blue-500/10 text-blue-600 border-blue-200">
+                          {stats.ready}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
+                  
+                  {stats.total > 0 && (
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {stats.success > 0 && (
+                        <div className="flex items-center">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mr-1.5" />
+                          <span className="text-xs text-green-600">تم إدخال {stats.success} وصل بنجاح</span>
+                        </div>
+                      )}
+                      {stats.error > 0 && (
+                        <div className="flex items-center">
+                          <AlertTriangle className="h-3.5 w-3.5 text-red-500 mr-1.5" />
+                          <span className="text-xs text-red-600">فشل إدخال {stats.error} وصل</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex flex-col space-y-3">
@@ -166,7 +225,18 @@ const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
                 </div>
                 
                 <div>
-                  <h3 className="text-sm font-medium mb-2">رابط الأداة (Bookmarklet):</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium">رابط الأداة (Bookmarklet):</h3>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="text-xs h-7 px-2"
+                    >
+                      {showAdvanced ? "إخفاء الخيارات المتقدمة" : "خيارات متقدمة"}
+                    </Button>
+                  </div>
+                  
                   <div className="flex items-center">
                     <div className="flex-1 relative">
                       <div className="border rounded-md px-3 py-2 bg-muted text-sm truncate overflow-hidden">
@@ -200,6 +270,35 @@ const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
                     * اسحب الرابط (أداة نقل البيانات) إلى شريط المفضلة في متصفحك
                   </p>
                 </div>
+                
+                {showAdvanced && (
+                  <div className="mt-4 space-y-3">
+                    <Separator />
+                    <h3 className="text-sm font-medium pt-2">خيارات متقدمة:</h3>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleRegenerateBookmarklet}
+                      className="w-full"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5 ml-1.5" />
+                      إعادة إنشاء رمز Bookmarklet
+                    </Button>
+                    
+                    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-md p-3 mt-2">
+                      <h4 className="text-xs font-medium text-amber-800 dark:text-amber-400 flex items-center">
+                        <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
+                        ملاحظات هامة
+                      </h4>
+                      <ul className="text-xs text-amber-700 dark:text-amber-500 mt-1 space-y-1 list-disc list-inside">
+                        <li>قد تحتاج لإعادة إنشاء الرابط بعد تحديثات النظام</li>
+                        <li>بعض المواقع قد تمنع تشغيل البرامج النصية الخارجية</li>
+                        <li>للحصول على أفضل النتائج، استخدم متصفح Chrome أو Firefox أو Edge</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>
@@ -216,3 +315,4 @@ const BookmarkletGenerator = ({ images }: BookmarkletGeneratorProps) => {
 };
 
 export default BookmarkletGenerator;
+

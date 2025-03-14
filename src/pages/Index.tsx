@@ -45,7 +45,7 @@ const Index = () => {
               </div>
             </div>
 
-            {/* عرض مكون Bookmarklet Generator */}
+            {/* عرض أداة Bookmarklet بشكل دائم إذا كانت هناك صور أو إذا كانت هناك بيانات مخزنة */}
             {images.length > 0 && (
               <div className="mb-8">
                 <BookmarkletGenerator images={images} />
@@ -68,3 +68,4 @@ const Index = () => {
 };
 
 export default Index;
+
