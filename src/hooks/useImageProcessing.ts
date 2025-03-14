@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -7,6 +6,8 @@ import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useSubmitToApi } from "@/hooks/useSubmitToApi";
 import { createReliableBlobUrl, formatPrice } from "@/lib/gemini/utils";
+import { correctProvinceName } from "@/utils/provinces";
+import { saveToLocalStorage } from "@/utils/bookmarklet";
 
 export const useImageProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -56,8 +57,35 @@ export const useImageProcessing = () => {
       }
     }
     
+    // معالجة حقل المحافظة لتصحيح الأخطاء الإملائية
+    if (field === "province" && value) {
+      const originalValue = value;
+      const correctedValue = correctProvinceName(value);
+      
+      if (correctedValue !== originalValue) {
+        console.log(`تصحيح اسم المحافظة تلقائيًا: "${originalValue}" -> "${correctedValue}"`);
+        value = correctedValue;
+        
+        toast({
+          title: "تم تصحيح اسم المحافظة",
+          description: `تم تصحيح "${originalValue}" إلى "${correctedValue}"`,
+          variant: "default"
+        });
+      }
+    }
+    
     // استدعاء معالج تغيير النص الأصلي
     handleTextChange(id, field, value);
+    
+    // حفظ البيانات في localStorage بعد كل تغيير مهم
+    if (["code", "senderName", "phoneNumber", "province", "price"].includes(field)) {
+      setTimeout(() => {
+        const completedImages = images.filter(img => img.status === "completed");
+        if (completedImages.length > 0) {
+          saveToLocalStorage(completedImages);
+        }
+      }, 1000);
+    }
   };
 
   const handleFileChange = async (files: FileList | null) => {
@@ -214,6 +242,12 @@ export const useImageProcessing = () => {
           variant: "destructive"
         });
         return;
+      }
+      
+      // حفظ البيانات في localStorage قبل الإرسال للتأكد من أنها محفوظة
+      const completedImages = images.filter(img => img.status === "completed");
+      if (completedImages.length > 0) {
+        saveToLocalStorage(completedImages);
       }
       
       submitToApi(id, image);

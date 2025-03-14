@@ -1,18 +1,15 @@
 
 import { ImageData } from "@/types/ImageData";
 import { STORAGE_KEY, STORAGE_VERSION, BookmarkletExportData, BookmarkletItem, StorageStats } from "./types";
-import { convertImageToBookmarkletItem } from "./converter";
+import { convertImagesToBookmarkletItems } from "./converter";
 
 /**
  * حفظ بيانات الصور في localStorage
  */
 export const saveToLocalStorage = (images: ImageData[]): number => {
   try {
-    // تحويل فقط الصور المكتملة ذات البيانات الكافية
-    const items = images
-      .filter(img => img.status === "completed" && img.code && img.senderName && img.phoneNumber)
-      .map(img => convertImageToBookmarkletItem(img))
-      .filter(item => item !== null) as BookmarkletItem[];
+    // استخدام وظيفة التحويل المحسنة
+    const items = convertImagesToBookmarkletItems(images);
 
     if (items.length === 0) {
       return 0;
@@ -73,14 +70,15 @@ export const updateItemStatus = (id: string, status: "ready" | "pending" | "succ
 
     const updatedItems = data.items.map(item => {
       if (item.id === id) {
-        return { ...item, status, message };
+        return { ...item, status, message, lastUpdated: new Date().toISOString() };
       }
       return item;
     });
 
     const updatedData = {
       ...data,
-      items: updatedItems
+      items: updatedItems,
+      lastUpdated: new Date().toISOString()
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedData));
@@ -113,4 +111,16 @@ export const getStorageStats = (): StorageStats => {
     error: data.items.filter(item => item.status === "error").length,
     lastUpdate: new Date(data.exportDate)
   };
+};
+
+/**
+ * استرداد البيانات المخزنة حسب الحالة
+ */
+export const getItemsByStatus = (status?: "ready" | "pending" | "success" | "error"): BookmarkletItem[] => {
+  const data = getFromLocalStorage();
+  if (!data) return [];
+  
+  if (!status) return data.items;
+  
+  return data.items.filter(item => item.status === status);
 };

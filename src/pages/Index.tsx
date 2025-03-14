@@ -7,6 +7,8 @@ import LearningStats from "@/components/LearningStats";
 import BookmarkletGenerator from "@/components/BookmarkletGenerator";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
+import { getStorageStats } from "@/utils/bookmarklet";
+import { useEffect, useState } from "react";
 
 const Index = () => {
   const {
@@ -20,6 +22,20 @@ const Index = () => {
     handleDelete,
     handleSubmitToApi
   } = useImageProcessing();
+
+  const [bookmarkletStats, setBookmarkletStats] = useState({
+    total: 0,
+    ready: 0
+  });
+
+  // تحديث إحصائيات البوكماركلت عند تحميل الصفحة وعند تغيير الصور
+  useEffect(() => {
+    const stats = getStorageStats();
+    setBookmarkletStats({
+      total: stats.total,
+      ready: stats.ready
+    });
+  }, [images]);
 
   return (
     <div className="relative min-h-screen pb-20">
@@ -45,12 +61,14 @@ const Index = () => {
               </div>
             </div>
 
-            {/* عرض أداة Bookmarklet بشكل دائم إذا كانت هناك صور أو إذا كانت هناك بيانات مخزنة */}
-            {images.length > 0 && (
-              <div className="mb-8">
-                <BookmarkletGenerator images={images} />
-              </div>
-            )}
+            {/* عرض أداة Bookmarklet مع الإحصائيات المحدثة */}
+            <div className="mb-8">
+              <BookmarkletGenerator 
+                images={images} 
+                storedCount={bookmarkletStats.total}
+                readyCount={bookmarkletStats.ready}
+              />
+            </div>
 
             <ImagePreviewContainer 
               images={images}

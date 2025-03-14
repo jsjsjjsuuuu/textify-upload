@@ -15,19 +15,20 @@ export interface BookmarkletItem {
   exportDate: string;
   status: "ready" | "pending" | "success" | "error";
   message?: string;
+  lastUpdated?: string;
   // حقول إضافية اختيارية للاستخدامات المستقبلية
   notes?: string;
   category?: string;
   priority?: string;
-  // حقول إضافية مخصصة للموقع المستهدف
   address?: string;
+  recipientName?: string;
+  // حقول إضافية مخصصة للموقع المستهدف
   productType?: string;
   orderNumber?: string;
   delegateName?: string;
   region?: string;
   packageCount?: string;
   customerCode?: string;
-  recipientName?: string;
   reference?: string;
   destination?: string;
   shippingType?: string;
@@ -40,6 +41,7 @@ export interface BookmarkletItem {
 export interface BookmarkletExportData {
   version: string;
   exportDate: string;
+  lastUpdated?: string;
   items: BookmarkletItem[];
 }
 
@@ -49,4 +51,12 @@ export interface StorageStats {
   success: number;
   error: number;
   lastUpdate: Date | null;
+}
+
+// واجهة لتتبع العمليات في Bookmarklet
+export interface BookmarkletUsageStats {
+  totalExports: number;
+  successfulFills: number;
+  failedFills: number;
+  lastUsed: Date | null;
 }
