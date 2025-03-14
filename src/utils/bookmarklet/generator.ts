@@ -4,7 +4,7 @@
  * مع تحسين واجهة المستخدم وزيادة التوافق مع المواقع المختلفة
  */
 export const generateBookmarkletCode = (): string => {
-  // الكود المحسن للـ Bookmarklet
+  // الكود المحسن للـ Bookmarklet - يجب تقليصه قدر الإمكان مع الحفاظ على وظائفه
   const code = `
   (function() {
     // التحقق من وجود البيانات
@@ -15,7 +15,7 @@ export const generateBookmarkletCode = (): string => {
       alert("لا توجد بيانات مخزنة للاستخدام. يرجى تصدير البيانات أولاً.");
       return;
     }
-    
+
     try {
       const parsedData = JSON.parse(data);
       const items = parsedData.items || [];
@@ -27,145 +27,25 @@ export const generateBookmarkletCode = (): string => {
       
       // تحميل CSS لتحسين مظهر واجهة المستخدم
       const styles = document.createElement("style");
-      styles.innerHTML = \`
-        .bm-control {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-          direction: rtl;
-          position: fixed;
-          top: 10px;
-          right: 10px;
-          background: white;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          width: 320px;
-          z-index: 9999999;
-          max-height: 90vh;
-          overflow-y: auto;
-          border: 1px solid #eaeaea;
-        }
-        .bm-header {
-          padding: 12px 15px;
-          border-bottom: 1px solid #eaeaea;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .bm-title {
-          margin: 0;
-          font-size: 16px;
-          font-weight: 600;
-          color: #333;
-        }
-        .bm-close {
-          background: none;
-          border: none;
-          font-size: 16px;
-          cursor: pointer;
-          color: #666;
-          width: 24px;
-          height: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 4px;
-        }
-        .bm-close:hover {
-          background: #f5f5f5;
-          color: #333;
-        }
-        .bm-content {
-          padding: 12px 15px;
-        }
-        .bm-info {
-          margin-bottom: 15px;
-          font-size: 14px;
-          color: #555;
-          padding: 8px 12px;
-          background: #f9f9f9;
-          border-radius: 6px;
-        }
-        .bm-btn {
-          display: block;
-          width: 100%;
-          padding: 10px 15px;
-          border: none;
-          border-radius: 6px;
-          margin: 8px 0;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-          text-align: center;
-        }
-        .bm-btn-primary {
-          background: #4CAF50;
-          color: white;
-        }
-        .bm-btn-primary:hover {
-          background: #43A047;
-        }
-        .bm-btn-secondary {
-          background: #f1f1f1;
-          color: #333;
-        }
-        .bm-btn-secondary:hover {
-          background: #e5e5e5;
-        }
-        .bm-btn-danger {
-          background: #ff5252;
-          color: white;
-        }
-        .bm-btn-danger:hover {
-          background: #e64a4a;
-        }
-        .bm-item {
-          padding: 10px;
-          margin: 8px 0;
-          border: 1px solid #eaeaea;
-          border-radius: 6px;
-          background: #f9f9f9;
-        }
-        .bm-item-title {
-          font-weight: 600;
-          margin-bottom: 5px;
-          font-size: 14px;
-        }
-        .bm-item-detail {
-          font-size: 12px;
-          color: #666;
-        }
-        .bm-badge {
-          display: inline-block;
-          padding: 2px 6px;
-          border-radius: 12px;
-          font-size: 11px;
-          font-weight: 500;
-        }
-        .bm-badge-success {
-          background: #e6f7e6;
-          color: #43A047;
-        }
-        .bm-badge-pending {
-          background: #fff8e6;
-          color: #F9A825;
-        }
-        .bm-badge-error {
-          background: #ffebee;
-          color: #e64a4a;
-        }
-        .bm-loader {
-          display: inline-block;
-          width: 12px;
-          height: 12px;
-          border: 2px solid rgba(0,0,0,0.1);
-          border-radius: 50%;
-          border-top-color: #4CAF50;
-          animation: bm-spin 1s linear infinite;
-          margin-left: 8px;
-        }
-        @keyframes bm-spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
+      styles.textContent = \`
+        .bm-control{font-family:sans-serif;direction:rtl;position:fixed;top:10px;right:10px;background:white;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:320px;z-index:9999999;max-height:90vh;overflow-y:auto;border:1px solid #eaeaea}
+        .bm-header{padding:12px 15px;border-bottom:1px solid #eaeaea;display:flex;justify-content:space-between;align-items:center}
+        .bm-title{margin:0;font-size:16px;font-weight:600;color:#333}
+        .bm-close{background:none;border:none;font-size:16px;cursor:pointer;color:#666;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:4px}
+        .bm-close:hover{background:#f5f5f5;color:#333}
+        .bm-content{padding:12px 15px}
+        .bm-info{margin-bottom:15px;font-size:14px;color:#555;padding:8px 12px;background:#f9f9f9;border-radius:6px}
+        .bm-btn{display:block;width:100%;padding:10px 15px;border:none;border-radius:6px;margin:8px 0;cursor:pointer;font-size:14px;font-weight:500;text-align:center}
+        .bm-btn-primary{background:#4CAF50;color:white}
+        .bm-btn-primary:hover{background:#43A047}
+        .bm-btn-secondary{background:#f1f1f1;color:#333}
+        .bm-btn-secondary:hover{background:#e5e5e5}
+        .bm-item{padding:10px;margin:8px 0;border:1px solid #eaeaea;border-radius:6px;background:#f9f9f9}
+        .bm-item-title{font-weight:600;margin-bottom:5px;font-size:14px}
+        .bm-item-detail{font-size:12px;color:#666}
+        .bm-badge{display:inline-block;padding:2px 6px;border-radius:12px;font-size:11px;font-weight:500}
+        .bm-loader{display:inline-block;width:12px;height:12px;border:2px solid rgba(0,0,0,0.1);border-radius:50%;border-top-color:#4CAF50;animation:bm-spin 1s linear infinite;margin-left:8px}
+        @keyframes bm-spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
       \`;
       document.head.appendChild(styles);
       
@@ -229,13 +109,13 @@ export const generateBookmarkletCode = (): string => {
       actionsDiv.appendChild(fillFirstButton);
       
       // إضافة زر "إظهار جميع العناصر"
-      const fillAllButton = document.createElement("button");
-      fillAllButton.className = "bm-btn bm-btn-secondary";
-      fillAllButton.innerHTML = '<span>إظهار جميع العناصر</span>';
-      fillAllButton.onclick = function() {
+      const showAllButton = document.createElement("button");
+      showAllButton.className = "bm-btn bm-btn-secondary";
+      showAllButton.innerHTML = '<span>إظهار جميع العناصر</span>';
+      showAllButton.onclick = function() {
         showAllItems();
       };
-      actionsDiv.appendChild(fillAllButton);
+      actionsDiv.appendChild(showAllButton);
       
       content.appendChild(actionsDiv);
       
@@ -248,10 +128,11 @@ export const generateBookmarkletCode = (): string => {
       
       controlPanel.appendChild(content);
       document.body.appendChild(controlPanel);
-      
+
       // وظيفة تعبئة النموذج بشكل محسن
       function fillForm(item) {
-        // البحث عن حقول النموذج استنادًا إلى السمات والأسماء الشائعة
+        console.log("بدء ملء النموذج بالبيانات:", item);
+        // البحث عن حقول النموذج
         const fields = document.querySelectorAll('input, select, textarea, [contenteditable="true"]');
         console.log("وجدت", fields.length, "حقل إدخال");
         
@@ -277,20 +158,21 @@ export const generateBookmarkletCode = (): string => {
               case 'orderNumber': value = item.code || ''; break;
               case 'customerCode': value = item.customerCode || item.code || ''; break;
               case 'recipientName': value = item.recipientName || item.senderName || ''; break;
-              case 'region': value = item.region || item.province || ''; break;
+              default: break;
             }
             
             if (value && fillField(field, value)) {
               filledFields++;
+              console.log("تم ملء حقل", fieldType, "بقيمة:", value);
             }
           }
         });
         
-        // إضافة تأخير قصير ومحاولة ثانية للحقول التي قد تظهر بعد التفاعل مع الصفحة
+        // إضافة تأخير قصير ومحاولة ثانية للحقول
         setTimeout(() => {
           const newFields = document.querySelectorAll('input, select, textarea, [contenteditable="true"]');
           if (newFields.length > fields.length) {
-            console.log("تم اكتشاف", newFields.length - fields.length, "حقول جديدة بعد التأخير");
+            console.log("تم اكتشاف", newFields.length - fields.length, "حقول جديدة");
             
             // تحديد الحقول الجديدة فقط
             const existingIds = new Set(Array.from(fields).map(f => f.id || Math.random().toString()));
@@ -312,6 +194,7 @@ export const generateBookmarkletCode = (): string => {
                 
                 if (value && fillField(field, value)) {
                   filledFields++;
+                  console.log("تم ملء حقل جديد", fieldType, "بقيمة:", value);
                 }
               }
             });
@@ -324,7 +207,7 @@ export const generateBookmarkletCode = (): string => {
             // تحديث حالة العنصر في localStorage
             updateItemStatus(item.id, "success", "تم إدخال البيانات بنجاح");
           } else {
-            showNotification("لم نتمكن من العثور على حقول مناسبة. حاول الانتقال إلى صفحة إضافة شحنة أولاً.", "error");
+            showNotification("لم نتمكن من العثور على حقول مناسبة. تأكد من أنك في صفحة إضافة شحنة.", "error");
             
             // تحديث حالة العنصر في localStorage
             updateItemStatus(item.id, "error", "فشل في إدخال البيانات");
@@ -352,17 +235,8 @@ export const generateBookmarkletCode = (): string => {
               return item;
             });
             
-            // تحديث الإحصائيات
-            const stats = {
-              total: updatedItems.length,
-              ready: updatedItems.filter(i => !i.status || i.status === 'ready').length,
-              success: updatedItems.filter(i => i.status === 'success').length,
-              error: updatedItems.filter(i => i.status === 'error').length,
-              lastUpdate: new Date().toISOString()
-            };
-            
             storageData.items = updatedItems;
-            storageData.stats = stats;
+            storageData.lastUpdated = new Date().toISOString();
             
             localStorage.setItem(storageKey, JSON.stringify(storageData));
             console.log("تم تحديث حالة العنصر:", itemId, status);
@@ -374,64 +248,41 @@ export const generateBookmarkletCode = (): string => {
       
       // وظيفة تخمين نوع الحقل
       function guessFieldType(field) {
+        const searchables = [];
+        
         // جمع كل المعرّفات المحتملة للحقل
-        let name = '';
-        let id = '';
-        let className = '';
-        let placeholderText = '';
+        if (field.name) searchables.push(field.name.toLowerCase());
+        if (field.id) searchables.push(field.id.toLowerCase());
+        if (field.className && typeof field.className === 'string') searchables.push(field.className.toLowerCase());
+        if (field.placeholder) searchables.push(field.placeholder.toLowerCase());
         
-        // التحقق مما إذا كانت هذه الخصائص متوفرة في الحقل
-        if (field.name !== undefined) {
-          name = field.name.toLowerCase();
-        }
-        
-        if (field.id !== undefined) {
-          id = field.id.toLowerCase();
-        }
-        
-        if (field.className !== undefined && typeof field.className === 'string') {
-          className = field.className.toLowerCase();
-        }
-        
-        if (field.placeholder !== undefined) {
-          placeholderText = field.placeholder.toLowerCase();
-        }
-        
-        // البحث عن عنصر label المرتبط بالحقل إذا كان موجودًا
-        let labelText = '';
+        // البحث عن عنصر label المرتبط
         if (field.id) {
-          const associatedLabel = document.querySelector('label[for="' + field.id + '"]');
-          if (associatedLabel) {
-            labelText = associatedLabel.textContent ? associatedLabel.textContent.toLowerCase() : '';
-          }
+          const label = document.querySelector('label[for="' + field.id + '"]');
+          if (label && label.textContent) searchables.push(label.textContent.toLowerCase());
         }
         
-        // البحث في النص المجاور عن أدلة على محتوى الحقل
-        let nearbyText = '';
+        // البحث في النص المحيط
         let parent = field.parentElement;
-        for (let i = 0; i < 3 && parent; i++) {
-          nearbyText += parent.textContent ? parent.textContent.toLowerCase() : '';
-          parent = parent.parentElement;
-        }
+        if (parent && parent.textContent) searchables.push(parent.textContent.toLowerCase());
         
-        // جمع كل المدخلات المحتملة للبحث
-        const searchables = [name, id, className, placeholderText, labelText, nearbyText];
+        // تجميع النص للبحث
         const searchText = searchables.join(' ');
         
-        // الكلمات المفتاحية للبحث
+        // الكلمات المفتاحية للبحث - مبسطة للتوافق
         const patterns = [
-          { type: 'code', keywords: ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة', 'رقم الطلب', 'order', 'tracking', 'reference', 'ref', 'الوصل', 'الطلب', 'الشحنة', 'المرجع', 'تتبع', 'الرمز', 'تعقب', 'كود العميل', 'track', 'tracking number', 'shipment number', 'waybill', 'رقم التتبع', 'رقم المرجع'] },
-          { type: 'senderName', keywords: ['sender', 'name', 'customer', 'اسم', 'المرسل', 'الزبون', 'العميل', 'المستلم', 'الاسم', 'اسم المستلم', 'اسم العميل', 'recipient', 'customer name', 'full name', 'الاسم الكامل', 'الشخص', 'المستفيد', 'consignee', 'اسم الزبون', 'حدد العميل', 'اسم المستفيد'] },
-          { type: 'phoneNumber', keywords: ['phone', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم الهاتف', 'تليفون', 'رقم الجوال', 'tel', 'telephone', 'contact', 'cell', 'رقم الاتصال', 'رقم التواصل', 'اتصال', 'رقم المحمول', 'هاتف الزبون', 'الرقم', 'الموبايل'] },
-          { type: 'province', keywords: ['province', 'state', 'city', 'region', 'محافظة', 'المحافظة', 'مدينة', 'منطقة', 'المدينة', 'المنطقة', 'الولاية', 'البلدة', 'البلد', 'country', 'المكان', 'الموقع', 'location', 'منطقة التسليم', 'area', 'delivery area', 'destination', 'مكان التسليم'] },
-          { type: 'price', keywords: ['price', 'amount', 'cost', 'سعر', 'المبلغ', 'التكلفة', 'قيمة', 'دينار', 'المال', 'النقود', 'الثمن', 'الكلفة', 'القيمة', 'value', 'money', 'currency', 'العملة', 'cod', 'cash on delivery', 'الدفع عند الاستلام', 'مبلغ التحصيل', 'مبلغ', 'المبلغ الكلي', 'قيمة البضاعة'] },
-          { type: 'address', keywords: ['address', 'location', 'street', 'عنوان', 'الموقع', 'الشارع', 'التفاصيل', 'details', 'delivery address', 'shipping address', 'عنوان التسليم', 'عنوان الشحن', 'العنوان', 'مكان التسليم', 'تفاصيل العنوان', 'delivery location', 'المنطقة', 'التفاصيل', 'العنوان بالتفصيل'] },
-          { type: 'notes', keywords: ['notes', 'comments', 'ملاحظات', 'تعليقات', 'توضيح', 'explanation', 'additional', 'extra', 'إضافي', 'delivery notes', 'ملاحظات التسليم', 'ملاحظة', 'شرح', 'تفاصيل إضافية', 'additional details', 'ملاحظات خاصة', 'المحلظات', 'تعليمات خاصة'] },
-          { type: 'productType', keywords: ['product', 'item', 'منتج', 'صنف', 'نوع البضاعة', 'نوع المنتج', 'نوع', 'البضاعة', 'المنتج', 'بضاعة', 'سلعة', 'commodity', 'goods', 'merchandise', 'product type', 'item type', 'محتويات', 'وصف المنتج', 'طبيعة الشحنة'] },
-          { type: 'orderNumber', keywords: ['order number', 'invoice number', 'receipt number', 'رقم الطلب', 'رقم الفاتورة', 'رقم الإيصال', 'رقم الوصل', 'الوصل', 'رقم العملية', 'رقم التتبع', 'tracking number', 'waybill', 'رقم البوليصة', 'رقم الشحنة', 'رقم الشحن'] },
+          { type: 'code', keywords: ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة', 'رقم الطلب', 'order', 'tracking', 'reference', 'ref'] },
+          { type: 'senderName', keywords: ['sender', 'name', 'customer', 'اسم', 'المرسل', 'الزبون', 'العميل', 'المستلم', 'الاسم'] },
+          { type: 'phoneNumber', keywords: ['phone', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم الهاتف', 'تليفون', 'رقم الجوال', 'tel'] },
+          { type: 'province', keywords: ['province', 'state', 'city', 'region', 'محافظة', 'المحافظة', 'مدينة', 'منطقة', 'المدينة'] },
+          { type: 'price', keywords: ['price', 'amount', 'cost', 'سعر', 'المبلغ', 'التكلفة', 'قيمة', 'دينار', 'المال'] },
+          { type: 'address', keywords: ['address', 'location', 'street', 'عنوان', 'الموقع', 'الشارع', 'التفاصيل'] },
+          { type: 'notes', keywords: ['notes', 'comments', 'ملاحظات', 'تعليقات', 'توضيح', 'explanation'] },
+          { type: 'companyName', keywords: ['company', 'business', 'vendor', 'شركة', 'الشركة', 'المتجر', 'البائع'] },
+          { type: 'recipientName', keywords: ['recipient', 'receiver', 'المستلم', 'اسم المستلم', 'من يستلم'] }
         ];
         
-        // البحث عن أفضل تطابق - مع تحسين آلية المطابقة
+        // البحث عن أفضل تطابق
         for (const pattern of patterns) {
           for (const keyword of pattern.keywords) {
             if (searchText.includes(keyword)) {
@@ -440,21 +291,16 @@ export const generateBookmarkletCode = (): string => {
           }
         }
         
-        // إذا لم نجد تطابقًا واضحًا، نحاول تخمين النوع من خصائص الحقل
-        if (field.type === 'tel' || name.includes('phone') || name.includes('mobile')) {
-          return 'phoneNumber';
-        } else if (field.type === 'number' && (name.includes('price') || name.includes('amount'))) {
-          return 'price';
-        }
+        // تخمين بناءً على خصائص الحقل
+        if (field.type === 'tel') return 'phoneNumber';
+        if (field.type === 'number' && searchText.includes('price')) return 'price';
         
         return 'unknown';
       }
       
-      // وظيفة ملء الحقل بالقيمة وإثارة الأحداث المناسبة
+      // وظيفة ملء الحقل بالقيمة
       function fillField(field, value) {
-        if (!value || value.trim() === '') {
-          return false;
-        }
+        if (!value || value.trim() === '') return false;
         
         try {
           // التعامل مع القوائم المنسدلة
@@ -463,29 +309,14 @@ export const generateBookmarkletCode = (): string => {
             const options = Array.from(select.options);
             const cleanValue = value.trim().toLowerCase();
             
-            // محاولة العثور على تطابق دقيق أولاً
+            // محاولة العثور على تطابق
             let found = false;
-            options.forEach(option => {
+            for (const option of options) {
               const optionText = option.text.toLowerCase();
               if (optionText === cleanValue || optionText.includes(cleanValue)) {
                 select.value = option.value;
                 found = true;
-              }
-            });
-            
-            // إذا لم نجد تطابقًا دقيقًا، نبحث عن تطابق جزئي
-            if (!found) {
-              const words = cleanValue.split(' ');
-              for (const option of options) {
-                const optionText = option.text.toLowerCase();
-                for (const word of words) {
-                  if (word.length > 2 && optionText.includes(word)) {
-                    select.value = option.value;
-                    found = true;
-                    break;
-                  }
-                }
-                if (found) break;
+                break;
               }
             }
             
@@ -509,11 +340,13 @@ export const generateBookmarkletCode = (): string => {
             field.dispatchEvent(event);
           });
           
-          // محاولة تنشيط الحقل (للمواقع التي قد تتطلب ذلك)
+          // محاولة تنشيط الحقل
           try {
             field.focus();
             field.click();
-          } catch (e) {}
+          } catch (e) {
+            console.warn("لم يمكن تنشيط الحقل:", e);
+          }
           
           return true;
         } catch (e) {
@@ -535,7 +368,7 @@ export const generateBookmarkletCode = (): string => {
         notification.style.zIndex = "10000";
         notification.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
         notification.style.direction = "rtl";
-        notification.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        notification.style.fontFamily = "sans-serif";
         
         if (type === "success") {
           notification.style.backgroundColor = "#4CAF50";
@@ -551,7 +384,7 @@ export const generateBookmarkletCode = (): string => {
         setTimeout(() => {
           notification.style.opacity = "0";
           notification.style.transition = "opacity 0.5s";
-          setTimeout(() => document.body.removeChild(notification), 500);
+          setTimeout(() => notification.parentNode && document.body.removeChild(notification), 500);
         }, 3000);
       }
       
@@ -562,7 +395,7 @@ export const generateBookmarkletCode = (): string => {
         // تبديل عرض قائمة العناصر
         if (container.style.display === "none") {
           container.style.display = "block";
-          fillAllButton.innerHTML = '<span>إخفاء العناصر</span>';
+          showAllButton.innerHTML = '<span>إخفاء العناصر</span>';
           
           // إنشاء قائمة العناصر
           container.innerHTML = '';
@@ -581,7 +414,6 @@ export const generateBookmarkletCode = (): string => {
               رقم الهاتف: \${item.phoneNumber || 'غير محدد'}<br>
               المحافظة: \${item.province || 'غير محددة'}<br>
               \${item.price ? 'السعر: ' + item.price : ''}
-              \${item.status ? '<br>الحالة: ' + (item.status === 'success' ? 'تم الإدخال' : item.status === 'error' ? 'فشل الإدخال' : 'جاهز') : ''}
             \`;
             
             const actionBtn = document.createElement("button");
@@ -607,7 +439,7 @@ export const generateBookmarkletCode = (): string => {
           });
         } else {
           container.style.display = "none";
-          fillAllButton.innerHTML = '<span>إظهار جميع العناصر</span>';
+          showAllButton.innerHTML = '<span>إظهار جميع العناصر</span>';
         }
       }
     } catch (error) {
@@ -617,20 +449,10 @@ export const generateBookmarkletCode = (): string => {
   })();
   `;
   
-  // تنظيف الكود بشكل محسن للتوافق مع المتصفحات المختلفة
-  // استخدام encodeURIComponent لضمان تشفير جميع الأحرف الخاصة بشكل صحيح
-  let cleanedCode = code.replace(/\s{2,}/g, ' ').replace(/\n/g, '').trim();
-  
-  // للتوافق مع جميع المتصفحات، نتأكد من تشفير الرمز بشكل صحيح
-  let bookmarkletCode = `javascript:${encodeURIComponent('(' + cleanedCode + ')();')}`;
-  
-  // إضافة تعليمات تصحيحية للمستخدم في حالة كان الرابط يتجاوز الحد المسموح به في بعض المتصفحات
-  if (bookmarkletCode.length > 5000) {
-    console.warn("تنبيه: رمز البوكماركلت كبير جدًا وقد لا يعمل في بعض المتصفحات");
-    // تقليص الكود أكثر بإزالة كل التعليقات وتقليل CSS
-    cleanedCode = cleanedCode.replace(/\/\/.*?(?=\n|$)/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-    bookmarkletCode = `javascript:${encodeURIComponent('(' + cleanedCode + ')();')}`;
-  }
+  // استخدام تنسيق مباشر وبسيط للرابط
+  // هذا يتجنب استخدام encodeURIComponent الذي قد يسبب مشاكل في بعض الأحيان
+  const cleanedCode = code.replace(/\s{2,}/g, ' ').replace(/\n/g, '').trim();
+  const bookmarkletCode = `javascript:${cleanedCode}`;
   
   return bookmarkletCode;
 };

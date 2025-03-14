@@ -28,15 +28,45 @@ const Index = () => {
     ready: 0
   });
 
-  // تحديث إحصائيات البوكماركلت عند تحميل الصفحة فقط، وليس عند كل تغيير في الصور
+  // تحديث إحصائيات البوكماركلت عند تحميل الصفحة وكل دقيقة
   useEffect(() => {
-    const stats = getStorageStats();
-    setBookmarkletStats({
-      total: stats.total,
-      ready: stats.ready
-    });
-    // نضيف مصفوفة تبعيات فارغة لتشغيل الكود مرة واحدة فقط عند تحميل المكون
+    // الدالة التي تقوم بتحديث الإحصائيات
+    const updateStats = () => {
+      console.log("تحديث إحصائيات البوكماركلت");
+      const stats = getStorageStats();
+      setBookmarkletStats({
+        total: stats.total,
+        ready: stats.ready
+      });
+    };
+
+    // تحديث الإحصائيات عند التحميل الأولي
+    updateStats();
+
+    // إعداد مؤقت لتحديث الإحصائيات كل دقيقة
+    const intervalId = setInterval(updateStats, 60000);
+
+    // تنظيف المؤقت عند إزالة المكون
+    return () => {
+      clearInterval(intervalId);
+    };
   }, []);
+
+  // تحديث إحصائيات البوكماركلت عند تغيير الصور (بتأخير لتجنب التحديثات المتكررة)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      console.log("تحديث إحصائيات البوكماركلت بعد تغيير الصور");
+      const stats = getStorageStats();
+      setBookmarkletStats({
+        total: stats.total,
+        ready: stats.ready
+      });
+    }, 1000);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [images]);
 
   return (
     <div className="relative min-h-screen pb-20">

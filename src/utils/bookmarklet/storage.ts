@@ -12,6 +12,7 @@ export const saveToLocalStorage = (images: ImageData[]): number => {
     const items = convertImagesToBookmarkletItems(images);
 
     if (items.length === 0) {
+      console.log("لا توجد عناصر لحفظها بعد التحويل");
       return 0;
     }
 
@@ -20,6 +21,10 @@ export const saveToLocalStorage = (images: ImageData[]): number => {
       exportDate: new Date().toISOString(),
       items
     };
+
+    // طباعة البيانات للتشخيص
+    console.log("حفظ البيانات إلى localStorage:", exportData);
+    console.log("عدد العناصر:", items.length);
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(exportData));
     return items.length;
@@ -35,9 +40,14 @@ export const saveToLocalStorage = (images: ImageData[]): number => {
 export const getFromLocalStorage = (): BookmarkletExportData | null => {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return null;
+    if (!data) {
+      console.log("لا توجد بيانات مخزنة في localStorage");
+      return null;
+    }
     
-    return JSON.parse(data) as BookmarkletExportData;
+    const parsedData = JSON.parse(data) as BookmarkletExportData;
+    console.log("قراءة البيانات من localStorage:", parsedData);
+    return parsedData;
   } catch (error) {
     console.error("خطأ في قراءة البيانات:", error);
     return null;
@@ -50,7 +60,9 @@ export const getFromLocalStorage = (): BookmarkletExportData | null => {
 export const getStoredItemsCount = (): number => {
   const data = getFromLocalStorage();
   if (!data) return 0;
-  return data.items.length;
+  const count = data.items.length;
+  console.log("عدد العناصر المخزنة:", count);
+  return count;
 };
 
 /**
@@ -58,6 +70,7 @@ export const getStoredItemsCount = (): number => {
  */
 export const clearStoredItems = (): void => {
   localStorage.removeItem(STORAGE_KEY);
+  console.log("تم مسح البيانات المخزنة");
 };
 
 /**
@@ -82,6 +95,7 @@ export const updateItemStatus = (id: string, status: "ready" | "pending" | "succ
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedData));
+    console.log("تم تحديث حالة العنصر:", id, status);
     return true;
   } catch (error) {
     console.error("خطأ في تحديث حالة العنصر:", error);
@@ -104,13 +118,16 @@ export const getStorageStats = (): StorageStats => {
     };
   }
   
-  return {
+  const stats = {
     total: data.items.length,
     ready: data.items.filter(item => item.status === "ready").length,
     success: data.items.filter(item => item.status === "success").length,
     error: data.items.filter(item => item.status === "error").length,
-    lastUpdate: new Date(data.exportDate)
+    lastUpdate: data.exportDate ? new Date(data.exportDate) : null
   };
+  
+  console.log("إحصائيات التخزين:", stats);
+  return stats;
 };
 
 /**

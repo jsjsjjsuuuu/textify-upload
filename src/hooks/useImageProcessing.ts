@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { useImageState } from "@/hooks/useImageState";
@@ -7,7 +8,7 @@ import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useSubmitToApi } from "@/hooks/useSubmitToApi";
 import { createReliableBlobUrl, formatPrice } from "@/lib/gemini/utils";
 import { correctProvinceName } from "@/utils/provinces";
-import { saveToLocalStorage } from "@/utils/bookmarklet";
+import { saveToLocalStorage, getStorageStats, getStoredItemsCount } from "@/utils/bookmarklet";
 
 export const useImageProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -19,8 +20,24 @@ export const useImageProcessing = () => {
   const { useGemini, processWithGemini } = useGeminiProcessing();
   const { isSubmitting, handleSubmitToApi: submitToApi } = useSubmitToApi(updateImage);
 
-  // تخصيص معالج تغيير النص لتنسيق السعر تلقائيًا
+  // حفظ البيانات المكتملة في localStorage
+  useEffect(() => {
+    // استخراج الصور المكتملة فقط
+    const completedImages = images.filter(img => 
+      img.status === "completed" && img.code && img.senderName && img.phoneNumber
+    );
+    
+    // حفظ البيانات فقط إذا كان هناك صور مكتملة
+    if (completedImages.length > 0) {
+      console.log("حفظ البيانات المكتملة في localStorage:", completedImages.length, "صورة");
+      saveToLocalStorage(completedImages);
+    }
+  }, [images]);
+
+  // تخصيص معالج تغيير النص لتنسيق السعر وتنظيف رقم الهاتف تلقائيًا
   const handleCustomTextChange = (id: string, field: string, value: string) => {
+    console.log(`معالجة تغيير النص: ${field} = "${value}" للصورة ${id}`);
+    
     // إذا كان الحقل هو السعر، نتحقق من التنسيق
     if (field === "price" && value) {
       const originalValue = value;
@@ -76,22 +93,12 @@ export const useImageProcessing = () => {
     
     // استدعاء معالج تغيير النص الأصلي
     handleTextChange(id, field, value);
-    
-    // حفظ البيانات في localStorage بعد كل تغيير مهم
-    if (["code", "senderName", "phoneNumber", "province", "price"].includes(field)) {
-      setTimeout(() => {
-        const completedImages = images.filter(img => img.status === "completed");
-        if (completedImages.length > 0) {
-          saveToLocalStorage(completedImages);
-        }
-      }, 1000);
-    }
   };
 
   const handleFileChange = async (files: FileList | null) => {
-    console.log("handleFileChange called with files:", files);
+    console.log("معالجة الملفات:", files?.length);
     if (!files || files.length === 0) {
-      console.log("No files selected");
+      console.log("لم يتم اختيار ملفات");
       return;
     }
     
@@ -99,17 +106,17 @@ export const useImageProcessing = () => {
     setProcessingProgress(0);
     
     const fileArray = Array.from(files);
-    console.log("Processing", fileArray.length, "files");
+    console.log("معالجة", fileArray.length, "ملفات");
     
     const totalFiles = fileArray.length;
     let processedFiles = 0;
     
     const startingNumber = images.length > 0 ? Math.max(...images.map(img => img.number || 0)) + 1 : 1;
-    console.log("Starting number for new images:", startingNumber);
+    console.log("رقم بداية الصور الجديدة:", startingNumber);
     
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
-      console.log("Processing file:", file.name, "type:", file.type);
+      console.log("معالجة الملف:", file.name, "النوع:", file.type);
       
       if (!file.type.startsWith("image/")) {
         toast({
@@ -117,13 +124,13 @@ export const useImageProcessing = () => {
           description: "يرجى تحميل صور فقط",
           variant: "destructive"
         });
-        console.log("File is not an image, skipping");
+        console.log("الملف ليس صورة، تخطي");
         continue;
       }
       
-      // Create a more reliable blob URL
+      // إنشاء عنوان URL أكثر موثوقية للكائن
       const previewUrl = createReliableBlobUrl(file);
-      console.log("Created preview URL:", previewUrl);
+      console.log("تم إنشاء عنوان URL للمعاينة:", previewUrl);
       
       if (!previewUrl) {
         toast({
@@ -145,20 +152,20 @@ export const useImageProcessing = () => {
       };
       
       addImage(newImage);
-      console.log("Added new image to state with ID:", newImage.id);
+      console.log("تمت إضافة صورة جديدة إلى الحالة بالمعرف:", newImage.id);
       
       try {
         let processedImage: ImageData;
         
         if (useGemini) {
-          console.log("Using Gemini API for extraction");
+          console.log("استخدام Gemini API للاستخراج");
           processedImage = await processWithGemini(
             file, 
             newImage, 
             processWithOcr
           );
         } else {
-          console.log("No Gemini API key, using OCR directly");
+          console.log("لا يوجد مفتاح Gemini API، استخدام OCR مباشرة");
           processedImage = await processWithOcr(file, newImage);
         }
         
@@ -182,9 +189,17 @@ export const useImageProcessing = () => {
           }
         }
         
+        // تحديث حالة الصورة إلى "مكتملة" إذا كانت تحتوي على جميع البيانات الأساسية
+        if (processedImage.code && processedImage.senderName && processedImage.phoneNumber) {
+          processedImage.status = "completed";
+        } else {
+          processedImage.status = "pending";
+        }
+        
         updateImage(newImage.id, processedImage);
+        console.log("تم تحديث الصورة بالبيانات المستخرجة:", newImage.id);
       } catch (error) {
-        console.error("General error in image processing:", error);
+        console.error("خطأ عام في معالجة الصورة:", error);
         updateImage(newImage.id, { status: "error" });
         
         toast({
@@ -196,12 +211,12 @@ export const useImageProcessing = () => {
       
       processedFiles++;
       const progress = Math.round(processedFiles / totalFiles * 100);
-      console.log("Processing progress:", progress + "%");
+      console.log("تقدم المعالجة:", progress + "%");
       setProcessingProgress(progress);
     }
     
     setIsProcessing(false);
-    console.log("Image processing completed");
+    console.log("اكتملت معالجة الصور");
     
     if (processedFiles > 0) {
       toast({
@@ -209,6 +224,16 @@ export const useImageProcessing = () => {
         description: `تم معالجة ${processedFiles} صورة${useGemini ? " باستخدام Gemini AI" : ""}`,
         variant: "default"
       });
+      
+      // تحديث إحصائيات التخزين
+      console.log("إعادة حفظ البيانات في localStorage");
+      const completedImages = images.filter(img => 
+        img.status === "completed" && img.code && img.senderName && img.phoneNumber
+      );
+      
+      if (completedImages.length > 0) {
+        saveToLocalStorage(completedImages);
+      }
     }
   };
 
@@ -244,10 +269,9 @@ export const useImageProcessing = () => {
         return;
       }
       
-      // حفظ البيانات في localStorage قبل الإرسال للتأكد من أنها محفوظة
-      const completedImages = images.filter(img => img.status === "completed");
-      if (completedImages.length > 0) {
-        saveToLocalStorage(completedImages);
+      // التأكد من تحديث حالة الصورة إلى "مكتملة" قبل الإرسال
+      if (image.code && image.senderName && image.phoneNumber && image.status !== "completed") {
+        updateImage(id, { status: "completed" });
       }
       
       submitToApi(id, image);

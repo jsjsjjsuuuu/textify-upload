@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { ArrowDown, Copy, Trash, BookmarkIcon, Save, FileBox, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react";
 
-// تحديث واجهة الخصائص لتشمل storedCount و readyCount
+// تحديث واجهة الخصائص
 interface BookmarkletGeneratorProps {
   images: ImageData[];
   storedCount?: number;
@@ -30,12 +31,32 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
     error: 0,
     lastUpdate: null as Date | null
   });
+  const [isGeneratingUrl, setIsGeneratingUrl] = useState(false);
 
   // تحديث عدد العناصر المخزنة والكود عند التحميل مرة واحدة فقط
   useEffect(() => {
+    console.log("BookmarkletGenerator: تحميل البيانات الأولية");
     const currentCount = getStoredItemsCount();
     setStoredCount(currentCount);
-    setBookmarkletUrl(generateBookmarkletCode());
+    
+    // تأخير توليد رابط البوكماركلت للتأكد من استقرار واجهة المستخدم أولاً
+    setIsGeneratingUrl(true);
+    setTimeout(() => {
+      try {
+        const url = generateBookmarkletCode();
+        setBookmarkletUrl(url);
+        console.log("تم إنشاء رابط البوكماركلت بطول:", url.length);
+      } catch (error) {
+        console.error("خطأ في إنشاء رابط البوكماركلت:", error);
+        toast({
+          title: "خطأ في إنشاء رابط الأداة",
+          description: "حدث خطأ أثناء توليد رابط البوكماركلت. حاول مرة أخرى.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsGeneratingUrl(false);
+      }
+    }, 500);
     
     const currentStats = getStorageStats();
     setStats(currentStats);
@@ -44,6 +65,7 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
   // تحديث القيم عندما تتغير الخصائص من الأعلى
   useEffect(() => {
     if (initialStoredCount !== storedCount) {
+      console.log("تحديث من الخصائص:", { initialStoredCount, initialReadyCount });
       setStoredCount(initialStoredCount);
       setStats(prev => ({
         ...prev,
@@ -51,23 +73,40 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
         ready: initialReadyCount
       }));
     }
-  }, [initialStoredCount, initialReadyCount]); // التبعيات الصحيحة
+  }, [initialStoredCount, initialReadyCount, storedCount]); // التبعيات الصحيحة
 
   // تحديث عدد العناصر المخزنة
   const updateStoredCount = () => {
     const count = getStoredItemsCount();
+    console.log("تحديث عدد العناصر المخزنة:", count);
     setStoredCount(count);
   };
   
   // تحديث إحصائيات التخزين
   const updateStats = () => {
     const currentStats = getStorageStats();
+    console.log("تحديث إحصائيات التخزين:", currentStats);
     setStats(currentStats);
   };
 
   // تصدير البيانات إلى localStorage
   const handleExport = () => {
-    const count = saveToLocalStorage(images);
+    console.log("تصدير البيانات:", images.length, "صورة");
+    
+    // تصفية الصور للتأكد من وجود البيانات الأساسية
+    const validImages = images.filter(img => img.code && img.senderName && img.phoneNumber);
+    console.log("عدد الصور الصالحة:", validImages.length);
+    
+    if (validImages.length === 0) {
+      toast({
+        title: "لا توجد بيانات كاملة",
+        description: "تأكد من إكمال الحقول الأساسية (الكود، الاسم، رقم الهاتف) لصورة واحدة على الأقل",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const count = saveToLocalStorage(validImages);
     updateStoredCount();
     updateStats();
     
@@ -80,7 +119,7 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
     } else {
       toast({
         title: "تعذر تصدير البيانات",
-        description: "تأكد من وجود بيانات كاملة (الكود، الاسم، رقم الهاتف، المحافظة)",
+        description: "تأكد من وجود بيانات كاملة (الكود، الاسم، رقم الهاتف)",
         variant: "destructive"
       });
     }
@@ -100,6 +139,15 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
 
   // نسخ رابط Bookmarklet
   const handleCopyBookmarklet = () => {
+    if (!bookmarkletUrl) {
+      toast({
+        title: "الرابط غير جاهز",
+        description: "جاري إنشاء الرابط، انتظر لحظة من فضلك",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     navigator.clipboard.writeText(bookmarkletUrl).then(() => {
       toast({
         title: "تم نسخ الرابط",
@@ -111,14 +159,35 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
   
   // إعادة إنشاء كود Bookmarklet
   const handleRegenerateBookmarklet = () => {
-    setBookmarkletUrl(generateBookmarkletCode());
-    toast({
-      title: "تم إعادة إنشاء الرابط",
-      description: "تم تحديث رمز Bookmarklet بأحدث التغييرات",
-      variant: "default"
-    });
+    try {
+      setIsGeneratingUrl(true);
+      const newUrl = generateBookmarkletCode();
+      setBookmarkletUrl(newUrl);
+      setIsGeneratingUrl(false);
+      
+      toast({
+        title: "تم إعادة إنشاء الرابط",
+        description: "تم تحديث رمز Bookmarklet بأحدث التغييرات",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("خطأ في إعادة إنشاء رابط البوكماركلت:", error);
+      setIsGeneratingUrl(false);
+      
+      toast({
+        title: "خطأ في إعادة إنشاء الرابط",
+        description: "حدث خطأ أثناء توليد رابط البوكماركلت. حاول مرة أخرى.",
+        variant: "destructive"
+      });
+    }
   };
 
+  // معالجة السحب والإفلات للبوكماركلت
+  const handleDragStart = (e: React.DragEvent<HTMLAnchorElement>) => {
+    // لا نحتاج لأي إجراء خاص هنا، المتصفح يتعامل مع السحب بشكل طبيعي
+    console.log("بدء سحب رابط البوكماركلت");
+  };
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -177,7 +246,7 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
                     <div className="flex items-center">
                       <span className="text-muted-foreground">العناصر المكتملة:</span>
                       <Badge variant="outline" className="ml-2">
-                        {images.filter(img => img.status === "completed").length || 0}
+                        {images.filter(img => img.code && img.senderName && img.phoneNumber).length || 0}
                       </Badge>
                     </div>
                     <div className="flex items-center">
@@ -233,52 +302,47 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
             {/* قسم إعداد Bookmarklet */}
             <TabsContent value="bookmarklet">
               <div className="space-y-4">
-                <div className="bg-secondary/30 rounded-lg p-4">
-                  <h3 className="text-sm font-medium mb-2">كيفية الاستخدام:</h3>
-                  <ol className="text-sm space-y-2 text-muted-foreground">
-                    <li>1. اسحب الرابط أدناه إلى شريط الإشارات المرجعية/المفضلة في المتصفح</li>
-                    <li>2. قم بفتح موقع شركة التوصيل وتسجيل الدخول</li>
-                    <li>3. انقر على الرابط المحفوظ في شريط الإشارات المرجعية لتشغيل الأداة</li>
-                    <li>4. استخدم لوحة التحكم لإدخال البيانات تلقائيًا</li>
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium mb-2 flex items-center">
+                    <AlertTriangle className="h-4 w-4 mr-2 text-amber-600" />
+                    هام - تأكد من إتمام هذه الخطوات بالترتيب:
+                  </h3>
+                  <ol className="text-sm space-y-2 list-decimal list-inside text-amber-700 dark:text-amber-400">
+                    <li><strong>قم بتصدير البيانات أولاً</strong> في صفحة "تصدير البيانات"</li>
+                    <li><strong>اسحب</strong> الرابط أدناه إلى شريط الإشارات المرجعية/المفضلة في المتصفح</li>
+                    <li>انتقل إلى <strong>موقع شركة التوصيل</strong> وسجل الدخول</li>
+                    <li>انقر على <strong>رابط أداة نقل البيانات</strong> في شريط الإشارات المرجعية</li>
                   </ol>
-                  <div className="mt-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-md p-2">
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      <strong>ملاحظة:</strong> شريط الإشارات المرجعية (Bookmarks) يسمى أيضًا "المفضلة" في بعض المتصفحات، وهو الشريط الذي يظهر أعلى المتصفح ويحتوي على روابط المواقع المحفوظة.
-                    </p>
-                  </div>
                 </div>
                 
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium">رابط الأداة (Bookmarklet):</h3>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setShowAdvanced(!showAdvanced)}
-                      className="text-xs h-7 px-2"
-                    >
-                      {showAdvanced ? "إخفاء الخيارات المتقدمة" : "خيارات متقدمة"}
-                    </Button>
-                  </div>
+                <div className="bg-secondary/30 rounded-lg p-4">
+                  <h3 className="text-sm font-medium mb-3">كيفية إضافة الأداة للمتصفح:</h3>
                   
                   <div className="flex items-center">
                     <div className="flex-1 relative">
-                      <div className="border rounded-md px-3 py-2 bg-muted text-sm truncate overflow-hidden">
+                      <div className="border rounded-md px-3 py-2 bg-muted text-sm truncate overflow-hidden text-center relative">
                         <ArrowDown className="absolute top-2 left-2 h-4 w-4 text-muted-foreground animate-bounce" />
-                        <a 
-                          href={bookmarkletUrl} 
-                          className="text-brand-coral hover:text-brand-coral/80 hover:underline font-mono"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            toast({
-                              title: "اسحب الرابط إلى شريط الإشارات المرجعية",
-                              description: "لا تنقر على الرابط، بل اسحبه إلى شريط الإشارات المرجعية (المفضلة) في متصفحك",
-                              variant: "default"
-                            });
-                          }}
-                        >
-                          أداة نقل البيانات
-                        </a>
+                        
+                        {isGeneratingUrl ? (
+                          <span className="text-muted-foreground">جاري إنشاء الرابط...</span>
+                        ) : (
+                          <a 
+                            href={bookmarkletUrl} 
+                            className="text-brand-coral hover:text-brand-coral/80 hover:underline font-mono"
+                            draggable="true"
+                            onDragStart={handleDragStart}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toast({
+                                title: "اسحب الرابط إلى شريط المفضلة",
+                                description: "لا تنقر على الرابط، بل اسحبه إلى شريط الإشارات المرجعية (المفضلة) في متصفحك",
+                                variant: "default"
+                              });
+                            }}
+                          >
+                            أداة نقل البيانات
+                          </a>
+                        )}
                       </div>
                     </div>
                     <Button 
@@ -286,15 +350,19 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
                       size="sm"
                       onClick={handleCopyBookmarklet}
                       className="ml-2"
+                      disabled={isGeneratingUrl}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    * اسحب الرابط (أداة نقل البيانات) إلى شريط الإشارات المرجعية في متصفحك
+                  
+                  <p className="text-xs text-muted-foreground mt-2 flex items-center">
+                    <ArrowDown className="h-3 w-3 mr-1 inline-block" />
+                    <strong>اسحب الرابط</strong> (أداة نقل البيانات) إلى شريط الإشارات المرجعية في متصفحك
                   </p>
+                  
                   <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/50 rounded-md">
-                    <h4 className="text-xs font-semibold text-blue-700 dark:text-blue-400">كيفية إظهار شريط الإشارات المرجعية:</h4>
+                    <h4 className="text-xs font-semibold text-blue-700 dark:text-blue-400">كيفية إظهار شريط الإشارات المرجعية (المفضلة):</h4>
                     <ul className="text-xs text-blue-600 dark:text-blue-500 mt-1 list-disc list-inside space-y-1">
                       <li>Chrome: انقر على ⋮ (ثلاث نقاط) ثم الإشارات المرجعية → إظهار شريط الإشارات المرجعية</li>
                       <li>Firefox: انقر بزر الماوس الأيمن على شريط العناوين → إظهار شريط الإشارات المرجعية</li>
@@ -313,6 +381,7 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
                       size="sm" 
                       onClick={handleRegenerateBookmarklet}
                       className="w-full"
+                      disabled={isGeneratingUrl}
                     >
                       <RefreshCw className="h-3.5 w-3.5 ml-1.5" />
                       إعادة إنشاء رمز Bookmarklet
@@ -331,6 +400,15 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
                     </div>
                   </div>
                 )}
+                
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="text-xs w-full mt-2"
+                >
+                  {showAdvanced ? "إخفاء الخيارات المتقدمة" : "إظهار الخيارات المتقدمة"}
+                </Button>
               </div>
             </TabsContent>
           </Tabs>
