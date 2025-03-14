@@ -1,6 +1,10 @@
 
 // أنواع البيانات المشتركة للبوكماركلت
 
+// المتغيرات الثابتة
+export const STORAGE_KEY = "bookmarklet_data_v1";
+export const STORAGE_VERSION = "1.0";
+
 // نتائج ملء النموذج
 export interface FormFillerResults {
   filled: string[];
@@ -50,5 +54,5 @@ export interface StorageStats {
   ready: number;
   success: number;
   error: number;
-  lastUpdate?: Date;
+  lastUpdate: Date | null;  // تغيير هذا من اختياري إلى إلزامي
 }

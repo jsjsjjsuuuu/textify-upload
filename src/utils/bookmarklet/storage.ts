@@ -118,7 +118,7 @@ export const getStorageStats = (): StorageStats => {
     };
   }
   
-  const stats = {
+  const stats: StorageStats = {
     total: data.items.length,
     ready: data.items.filter(item => item.status === "ready").length,
     success: data.items.filter(item => item.status === "success").length,

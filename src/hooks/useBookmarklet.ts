@@ -64,7 +64,14 @@ export const useBookmarklet = (images: ImageData[]) => {
   const updateStats = () => {
     const currentStats = getStorageStats();
     console.log("تحديث إحصائيات التخزين:", currentStats);
-    setStats(currentStats);
+    // تأكد من أن التاريخ ليس فارغًا
+    setStats({
+      total: currentStats.total,
+      ready: currentStats.ready,
+      success: currentStats.success,
+      error: currentStats.error,
+      lastUpdate: currentStats.lastUpdate || null
+    });
   };
 
   // تصدير البيانات إلى localStorage
