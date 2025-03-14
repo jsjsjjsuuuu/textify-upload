@@ -381,6 +381,80 @@ export const generateBookmarkletCode = (): string => {
       showMessage(fillResults.message, fillResults.success ? "success" : "error");
     }
     
+    // وظيفة البحث عن زر الحفظ والضغط عليه
+    function findAndClickSaveButton() {
+      // محاولات متعددة للعثور على زر الحفظ
+      const saveButtonSelectors = [
+        // البحث عن النص المباشر
+        'button:contains("حفظ")', 
+        'button:contains("احفظ")',
+        'button:contains("تأكيد")',
+        'button:contains("إضافة")',
+        'input[type="submit"][value*="حفظ"]',
+        'input[type="button"][value*="حفظ"]',
+        // البحث باستخدام السمات
+        'button[type="submit"]',
+        '.save-button', 
+        '.btn-save',
+        '.submit-btn',
+        '.btn-primary',
+        // محددات أخرى
+        'form button:last-child',
+        'form input[type="submit"]:last-child',
+        'button.btn-success'
+      ];
+      
+      // تحسين البحث عن النص داخل الأزرار
+      const getAllButtons = () => document.querySelectorAll('button, input[type="submit"], input[type="button"]');
+      const allButtons = getAllButtons();
+      
+      // البحث عن الأزرار بالنص المناسب
+      for (const button of Array.from(allButtons)) {
+        const buttonText = button.textContent?.trim().toLowerCase() || '';
+        const buttonValue = button.getAttribute('value')?.toLowerCase() || '';
+        
+        if (buttonText.includes('حفظ') || buttonText.includes('تأكيد') || buttonText.includes('إضافة') ||
+            buttonValue.includes('حفظ') || buttonValue.includes('تأكيد')) {
+          try {
+            console.log("وجدت زر الحفظ:", buttonText || buttonValue);
+            button.click();
+            return true;
+          } catch (e) {
+            console.warn("خطأ أثناء النقر على الزر:", e);
+          }
+        }
+      }
+      
+      // البحث عن زر في أسفل النموذج
+      const forms = document.querySelectorAll('form');
+      for (const form of Array.from(forms)) {
+        const formButtons = form.querySelectorAll('button, input[type="submit"], input[type="button"]');
+        if (formButtons.length > 0) {
+          try {
+            console.log("النقر على آخر زر في النموذج");
+            formButtons[formButtons.length - 1].click();
+            return true;
+          } catch (e) {
+            console.warn("خطأ أثناء النقر على آخر زر في النموذج:", e);
+          }
+        }
+      }
+      
+      // محاولة أخيرة - البحث عن أي زر submit
+      const submitButtons = document.querySelectorAll('button[type="submit"]');
+      if (submitButtons.length > 0) {
+        try {
+          console.log("النقر على زر submit");
+          submitButtons[0].click();
+          return true;
+        } catch (e) {
+          console.warn("خطأ أثناء النقر على زر submit:", e);
+        }
+      }
+      
+      return false;
+    }
+    
     // تنفيذ البوكماركلت
     try {
       init();
