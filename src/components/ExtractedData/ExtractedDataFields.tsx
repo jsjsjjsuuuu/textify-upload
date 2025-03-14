@@ -7,7 +7,6 @@ interface ExtractedDataFieldsProps {
     code: string;
     senderName: string;
     phoneNumber: string;
-    secondaryPhoneNumber: string;
     province: string;
     price: string;
     companyName: string;
@@ -54,15 +53,6 @@ const ExtractedDataFields = ({
         editMode={editMode}
         placeholder="أدخل رقم الهاتف"
         onChange={(value) => onTempChange("phoneNumber", value)}
-        fieldType="phone"
-      />
-      
-      <ExtractedDataField 
-        label="رقم الهاتف الثانوي"
-        value={tempData.secondaryPhoneNumber}
-        editMode={editMode}
-        placeholder="أدخل رقم الهاتف الثانوي"
-        onChange={(value) => onTempChange("secondaryPhoneNumber", value)}
         fieldType="phone"
       />
 

@@ -11,7 +11,6 @@ interface ImageListProps {
   onDelete: (id: string) => void;
   onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
-  onExport?: (id: string) => void;
 }
 
 const ImageList = ({
@@ -21,8 +20,7 @@ const ImageList = ({
   onTextChange,
   onDelete,
   onSubmit,
-  formatDate,
-  onExport = () => {}
+  formatDate
 }: ImageListProps) => {
   if (images.length === 0) return null;
 
@@ -48,7 +46,6 @@ const ImageList = ({
             onDelete={onDelete}
             onSubmit={onSubmit}
             formatDate={formatDate}
-            onExport={onExport}
           />
         ))}
       </div>

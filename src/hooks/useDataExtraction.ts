@@ -10,7 +10,6 @@ interface TempData {
   code: string;
   senderName: string;
   phoneNumber: string;
-  secondaryPhoneNumber: string;
   province: string;
   price: string;
   companyName: string;
@@ -22,7 +21,6 @@ interface ExtractedData {
   code?: string;
   senderName?: string;
   phoneNumber?: string;
-  secondaryPhoneNumber?: string;
   province?: string;
   price?: string;
   companyName?: string;
@@ -39,7 +37,6 @@ export const useDataExtraction = (
     code: image.code || "",
     senderName: image.senderName || "",
     phoneNumber: image.phoneNumber || "",
-    secondaryPhoneNumber: image.secondaryPhoneNumber || "",
     province: image.province || "",
     price: image.price || "",
     companyName: image.companyName || ""
@@ -55,7 +52,6 @@ export const useDataExtraction = (
         code: image.code || "",
         senderName: image.senderName || "",
         phoneNumber: image.phoneNumber || "",
-        secondaryPhoneNumber: image.secondaryPhoneNumber || "",
         province: image.province || "",
         price: image.price || "",
         companyName: image.companyName || ""
@@ -63,8 +59,6 @@ export const useDataExtraction = (
       
       // التحقق من صحة رقم الهاتف قبل الحفظ
       const phoneDigits = tempData.phoneNumber.replace(/[^\d]/g, '');
-      const secondaryPhoneDigits = tempData.secondaryPhoneNumber.replace(/[^\d]/g, '');
-      
       if (tempData.phoneNumber && phoneDigits.length !== 11) {
         toast({
           title: "تنبيه",
@@ -72,15 +66,6 @@ export const useDataExtraction = (
           variant: "destructive"
         });
         return; // منع الحفظ في حالة عدم صحة رقم الهاتف
-      }
-      
-      if (tempData.secondaryPhoneNumber && secondaryPhoneDigits.length !== 11) {
-        toast({
-          title: "تنبيه",
-          description: "رقم الهاتف الثانوي يجب أن يكون 11 رقم بالضبط",
-          variant: "destructive"
-        });
-        return; // منع الحفظ في حالة عدم صحة رقم الهاتف الثانوي
       }
       
       Object.entries(tempData).forEach(([field, value]) => {
@@ -98,7 +83,6 @@ export const useDataExtraction = (
         code: image.code || "",
         senderName: image.senderName || "",
         phoneNumber: image.phoneNumber || "",
-        secondaryPhoneNumber: image.secondaryPhoneNumber || "",
         province: image.province || "",
         price: image.price || "",
         companyName: image.companyName || ""
@@ -113,7 +97,6 @@ export const useDataExtraction = (
       code: image.code || "",
       senderName: image.senderName || "",
       phoneNumber: image.phoneNumber || "",
-      secondaryPhoneNumber: image.secondaryPhoneNumber || "",
       province: image.province || "",
       price: image.price || "",
       companyName: image.companyName || ""
@@ -178,7 +161,6 @@ export const useDataExtraction = (
       code: extractedData.code || prev.code,
       senderName: extractedData.senderName || prev.senderName,
       phoneNumber: extractedData.phoneNumber || prev.phoneNumber,
-      secondaryPhoneNumber: extractedData.secondaryPhoneNumber || prev.secondaryPhoneNumber,
       province: extractedData.province || prev.province,
       price: extractedData.price || prev.price,
       companyName: extractedData.companyName || prev.companyName

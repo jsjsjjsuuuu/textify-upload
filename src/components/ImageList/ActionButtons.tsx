@@ -1,9 +1,6 @@
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Send, Copy, CheckCircle, ExternalLink } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import AdvancedFillOptions from "@/components/AdvancedFillOptions";
+import { Trash, Send } from "lucide-react";
 
 interface ActionButtonsProps {
   imageId: string;
@@ -13,109 +10,39 @@ interface ActionButtonsProps {
   isPhoneNumberValid: boolean;
   onDelete: (id: string) => void;
   onSubmit: (id: string) => void;
-  onExport: (id: string) => void;
 }
 
-const ActionButtons = ({
-  imageId,
-  isSubmitting,
-  isCompleted,
-  isSubmitted,
-  isPhoneNumberValid,
-  onDelete,
-  onSubmit,
-  onExport
+const ActionButtons = ({ 
+  imageId, 
+  isSubmitting, 
+  isCompleted, 
+  isSubmitted, 
+  isPhoneNumberValid, 
+  onDelete, 
+  onSubmit 
 }: ActionButtonsProps) => {
-  const { toast } = useToast();
-  const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
-  
-  const handleDeleteClick = () => {
-    if (window.confirm("هل أنت متأكد من رغبتك في حذف هذه الصورة؟")) {
-      onDelete(imageId);
-    }
-  };
-
-  const handleSubmitClick = () => {
-    if (!isPhoneNumberValid) {
-      toast({
-        title: "خطأ في رقم الهاتف",
-        description: "تأكد من إدخال رقم هاتف صحيح (11 رقمًا)",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    onSubmit(imageId);
-  };
-
-  const handleExportClick = () => {
-    onExport(imageId);
-  };
-
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        size="sm"
-        variant="destructive"
-        className="flex items-center gap-1 text-xs bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200"
-        onClick={handleDeleteClick}
+    <div className="flex justify-end gap-2 mt-3">
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => onDelete(imageId)} 
+        className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 text-xs border-destructive/20 hover:border-destructive/30"
       >
-        <Trash2 className="h-3.5 w-3.5" />
+        <Trash size={14} className="ml-1 opacity-70" />
         حذف
       </Button>
       
-      <Button
-        size="sm"
-        variant={isSubmitted ? "outline" : "default"}
-        className={`flex items-center gap-1 text-xs ${
-          isSubmitted
-            ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-            : "bg-brand-brown text-white hover:bg-brand-brown/90"
-        }`}
-        onClick={handleSubmitClick}
-        disabled={isSubmitting || !isCompleted || !isPhoneNumberValid}
+      <Button 
+        variant="default" 
+        size="sm" 
+        className="bg-brand-green hover:bg-brand-green/90 h-8 text-xs shadow-sm" 
+        disabled={!isCompleted || isSubmitting || isSubmitted || !isPhoneNumberValid} 
+        onClick={() => onSubmit(imageId)}
       >
-        {isSubmitted ? (
-          <>
-            <CheckCircle className="h-3.5 w-3.5" />
-            تم الإرسال
-          </>
-        ) : (
-          <>
-            <Send className="h-3.5 w-3.5" />
-            {isSubmitting ? "جاري الإرسال..." : "إرسال"}
-          </>
-        )}
+        <Send size={14} className="ml-1 opacity-90" />
+        {isSubmitting ? "جاري الإرسال..." : "إرسال البيانات"}
       </Button>
-      
-      <Button
-        size="sm"
-        variant="outline"
-        className="flex items-center gap-1 text-xs"
-        onClick={() => setIsAdvancedOptionsOpen(true)}
-        disabled={!isCompleted}
-      >
-        <ExternalLink className="h-3.5 w-3.5" />
-        تعبئة تلقائية
-      </Button>
-      
-      <Button
-        size="sm"
-        variant="outline"
-        className="flex items-center gap-1 text-xs"
-        onClick={handleExportClick}
-        disabled={!isCompleted}
-      >
-        <Copy className="h-3.5 w-3.5" />
-        تصدير
-      </Button>
-      
-      <AdvancedFillOptions
-        isOpen={isAdvancedOptionsOpen}
-        onClose={() => setIsAdvancedOptionsOpen(false)}
-        imageData={{ id: imageId } as any}
-        isMultiMode={false}
-      />
     </div>
   );
 };
