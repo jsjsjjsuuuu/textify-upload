@@ -50,10 +50,11 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   
   if ('id' in field) {
     id = field.id.toLowerCase();
-  } else if ('getAttribute' in field) {
-    // تحقق من أن getAttribute هي فعلاً وظيفة قبل استدعائها
-    if (typeof field.getAttribute === 'function') {
-      const idAttr = field.getAttribute('id');
+  } else {
+    // تحقق أن field هو من نوع HTMLElement قبل استخدام getAttribute
+    const elem = field as HTMLElement;
+    if (elem && typeof elem.getAttribute === 'function') {
+      const idAttr = elem.getAttribute('id');
       if (idAttr) {
         id = idAttr.toLowerCase();
       }
@@ -66,10 +67,11 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   
   if ('placeholder' in field && field.placeholder) {
     placeholderText = field.placeholder.toLowerCase();
-  } else if ('getAttribute' in field) {
-    // تحقق من أن getAttribute هي فعلاً وظيفة قبل استدعائها
-    if (typeof field.getAttribute === 'function') {
-      const placeholderAttr = field.getAttribute('placeholder');
+  } else {
+    // تحقق أن field هو من نوع HTMLElement قبل استخدام getAttribute
+    const elem = field as HTMLElement;
+    if (elem && typeof elem.getAttribute === 'function') {
+      const placeholderAttr = elem.getAttribute('placeholder');
       if (placeholderAttr) {
         placeholderText = placeholderAttr.toLowerCase();
       }
