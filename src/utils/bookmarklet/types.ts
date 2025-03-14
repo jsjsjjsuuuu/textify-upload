@@ -48,6 +48,12 @@ export interface BookmarkletItem {
   errorFields?: string[]; // أسماء الحقول التي فشل ملؤها
   successFields?: string[]; // أسماء الحقول التي نجح ملؤها
   fillAttemptDate?: string; // تاريخ آخر محاولة ملء
+  
+  // معلومات إضافية لتحسين عملية تتبع الأخطاء
+  debugInfo?: string; // معلومات التصحيح
+  lastFieldTried?: string; // آخر حقل تمت محاولة ملئه
+  fieldSelectors?: {[key: string]: string}; // المحددات المستخدمة للعثور على الحقول
+  domInfo?: string; // معلومات عن هيكل DOM للصفحة المستهدفة
 }
 
 // نوع بيانات التصدير
@@ -65,4 +71,24 @@ export interface StorageStats {
   success: number;
   error: number;
   lastUpdate: Date | null;
+}
+
+// تعريف حقول الإدخال المطابقة وكيفية العثور عليها
+export interface FieldMapping {
+  key: string;               // مفتاح البيانات
+  selectors: string[];       // المحددات للعثور على الحقل
+  aliases: string[];         // أسماء بديلة للحقل
+  valueAccessor?: string;    // الوصول إلى القيمة (مثل value, innerText)
+  required?: boolean;        // هل الحقل مطلوب
+  transform?: (value: string) => string; // دالة تحويل القيمة قبل الإدخال
+}
+
+// فئة لتخزين معلومات محاولة ملء الحقول
+export interface FillAttemptInfo {
+  timestamp: string;
+  itemId: string;
+  fieldsAttempted: string[];
+  fieldsSucceeded: string[];
+  fieldsFailed: string[];
+  errorMessages: string[];
 }
