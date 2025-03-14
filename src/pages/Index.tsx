@@ -4,6 +4,7 @@ import ImageUploader from "@/components/ImageUploader";
 import AppHeader from "@/components/AppHeader";
 import ImagePreviewContainer from "@/components/ImageViewer/ImagePreviewContainer";
 import LearningStats from "@/components/LearningStats";
+import BookmarkletGenerator from "@/components/BookmarkletGenerator";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 
@@ -43,6 +44,13 @@ const Index = () => {
                 <LearningStats />
               </div>
             </div>
+
+            {/* عرض مكون Bookmarklet Generator */}
+            {images.length > 0 && (
+              <div className="mb-8">
+                <BookmarkletGenerator images={images} />
+              </div>
+            )}
 
             <ImagePreviewContainer 
               images={images}
