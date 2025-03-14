@@ -1,4 +1,3 @@
-
 import { BookmarkletItem, BookmarkletExportData } from "@/types/ImageData";
 import { getFromLocalStorage, updateItemStatus } from "@/utils/bookmarkletService";
 
@@ -51,17 +50,17 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   
   if ('id' in field) {
     id = field.id.toLowerCase();
-  } else if (field.getAttribute('id')) {
+  } else if (field instanceof HTMLElement && field.getAttribute && field.getAttribute('id')) {
     id = field.getAttribute('id')!.toLowerCase();
   }
   
-  if (field.className) {
+  if (field instanceof HTMLElement && field.className) {
     className = field.className.toLowerCase();
   }
   
   if ('placeholder' in field && field.placeholder) {
     placeholderText = field.placeholder.toLowerCase();
-  } else if (field.getAttribute('placeholder')) {
+  } else if (field instanceof HTMLElement && field.getAttribute && field.getAttribute('placeholder')) {
     placeholderText = field.getAttribute('placeholder')!.toLowerCase();
   }
   
