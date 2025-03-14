@@ -1,3 +1,4 @@
+
 import { BookmarkletItem, BookmarkletExportData } from "@/types/ImageData";
 import { getFromLocalStorage, updateItemStatus } from "@/utils/bookmarkletService";
 
@@ -38,10 +39,31 @@ export const findFormFields = () => {
  */
 export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLElement): string => {
   // جمع كل المعرّفات المحتملة للحقل
-  const name = field.name ? field.name.toLowerCase() : '';
-  const id = field.id ? field.id.toLowerCase() : '';
-  const className = field.className ? field.className.toLowerCase() : '';
-  const placeholderText = 'placeholder' in field ? (field.placeholder || '').toLowerCase() : '';
+  let name = '';
+  let id = '';
+  let className = '';
+  let placeholderText = '';
+  
+  // التحقق من نوع العنصر قبل الوصول إلى الخصائص الخاصة به
+  if ('name' in field) {
+    name = field.name.toLowerCase();
+  }
+  
+  if ('id' in field) {
+    id = field.id.toLowerCase();
+  } else if (field.getAttribute('id')) {
+    id = field.getAttribute('id')!.toLowerCase();
+  }
+  
+  if (field.className) {
+    className = field.className.toLowerCase();
+  }
+  
+  if ('placeholder' in field && field.placeholder) {
+    placeholderText = field.placeholder.toLowerCase();
+  } else if (field.getAttribute('placeholder')) {
+    placeholderText = field.getAttribute('placeholder')!.toLowerCase();
+  }
   
   // البحث عن الـ label المرتبط
   let labelText = '';
@@ -129,9 +151,9 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   // إذا لم نجد تطابقًا، حاول التخمين بناءً على خصائص الحقل
   if (field instanceof HTMLInputElement && field.type) {
     const inputType = field.type.toLowerCase();
-    if (inputType === 'tel' || name.includes('phone') || name.includes('mobile')) {
+    if (inputType === 'tel' || (name && name.includes('phone')) || (name && name.includes('mobile'))) {
       return 'phoneNumber';
-    } else if (inputType === 'number' && (name.includes('price') || name.includes('amount'))) {
+    } else if (inputType === 'number' && (name && (name.includes('price') || name.includes('amount')))) {
       return 'price';
     }
   }
