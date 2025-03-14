@@ -5,7 +5,8 @@ import { ImageData } from "@/types/ImageData";
 import { 
   getStoredItemsCount, 
   clearStoredItems, 
-  generateBookmarkletCode, 
+  generateBookmarkletCode,
+  generateEnhancedBookmarkletCode,
   saveToLocalStorage, 
   getStorageStats 
 } from "@/utils/bookmarkletService";
@@ -14,6 +15,7 @@ export const useBookmarklet = (images: ImageData[]) => {
   const { toast } = useToast();
   const [storedCount, setStoredCount] = useState(0);
   const [bookmarkletUrl, setBookmarkletUrl] = useState("");
+  const [enhancedBookmarkletUrl, setEnhancedBookmarkletUrl] = useState("");
   const [isGeneratingUrl, setIsGeneratingUrl] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [stats, setStats] = useState({
@@ -43,14 +45,20 @@ export const useBookmarklet = (images: ImageData[]) => {
     setIsGeneratingUrl(true);
     setTimeout(() => {
       try {
+        // توليد رابط البوكماركلت التقليدي
         const url = generateBookmarkletCode();
         setBookmarkletUrl(url);
-        console.log("تم إنشاء رابط البوكماركلت بطول:", url.length);
+        
+        // توليد رابط البوكماركلت المحسّن
+        const enhancedUrl = generateEnhancedBookmarkletCode();
+        setEnhancedBookmarkletUrl(enhancedUrl);
+        
+        console.log("تم إنشاء روابط البوكماركلت");
       } catch (error) {
-        console.error("خطأ في إنشاء رابط البوكماركلت:", error);
+        console.error("خطأ في إنشاء روابط البوكماركلت:", error);
         toast({
-          title: "خطأ في إنشاء رابط الأداة",
-          description: "حدث خطأ أثناء توليد رابط البوكماركلت. حاول مرة أخرى.",
+          title: "خطأ في إنشاء روابط الأداة",
+          description: "حدث خطأ أثناء توليد روابط البوكماركلت. حاول مرة أخرى.",
           variant: "destructive"
         });
       } finally {
@@ -129,7 +137,7 @@ export const useBookmarklet = (images: ImageData[]) => {
     });
   }, [toast, updateStoredCount, updateStats]);
 
-  // نسخ رابط Bookmarklet
+  // نسخ رابط Bookmarklet التقليدي
   const handleCopyBookmarklet = useCallback(() => {
     if (!bookmarkletUrl) {
       toast({
@@ -149,26 +157,52 @@ export const useBookmarklet = (images: ImageData[]) => {
     });
   }, [bookmarkletUrl, toast]);
   
+  // نسخ رابط Bookmarklet المحسّن
+  const handleCopyEnhancedBookmarklet = useCallback(() => {
+    if (!enhancedBookmarkletUrl) {
+      toast({
+        title: "الرابط غير جاهز",
+        description: "جاري إنشاء الرابط، انتظر لحظة من فضلك",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    navigator.clipboard.writeText(enhancedBookmarkletUrl).then(() => {
+      toast({
+        title: "تم نسخ الرابط",
+        description: "تم نسخ رابط أداة الإدخال المحسّنة إلى الحافظة",
+        variant: "default"
+      });
+    });
+  }, [enhancedBookmarkletUrl, toast]);
+  
   // إعادة إنشاء كود Bookmarklet
   const handleRegenerateBookmarklet = useCallback(() => {
     try {
       setIsGeneratingUrl(true);
+      // توليد رابط البوكماركلت التقليدي
       const newUrl = generateBookmarkletCode();
       setBookmarkletUrl(newUrl);
+      
+      // توليد رابط البوكماركلت المحسّن
+      const enhancedUrl = generateEnhancedBookmarkletCode();
+      setEnhancedBookmarkletUrl(enhancedUrl);
+      
       setIsGeneratingUrl(false);
       
       toast({
-        title: "تم إعادة إنشاء الرابط",
-        description: "تم تحديث رمز Bookmarklet بأحدث التغييرات",
+        title: "تم إعادة إنشاء الروابط",
+        description: "تم تحديث رموز البوكماركلت بأحدث التغييرات",
         variant: "default"
       });
     } catch (error) {
-      console.error("خطأ في إعادة إنشاء رابط البوكماركلت:", error);
+      console.error("خطأ في إعادة إنشاء روابط البوكماركلت:", error);
       setIsGeneratingUrl(false);
       
       toast({
-        title: "خطأ في إعادة إنشاء الرابط",
-        description: "حدث خطأ أثناء توليد رابط البوكماركلت. حاول مرة أخرى.",
+        title: "خطأ في إعادة إنشاء الروابط",
+        description: "حدث خطأ أثناء توليد روابط البوكماركلت. حاول مرة أخرى.",
         variant: "destructive"
       });
     }
@@ -182,12 +216,14 @@ export const useBookmarklet = (images: ImageData[]) => {
   return {
     storedCount,
     bookmarkletUrl,
+    enhancedBookmarkletUrl,
     isGeneratingUrl,
     showAdvanced,
     stats,
     handleExport,
     handleClear,
     handleCopyBookmarklet,
+    handleCopyEnhancedBookmarklet,
     handleRegenerateBookmarklet,
     toggleAdvancedOptions
   };

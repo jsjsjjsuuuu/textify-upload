@@ -9,6 +9,7 @@ import { ImageData } from "@/types/ImageData";
 import { useBookmarklet } from "@/hooks/useBookmarklet";
 import ExportDataSection from "./ExportDataSection";
 import BookmarkletSection from "./BookmarkletSection";
+import ImprovedFormFillerSection from "./ImprovedFormFillerSection";
 
 // تحديث واجهة الخصائص
 interface BookmarkletGeneratorProps {
@@ -24,12 +25,14 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
   const {
     storedCount,
     bookmarkletUrl,
+    enhancedBookmarkletUrl,
     isGeneratingUrl,
     showAdvanced,
     stats,
     handleExport,
     handleClear,
     handleCopyBookmarklet,
+    handleCopyEnhancedBookmarklet,
     handleRegenerateBookmarklet,
     toggleAdvancedOptions
   } = useBookmarklet(images);
@@ -40,7 +43,7 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
     if (storedCount > 0 && activeTab === "export") {
       // إذا كان هناك بيانات مخزنة وكنا في تبويب التصدير، نسأل المستخدم عما إذا كان يريد الانتقال للبوكماركلت
       const timer = setTimeout(() => {
-        setActiveTab("bookmarklet");
+        setActiveTab("improved-filler");
       }, 500);
       
       return () => clearTimeout(timer);
@@ -63,7 +66,7 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
             <div>
               <CardTitle className="text-xl font-bold text-brand-brown dark:text-brand-beige flex items-center">
                 <BookmarkIcon className="mr-2 h-5 w-5 text-brand-coral" />
-                أداة نقل البيانات (Bookmarklet)
+                أداة نقل البيانات (محسّنة)
               </CardTitle>
               <CardDescription className="mt-1">
                 نقل البيانات المستخرجة تلقائيًا إلى مواقع شركات التوصيل
@@ -80,9 +83,10 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
         
         <CardContent>
           <Tabs defaultValue="export" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-4">
+            <TabsList className="grid grid-cols-3 mb-4">
               <TabsTrigger value="export">تصدير البيانات</TabsTrigger>
-              <TabsTrigger value="bookmarklet">إعداد الـ Bookmarklet</TabsTrigger>
+              <TabsTrigger value="improved-filler">طريقة الإدخال المحسّنة</TabsTrigger>
+              <TabsTrigger value="bookmarklet">الإدخال التقليدي</TabsTrigger>
             </TabsList>
             
             {/* قسم تصدير البيانات */}
@@ -97,7 +101,17 @@ const BookmarkletGenerator = ({ images, storedCount: initialStoredCount = 0, rea
               />
             </TabsContent>
             
-            {/* قسم إعداد Bookmarklet */}
+            {/* قسم طريقة الإدخال المحسّنة */}
+            <TabsContent value="improved-filler">
+              <ImprovedFormFillerSection 
+                enhancedBookmarkletUrl={enhancedBookmarkletUrl}
+                isGeneratingUrl={isGeneratingUrl}
+                onCopyEnhancedBookmarklet={handleCopyEnhancedBookmarklet}
+                storedCount={storedCount}
+              />
+            </TabsContent>
+            
+            {/* قسم إعداد Bookmarklet التقليدي */}
             <TabsContent value="bookmarklet">
               <BookmarkletSection 
                 bookmarkletUrl={bookmarkletUrl}
