@@ -231,7 +231,7 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
   // إذا كانت القيمة فارغة، لا تملأ الحقل
   if (!value || value.trim() === '') {
     // هنا نحتاج إلى التحقق من الخاصية الصحيحة للعنصر
-    const fieldIdentifier = 'id' in field ? field.id : ('name' in field ? field.name : 'غير معروف');
+    const fieldIdentifier = 'id' in field ? field.id : ('name' in field ? field.name : '') || 'غير معروف';
     console.log(`[Bookmarklet] تخطي ملء الحقل لأن القيمة فارغة: ${fieldIdentifier}`);
     return false;
   }
@@ -303,7 +303,7 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
     }
     
     // استخدام معرف مناسب لتسجيل الإجراء
-    const fieldIdentifier = field.name || field.id || 'غير معروف';
+    const fieldIdentifier = ('name' in field ? field.name : '') || ('id' in field ? field.id : '') || 'غير معروف';
     console.log(`[Bookmarklet] تم ملء الحقل: ${fieldIdentifier} بالقيمة: ${field.value}`);
   } else if ('contentEditable' in field && field.contentEditable === 'true') {
     // ملء العناصر ذات المحتوى القابل للتحرير
