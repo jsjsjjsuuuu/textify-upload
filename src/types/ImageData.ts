@@ -55,6 +55,7 @@ export interface ImageData {
   status1?: string; // الحالة
   exchangeStatus?: string; // استبدال
   orderStatus?: string; // حالة الطلب
+  paymentStatus?: string; // حالة الدفع
 }
 
 // واجهة لتصدير البيانات إلى Bookmarklet
@@ -110,6 +111,8 @@ export interface BookmarkletItem {
   notes2?: string; // ملاحظات خاصة
   status1?: string; // الحالة
   exchangeStatus?: string; // استبدال
+  paymentStatus?: string; // حالة الدفع
+  orderStatus?: string; // حالة الطلب
 }
 
 // إحصائيات البيانات المخزنة

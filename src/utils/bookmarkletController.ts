@@ -142,22 +142,47 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
     'كود العميل': 'customerCode',
     'رقم العميل': 'customerCode',
     'رقم الوصل': 'orderNumber',
-    'هاتف الزبون': 'phoneNumber',
+    'هاتف الزبون': 'customerPhone',
+    'رقم الزبون': 'customerPhone',
+    'رقم هاتف': 'customerPhone',
+    'رقم الهاتف': 'customerPhone',
     'المحافظة': 'province',
+    'محافظة': 'province',
+    'المدينة': 'province',
     'اسم العميل': 'customerName',
-    'اسم المستلم': 'recipientName',
-    'المبلغ الكلي': 'totalAmount',
     'اسم الزبون': 'customerName',
+    'الزبون': 'customerName',
+    'العميل': 'customerName',
+    'اسم المستلم': 'receiverName',
+    'المستلم': 'receiverName',
+    'المبلغ الكلي': 'totalAmount',
+    'المبلغ': 'totalAmount',
+    'السعر': 'totalAmount',
     'المنطقة': 'area',
+    'منطقة': 'area',
     'نوع البضاعة': 'packageType',
+    'البضاعة': 'packageType',
     'عدد القطع': 'pieceCount',
+    'عدد': 'pieceCount',
+    'قطع': 'pieceCount',
     'زيادة أجرة العميل': 'customerFee',
+    'أجرة العميل': 'customerFee',
     'زيادة أجرة المندوب': 'deliveryAgentFee',
+    'أجرة المندوب': 'deliveryAgentFee',
     'ملاحظات': 'notes1',
+    'ملاحظة': 'notes1',
     'ملاحظات خاصة': 'notes2',
+    'ملاحظة خاصة': 'notes2',
     'الحالة': 'status1',
+    'حالة': 'status1',
     'استبدال': 'exchangeStatus',
-    'اسم المندوب': 'delegateName'
+    'تبديل': 'exchangeStatus',
+    'حالة الدفع': 'paymentStatus',
+    'الدفع': 'paymentStatus',
+    'تاريخ التسليم': 'deliveryDate',
+    'التسليم': 'deliveryDate',
+    'اسم المندوب': 'delegateName',
+    'المندوب': 'delegateName'
   };
   
   // البحث في الحقول المستهدفة أولاً
@@ -179,11 +204,11 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
       keywords: ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة', 'رقم الطلب', 'order', 'tracking', 'reference', 'ref', 'الوصل', 'الطلب', 'الشحنة']
     },
     { 
-      type: 'senderName', 
+      type: 'customerName', 
       keywords: ['sender', 'name', 'customer', 'اسم', 'المرسل', 'الزبون', 'العميل', 'المستلم', 'الاسم', 'اسم المستلم', 'اسم العميل']
     },
     { 
-      type: 'phoneNumber', 
+      type: 'customerPhone', 
       keywords: ['phone', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم الهاتف', 'تليفون', 'رقم الجوال', 'tel', 'telephone', 'contact']
     },
     { 
@@ -191,7 +216,7 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
       keywords: ['province', 'state', 'city', 'region', 'محافظة', 'المحافظة', 'مدينة', 'منطقة', 'المدينة', 'المنطقة', 'الولاية', 'البلدة']
     },
     { 
-      type: 'price', 
+      type: 'totalAmount', 
       keywords: ['price', 'amount', 'cost', 'سعر', 'المبلغ', 'التكلفة', 'قيمة', 'دينار', 'المال', 'النقود', 'الثمن', 'الكلفة', 'المبلغ الكلي']
     },
     { 
@@ -211,15 +236,11 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
       keywords: ['piece count', 'عدد القطع', 'عدد', 'قطع', 'كمية', 'العدد', 'عدد الطرود', 'الكمية']
     },
     {
-      type: 'notes',
+      type: 'notes1',
       keywords: ['notes', 'comment', 'ملاحظات', 'ملاحظة', 'تعليق', 'شرح', 'توضيح']
     },
     {
-      type: 'customerName',
-      keywords: ['customer name', 'اسم الزبون', 'اسم العميل', 'الزبون', 'المستلم']
-    },
-    {
-      type: 'recipientName',
+      type: 'receiverName',
       keywords: ['recipient name', 'اسم المستلم', 'المستلم', 'receiver', 'receiver name', 'من يستلم']
     },
     {
@@ -241,6 +262,14 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
     {
       type: 'deliveryAgentFee',
       keywords: ['delivery agent fee', 'زيادة أجرة المندوب', 'أجرة المندوب', 'أجرة السائق', 'رسوم التوصيل']
+    },
+    {
+      type: 'paymentStatus',
+      keywords: ['payment status', 'حالة الدفع', 'payment', 'دفع', 'طريقة الدفع', 'الدفع']
+    },
+    {
+      type: 'deliveryDate',
+      keywords: ['delivery date', 'تاريخ التسليم', 'موعد التسليم', 'تاريخ', 'delivery', 'تسليم']
     }
   ];
   
@@ -263,11 +292,13 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   if ('type' in field) {
     const inputType = field.type?.toLowerCase();
     if (inputType === 'tel' || (name && name.includes('phone')) || (name && name.includes('mobile'))) {
-      return 'phoneNumber';
+      return 'customerPhone';
     } else if (inputType === 'number' && (name && (name.includes('price') || name.includes('amount')))) {
-      return 'price';
+      return 'totalAmount';
     } else if (inputType === 'number' && (name && (name.includes('count') || name.includes('quantity')))) {
       return 'pieceCount';
+    } else if (inputType === 'date' && (name && (name.includes('delivery') || name.includes('date')))) {
+      return 'deliveryDate';
     }
   }
   
@@ -276,9 +307,183 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
 };
 
 /**
+ * وظيفة تحسين المطابقة للقوائم المنسدلة
+ */
+export const findBestSelectOption = (select: HTMLSelectElement, desiredValue: string): HTMLOptionElement | null => {
+  if (!desiredValue || desiredValue.trim() === '') {
+    return null;
+  }
+  
+  const options = Array.from(select.options);
+  const cleanValue = desiredValue.trim().toLowerCase();
+  
+  // 1. ابحث عن تطابق تام للنص
+  const exactTextMatch = options.find(option => 
+    option.text.trim().toLowerCase() === cleanValue
+  );
+  
+  if (exactTextMatch) {
+    console.log(`[Bookmarklet] تم العثور على تطابق تام للنص: ${exactTextMatch.text}`);
+    return exactTextMatch;
+  }
+  
+  // 2. ابحث عن تطابق تام للقيمة
+  const exactValueMatch = options.find(option => 
+    option.value.trim().toLowerCase() === cleanValue
+  );
+  
+  if (exactValueMatch) {
+    console.log(`[Bookmarklet] تم العثور على تطابق تام للقيمة: ${exactValueMatch.value}`);
+    return exactValueMatch;
+  }
+  
+  // 3. ابحث عن احتواء النص للقيمة المطلوبة
+  const textContainsMatch = options.find(option => 
+    option.text.trim().toLowerCase().includes(cleanValue)
+  );
+  
+  if (textContainsMatch) {
+    console.log(`[Bookmarklet] تم العثور على تطابق جزئي للنص: ${textContainsMatch.text}`);
+    return textContainsMatch;
+  }
+  
+  // 4. ابحث عن احتواء القيمة المطلوبة للنص
+  const valueContainsMatch = options.find(option => 
+    cleanValue.includes(option.text.trim().toLowerCase())
+  );
+  
+  if (valueContainsMatch) {
+    console.log(`[Bookmarklet] القيمة المطلوبة تحتوي على نص الخيار: ${valueContainsMatch.text}`);
+    return valueContainsMatch;
+  }
+  
+  // 5. ابحث عن تطابق لأول كلمة
+  const firstWord = cleanValue.split(' ')[0];
+  if (firstWord && firstWord.length > 2) {
+    const firstWordMatch = options.find(option => 
+      option.text.trim().toLowerCase().includes(firstWord)
+    );
+    
+    if (firstWordMatch) {
+      console.log(`[Bookmarklet] تم العثور على تطابق للكلمة الأولى: ${firstWordMatch.text}`);
+      return firstWordMatch;
+    }
+  }
+  
+  // 6. ابحث عن حالات خاصة
+  // للمحافظات العراقية
+  if (select.name.includes('province') || select.id.includes('province') || cleanValue.includes('محافظة')) {
+    const provinceMap: Record<string, string[]> = {
+      'بغداد': ['baghdad', 'بقداد', 'بغدات'],
+      'البصرة': ['basra', 'basrah', 'البصره'],
+      'نينوى': ['nineveh', 'mosul', 'الموصل', 'موصل', 'نينوه'],
+      'أربيل': ['erbil', 'arbil', 'اربيل', 'اربل'],
+      'النجف': ['najaf', 'نجف'],
+      'كربلاء': ['karbala', 'كربلا'],
+      'ذي قار': ['dhi qar', 'thi qar', 'ذيقار', 'ذى قار', 'الناصرية'],
+      'الأنبار': ['anbar', 'الانبار', 'انبار', 'الرمادي'],
+      'ديالى': ['diyala', 'ديالا', 'بعقوبة'],
+      'كركوك': ['kirkuk', 'كرگوک'],
+      'صلاح الدين': ['salah al-din', 'saladin', 'صلاحدين', 'صلاح دين', 'تكريت'],
+      'بابل': ['babylon', 'babil', 'الحلة', 'hillah'],
+      'المثنى': ['muthanna', 'مثنى', 'السماوة'],
+      'القادسية': ['qadisiyyah', 'قادسية', 'الديوانية', 'diwaniyah'],
+      'واسط': ['wasit', 'kut', 'الكوت'],
+      'ميسان': ['maysan', 'missan', 'العمارة'],
+      'دهوك': ['dhok', 'dohuk'],
+      'السليمانية': ['sulaymaniyah', 'سليمانية', 'سلیمانیة']
+    };
+    
+    for (const [province, aliases] of Object.entries(provinceMap)) {
+      if (cleanValue === province.toLowerCase() || aliases.some(alias => cleanValue.includes(alias.toLowerCase()))) {
+        const provinceMatch = options.find(option => 
+          option.text.toLowerCase().includes(province.toLowerCase()) || 
+          aliases.some(alias => option.text.toLowerCase().includes(alias.toLowerCase()))
+        );
+        
+        if (provinceMatch) {
+          console.log(`[Bookmarklet] تم العثور على تطابق للمحافظة: ${provinceMatch.text}`);
+          return provinceMatch;
+        }
+      }
+    }
+  }
+  
+  // للحالات
+  if (select.name.includes('status') || select.id.includes('status') || cleanValue.includes('حالة')) {
+    const statusMap: Record<string, string[]> = {
+      'قيد التنفيذ': ['pending', 'in process', 'processing', 'جاري', 'قيد', 'تنفيذ'],
+      'تم التسليم': ['delivered', 'completed', 'done', 'تسليم', 'مكتمل', 'منجز'],
+      'ملغي': ['cancelled', 'canceled', 'الغاء', 'إلغاء', 'ملغية'],
+      'مؤجل': ['delayed', 'postponed', 'تأجيل', 'مؤجلة'],
+      'معلق': ['on hold', 'held', 'تعليق', 'معلقة']
+    };
+    
+    for (const [status, aliases] of Object.entries(statusMap)) {
+      if (cleanValue === status.toLowerCase() || aliases.some(alias => cleanValue.includes(alias.toLowerCase()))) {
+        const statusMatch = options.find(option => 
+          option.text.toLowerCase().includes(status.toLowerCase()) || 
+          aliases.some(alias => option.text.toLowerCase().includes(alias.toLowerCase()))
+        );
+        
+        if (statusMatch) {
+          console.log(`[Bookmarklet] تم العثور على تطابق للحالة: ${statusMatch.text}`);
+          return statusMatch;
+        }
+      }
+    }
+  }
+  
+  // للاستبدال
+  if (select.name.includes('exchange') || select.id.includes('exchange') || cleanValue.includes('استبدال')) {
+    const yesNoMap: Record<string, string[]> = {
+      'نعم': ['yes', 'true', '1', 'مطلوب', 'موافق'],
+      'لا': ['no', 'false', '0', 'غير مطلوب', 'غير موافق', 'رفض']
+    };
+    
+    for (const [value, aliases] of Object.entries(yesNoMap)) {
+      if (cleanValue === value.toLowerCase() || aliases.some(alias => cleanValue.toLowerCase() === alias.toLowerCase())) {
+        const match = options.find(option => 
+          option.text.toLowerCase().includes(value.toLowerCase()) || 
+          aliases.some(alias => option.text.toLowerCase().includes(alias.toLowerCase()))
+        );
+        
+        if (match) {
+          console.log(`[Bookmarklet] تم العثور على تطابق للاستبدال: ${match.text}`);
+          return match;
+        }
+      }
+    }
+    
+    // الافتراضي هو "لا" للاستبدال
+    const noOption = options.find(option => 
+      option.text.toLowerCase().includes('لا') || 
+      option.text.toLowerCase().includes('no') ||
+      option.text.toLowerCase() === 'لا' ||
+      option.text.toLowerCase() === 'no'
+    );
+    
+    if (noOption) {
+      console.log(`[Bookmarklet] استخدام الخيار الافتراضي للاستبدال: ${noOption.text}`);
+      return noOption;
+    }
+  }
+  
+  // القيمة الافتراضية: استخدم الخيار الأول غير الفارغ
+  const firstNonEmptyOption = options.find(opt => opt.value.trim() !== '' && opt.text.trim() !== '');
+  if (firstNonEmptyOption) {
+    console.log(`[Bookmarklet] استخدام أول خيار غير فارغ: ${firstNonEmptyOption.text}`);
+    return firstNonEmptyOption;
+  }
+  
+  // لم يتم العثور على تطابق مناسب
+  return null;
+};
+
+/**
  * وظيفة ملء الحقل بالقيمة المناسبة وإطلاق أحداث التغيير
  */
-export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLElement, value: string) => {
+export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLElement, value: string): boolean => {
   // إذا كانت القيمة فارغة، لا تملأ الحقل
   if (!value || value.trim() === '') {
     // هنا نحتاج إلى التحقق من الخاصية الصحيحة للعنصر
@@ -294,71 +499,32 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
     return false;
   }
   
-  // التعامل مع القوائم المنسدلة
+  // تعامل خاص مع القوائم المنسدلة
   if (field instanceof HTMLSelectElement) {
-    const select = field;
+    const select = field as HTMLSelectElement;
+    const bestOption = findBestSelectOption(select, value);
     
-    // محاولة العثور على الخيار المطابق
-    const options = Array.from(select.options);
-    
-    // تنظيف القيمة للمقارنة
-    const cleanValue = value.trim().toLowerCase();
-    
-    // البحث عن تطابق دقيق أولاً
-    const exactMatch = options.find(option => 
-      option.text.trim().toLowerCase() === cleanValue || 
-      option.value.trim().toLowerCase() === cleanValue
-    );
-    
-    if (exactMatch) {
-      select.value = exactMatch.value;
-      console.log(`[Bookmarklet] تم ملء القائمة المنسدلة بالقيمة: ${exactMatch.text} (تطابق تام)`);
-    } else {
-      // البحث عن تطابق جزئي
-      const partialMatches = options
-        .map(option => ({
-          option,
-          similarity: Math.max(
-            // قياس تشابه النص
-            option.text.trim().toLowerCase().includes(cleanValue) ? 0.7 : 0,
-            cleanValue.includes(option.text.trim().toLowerCase()) ? 0.6 : 0,
-            // قياس تشابه القيمة
-            option.value.trim().toLowerCase().includes(cleanValue) ? 0.5 : 0,
-            cleanValue.includes(option.value.trim().toLowerCase()) ? 0.4 : 0
-          )
-        }))
-        .filter(match => match.similarity > 0)
-        .sort((a, b) => b.similarity - a.similarity);
+    if (bestOption) {
+      select.value = bestOption.value;
+      console.log(`[Bookmarklet] تم ملء القائمة المنسدلة بالقيمة: ${bestOption.text}`);
       
-      if (partialMatches.length > 0) {
-        const bestMatch = partialMatches[0].option;
-        select.value = bestMatch.value;
-        console.log(`[Bookmarklet] تم ملء القائمة المنسدلة بالقيمة: ${bestMatch.text} (تطابق جزئي)`);
-      } else {
-        // إذا لم نجد تطابقًا، اختر الخيار الأول إذا كان موجودًا
-        if (options.length > 0) {
-          select.value = options[0].value;
-          console.log(`[Bookmarklet] تم ملء القائمة المنسدلة بالقيمة الافتراضية: ${options[0].text}`);
-        } else {
-          console.log(`[Bookmarklet] لم يتم العثور على تطابق في القائمة المنسدلة للقيمة: ${value}`);
-          return false;
-        }
+      // إطلاق حدث التغيير
+      try {
+        const event = new Event('change', { bubbles: true });
+        select.dispatchEvent(event);
+      } catch (e) {
+        console.warn("[Bookmarklet] خطأ في إطلاق حدث التغيير:", e);
       }
+      
+      return true;
+    } else {
+      console.log(`[Bookmarklet] لم يتم العثور على تطابق في القائمة المنسدلة للقيمة: ${value}`);
+      return false;
     }
-    
-    // إطلاق حدث التغيير
-    try {
-      const event = new Event('change', { bubbles: true });
-      select.dispatchEvent(event);
-    } catch (e) {
-      console.warn("خطأ في إطلاق حدث التغيير:", e);
-    }
-    
-    return true;
   } else if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
     // تعديل القيمة حسب نوع الإدخال
-    if (field instanceof HTMLInputElement && field.type) {
-      const inputElement = field;
+    if (field instanceof HTMLInputElement) {
+      const inputElement = field as HTMLInputElement;
       
       switch (inputElement.type.toLowerCase()) {
         case 'tel':
@@ -368,6 +534,21 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
         case 'number':
           // تنظيف القيمة العددية
           field.value = value.replace(/[^\d.]/g, '');
+          break;
+        case 'date':
+          // تحويل التاريخ إلى التنسيق المناسب
+          try {
+            const dateValue = new Date(value);
+            if (!isNaN(dateValue.getTime())) {
+              // تنسيق YYYY-MM-DD
+              const formattedDate = dateValue.toISOString().split('T')[0];
+              field.value = formattedDate;
+            } else {
+              field.value = value;
+            }
+          } catch (e) {
+            field.value = value;
+          }
           break;
         case 'checkbox':
         case 'radio':
@@ -400,7 +581,7 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
         field.dispatchEvent(event);
       });
     } catch (e) {
-      console.warn("خطأ في إطلاق أحداث التغيير:", e);
+      console.warn("[Bookmarklet] خطأ في إطلاق أحداث التغيير:", e);
     }
   } else if ('contentEditable' in field && field.contentEditable === 'true') {
     // ملء العناصر ذات المحتوى القابل للتحرير
@@ -411,7 +592,7 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
       const event = new Event('input', { bubbles: true });
       field.dispatchEvent(event);
     } catch (e) {
-      console.warn("خطأ في إطلاق حدث التغيير:", e);
+      console.warn("[Bookmarklet] خطأ في إطلاق حدث التغيير:", e);
     }
   } else {
     console.log(`[Bookmarklet] نوع حقل غير معروف: ${field.tagName}`);
@@ -423,7 +604,7 @@ export const fillField = (field: HTMLInputElement | HTMLSelectElement | HTMLText
     field.focus();
     field.click();
   } catch (e) {
-    console.warn("تعذر تنشيط الحقل بالكامل:", e);
+    console.warn("[Bookmarklet] تعذر تنشيط الحقل بالكامل:", e);
   }
   
   return true;
@@ -441,6 +622,7 @@ export const findAndClickSaveButton = (): boolean => {
     'button:contains("حفظ")', 
     'button:contains("احفظ")',
     'button:contains("تأكيد")',
+    'button:contains("إضافة")',
     'input[type="submit"][value*="حفظ"]',
     'input[type="button"][value*="حفظ"]',
     // البحث باستخدام السمات
@@ -448,11 +630,57 @@ export const findAndClickSaveButton = (): boolean => {
     '.save-button', 
     '.btn-save',
     '.submit-btn',
+    '.btn-primary',
     // محددات أخرى
-    'button.btn-primary',
     'form button:last-child',
-    'form input[type="submit"]:last-child'
+    'form input[type="submit"]:last-child',
+    'button.btn-success'
   ];
+  
+  // تحسين البحث عن النص داخل الأزرار
+  const containsTextPredicate = (buttonElement: Element, searchText: string) => {
+    return buttonElement.textContent?.trim().toLowerCase().includes(searchText.toLowerCase());
+  };
+  
+  // محاولة العثور على زر باستخدام المحددات المعرفة
+  for (const selector of saveButtonSelectors) {
+    if (selector.includes(':contains("')) {
+      // استخراج النص المطلوب البحث عنه
+      const match = selector.match(/:contains\("([^"]+)"\)/);
+      if (match && match[1]) {
+        const searchText = match[1];
+        const baseSelector = selector.replace(/:contains\("([^"]+)"\)/, '');
+        
+        // البحث عن جميع الأزرار وتصفيتها بناءً على النص
+        const buttons = Array.from(document.querySelectorAll(baseSelector) as NodeListOf<Element>)
+          .filter(btn => containsTextPredicate(btn, searchText));
+        
+        if (buttons.length > 0) {
+          console.log(`[Bookmarklet] وجدت ${buttons.length} زر مع النص "${searchText}"`);
+          try {
+            buttons[0].click();
+            console.log("[Bookmarklet] تم النقر على زر الحفظ!");
+            return true;
+          } catch (e) {
+            console.warn("[Bookmarklet] خطأ أثناء النقر على الزر:", e);
+          }
+        }
+      }
+    } else {
+      // استخدام المحدد مباشرة
+      const buttons = document.querySelectorAll(selector);
+      if (buttons.length > 0) {
+        console.log(`[Bookmarklet] وجدت ${buttons.length} زر باستخدام المحدد "${selector}"`);
+        try {
+          (buttons[0] as HTMLElement).click();
+          console.log("[Bookmarklet] تم النقر على زر الحفظ!");
+          return true;
+        } catch (e) {
+          console.warn("[Bookmarklet] خطأ أثناء النقر على الزر:", e);
+        }
+      }
+    }
+  }
   
   // البحث اليدوي عن أزرار قد تكون أزرار حفظ
   const allButtons = document.querySelectorAll('button, input[type="submit"], input[type="button"]');
@@ -468,11 +696,27 @@ export const findAndClickSaveButton = (): boolean => {
       buttonText.includes('تأكيد') || buttonText.includes('إرسال') || 
       buttonText.includes('تخزين') || buttonText.includes('إضافة') ||
       buttonValue.includes('حفظ') || buttonValue.includes('تأكيد') ||
-      buttonText === 'حفظ'
+      buttonText === 'حفظ' || buttonText === 'إضافة' ||
+      button.classList.contains('save') || button.classList.contains('submit') ||
+      button.classList.contains('btn-primary') || button.classList.contains('btn-success')
     ) {
       potentialSaveButtons.push(button);
     }
   }
+  
+  // ترتيب الأزرار المحتملة حسب أولوية النص
+  potentialSaveButtons.sort((a, b) => {
+    const textA = a.textContent?.trim().toLowerCase() || '';
+    const textB = b.textContent?.trim().toLowerCase() || '';
+    
+    // أزرار بنص "حفظ" أو "تأكيد" لها أولوية أعلى
+    if (textA === 'حفظ' && textB !== 'حفظ') return -1;
+    if (textB === 'حفظ' && textA !== 'حفظ') return 1;
+    if (textA === 'تأكيد' && textB !== 'تأكيد') return -1;
+    if (textB === 'تأكيد' && textA !== 'تأكيد') return 1;
+    
+    return 0;
+  });
   
   // البحث عن زر في أسفل النموذج
   if (potentialSaveButtons.length === 0) {
@@ -508,8 +752,10 @@ export const findAndClickSaveButton = (): boolean => {
   // استخدم أول زر محتمل وجدته
   if (potentialSaveButtons.length > 0) {
     try {
-      console.log("[Bookmarklet] جاري النقر على زر الحفظ...");
-      potentialSaveButtons[0].click();
+      console.log("[Bookmarklet] جاري النقر على زر الحفظ المكتشف...");
+      console.log("[Bookmarklet] نص الزر:", potentialSaveButtons[0].textContent);
+      console.log("[Bookmarklet] نوع الزر:", potentialSaveButtons[0].tagName);
+      (potentialSaveButtons[0] as HTMLElement).click();
       console.log("[Bookmarklet] تم النقر على زر الحفظ بنجاح!");
       return true;
     } catch (error) {
@@ -544,30 +790,35 @@ export const fillForm = (item: BookmarkletItem): number => {
     return 0;
   }
   
-  // خريطة للحقول المستهدفة من الموقع المرسل
-  const fieldMappings = {
+  // خريطة للحقول المستهدفة - تمت إعادة تنظيمها بناءً على ما رأيناه في الصورة
+  const fieldMappings: Record<string, string> = {
+    // الحقول الأساسية المرئية في الصورة
     'customerCode': item.customerCode || item.code || '',
-    'orderNumber': item.code || '',
-    'phoneNumber': item.phoneNumber ? item.phoneNumber.replace(/\D/g, '') : '',
-    'province': item.province || '',
     'customerName': item.customerName || item.senderName || '',
-    'recipientName': item.recipientName || item.senderName || '',
+    'customerPhone': item.customerPhone || item.phoneNumber.replace(/\D/g, '') || '',
+    'province': item.province || '',
+    'area': item.area || item.region || '',
+    'receiverName': item.receiverName || item.recipientName || item.senderName || '',
     'totalAmount': item.totalAmount || item.price ? item.price.replace(/[^\d.]/g, '') : '',
-    'area': item.area || item.region || item.province || '',
-    'packageType': item.packageType || item.productType || item.category || 'بضائع متنوعة',
-    'pieceCount': item.pieceCount || item.packageCount || '1',
-    'customerFee': item.customerFee || '',
-    'deliveryAgentFee': item.deliveryAgentFee || '',
+    'packageType': item.packageType || item.category || 'بضائع متنوعة',
+    'pieceCount': item.pieceCount || '1',
+    'customerFee': item.customerFee || '0',
+    'deliveryAgentFee': item.deliveryAgentFee || '0',
     'notes1': item.notes1 || item.notes || '',
     'notes2': item.notes2 || '',
     'status1': item.status1 || 'قيد التنفيذ',
-    'exchangeStatus': item.exchangeStatus || '',
+    'exchangeStatus': item.exchangeStatus || 'لا',
+    'paymentStatus': item.paymentStatus || 'نقدي',
+    'deliveryDate': item.deliveryDate || '',
     'delegateName': item.delegateName || '',
+    
+    // الحقول الاحتياطية/التوافقية
+    'code': item.code || '',
     'senderName': item.senderName || '',
+    'phoneNumber': item.phoneNumber.replace(/\D/g, '') || '',
     'price': item.price ? item.price.replace(/[^\d.]/g, '') : '',
     'companyName': item.companyName || '',
-    'code': item.code || '',
-    'address': item.address || item.province || ''
+    'address': item.address || '',
   };
   
   // تتبع الحقول التي تم ملؤها
@@ -624,8 +875,31 @@ export const fillForm = (item: BookmarkletItem): number => {
           }
         }
       });
+      
+      // بعد ملء الحقول الجديدة، محاولة النقر على زر الحفظ مرة أخرى
+      setTimeout(() => {
+        findAndClickSaveButton();
+      }, 1000);
     }
   }, 1000);
+  
+  // محاولة النقر على زر الحفظ بعد ملء الحقول
+  setTimeout(() => {
+    console.log("[Bookmarklet] محاولة النقر على زر الحفظ بعد ملء الحقول");
+    const buttonClicked = findAndClickSaveButton();
+    
+    if (buttonClicked) {
+      console.log("[Bookmarklet] تم النقر على زر الحفظ!");
+      // تحديث حالة العنصر إلى "نجاح" بعد فترة
+      setTimeout(() => {
+        updateItemStatus(item.id, 'success', 'تم ملء البيانات وحفظها بنجاح');
+      }, 1000);
+    } else {
+      console.warn("[Bookmarklet] تعذر العثور على زر الحفظ");
+      // تحديث حالة العنصر إلى "خطأ" إذا لم يتم العثور على زر الحفظ
+      updateItemStatus(item.id, 'error', 'تعذر العثور على زر الحفظ');
+    }
+  }, 1500);
   
   // حساب العدد المبدئي للحقول التي تم ملؤها
   return Object.keys(filledFields).length;

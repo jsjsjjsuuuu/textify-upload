@@ -24,7 +24,7 @@ export interface BookmarkletItem {
   category?: string;
   region?: string;
   
-  // حقول جديدة مطابقة للموقع المستهدف
+  // حقول مطابقة للموقع المستهدف
   customerName?: string; // اسم العميل/الزبون
   customerPhone?: string; // هاتف الزبون
   totalAmount?: string; // المبلغ الكلي
@@ -38,6 +38,9 @@ export interface BookmarkletItem {
   notes2?: string; // ملاحظات خاصة
   status1?: string; // الحالة
   exchangeStatus?: string; // استبدال
+  paymentStatus?: string; // حالة الدفع
+  deliveryDate?: string; // تاريخ التسليم
+  delegateName?: string; // اسم المندوب
 }
 
 // نوع بيانات التصدير

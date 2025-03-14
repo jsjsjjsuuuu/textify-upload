@@ -41,16 +41,23 @@ export const convertImageToBookmarkletItem = (image: ImageData): BookmarkletItem
     customerCode: image.customerCode || "",
     region: image.region || "",
     
-    // الحقول الجديدة المناسبة للموقع
-    customerName: image.recipientName || image.senderName || "", // استخدام اسم المستلم أو المرسل كاسم للعميل
-    customerPhone: cleanedPhoneNumber || "", // استخدام نفس رقم الهاتف المنظف
-    totalAmount: image.price || "", // استخدام حقل السعر كمبلغ كلي
-    receiverName: image.recipientName || "", // اسم المستلم
-    area: image.province || "", // استخدام المحافظة كمنطقة
-    packageType: image.category || "بضائع متنوعة", // نوع البضاعة
-    pieceCount: image.packageCount || "1", // عدد القطع، الافتراضي 1
-    notes1: image.notes || "", // الملاحظات
-    notes2: image.notes ? "انظر الملاحظات الأساسية" : "", // ملاحظات خاصة إضافية
+    // الحقول الجديدة المناسبة للموقع المستهدف - جعلها أكثر دقة
+    customerName: image.customerName || image.senderName || "", // استخدام الاسم المخصص أو اسم المرسل
+    customerPhone: image.customerPhone || cleanedPhoneNumber || "", // استخدام رقم الهاتف المخصص أو رقم الهاتف الأساسي
+    totalAmount: image.totalAmount || image.price || "", // استخدام المبلغ الكلي المخصص أو السعر
+    receiverName: image.receiverName || image.recipientName || "", // اسم المستلم
+    area: image.area || image.region || correctedProvince || "", // المنطقة
+    packageType: image.packageType || image.category || "بضائع متنوعة", // نوع البضاعة
+    pieceCount: image.pieceCount || "1", // عدد القطع، الافتراضي 1
+    notes1: image.notes1 || image.notes || "", // الملاحظات
+    notes2: image.notes2 || "", // ملاحظات خاصة إضافية
+    customerFee: image.customerFee || "", // زيادة أجرة العميل
+    deliveryAgentFee: image.deliveryAgentFee || "", // زيادة أجرة المندوب
+    status1: image.status1 || image.orderStatus || "قيد التنفيذ", // الحالة
+    exchangeStatus: image.exchangeStatus || "لا", // استبدال (الافتراضي: لا)
+    paymentStatus: image.paymentType || "نقدي", // حالة الدفع (الافتراضي: نقدي)
+    deliveryDate: image.deliveryDate || "", // تاريخ التسليم
+    delegateName: image.delegateName || "" // اسم المندوب
   };
 
   console.log("تم تحويل الصورة بنجاح:", item);
