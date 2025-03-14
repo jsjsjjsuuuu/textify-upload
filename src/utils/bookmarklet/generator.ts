@@ -108,6 +108,43 @@ export const generateBookmarkletCode = (): string => {
       };
       actionsDiv.appendChild(fillFirstButton);
       
+      // إضافة زر "إدخال ثم ضغط حفظ"
+      const fillAndSaveButton = document.createElement("button");
+      fillAndSaveButton.className = "bm-btn bm-btn-primary";
+      fillAndSaveButton.innerHTML = '<span>إدخال البيانات والضغط على حفظ</span>';
+      fillAndSaveButton.onclick = function() {
+        if (items.length > 0) {
+          fillAndSaveButton.innerHTML = '<span>جاري ملء البيانات...</span><span class="bm-loader"></span>';
+          fillAndSaveButton.disabled = true;
+          
+          setTimeout(() => {
+            const result = fillForm(items[0]);
+            
+            if (result > 0) {
+              // ابحث عن زر الحفظ وانقر عليه
+              setTimeout(() => {
+                const saveButtonResult = clickSaveButton();
+                
+                if (saveButtonResult) {
+                  showNotification("تم ملء البيانات والضغط على زر الحفظ بنجاح!", "success");
+                  updateItemStatus(items[0].id, "success", "تم إدخال البيانات والحفظ بنجاح");
+                } else {
+                  showNotification("تم ملء البيانات لكن لم نتمكن من العثور على زر الحفظ.", "error");
+                }
+                
+                fillAndSaveButton.innerHTML = '<span>إدخال البيانات والضغط على حفظ</span>';
+                fillAndSaveButton.disabled = false;
+              }, 1000);
+            } else {
+              showNotification("لم نتمكن من العثور على حقول مناسبة. تأكد من أنك في صفحة إضافة شحنة.", "error");
+              fillAndSaveButton.innerHTML = '<span>إدخال البيانات والضغط على حفظ</span>';
+              fillAndSaveButton.disabled = false;
+            }
+          }, 500);
+        }
+      };
+      actionsDiv.appendChild(fillAndSaveButton);
+      
       // إضافة زر "إظهار جميع العناصر"
       const showAllButton = document.createElement("button");
       showAllButton.className = "bm-btn bm-btn-secondary";
@@ -129,6 +166,121 @@ export const generateBookmarkletCode = (): string => {
       controlPanel.appendChild(content);
       document.body.appendChild(controlPanel);
 
+      // وظيفة البحث عن زر الحفظ والضغط عليه
+      function clickSaveButton() {
+        console.log("البحث عن زر الحفظ...");
+        
+        // طرق مختلفة للعثور على زر الحفظ
+        const saveButtonSelectors = [
+          // البحث عن زر النص "حفظ" أو "احفظ" أو "تأكيد"
+          'button:contains("حفظ")', 
+          'input[type="submit"][value*="حفظ"]',
+          'button:contains("احفظ")',
+          'button:contains("تأكيد")',
+          'button:contains("حفط")',
+          'input[type="button"][value*="حفظ"]',
+          // البحث بواسطة الكلاس
+          '.save-button', 
+          '.btn-save',
+          '.submit-btn',
+          // خاص بالموقع المستهدف
+          'button.حفظ',
+          // أي زر في أسفل النموذج
+          'form button[type="submit"]',
+          // محاولة العثور على أي زر في أسفل الصفحة
+          'button', 
+          'input[type="submit"]',
+          'input[type="button"]'
+        ];
+        
+        // محاولة العثور على زر الحفظ باستخدام المحددات المختلفة
+        let saveButton;
+        
+        for (const selector of saveButtonSelectors) {
+          // استخدام document.querySelectorAll ثم التصفية بناءً على النص المرئي
+          const buttons = document.querySelectorAll(selector.replace(':contains(', '['));
+          
+          // تخمين زر الحفظ بناء على موقعه (غالبًا في أسفل النموذج) أو النص المعروض
+          for (const button of Array.from(buttons)) {
+            const buttonText = button.textContent?.trim().toLowerCase() || '';
+            const buttonType = button.getAttribute('type')?.toLowerCase() || '';
+            const buttonValue = button.getAttribute('value')?.toLowerCase() || '';
+            
+            if (
+              (buttonText.includes('حفظ') || buttonText.includes('تأكيد') || 
+               buttonText.includes('احفظ') || buttonText.includes('إرسال') || 
+               buttonText.includes('تخزين') || buttonText.includes('إضافة') || 
+               buttonText === 'حفظ') || 
+              (buttonValue.includes('حفظ') || buttonValue.includes('تأكيد')) ||
+              (buttonType === 'submit')
+            ) {
+              saveButton = button;
+              console.log("تم العثور على زر الحفظ المحتمل:", buttonText || buttonValue || buttonType);
+              break;
+            }
+          }
+          
+          if (saveButton) break;
+        }
+        
+        // إذا لم يتم العثور على زر محدد، ابحث عن آخر زر في الصفحة (احتمالية أنه زر الحفظ)
+        if (!saveButton) {
+          const allButtons = document.querySelectorAll('button, input[type="submit"], input[type="button"]');
+          // ابحث عن زر في أسفل الصفحة
+          const bottomButtons = Array.from(allButtons).filter(button => {
+            const rect = button.getBoundingClientRect();
+            return rect.top > window.innerHeight * 0.6; // في النصف السفلي من الصفحة
+          });
+          
+          if (bottomButtons.length > 0) {
+            // رتب الأزرار حسب موضعها من الأسفل إلى الأعلى
+            bottomButtons.sort((a, b) => {
+              const rectA = a.getBoundingClientRect();
+              const rectB = b.getBoundingClientRect();
+              return rectB.top - rectA.top;
+            });
+            
+            saveButton = bottomButtons[0];
+            console.log("تم اختيار آخر زر في الصفحة كزر حفظ محتمل");
+          }
+        }
+        
+        // محاولة استخدام خاصة بالموقع المستهدف
+        if (!saveButton) {
+          // في بعض المواقع، قد يكون هناك عناصر divs تتصرف كأزرار
+          const potentialButtons = document.querySelectorAll('.حفظ, .btn, .button, [role="button"]');
+          for (const btn of Array.from(potentialButtons)) {
+            const btnText = btn.textContent?.trim().toLowerCase() || '';
+            if (btnText.includes('حفظ') || btnText.includes('تأكيد') || btnText === 'حفظ') {
+              saveButton = btn;
+              console.log("تم العثور على عنصر يتصرف كزر:", btnText);
+              break;
+            }
+          }
+        }
+        
+        // إذا وجدنا زر الحفظ، انقر عليه
+        if (saveButton) {
+          try {
+            console.log("جاري النقر على زر الحفظ...");
+            saveButton.click();
+            
+            // التحقق من نجاح النقر
+            setTimeout(() => {
+              console.log("تم النقر على زر الحفظ بنجاح!");
+            }, 100);
+            
+            return true;
+          } catch (error) {
+            console.error("خطأ أثناء النقر على زر الحفظ:", error);
+            return false;
+          }
+        } else {
+          console.warn("لم يتم العثور على زر الحفظ");
+          return false;
+        }
+      }
+
       // وظيفة تعبئة النموذج بشكل محسن
       function fillForm(item) {
         console.log("بدء ملء النموذج بالبيانات:", item);
@@ -139,31 +291,186 @@ export const generateBookmarkletCode = (): string => {
         // تتبع ما إذا تم ملء أي حقول
         let filledFields = 0;
         
-        fields.forEach(field => {
-          // تحديد نوع الحقل
-          const fieldType = guessFieldType(field);
-          if (fieldType !== 'unknown') {
-            let value = '';
-            
-            switch (fieldType) {
-              case 'code': value = item.code || ''; break;
-              case 'senderName': value = item.senderName || ''; break;
-              case 'phoneNumber': value = item.phoneNumber ? item.phoneNumber.replace(/\\D/g, '') : ''; break;
-              case 'province': value = item.province || ''; break;
-              case 'price': value = item.price ? item.price.replace(/[^\\d.]/g, '') : ''; break;
-              case 'companyName': value = item.companyName || ''; break;
-              case 'address': value = \`\${item.province || ''}\${item.notes ? ' - ' + item.notes : ''}\`; break;
-              case 'notes': value = item.notes || ''; break;
-              case 'productType': value = item.category || item.notes || 'بضائع متنوعة'; break;
-              case 'orderNumber': value = item.code || ''; break;
-              case 'customerCode': value = item.customerCode || item.code || ''; break;
-              case 'recipientName': value = item.recipientName || item.senderName || ''; break;
-              default: break;
+        // تعيين الحقول المرئية في الصورة المرفقة
+        const fieldMappings = {
+          'كود العميل': { key: 'customerCode', value: item.code || item.customerCode || '' },
+          'رقم العميل': { key: 'customerCode', value: item.code || item.customerCode || '' },
+          'رقم الوصل': { key: 'code', value: item.code || '' },
+          'رقم البوليصة': { key: 'code', value: item.code || '' },
+          'هاتف الزبون': { key: 'phoneNumber', value: item.phoneNumber ? item.phoneNumber.replace(/\\D/g, '') : '' },
+          'المحافظة': { key: 'province', value: item.province || '' },
+          'اسم العميل': { key: 'customerName', value: item.senderName || item.recipientName || '' },
+          'اسم المستلم': { key: 'recipientName', value: item.recipientName || item.senderName || '' },
+          'المبلغ الكلي': { key: 'totalAmount', value: item.price ? item.price.replace(/[^\\d.]/g, '') : '' },
+          'عدد القطع': { key: 'pieceCount', value: item.packageCount || item.pieceCount || '1' },
+          'المنطقة': { key: 'area', value: item.region || item.province || '' },
+          'اسم الزبون': { key: 'customerName', value: item.senderName || '' },
+          'نوع البضاعة': { key: 'packageType', value: item.productType || item.category || 'بضائع متنوعة' },
+          'زيادة أجرة العميل': { key: 'customerFee', value: '' },
+          'زيادة أجرة المندوب': { key: 'deliveryAgentFee', value: '' },
+          'ملاحظات': { key: 'notes1', value: item.notes || '' },
+          'ملاحظات خاصة': { key: 'notes2', value: '' },
+          'الحالة': { key: 'status1', value: 'قيد التنفيذ' },
+          'استبدال': { key: 'exchangeStatus', value: '' },
+          'اسم المندوب': { key: 'delegateName', value: item.delegateName || '' }
+        };
+        
+        // للبحث في النص المحيط بالحقل
+        function getFieldLabel(field) {
+          // محاولة العثور على التسمية المرتبطة مباشرة بالحقل
+          if (field.id) {
+            const labelElement = document.querySelector(\`label[for="\${field.id}"]\`);
+            if (labelElement) {
+              return labelElement.textContent?.trim() || '';
+            }
+          }
+          
+          // البحث في العناصر المجاورة عن تسمية محتملة
+          let current = field.previousElementSibling;
+          while (current && current.tagName !== 'INPUT' && current.tagName !== 'SELECT' && current.tagName !== 'TEXTAREA') {
+            // إذا كان العنصر الحالي نص (td, div, span, label, etc)
+            if (current.textContent) {
+              const text = current.textContent.trim();
+              if (text && text.length < 50) { // تجنب النصوص الطويلة جدًا
+                return text;
+              }
+            }
+            current = current.previousElementSibling;
+          }
+          
+          // البحث في العنصر الأب
+          if (field.parentElement) {
+            // ابحث عن أي عنصر نصي مباشر في العنصر الأب
+            const parentText = Array.from(field.parentElement.childNodes)
+              .filter(node => node.nodeType === 3) // الأنواع النصية فقط
+              .map(node => node.textContent?.trim())
+              .filter(text => text && text.length > 0 && text.length < 50)
+              .join(' ');
+              
+            if (parentText) {
+              return parentText;
             }
             
-            if (value && fillField(field, value)) {
-              filledFields++;
-              console.log("تم ملء حقل", fieldType, "بقيمة:", value);
+            // ابحث عن أي span أو div أو label داخل الأب قبل الحقل
+            const siblings = Array.from(field.parentElement.children);
+            const fieldIndex = siblings.indexOf(field);
+            
+            for (let i = 0; i < fieldIndex; i++) {
+              const sibling = siblings[i];
+              if (sibling.tagName === 'SPAN' || sibling.tagName === 'DIV' || sibling.tagName === 'LABEL') {
+                const text = sibling.textContent?.trim();
+                if (text && text.length < 50) {
+                  return text;
+                }
+              }
+            }
+            
+            // ابحث عن النص في العنصر الأب نفسه
+            const parentElement = field.parentElement;
+            if (parentElement.childNodes.length <= 3) { // لتجنب العناصر المعقدة
+              const text = parentElement.textContent?.trim() || '';
+              // استبعاد النص إذا كان يحتوي فقط على نص الحقل نفسه
+              if (text && text !== field.value && text.length < 50) {
+                return text;
+              }
+            }
+          }
+          
+          // إذا لم نجد أي شيء، أعد الاسم أو المعرف أو الفئة
+          return field.name || field.id || field.className || '';
+        }
+        
+        fields.forEach(field => {
+          // تحديد تسمية الحقل
+          const fieldLabel = getFieldLabel(field);
+          console.log("الحقل:", field.tagName, "الاسم:", field.name || field.id, "التسمية:", fieldLabel);
+          
+          // البحث عن تطابق في خريطة الحقول
+          let foundMapping = null;
+          for (const [label, mapping] of Object.entries(fieldMappings)) {
+            if (
+              fieldLabel.includes(label) || 
+              (field.placeholder && field.placeholder.includes(label)) ||
+              (field.name && field.name.includes(label)) ||
+              (field.id && field.id.includes(label))
+            ) {
+              foundMapping = mapping;
+              console.log("تم العثور على تطابق:", label, "->", mapping.key);
+              break;
+            }
+          }
+          
+          // إذا وجدنا تطابقًا، املأ الحقل
+          if (foundMapping) {
+            const value = foundMapping.value;
+            
+            if (value && field.tagName) {
+              if (field.tagName === 'SELECT') {
+                // للقوائم المنسدلة
+                const select = field as HTMLSelectElement;
+                const options = Array.from(select.options);
+                
+                // البحث عن تطابق دقيق أو جزئي
+                const exactMatch = options.find(opt => 
+                  opt.text.trim().toLowerCase() === value.toLowerCase() || 
+                  opt.value.toLowerCase() === value.toLowerCase()
+                );
+                
+                if (exactMatch) {
+                  // تعيين القيمة باستخدام قيمة الخيار
+                  select.value = exactMatch.value;
+                  console.log("تم ملء القائمة المنسدلة:", foundMapping.key, "بالقيمة:", exactMatch.text);
+                } else {
+                  // البحث عن تطابق جزئي
+                  const partialMatch = options.find(opt => 
+                    opt.text.trim().toLowerCase().includes(value.toLowerCase()) || 
+                    value.toLowerCase().includes(opt.text.trim().toLowerCase())
+                  );
+                  
+                  if (partialMatch) {
+                    select.value = partialMatch.value;
+                    console.log("تم ملء القائمة المنسدلة (تطابق جزئي):", foundMapping.key, "بالقيمة:", partialMatch.text);
+                  } else if (options.length > 0 && foundMapping.key === 'status1') {
+                    // للحالة، اختر الخيار الأول إذا لم نجد تطابقًا
+                    select.value = options[0].value;
+                    console.log("تم ملء القائمة المنسدلة (الخيار الأول):", foundMapping.key, "بالقيمة:", options[0].text);
+                  }
+                }
+                
+                // إطلاق حدث التغيير
+                const event = new Event('change', { bubbles: true });
+                select.dispatchEvent(event);
+                
+                filledFields++;
+              } else if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
+                // للحقول النصية
+                const input = field as HTMLInputElement | HTMLTextAreaElement;
+                
+                if (input.type === 'checkbox' || input.type === 'radio') {
+                  // للمربعات أو أزرار الاختيار
+                  const shouldCheck = value === 'true' || value === '1' || value.toLowerCase() === 'نعم';
+                  input.checked = shouldCheck;
+                } else {
+                  // للحقول النصية العادية
+                  input.value = value;
+                }
+                
+                // إطلاق أحداث التغيير والإدخال
+                ['input', 'change', 'blur'].forEach(eventType => {
+                  const event = new Event(eventType, { bubbles: true });
+                  input.dispatchEvent(event);
+                });
+                
+                console.log("تم ملء الحقل:", foundMapping.key, "بالقيمة:", value);
+                filledFields++;
+              } else if (field.contentEditable === 'true') {
+                // للعناصر القابلة للتحرير
+                field.textContent = value;
+                const event = new Event('input', { bubbles: true });
+                field.dispatchEvent(event);
+                console.log("تم ملء العنصر القابل للتحرير:", foundMapping.key, "بالقيمة:", value);
+                filledFields++;
+              }
             }
           }
         });
@@ -179,22 +486,76 @@ export const generateBookmarkletCode = (): string => {
             const additionalFields = Array.from(newFields).filter(f => !existingIds.has(f.id || ''));
             
             additionalFields.forEach(field => {
-              const fieldType = guessFieldType(field);
-              if (fieldType !== 'unknown') {
-                let value = '';
-                
-                switch (fieldType) {
-                  case 'code': value = item.code || ''; break;
-                  case 'senderName': value = item.senderName || ''; break;
-                  case 'phoneNumber': value = item.phoneNumber ? item.phoneNumber.replace(/\\D/g, '') : ''; break;
-                  case 'province': value = item.province || ''; break;
-                  case 'price': value = item.price ? item.price.replace(/[^\\d.]/g, '') : ''; break;
-                  default: break;
+              const fieldLabel = getFieldLabel(field);
+              
+              // البحث عن تطابق في خريطة الحقول
+              let foundMapping = null;
+              for (const [label, mapping] of Object.entries(fieldMappings)) {
+                if (
+                  fieldLabel.includes(label) || 
+                  (field.placeholder && field.placeholder.includes(label)) ||
+                  (field.name && field.name.includes(label)) ||
+                  (field.id && field.id.includes(label))
+                ) {
+                  foundMapping = mapping;
+                  break;
                 }
+              }
+              
+              if (foundMapping) {
+                const value = foundMapping.value;
                 
-                if (value && fillField(field, value)) {
-                  filledFields++;
-                  console.log("تم ملء حقل جديد", fieldType, "بقيمة:", value);
+                if (value && field.tagName) {
+                  if (field.tagName === 'SELECT') {
+                    // للقوائم المنسدلة
+                    const select = field as HTMLSelectElement;
+                    const options = Array.from(select.options);
+                    
+                    const exactMatch = options.find(opt => 
+                      opt.text.trim().toLowerCase() === value.toLowerCase() || 
+                      opt.value.toLowerCase() === value.toLowerCase()
+                    );
+                    
+                    if (exactMatch) {
+                      select.value = exactMatch.value;
+                    } else {
+                      const partialMatch = options.find(opt => 
+                        opt.text.trim().toLowerCase().includes(value.toLowerCase()) || 
+                        value.toLowerCase().includes(opt.text.trim().toLowerCase())
+                      );
+                      
+                      if (partialMatch) {
+                        select.value = partialMatch.value;
+                      }
+                    }
+                    
+                    const event = new Event('change', { bubbles: true });
+                    select.dispatchEvent(event);
+                    
+                    filledFields++;
+                  } else if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
+                    // للحقول النصية
+                    const input = field as HTMLInputElement | HTMLTextAreaElement;
+                    
+                    if (input.type === 'checkbox' || input.type === 'radio') {
+                      const shouldCheck = value === 'true' || value === '1' || value.toLowerCase() === 'نعم';
+                      input.checked = shouldCheck;
+                    } else {
+                      input.value = value;
+                    }
+                    
+                    ['input', 'change', 'blur'].forEach(eventType => {
+                      const event = new Event(eventType, { bubbles: true });
+                      input.dispatchEvent(event);
+                    });
+                    
+                    filledFields++;
+                  } else if (field.contentEditable === 'true') {
+                    field.textContent = value;
+                    const event = new Event('input', { bubbles: true });
+                    field.dispatchEvent(event);
+                    filledFields++;
+                  }
                 }
               }
             });
@@ -212,7 +573,7 @@ export const generateBookmarkletCode = (): string => {
             // تحديث حالة العنصر في localStorage
             updateItemStatus(item.id, "error", "فشل في إدخال البيانات");
           }
-        }, 1000);
+        }, 500);
         
         return filledFields;
       }
@@ -228,7 +589,7 @@ export const generateBookmarkletCode = (): string => {
                 return {
                   ...item,
                   status: status,
-                  statusMessage: message,
+                  message: message,
                   lastUpdated: now.toISOString()
                 };
               }
@@ -243,115 +604,6 @@ export const generateBookmarkletCode = (): string => {
           }
         } catch (e) {
           console.error("خطأ في تحديث حالة العنصر:", e);
-        }
-      }
-      
-      // وظيفة تخمين نوع الحقل
-      function guessFieldType(field) {
-        const searchables = [];
-        
-        // جمع كل المعرّفات المحتملة للحقل
-        if (field.name) searchables.push(field.name.toLowerCase());
-        if (field.id) searchables.push(field.id.toLowerCase());
-        if (field.className && typeof field.className === 'string') searchables.push(field.className.toLowerCase());
-        if (field.placeholder) searchables.push(field.placeholder.toLowerCase());
-        
-        // البحث عن عنصر label المرتبط
-        if (field.id) {
-          const label = document.querySelector('label[for="' + field.id + '"]');
-          if (label && label.textContent) searchables.push(label.textContent.toLowerCase());
-        }
-        
-        // البحث في النص المحيط
-        let parent = field.parentElement;
-        if (parent && parent.textContent) searchables.push(parent.textContent.toLowerCase());
-        
-        // تجميع النص للبحث
-        const searchText = searchables.join(' ');
-        
-        // الكلمات المفتاحية للبحث - مبسطة للتوافق
-        const patterns = [
-          { type: 'code', keywords: ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة', 'رقم الطلب', 'order', 'tracking', 'reference', 'ref'] },
-          { type: 'senderName', keywords: ['sender', 'name', 'customer', 'اسم', 'المرسل', 'الزبون', 'العميل', 'المستلم', 'الاسم'] },
-          { type: 'phoneNumber', keywords: ['phone', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم الهاتف', 'تليفون', 'رقم الجوال', 'tel'] },
-          { type: 'province', keywords: ['province', 'state', 'city', 'region', 'محافظة', 'المحافظة', 'مدينة', 'منطقة', 'المدينة'] },
-          { type: 'price', keywords: ['price', 'amount', 'cost', 'سعر', 'المبلغ', 'التكلفة', 'قيمة', 'دينار', 'المال'] },
-          { type: 'address', keywords: ['address', 'location', 'street', 'عنوان', 'الموقع', 'الشارع', 'التفاصيل'] },
-          { type: 'notes', keywords: ['notes', 'comments', 'ملاحظات', 'تعليقات', 'توضيح', 'explanation'] },
-          { type: 'companyName', keywords: ['company', 'business', 'vendor', 'شركة', 'الشركة', 'المتجر', 'البائع'] },
-          { type: 'recipientName', keywords: ['recipient', 'receiver', 'المستلم', 'اسم المستلم', 'من يستلم'] }
-        ];
-        
-        // البحث عن أفضل تطابق
-        for (const pattern of patterns) {
-          for (const keyword of pattern.keywords) {
-            if (searchText.includes(keyword)) {
-              return pattern.type;
-            }
-          }
-        }
-        
-        // تخمين بناءً على خصائص الحقل
-        if (field.type === 'tel') return 'phoneNumber';
-        if (field.type === 'number' && searchText.includes('price')) return 'price';
-        
-        return 'unknown';
-      }
-      
-      // وظيفة ملء الحقل بالقيمة
-      function fillField(field, value) {
-        if (!value || value.trim() === '') return false;
-        
-        try {
-          // التعامل مع القوائم المنسدلة
-          if (field.tagName === 'SELECT') {
-            const select = field;
-            const options = Array.from(select.options);
-            const cleanValue = value.trim().toLowerCase();
-            
-            // محاولة العثور على تطابق
-            let found = false;
-            for (const option of options) {
-              const optionText = option.text.toLowerCase();
-              if (optionText === cleanValue || optionText.includes(cleanValue)) {
-                select.value = option.value;
-                found = true;
-                break;
-              }
-            }
-            
-            if (!found) return false;
-          } else {
-            // للحقول العادية
-            if (field.type === 'tel') {
-              field.value = value.replace(/\\D/g, '');
-            } else if (field.type === 'number') {
-              field.value = value.replace(/[^\\d.]/g, '');
-            } else if (field.contentEditable === 'true') {
-              field.textContent = value;
-            } else {
-              field.value = value;
-            }
-          }
-          
-          // إطلاق الأحداث
-          ['input', 'change', 'blur'].forEach(eventType => {
-            const event = new Event(eventType, { bubbles: true });
-            field.dispatchEvent(event);
-          });
-          
-          // محاولة تنشيط الحقل
-          try {
-            field.focus();
-            field.click();
-          } catch (e) {
-            console.warn("لم يمكن تنشيط الحقل:", e);
-          }
-          
-          return true;
-        } catch (e) {
-          console.error("خطأ في ملء الحقل:", e);
-          return false;
         }
       }
       

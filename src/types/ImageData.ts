@@ -40,6 +40,21 @@ export interface ImageData {
   shipmentStatus?: string; // حالة الشحنة
   deliveryTime?: string; // وقت التسليم
   deliveryDate?: string; // تاريخ التسليم
+  // حقول جديدة مطابقة للموقع المستهدف
+  customerName?: string; // اسم العميل/الزبون
+  customerPhone?: string; // هاتف الزبون
+  totalAmount?: string; // المبلغ الكلي
+  receiverName?: string; // اسم المستلم
+  area?: string; // المنطقة
+  packageType?: string; // نوع البضاعة
+  pieceCount?: string; // عدد القطع
+  customerFee?: string; // زيادة أجرة العميل
+  deliveryAgentFee?: string; // زيادة أجرة المندوب
+  notes1?: string; // ملاحظات
+  notes2?: string; // ملاحظات خاصة
+  status1?: string; // الحالة
+  exchangeStatus?: string; // استبدال
+  orderStatus?: string; // حالة الطلب
 }
 
 // واجهة لتصدير البيانات إلى Bookmarklet
@@ -81,6 +96,20 @@ export interface BookmarkletItem {
   shipmentStatus?: string;
   deliveryTime?: string;
   deliveryDate?: string;
+  // حقول جديدة مطابقة للموقع المستهدف
+  customerName?: string; // اسم العميل/الزبون
+  customerPhone?: string; // هاتف الزبون
+  totalAmount?: string; // المبلغ الكلي
+  receiverName?: string; // اسم المستلم
+  area?: string; // المنطقة
+  packageType?: string; // نوع البضاعة
+  pieceCount?: string; // عدد القطع
+  customerFee?: string; // زيادة أجرة العميل
+  deliveryAgentFee?: string; // زيادة أجرة المندوب
+  notes1?: string; // ملاحظات
+  notes2?: string; // ملاحظات خاصة
+  status1?: string; // الحالة
+  exchangeStatus?: string; // استبدال
 }
 
 // إحصائيات البيانات المخزنة

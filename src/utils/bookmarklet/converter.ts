@@ -22,6 +22,7 @@ export const convertImageToBookmarkletItem = (image: ImageData): BookmarkletItem
   // تنظيف رقم الهاتف من أي أحرف غير رقمية
   const cleanedPhoneNumber = image.phoneNumber.replace(/[^\d+]/g, '');
 
+  // بناء كائن BookmarkletItem مع مراعاة الحقول الجديدة
   const item: BookmarkletItem = {
     id: image.id,
     code: image.code || "",
@@ -32,10 +33,24 @@ export const convertImageToBookmarkletItem = (image: ImageData): BookmarkletItem
     companyName: image.companyName || "",
     exportDate: new Date().toISOString(),
     status: "ready",
-    // إضافة حقول إضافية إذا كانت متاحة
+    
+    // الحقول الإضافية الأساسية
     address: image.address || "",
     notes: image.notes || "",
-    recipientName: image.recipientName || ""
+    recipientName: image.recipientName || "",
+    customerCode: image.customerCode || "",
+    region: image.region || "",
+    
+    // الحقول الجديدة المناسبة للموقع
+    customerName: image.recipientName || image.senderName || "", // استخدام اسم المستلم أو المرسل كاسم للعميل
+    customerPhone: cleanedPhoneNumber || "", // استخدام نفس رقم الهاتف المنظف
+    totalAmount: image.price || "", // استخدام حقل السعر كمبلغ كلي
+    receiverName: image.recipientName || "", // اسم المستلم
+    area: image.province || "", // استخدام المحافظة كمنطقة
+    packageType: image.category || "بضائع متنوعة", // نوع البضاعة
+    pieceCount: image.packageCount || "1", // عدد القطع، الافتراضي 1
+    notes1: image.notes || "", // الملاحظات
+    notes2: image.notes ? "انظر الملاحظات الأساسية" : "", // ملاحظات خاصة إضافية
   };
 
   console.log("تم تحويل الصورة بنجاح:", item);
