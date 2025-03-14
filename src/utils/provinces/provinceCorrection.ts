@@ -22,6 +22,21 @@ export function correctProvinceName(provinceName: string): string {
     return normalizedName;
   }
   
+  // معالجة خاصة للأنماط المختلفة من الكتابة
+  if (normalizedName.includes('بغداد') || normalizedName.includes('بقداد')) {
+    return 'بغداد';
+  } else if (normalizedName.includes('بصرة') || normalizedName.includes('البصره')) {
+    return 'البصرة';
+  } else if (normalizedName.includes('المثنى') || normalizedName.includes('سماوة') || normalizedName.includes('السماوة')) {
+    return 'المثنى';
+  } else if (normalizedName.includes('ذي قار') || normalizedName.includes('ذيقار') || normalizedName.includes('ناصرية')) {
+    return 'ذي قار';
+  } else if (normalizedName.includes('صلاح الدين') || normalizedName.includes('صلاحدين') || normalizedName.includes('تكريت')) {
+    return 'صلاح الدين';
+  } else if (normalizedName.includes('نجف') || normalizedName.includes('النجف')) {
+    return 'النجف';
+  }
+  
   // البحث عن أفضل تطابق جزئي
   for (const [wrongName, correctName] of Object.entries(PROVINCE_CORRECTIONS)) {
     // تحقق من وجود تطابق جزئي (اسم خاطئ موجود في النص)

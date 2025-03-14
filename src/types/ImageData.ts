@@ -24,6 +24,13 @@ export interface ImageData {
   notes?: string;
   category?: string;
   priority?: "low" | "medium" | "high";
+  // حقول إضافية مخصصة للموقع المستهدف
+  address?: string;
+  productType?: string;
+  orderNumber?: string;
+  delegateName?: string; // اسم المندوب
+  region?: string;      // المنطقة
+  packageCount?: string; // عدد القطع
 }
 
 // واجهة لتصدير البيانات إلى Bookmarklet
@@ -49,6 +56,13 @@ export interface BookmarkletItem {
   notes?: string;
   category?: string;
   priority?: string;
+  // حقول إضافية مخصصة للموقع المستهدف
+  address?: string;
+  productType?: string;
+  orderNumber?: string;
+  delegateName?: string;
+  region?: string;
+  packageCount?: string;
 }
 
 // إحصائيات البيانات المخزنة

@@ -1,3 +1,4 @@
+
 import { BookmarkletItem, BookmarkletExportData } from "@/types/ImageData";
 import { getFromLocalStorage, updateItemStatus } from "@/utils/bookmarkletService";
 
@@ -110,19 +111,19 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   const searchText = `${name} ${id} ${className} ${placeholderText} ${labelText} ${surroundingText} ${siblingsText}`;
   console.log(`[Bookmarklet] تحليل الحقل: ${id || name || 'غير معروف'}, النص: ${searchText.substring(0, 100)}...`);
   
-  // مصفوفة من الكلمات المفتاحية والأنماط - مع تحسين الكلمات المفتاحية
+  // مصفوفة من الكلمات المفتاحية والأنماط - مع تحسين الكلمات المفتاحية للموقع المحدد
   const patterns = [
     { 
       type: 'code', 
-      keywords: ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة', 'رقم الطلب', 'order', 'tracking', 'reference', 'ref', 'الوصل', 'الطلب', 'الشحنة', 'المرجع', 'تتبع', 'الرمز', 'تعقب']
+      keywords: ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة', 'رقم الطلب', 'order', 'tracking', 'reference', 'ref', 'الوصل', 'الطلب', 'الشحنة', 'المرجع', 'تتبع', 'الرمز', 'تعقب', 'كود العميل']
     },
     { 
       type: 'senderName', 
-      keywords: ['sender', 'name', 'customer', 'اسم', 'المرسل', 'الزبون', 'العميل', 'المستلم', 'الاسم', 'اسم المستلم', 'اسم العميل', 'recipient', 'customer name', 'full name', 'الاسم الكامل', 'الشخص', 'المستفيد', 'consignee']
+      keywords: ['sender', 'name', 'customer', 'اسم', 'المرسل', 'الزبون', 'العميل', 'المستلم', 'الاسم', 'اسم المستلم', 'اسم العميل', 'recipient', 'customer name', 'full name', 'الاسم الكامل', 'الشخص', 'المستفيد', 'consignee', 'اسم الزبون', 'حدد العميل']
     },
     { 
       type: 'phoneNumber', 
-      keywords: ['phone', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم الهاتف', 'تليفون', 'رقم الجوال', 'tel', 'telephone', 'contact', 'cell', 'رقم الاتصال', 'رقم التواصل', 'اتصال', 'رقم المحمول']
+      keywords: ['phone', 'mobile', 'هاتف', 'موبايل', 'جوال', 'رقم الهاتف', 'تليفون', 'رقم الجوال', 'tel', 'telephone', 'contact', 'cell', 'رقم الاتصال', 'رقم التواصل', 'اتصال', 'رقم المحمول', 'هاتف الزبون']
     },
     { 
       type: 'province', 
@@ -130,19 +131,27 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
     },
     { 
       type: 'price', 
-      keywords: ['price', 'amount', 'cost', 'سعر', 'المبلغ', 'التكلفة', 'قيمة', 'دينار', 'المال', 'النقود', 'الثمن', 'الكلفة', 'القيمة', 'value', 'money', 'currency', 'العملة', 'cod', 'cash on delivery', 'الدفع عند الاستلام', 'مبلغ التحصيل', 'مبلغ']
+      keywords: ['price', 'amount', 'cost', 'سعر', 'المبلغ', 'التكلفة', 'قيمة', 'دينار', 'المال', 'النقود', 'الثمن', 'الكلفة', 'القيمة', 'value', 'money', 'currency', 'العملة', 'cod', 'cash on delivery', 'الدفع عند الاستلام', 'مبلغ التحصيل', 'مبلغ', 'المبلغ الكلي']
     },
     { 
       type: 'companyName', 
-      keywords: ['company', 'business', 'vendor', 'شركة', 'الشركة', 'المتجر', 'البائع', 'اسم الشركة', 'الجهة', 'مؤسسة', 'corporation', 'store', 'shop', 'merchant', 'التاجر', 'المحل', 'نشاط تجاري', 'business name', 'مزود الخدمة', 'service provider']
+      keywords: ['company', 'business', 'vendor', 'شركة', 'الشركة', 'المتجر', 'البائع', 'اسم الشركة', 'الجهة', 'مؤسسة', 'corporation', 'store', 'shop', 'merchant', 'التاجر', 'المحل', 'نشاط تجاري', 'business name', 'مزود الخدمة', 'service provider', 'اسم المندوب']
     },
     {
       type: 'address',
-      keywords: ['address', 'location', 'street', 'عنوان', 'الموقع', 'الشارع', 'التفاصيل', 'details', 'delivery address', 'shipping address', 'عنوان التسليم', 'عنوان الشحن', 'العنوان', 'مكان التسليم', 'تفاصيل العنوان', 'delivery location']
+      keywords: ['address', 'location', 'street', 'عنوان', 'الموقع', 'الشارع', 'التفاصيل', 'details', 'delivery address', 'shipping address', 'عنوان التسليم', 'عنوان الشحن', 'العنوان', 'مكان التسليم', 'تفاصيل العنوان', 'delivery location', 'المنطقة']
     },
     {
       type: 'notes',
-      keywords: ['notes', 'comments', 'ملاحظات', 'تعليقات', 'توضيح', 'explanation', 'additional', 'extra', 'إضافي', 'delivery notes', 'ملاحظات التسليم', 'ملاحظة', 'شرح', 'تفاصيل إضافية', 'additional details']
+      keywords: ['notes', 'comments', 'ملاحظات', 'تعليقات', 'توضيح', 'explanation', 'additional', 'extra', 'إضافي', 'delivery notes', 'ملاحظات التسليم', 'ملاحظة', 'شرح', 'تفاصيل إضافية', 'additional details', 'ملاحظات خاصة', 'المحلظات']
+    },
+    {
+      type: 'productType',
+      keywords: ['product', 'item', 'منتج', 'صنف', 'نوع البضاعة', 'نوع المنتج', 'نوع', 'البضاعة', 'المنتج', 'بضاعة', 'سلعة', 'commodity', 'goods', 'merchandise', 'product type', 'item type']
+    },
+    {
+      type: 'orderNumber',
+      keywords: ['order number', 'invoice number', 'receipt number', 'رقم الطلب', 'رقم الفاتورة', 'رقم الإيصال', 'رقم الوصل', 'الوصل', 'رقم العملية', 'رقم التتبع', 'tracking number', 'waybill', 'رقم البوليصة']
     }
   ];
   
@@ -314,6 +323,14 @@ export const fillForm = (item: BookmarkletItem) => {
         case 'notes':
           value = item.notes || '';
           break;
+        case 'productType':
+          // استخدام الملاحظات أو فئة المنتج إذا كانت متوفرة
+          value = item.category || item.notes || 'بضائع متنوعة';
+          break;
+        case 'orderNumber':
+          // استخدام رمز الوصل
+          value = item.code;
+          break;
       }
       
       if (value && fillField(inputElement, value)) {
@@ -454,3 +471,4 @@ export const startDynamicFieldDetection = (callback: (fields: Element[]) => void
   // إرجاع وظيفة لإيقاف المراقبة
   return () => observer.disconnect();
 };
+
