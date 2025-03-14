@@ -375,10 +375,27 @@ export const generateBookmarkletCode = (): string => {
       // وظيفة تخمين نوع الحقل
       function guessFieldType(field) {
         // جمع كل المعرّفات المحتملة للحقل
-        const name = field.name ? field.name.toLowerCase() : '';
-        const id = field.id ? field.id.toLowerCase() : '';
-        const className = typeof field.className === 'string' ? field.className.toLowerCase() : '';
-        const placeholderText = field.placeholder ? field.placeholder.toLowerCase() : '';
+        let name = '';
+        let id = '';
+        let className = '';
+        let placeholderText = '';
+        
+        // التحقق مما إذا كانت هذه الخصائص متوفرة في الحقل
+        if (field.name !== undefined) {
+          name = field.name.toLowerCase();
+        }
+        
+        if (field.id !== undefined) {
+          id = field.id.toLowerCase();
+        }
+        
+        if (field.className !== undefined && typeof field.className === 'string') {
+          className = field.className.toLowerCase();
+        }
+        
+        if (field.placeholder !== undefined) {
+          placeholderText = field.placeholder.toLowerCase();
+        }
         
         // البحث عن عنصر label المرتبط بالحقل إذا كان موجودًا
         let labelText = '';
@@ -600,11 +617,20 @@ export const generateBookmarkletCode = (): string => {
   })();
   `;
   
-  // تنظيف الكود وإزالة المسافات الزائدة للحصول على حجم أصغر
-  const cleanedCode = code
-    .replace(/\s{2,}/g, ' ')
-    .replace(/\n/g, '')
-    .trim();
+  // تنظيف الكود بشكل محسن للتوافق مع المتصفحات المختلفة
+  // استخدام encodeURIComponent لضمان تشفير جميع الأحرف الخاصة بشكل صحيح
+  let cleanedCode = code.replace(/\s{2,}/g, ' ').replace(/\n/g, '').trim();
   
-  return `javascript:(${encodeURIComponent('function(){' + cleanedCode + '}')})()`;
+  // للتوافق مع جميع المتصفحات، نتأكد من تشفير الرمز بشكل صحيح
+  let bookmarkletCode = `javascript:${encodeURIComponent('(' + cleanedCode + ')();')}`;
+  
+  // إضافة تعليمات تصحيحية للمستخدم في حالة كان الرابط يتجاوز الحد المسموح به في بعض المتصفحات
+  if (bookmarkletCode.length > 5000) {
+    console.warn("تنبيه: رمز البوكماركلت كبير جدًا وقد لا يعمل في بعض المتصفحات");
+    // تقليص الكود أكثر بإزالة كل التعليقات وتقليل CSS
+    cleanedCode = cleanedCode.replace(/\/\/.*?(?=\n|$)/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+    bookmarkletCode = `javascript:${encodeURIComponent('(' + cleanedCode + ')();')}`;
+  }
+  
+  return bookmarkletCode;
 };
