@@ -39,6 +39,23 @@ export const useImageProcessing = () => {
       }
     }
     
+    // معالجة حقل رقم الهاتف لإزالة الأحرف غير الرقمية
+    if (field === "phoneNumber" && value) {
+      const originalValue = value;
+      const cleanedValue = value.replace(/[^\d+]/g, '');
+      
+      if (cleanedValue !== originalValue) {
+        console.log(`تنظيف رقم الهاتف تلقائيًا: "${originalValue}" -> "${cleanedValue}"`);
+        value = cleanedValue;
+        
+        toast({
+          title: "تم تنظيف رقم الهاتف",
+          description: `تم إزالة الرموز غير الرقمية`,
+          variant: "default"
+        });
+      }
+    }
+    
     // استدعاء معالج تغيير النص الأصلي
     handleTextChange(id, field, value);
   };
@@ -124,6 +141,16 @@ export const useImageProcessing = () => {
           
           if (originalPrice !== processedImage.price) {
             console.log(`تم تنسيق السعر تلقائيًا بعد المعالجة: "${originalPrice}" -> "${processedImage.price}"`);
+          }
+        }
+        
+        // تنظيف رقم الهاتف تلقائيًا بعد المعالجة
+        if (processedImage.phoneNumber) {
+          const originalPhone = processedImage.phoneNumber;
+          processedImage.phoneNumber = originalPhone.replace(/[^\d+]/g, '');
+          
+          if (originalPhone !== processedImage.phoneNumber) {
+            console.log(`تم تنظيف رقم الهاتف تلقائيًا بعد المعالجة: "${originalPhone}" -> "${processedImage.phoneNumber}"`);
           }
         }
         

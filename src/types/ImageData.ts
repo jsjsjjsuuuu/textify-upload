@@ -31,6 +31,15 @@ export interface ImageData {
   delegateName?: string; // اسم المندوب
   region?: string;      // المنطقة
   packageCount?: string; // عدد القطع
+  customerCode?: string; // كود العميل
+  recipientName?: string; // اسم المستلم
+  reference?: string;   // المرجع
+  destination?: string; // الوجهة
+  shippingType?: string; // نوع الشحن
+  paymentType?: string; // نوع الدفع
+  shipmentStatus?: string; // حالة الشحنة
+  deliveryTime?: string; // وقت التسليم
+  deliveryDate?: string; // تاريخ التسليم
 }
 
 // واجهة لتصدير البيانات إلى Bookmarklet
@@ -63,6 +72,15 @@ export interface BookmarkletItem {
   delegateName?: string;
   region?: string;
   packageCount?: string;
+  customerCode?: string;
+  recipientName?: string;
+  reference?: string;
+  destination?: string;
+  shippingType?: string;
+  paymentType?: string;
+  shipmentStatus?: string;
+  deliveryTime?: string;
+  deliveryDate?: string;
 }
 
 // إحصائيات البيانات المخزنة
@@ -73,4 +91,3 @@ export interface StorageStats {
   error: number;
   lastUpdate: Date | null;
 }
-

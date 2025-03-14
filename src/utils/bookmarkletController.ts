@@ -52,7 +52,7 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   if ('id' in field) {
     id = field.id.toLowerCase();
   } else {
-    // تحقق أن field هو من نوع HTMLElement قبل استخدام getAttribute
+    // تحقق أن field هو من نوع HTMLElement
     const elem = field as HTMLElement;
     if (elem && typeof elem.getAttribute === 'function') {
       const idAttr = elem.getAttribute('id');
@@ -69,7 +69,7 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   if ('placeholder' in field && field.placeholder) {
     placeholderText = field.placeholder.toLowerCase();
   } else {
-    // تحقق أن field هو من نوع HTMLElement قبل استخدام getAttribute
+    // تحقق أن field هو من نوع HTMLElement
     const elem = field as HTMLElement;
     if (elem && typeof elem.getAttribute === 'function') {
       const placeholderAttr = elem.getAttribute('placeholder');
@@ -115,7 +115,7 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
   const patterns = [
     { 
       type: 'code', 
-      keywords: ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة', 'رقم الطلب', 'order', 'tracking', 'reference', 'ref', 'الوصل', 'الطلب', 'الشحنة', 'المرجع', 'تتبع', 'الرمز', 'تعقب', 'كود العميل']
+      keywords: ['code', 'كود', 'رمز', 'رقم الوصل', 'رقم الشحنة', 'رقم الطلب', 'order', 'tracking', 'reference', 'ref', 'الوصل', 'الطلب', 'الشحنة', 'المرجع', 'تتبع', 'الرمز', 'تعقب', 'كود العميل', 'track', 'tracking number', 'shipment number', 'waybill']
     },
     { 
       type: 'senderName', 
@@ -152,6 +152,42 @@ export const guessFieldType = (field: HTMLInputElement | HTMLSelectElement | HTM
     {
       type: 'orderNumber',
       keywords: ['order number', 'invoice number', 'receipt number', 'رقم الطلب', 'رقم الفاتورة', 'رقم الإيصال', 'رقم الوصل', 'الوصل', 'رقم العملية', 'رقم التتبع', 'tracking number', 'waybill', 'رقم البوليصة']
+    },
+    {
+      type: 'customerCode',
+      keywords: ['customer code', 'client id', 'كود العميل', 'رمز العميل', 'رقم العميل', 'الكود', 'customer id', 'client code', 'user id', 'معرف العميل']
+    },
+    {
+      type: 'recipientName',
+      keywords: ['recipient name', 'اسم المستلم', 'المستلم', 'receiver', 'receiver name', 'consignee name', 'من يستلم', 'الشخص المستلم']
+    },
+    {
+      type: 'delegateName',
+      keywords: ['delegate', 'اسم المندوب', 'المندوب', 'delivery agent', 'agent name', 'courier', 'driver', 'delivery person', 'السائق', 'الموصل']
+    },
+    {
+      type: 'packageCount',
+      keywords: ['package count', 'عدد القطع', 'قطع', 'عدد الطرود', 'pieces', 'quantity', 'count', 'number of items', 'عدد', 'كمية', 'الكمية', 'عدد المنتجات']
+    },
+    {
+      type: 'reference',
+      keywords: ['reference', 'المرجع', 'ref', 'رقم المرجع', 'reference number', 'reference id', 'الرقم المرجعي']
+    },
+    {
+      type: 'shippingType',
+      keywords: ['shipping type', 'نوع الشحن', 'طريقة الشحن', 'delivery method', 'shipping method', 'وسيلة الشحن', 'طريقة التوصيل']
+    },
+    {
+      type: 'paymentType',
+      keywords: ['payment type', 'نوع الدفع', 'طريقة الدفع', 'payment method', 'الدفع', 'كيفية الدفع', 'وسيلة الدفع']
+    },
+    {
+      type: 'deliveryTime',
+      keywords: ['delivery time', 'وقت التسليم', 'زمن التوصيل', 'موعد التسليم', 'وقت التوصيل', 'delivery schedule', 'time of delivery']
+    },
+    {
+      type: 'region',
+      keywords: ['region', 'المنطقة', 'منطقة', 'الحي', 'القطاع', 'الناحية', 'القضاء', 'district', 'zone', 'area', 'sector']
     }
   ];
   
