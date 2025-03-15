@@ -8,6 +8,8 @@ import BookmarkletInstructions from "./BookmarkletInstructions";
 import BookmarkletStats from "./BookmarkletStats";
 import SeleniumLikeSection from "./SeleniumLikeSection";
 import useBookmarklet from "@/hooks/useBookmarklet";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 const BookmarkletGenerator: React.FC = () => {
   const {
@@ -48,6 +50,15 @@ const BookmarkletGenerator: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* تنبيه الإعدادات الأمنية للمتصفح */}
+      <Alert variant="destructive" className="bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/50">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle className="text-red-800 dark:text-red-400">تنبيه هام</AlertTitle>
+        <AlertDescription className="text-red-700 dark:text-red-400">
+          قد تحتاج لتعديل الإعدادات الأمنية للمتصفح للسماح بتشغيل البوكماركلت. إذا لم يعمل، قم بتفعيل JavaScript والنوافذ المنبثقة للموقع المستهدف من إعدادات الأمان في المتصفح.
+        </AlertDescription>
+      </Alert>
+      
       <BookmarkletStats
         stats={stats}
         imagesCount={0}
