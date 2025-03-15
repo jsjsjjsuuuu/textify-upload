@@ -7,6 +7,14 @@ import { convertCodeToBookmarklet } from './converter';
 import { STORAGE_KEY } from '../bookmarkletService';
 import { enhancedFormFiller } from './enhancedFormFiller';
 import { fillFormFields } from './fieldFiller';
+import { 
+  formatIraqiPhoneNumber, 
+  formatPrice, 
+  detectFormType, 
+  advancedFieldDetection, 
+  fillSingleField, 
+  findAndClickIraqiSaveButton 
+} from './helperFunctions';
 
 // إنشاء شفرة البوكماركلت
 export function generateBookmarkletCode(): string {
@@ -31,6 +39,15 @@ export function generateBookmarkletCode(): string {
       return;
     }
     
+    // تعريف الدوال المساعدة
+    const formatIraqiPhoneNumber = ${formatIraqiPhoneNumber.toString()};
+    const formatPrice = ${formatPrice.toString()};
+    const detectFormType = ${detectFormType.toString()};
+    const fillSingleField = ${fillSingleField.toString()};
+    const advancedFieldDetection = ${advancedFieldDetection.toString()};
+    const findAndClickIraqiSaveButton = ${findAndClickIraqiSaveButton.toString()};
+    
+    // دالة ملء النموذج
     const fillFormFields = ${fillFormFields.toString()};
     
     // إنشاء واجهة التحكم
@@ -160,6 +177,14 @@ export function generateEnhancedBookmarkletCode(): string {
   const code = `
 (function() {
   try {
+    // تعريف الدوال المساعدة
+    const formatIraqiPhoneNumber = ${formatIraqiPhoneNumber.toString()};
+    const formatPrice = ${formatPrice.toString()};
+    const detectFormType = ${detectFormType.toString()};
+    const fillSingleField = ${fillSingleField.toString()};
+    const advancedFieldDetection = ${advancedFieldDetection.toString()};
+    const findAndClickIraqiSaveButton = ${findAndClickIraqiSaveButton.toString()};
+    
     const enhancedFormFiller = ${enhancedFormFiller.toString()};
     
     // تشغيل محرك ملء النماذج المحسّن
