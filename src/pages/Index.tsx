@@ -4,12 +4,10 @@ import ImageUploader from "@/components/ImageUploader";
 import AppHeader from "@/components/AppHeader";
 import ImagePreviewContainer from "@/components/ImageViewer/ImagePreviewContainer";
 import LearningStats from "@/components/LearningStats";
-import BookmarkletGenerator from "@/components/BookmarkletGenerator";
 import DataEntrySimulator from "@/components/DataSimulator/DataEntrySimulator";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
-import { getStorageStats } from "@/utils/bookmarkletService";
-import { useEffect, useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, ExternalLink } from "lucide-react";
 
@@ -125,20 +123,10 @@ const Index = () => {
               </div>
             )}
 
-            {/* مكوّنات الأدوات */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {/* محاكي إدخال البيانات */}
+            {/* نظام محاكاة إدخال البيانات فقط */}
+            <div className="mb-8">
               <div ref={simulatorRef} id="simulator-section">
                 <DataEntrySimulator storedCount={bookmarkletStats.total} />
-              </div>
-              
-              {/* أداة البوكماركلت */}
-              <div>
-                <BookmarkletGenerator 
-                  images={images} 
-                  storedCount={bookmarkletStats.total}
-                  readyCount={bookmarkletStats.ready}
-                />
               </div>
             </div>
 

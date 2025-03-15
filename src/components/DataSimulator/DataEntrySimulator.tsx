@@ -6,14 +6,25 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { BookmarkletItem } from "@/utils/bookmarklet/types";
-import { getItemsByStatus } from "@/utils/bookmarkletService";
+import { getFromLocalStorage, getItemsByStatus } from "@/utils/bookmarkletService";
 import { useToast } from "@/hooks/use-toast";
 import { Monitor, RotateCw, CheckCircle2, ClipboardCopy, X, Info, ChevronLeft, ChevronRight, Play, Pause, ExternalLink, Video } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
+
+// نوع البيانات المستخدمة في المحاكاة
+type SimulationItem = {
+  id: string;
+  code: string;
+  senderName: string;
+  phoneNumber: string;
+  province: string;
+  price: string;
+  companyName: string;
+  address: string;
+  notes: string;
+  status?: string;
+};
 
 interface DataSimulatorProps {
   storedCount: number;
@@ -21,7 +32,7 @@ interface DataSimulatorProps {
 
 const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
   const { toast } = useToast();
-  const [items, setItems] = useState<BookmarkletItem[]>([]);
+  const [items, setItems] = useState<SimulationItem[]>([]);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [isSimulating, setIsSimulating] = useState(false);
   const [isLiveSimulation, setIsLiveSimulation] = useState(false);
@@ -53,6 +64,43 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
   const formRef = useRef<HTMLDivElement>(null);
   const [simulationUrl, setSimulationUrl] = useState("");
   const [showUrlInput, setShowUrlInput] = useState(false);
+  
+  // بيانات المحاكاة الافتراضية
+  const defaultItems: SimulationItem[] = [
+    {
+      id: '1',
+      code: '1234567',
+      senderName: 'محمد أحمد',
+      phoneNumber: '07801234567',
+      province: 'بغداد',
+      price: '25000',
+      companyName: 'شركة النورس',
+      address: 'حي الجامعة، شارع 14',
+      notes: 'اتصال قبل التسليم'
+    },
+    {
+      id: '2',
+      code: '7654321',
+      senderName: 'علي حسين',
+      phoneNumber: '07709876543',
+      province: 'البصرة',
+      price: '18000',
+      companyName: 'مكتبة الأمين',
+      address: 'شارع الكورنيش، بجانب فندق البصرة',
+      notes: 'الدفع عند الاستلام'
+    },
+    {
+      id: '3',
+      code: '9876543',
+      senderName: 'نور الهدى',
+      phoneNumber: '07711223344',
+      province: 'أربيل',
+      price: '32500',
+      companyName: 'متجر الياسمين',
+      address: 'عينكاوا، قرب مول فاميلي',
+      notes: ''
+    }
+  ];
 
   // سرعة الكتابة حسب الإعداد المختار
   const typingSpeed = {
@@ -66,19 +114,32 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
     loadItems();
   }, [storedCount]);
 
-  // تحميل العناصر من التخزين
+  // تحميل العناصر 
   const loadItems = () => {
-    const storedItems = getItemsByStatus("ready");
-    setItems(storedItems);
-    
-    if (storedItems.length > 0) {
+    try {
+      // محاولة استرجاع البيانات المخزنة، وإذا لم يجد يستخدم البيانات الافتراضية
+      const storedItems = getItemsByStatus("ready");
+      
+      if (storedItems && storedItems.length > 0) {
+        setItems(storedItems);
+        setCurrentItemIndex(0);
+        updateFormFields(storedItems[0]);
+      } else {
+        console.log("استخدام بيانات المحاكاة الافتراضية");
+        setItems(defaultItems);
+        setCurrentItemIndex(0);
+        updateFormFields(defaultItems[0]);
+      }
+    } catch (error) {
+      console.error("خطأ في تحميل البيانات:", error);
+      setItems(defaultItems);
       setCurrentItemIndex(0);
-      updateFormFields(storedItems[0]);
+      updateFormFields(defaultItems[0]);
     }
   };
 
   // تحديث حقول النموذج بناءً على العنصر الحالي
-  const updateFormFields = (item: BookmarkletItem) => {
+  const updateFormFields = (item: SimulationItem) => {
     setFormFields({
       code: item.code || "",
       senderName: item.senderName || "",
@@ -119,7 +180,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
     if (items.length === 0) {
       toast({
         title: "لا توجد بيانات",
-        description: "لا توجد بيانات متاحة للمحاكاة. يرجى تصدير البيانات أولاً.",
+        description: "لا توجد بيانات متاحة للمحاكاة.",
         variant: "destructive"
       });
       return;
@@ -261,15 +322,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
           <div className="flex justify-center">
             <X className="h-10 w-10 mb-2" />
           </div>
-          <p>لا توجد بيانات متاحة للمعاينة. يرجى تصدير البيانات أولاً.</p>
-          <Button 
-            variant="link" 
-            size="sm" 
-            onClick={() => document.querySelector('[data-value="export"]')?.dispatchEvent(new Event('click'))}
-            className="mt-2"
-          >
-            الذهاب إلى صفحة التصدير
-          </Button>
+          <p>لا توجد بيانات متاحة للمعاينة.</p>
         </div>
       );
     }
@@ -376,7 +429,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
                     setShowUrlInput(false);
                     toast({
                       title: "تم فتح الموقع الخارجي",
-                      description: "استخدم البوكماركلت المحسن في شريط المفضلة لملء البيانات."
+                      description: "يمكنك الآن تجربة إدخال البيانات يدوياً في الموقع."
                     });
                   } else {
                     toast({
@@ -397,7 +450,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              ملاحظة: سيتم فتح الموقع في علامة تبويب جديدة. استخدم البوكماركلت المحسن من شريط المفضلة لملء البيانات.
+              ملاحظة: سيتم فتح الموقع في علامة تبويب جديدة.
             </p>
           </div>
         )}
@@ -703,18 +756,11 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
                   <Button 
                     variant="default" 
                     onClick={startSimulation}
-                    disabled={items.length === 0}
                     className="mx-auto bg-brand-green hover:bg-brand-green/90"
                   >
                     <RotateCw className="h-4 w-4 ml-2" />
                     بدء المحاكاة
                   </Button>
-                  
-                  {items.length === 0 && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      لا توجد بيانات متاحة للمحاكاة. يرجى تصدير البيانات أولاً.
-                    </p>
-                  )}
                 </div>
               )}
             </TabsContent>
