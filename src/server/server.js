@@ -1,10 +1,15 @@
 
-const express = require('express');
-const puppeteer = require('puppeteer');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const path = require('path');
-const fs = require('fs');
+import express from 'express';
+import puppeteer from 'puppeteer';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// الحصول على المسار الحالي بطريقة متوافقة مع ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -15,7 +20,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(bodyParser.json({ limit: '50mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // إضافة مسار لصفحة ترحيبية بسيطة
@@ -358,4 +363,3 @@ process.on('SIGINT', async () => {
 process.on('uncaughtException', (error) => {
   console.error('خطأ غير معالج:', error);
 });
-
