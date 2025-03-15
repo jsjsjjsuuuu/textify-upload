@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,10 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { getFromLocalStorage, getItemsByStatus } from "@/utils/bookmarkletService";
 import { useToast } from "@/hooks/use-toast";
-import { Monitor, RotateCw, CheckCircle2, ClipboardCopy, X, Info, ChevronLeft, ChevronRight, Play, Pause, Video } from "lucide-react";
+import { Monitor, RotateCw, CheckCircle2, ClipboardCopy, X, Info, ChevronLeft, ChevronRight, Play, Pause, Video, Send, ExternalLink, Globe } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
-import { BookmarkletItem } from "@/utils/bookmarklet/types";
+import { BookmarkletItem, ExternalSubmitOptions } from "@/utils/bookmarklet/types";
+import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // نوع البيانات المستخدمة في المحاكاة
 type SimulationItem = {
@@ -67,6 +68,27 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
   const [showEmbeddedForm, setShowEmbeddedForm] = useState(false);
   const [simulationStatus, setSimulationStatus] = useState<"idle" | "running" | "completed" | "saved">("idle");
   
+  // إعدادات الإرسال الخارجي
+  const [externalSubmit, setExternalSubmit] = useState<ExternalSubmitOptions>({
+    enabled: false,
+    url: externalUrl || "",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    mapFields: {
+      code: "code",
+      senderName: "name",
+      phoneNumber: "phone",
+      province: "city",
+      price: "amount",
+      address: "address",
+      notes: "notes"
+    }
+  });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const defaultItems: SimulationItem[] = [
     {
       id: "1",
@@ -274,13 +296,73 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
 
   const simulateSaveAction = async () => {
     setSimulationStatus("saved");
-    toast({
-      title: "تم الحفظ بنجاح",
-      description: "تم حفظ البيانات بنجاح في النظام"
-    });
+    
+    // إذا كان الإرسال الخارجي مفعلاً، قم بإرسال البيانات
+    if (externalSubmit.enabled && externalSubmit.url) {
+      await submitToExternalForm();
+    } else {
+      toast({
+        title: "تم الحفظ بنجاح",
+        description: "تم حفظ البيانات بنجاح في النظام"
+      });
+    }
+    
     await new Promise(resolve => setTimeout(resolve, 1500));
     setSimulationStatus("idle");
     handleNext();
+  };
+
+  // وظيفة جديدة للإرسال إلى نموذج خارجي
+  const submitToExternalForm = async () => {
+    if (!externalSubmit.url) {
+      toast({
+        title: "خطأ في الإرسال",
+        description: "لم يتم تحديد عنوان URL للنموذج الخارجي",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // تحويل البيانات حسب تعيين الحقول
+      const mappedData: Record<string, any> = {};
+      for (const [key, value] of Object.entries(formFields)) {
+        if (value && externalSubmit.mapFields && externalSubmit.mapFields[key]) {
+          mappedData[externalSubmit.mapFields[key]] = value;
+        }
+      }
+      
+      console.log("إرسال البيانات إلى النموذج الخارجي:", mappedData);
+      
+      // إرسال البيانات
+      const response = await fetch(externalSubmit.url, {
+        method: externalSubmit.method,
+        headers: externalSubmit.headers || {
+          "Content-Type": "application/json"
+        },
+        body: externalSubmit.method !== "GET" ? JSON.stringify(mappedData) : undefined,
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "تم الإرسال بنجاح",
+          description: "تم إرسال البيانات بنجاح إلى النموذج الخارجي"
+        });
+      } else {
+        throw new Error(`فشل الإرسال بكود الاستجابة: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("خطأ في إرسال البيانات إلى النموذج الخارجي:", error);
+      toast({
+        title: "فشل الإرسال",
+        description: error instanceof Error ? error.message : "حدث خطأ أثناء إرسال البيانات إلى النموذج الخارجي",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const copyFieldToClipboard = async (field: string) => {
@@ -324,6 +406,87 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
                 <ChevronRight className="h-4 w-4 mr-1" />
               </Button>
             </div>
+          </div>
+          
+          {/* إضافة قسم إعدادات الإرسال الخارجي */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium flex items-center">
+                <Globe className="h-4 w-4 ml-2 text-brand-green" />
+                إعدادات الإرسال الخارجي:
+              </h4>
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <span className="text-xs text-muted-foreground">تفعيل</span>
+                <Switch
+                  checked={externalSubmit.enabled}
+                  onCheckedChange={(checked) => 
+                    setExternalSubmit(prev => ({ ...prev, enabled: checked }))
+                  }
+                />
+              </div>
+            </div>
+            
+            {externalSubmit.enabled && (
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <Label htmlFor="external-url" className="text-xs">رابط النموذج الخارجي</Label>
+                  <div className="flex space-x-2 space-x-reverse">
+                    <Input
+                      id="external-url"
+                      placeholder="https://example.com/form"
+                      value={externalSubmit.url}
+                      onChange={(e) => setExternalSubmit(prev => ({ ...prev, url: e.target.value }))}
+                      className="text-xs"
+                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-9 w-9">
+                          <Info className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">إعدادات الإرسال الخارجي</h4>
+                          <p className="text-xs text-muted-foreground">
+                            أدخل عنوان URL للنموذج الخارجي الذي ترغب بإرسال البيانات إليه.
+                            يتم إرسال البيانات بتنسيق JSON مع تعيين الحقول حسب الإعدادات.
+                          </p>
+                          <div className="mt-2">
+                            <Label className="text-xs">طريقة الإرسال:</Label>
+                            <Select
+                              value={externalSubmit.method}
+                              onValueChange={(value: 'GET' | 'POST' | 'PUT') => 
+                                setExternalSubmit(prev => ({ ...prev, method: value }))
+                              }
+                            >
+                              <SelectTrigger className="mt-1 h-8 text-xs">
+                                <SelectValue placeholder="اختر طريقة الإرسال" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="GET">GET</SelectItem>
+                                <SelectItem value="POST">POST</SelectItem>
+                                <SelectItem value="PUT">PUT</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2 text-xs"
+                  onClick={submitToExternalForm}
+                  disabled={isSubmitting || !externalSubmit.url}
+                >
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                  {isSubmitting ? "جاري الإرسال..." : "إرسال البيانات الآن"}
+                </Button>
+              </div>
+            )}
           </div>
         </>
       ) : (
@@ -444,6 +607,19 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
     </div>
   );
 
+  const getFieldLabel = (key: string) => {
+    switch (key) {
+      case "code": return "الكود";
+      case "senderName": return "اسم المرسل";
+      case "phoneNumber": return "رقم الهاتف";
+      case "province": return "المحافظة";
+      case "price": return "السعر";
+      case "address": return "العنوان";
+      case "notes": return "ملاحظات";
+      default: return key;
+    }
+  };
+
   return (
     <Card className="overflow-hidden shadow-sm">
       <CardHeader className="pb-3">
@@ -501,7 +677,11 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
       
       <CardFooter className="bg-muted/20 border-t flex justify-between items-center px-4 py-2 text-xs text-muted-foreground">
         <span>عدد العناصر المتاحة: {items.length}</span>
-        <span>محاكاة فقط - لا يتم إرسال البيانات لأي خادم خارجي</span>
+        <span>
+          {externalSubmit.enabled 
+            ? "إرسال البيانات إلى نموذج خارجي" 
+            : "محاكاة فقط - لا يتم إرسال البيانات لأي خادم خارجي"}
+        </span>
       </CardFooter>
     </Card>
   );

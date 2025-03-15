@@ -1,8 +1,10 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Clipboard, ExternalLink, AlertCircle, ArrowLeft, Info, Play } from "lucide-react";
+import { Clipboard, ExternalLink, AlertCircle, ArrowLeft, Info, Play, Send } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface ImprovedFormFillerSectionProps {
   enhancedBookmarkletUrl: string;
@@ -17,6 +19,8 @@ const ImprovedFormFillerSection: React.FC<ImprovedFormFillerSectionProps> = ({
   onCopyEnhancedBookmarklet,
   storedCount
 }) => {
+  const [externalUrl, setExternalUrl] = useState("");
+
   return (
     <div className="space-y-4">
       <div className="space-y-3">
@@ -43,6 +47,51 @@ const ImprovedFormFillerSection: React.FC<ImprovedFormFillerSectionProps> = ({
                 </ol>
               </AlertDescription>
             </Alert>
+            
+            {/* قسم جديد للإرسال الخارجي */}
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-4">
+              <div className="flex items-center mb-2">
+                <Send className="h-4 w-4 ml-2 text-amber-600 dark:text-amber-400" />
+                <h4 className="text-amber-800 dark:text-amber-300 font-medium">إرسال البيانات إلى نموذج خارجي</h4>
+              </div>
+              <p className="text-sm text-amber-700 dark:text-amber-400 mb-3">
+                يمكنك إرسال البيانات مباشرة إلى نموذج خارجي بدلاً من الإدخال اليدوي. أدخل عنوان URL للنموذج الخارجي أدناه:
+              </p>
+              
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <Label htmlFor="external-url" className="text-sm ml-2 text-amber-800 dark:text-amber-300">عنوان النموذج الخارجي:</Label>
+                  <Input 
+                    id="external-url"
+                    placeholder="https://example.com/api/form"
+                    value={externalUrl}
+                    onChange={(e) => setExternalUrl(e.target.value)}
+                    className="flex-1 h-8 text-sm border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800"
+                  />
+                </div>
+                
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const tab = document.querySelector('[data-simulator-tab="simulation"]');
+                      if (tab) {
+                        tab.dispatchEvent(new Event('click'));
+                        
+                        // تعيين عنوان URL الخارجي وتفعيل الإرسال الخارجي
+                        localStorage.setItem('external_form_url', externalUrl);
+                      }
+                    }}
+                    className="border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400"
+                    disabled={!externalUrl}
+                  >
+                    <Send className="h-4 w-4 ml-2" />
+                    الانتقال إلى نموذج المحاكاة
+                  </Button>
+                </div>
+              </div>
+            </div>
             
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">

@@ -7,7 +7,7 @@ import LearningStats from "@/components/LearningStats";
 import DataEntrySimulator from "@/components/DataSimulator/DataEntrySimulator";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +30,14 @@ const Index = () => {
   const { toast } = useToast();
   const [showDemo, setShowDemo] = useState(false);
   const [simulationUrl, setSimulationUrl] = useState("");
+  
+  // استرجاع عنوان URL الخارجي عند التحميل
+  useEffect(() => {
+    const externalUrl = localStorage.getItem('external_form_url');
+    if (externalUrl) {
+      setSimulationUrl(externalUrl);
+    }
+  }, []);
 
   // التنقل إلى قسم محاكاة الإدخال
   const scrollToSimulator = () => {

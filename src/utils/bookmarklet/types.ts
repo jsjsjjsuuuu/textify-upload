@@ -56,3 +56,12 @@ export interface StorageStats {
   error: number;
   lastUpdate: Date | null;
 }
+
+// خيارات الإرسال الخارجي
+export interface ExternalSubmitOptions {
+  enabled: boolean;
+  url: string;
+  method: 'GET' | 'POST' | 'PUT';
+  headers?: Record<string, string>;
+  mapFields?: Record<string, string>;
+}
