@@ -1,4 +1,5 @@
-import { formatIraqiPhoneNumber, formatPrice, detectFormType, advancedFieldDetection, fillSingleField, findAndClickIraqiSaveButton } from './bookmarkletHelpers';
+
+import { formatIraqiPhoneNumber, formatPrice, detectFormType, advancedFieldDetection, fillSingleField, findAndClickIraqiSaveButton } from './helperFunctions';
 
 /**
  * ملء نموذج باستخدام بيانات العنصر المحدد
