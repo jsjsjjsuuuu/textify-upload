@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Monitor, RotateCw, CheckCircle2, ClipboardCopy, X, Info, ChevronLeft, ChevronRight, Play, Pause, Video } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
+import { BookmarkletItem } from "@/utils/bookmarklet/types";
 
 // نوع البيانات المستخدمة في المحاكاة
 type SimulationItem = {
@@ -114,11 +116,29 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
 
   const loadItems = async () => {
     try {
-      const storedData = await getFromLocalStorage();
-      if (storedData && storedData.length > 0) {
-        setItems(storedData);
+      // استدعاء getItemsByStatus بدلاً من getFromLocalStorage مباشرة
+      const storedItems = getItemsByStatus("ready");
+      
+      if (storedItems && storedItems.length > 0) {
+        // تحويل العناصر إلى SimulationItem[]
+        const simulationItems: SimulationItem[] = storedItems.map(item => ({
+          id: item.id || "",
+          code: item.code || "",
+          senderName: item.senderName || "",
+          phoneNumber: item.phoneNumber || "",
+          province: item.province || "",
+          price: item.price || "",
+          companyName: item.companyName || "",
+          address: item.address || "",
+          notes: item.notes || "",
+          status: item.status
+        }));
+        
+        setItems(simulationItems);
+        updateFormFields(simulationItems[0]);
       } else {
         setItems(defaultItems);
+        updateFormFields(defaultItems[0]);
       }
     } catch (error) {
       console.error("Error loading items from local storage:", error);
@@ -128,6 +148,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
         description: "فشل في استرجاع البيانات من الذاكرة المحلية",
         variant: "destructive"
       });
+      updateFormFields(defaultItems[0]);
     }
   };
 
@@ -234,7 +255,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
 
     for (const field of fields) {
       setActiveField(field);
-      const text = item[field] || "";
+      const text = item[field as keyof typeof item] || "";
       let simulatedText = "";
 
       for (let i = 0; i < text.length; i++) {
@@ -255,8 +276,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
     setSimulationStatus("saved");
     toast({
       title: "تم الحفظ بنجاح",
-      description: "تم حفظ البيانات بنجاح في النظام",
-      icon: <CheckCircle2 className="h-5 w-5 text-green-500" />
+      description: "تم حفظ البيانات بنجاح في النظام"
     });
     await new Promise(resolve => setTimeout(resolve, 1500));
     setSimulationStatus("idle");
@@ -265,11 +285,10 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
 
   const copyFieldToClipboard = async (field: string) => {
     try {
-      await navigator.clipboard.writeText(formFields[field] || "");
+      await navigator.clipboard.writeText(formFields[field as keyof typeof formFields] || "");
       toast({
         title: "تم النسخ",
-        description: `تم نسخ ${getFieldLabel(field)} إلى الحافظة`,
-        icon: <ClipboardCopy className="h-5 w-5" />
+        description: `تم نسخ ${getFieldLabel(field)} إلى الحافظة`
       });
     } catch (error) {
       toast({

@@ -54,5 +54,5 @@ export interface StorageStats {
   ready: number;
   success: number;
   error: number;
-  lastUpdate: Date | null;  // تغيير هذا من اختياري إلى إلزامي
+  lastUpdate: Date | null;
 }
