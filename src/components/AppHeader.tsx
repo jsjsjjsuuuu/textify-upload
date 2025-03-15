@@ -1,6 +1,6 @@
 
 import React from "react";
-import ThemeToggle from "./ThemeToggle";
+import { ThemeToggle } from "./ThemeToggle";
 import { BookmarkIcon, ImageIcon, Settings, Database } from "lucide-react";
 import { Button } from "./ui/button";
 import { Link } from "react-router-dom";

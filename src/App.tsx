@@ -5,7 +5,7 @@ import Records from "./pages/Records";
 import ApiSettings from "./pages/ApiSettings";
 import NotFound from "./pages/NotFound";
 import { Toaster } from "./components/ui/sonner";
-import { ThemeProvider } from "./components/ThemeProvider";
+import { ThemeProvider } from "@/components/ui/theme-provider";
 import Bookmarklet from "./pages/Bookmarklet";
 
 export default function App() {
