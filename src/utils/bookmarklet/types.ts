@@ -65,3 +65,12 @@ export interface ExternalSubmitOptions {
   headers?: Record<string, string>;
   mapFields?: Record<string, string>;
 }
+
+// استجابة الإرسال الخارجي
+export interface ExternalSubmitResponse {
+  success: boolean;
+  message: string;
+  code: number;
+  responseData?: any;
+  timestamp: string;
+}

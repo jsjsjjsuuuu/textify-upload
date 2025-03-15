@@ -90,6 +90,8 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastSubmitError, setLastSubmitError] = useState<string | null>(null);
+  const [lastSubmitResponse, setLastSubmitResponse] = useState<any>(null);
+  const [responseStatus, setResponseStatus] = useState<{ success: boolean; message: string; code: number } | null>(null);
 
   const defaultItems: SimulationItem[] = [
     {
@@ -352,6 +354,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
     
     setIsSubmitting(true);
     setLastSubmitError(null);
+    setResponseStatus(null);
     
     try {
       // تحويل البيانات حسب تعيين الحقول
@@ -382,17 +385,72 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
       
       console.log("تم استلام استجابة من الخادم");
       
-      // مع mode: "no-cors" لن نتمكن من قراءة الاستجابة، لذلك نفترض النجاح
-      toast({
-        title: "تم ارسال البيانات",
-        description: "تم إرسال البيانات إلى النموذج الخارجي. (تم استخدام وضع no-cors لتجاوز قيود CORS)"
-      });
-      
-      return true;
+      // محاولة الحصول على الاستجابة كـ JSON في حالة عدم استخدام وضع "no-cors"
+      let responseData = null;
+      try {
+        if (response.headers?.get('content-type')?.includes('application/json')) {
+          responseData = await response.json();
+        } else {
+          responseData = await response.text();
+        }
+        setLastSubmitResponse(responseData);
+        
+        // التحقق من حالة الاستجابة
+        if (response.ok) {
+          setResponseStatus({
+            success: true,
+            message: "تم إضافة البيانات بنجاح إلى النظام",
+            code: response.status
+          });
+          
+          // تحديث حالة العنصر في التخزين المحلي إذا أمكن
+          // هنا يمكنك إضافة كود لتحديث حالة العنصر
+          
+          toast({
+            title: "تم الإرسال بنجاح",
+            description: "تم التأكد من إضافة البيانات في الموقع الخارجي"
+          });
+          
+          return true;
+        } else {
+          const errorMsg = typeof responseData === 'string' 
+            ? responseData 
+            : responseData?.message || `فشل الإرسال بكود الاستجابة: ${response.status}`;
+            
+          setResponseStatus({
+            success: false,
+            message: errorMsg,
+            code: response.status
+          });
+          
+          throw new Error(errorMsg);
+        }
+      } catch (parseError) {
+        // في حالة استخدام وضع "no-cors"، لا يمكن قراءة الاستجابة
+        // لنفترض أن الطلب قد نجح إذا لم نتمكن من قراءة الاستجابة
+        setResponseStatus({
+          success: true,
+          message: "تم إرسال البيانات (لا يمكن التأكد من الإضافة بسبب قيود CORS)",
+          code: response.status
+        });
+        
+        toast({
+          title: "تم إرسال البيانات",
+          description: "تم إرسال البيانات إلى النموذج الخارجي، لكن لا يمكن التأكد من الإضافة بسبب قيود CORS"
+        });
+        
+        return true;
+      }
     } catch (error) {
       console.error("خطأ في إرسال البيانات إلى النموذج الخارجي:", error);
       const errorMessage = error instanceof Error ? error.message : "حدث خطأ أثناء إرسال البيانات إلى النموذج الخارجي";
       setLastSubmitError(errorMessage);
+      
+      setResponseStatus({
+        success: false,
+        message: errorMessage,
+        code: 0
+      });
       
       toast({
         title: "فشل الإرسال",
@@ -536,6 +594,44 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
           <AlertDescription>يرجى استيراد البيانات أولاً.</AlertDescription>
         </Alert>
       )}
+      
+      {/* عرض نتيجة آخر إرسال */}
+      {responseStatus && (
+        <div className="col-span-1 md:col-span-2 mt-4">
+          <Alert variant={responseStatus.success ? "default" : "destructive"} className={`bg-${responseStatus.success ? 'green' : 'red'}-50 dark:bg-${responseStatus.success ? 'green' : 'red'}-900/20`}>
+            <AlertTitle className="flex items-center">
+              {responseStatus.success ? (
+                <CheckCircle2 className="h-4 w-4 ml-2 text-green-600 dark:text-green-400" />
+              ) : (
+                <X className="h-4 w-4 ml-2 text-red-600 dark:text-red-400" />
+              )}
+              {responseStatus.success ? "تم الإرسال بنجاح" : "فشل الإرسال"}
+              <span className="mx-2 text-xs">({responseStatus.code})</span>
+            </AlertTitle>
+            <AlertDescription className="mt-2 text-sm">
+              {responseStatus.message}
+              
+              {lastSubmitResponse && (
+                <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-md text-xs font-mono overflow-x-auto">
+                  {typeof lastSubmitResponse === 'string' 
+                    ? lastSubmitResponse 
+                    : JSON.stringify(lastSubmitResponse, null, 2)}
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+      
+      {/* عرض معلومات الخطأ السابق إذا كان موجوداً */}
+      {lastSubmitError && !responseStatus && (
+        <div className="col-span-1 md:col-span-2 mt-4">
+          <Alert variant="destructive">
+            <AlertTitle>آخر خطأ في الإرسال</AlertTitle>
+            <AlertDescription className="text-xs break-all">{lastSubmitError}</AlertDescription>
+          </Alert>
+        </div>
+      )}
     </div>
   );
 
@@ -648,8 +744,6 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
     </div>
   );
 
-  // حذفنا التعريف المكرر لدالة getFieldLabel هنا
-
   return (
     <Card className="overflow-hidden shadow-sm">
       <CardHeader className="pb-3">
@@ -683,14 +777,6 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
           <div className="p-4">
             <TabsContent value="preview" className="mt-0">
               {renderItemPreview()}
-              
-              {/* عرض معلومات الخطأ السابق إذا كان موجوداً */}
-              {lastSubmitError && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertTitle>آخر خطأ في الإرسال</AlertTitle>
-                  <AlertDescription className="text-xs break-all">{lastSubmitError}</AlertDescription>
-                </Alert>
-              )}
             </TabsContent>
             
             <TabsContent value="simulation" className="mt-0">
