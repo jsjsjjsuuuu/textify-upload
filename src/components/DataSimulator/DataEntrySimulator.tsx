@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -607,18 +608,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
     </div>
   );
 
-  const getFieldLabel = (key: string) => {
-    switch (key) {
-      case "code": return "الكود";
-      case "senderName": return "اسم المرسل";
-      case "phoneNumber": return "رقم الهاتف";
-      case "province": return "المحافظة";
-      case "price": return "السعر";
-      case "address": return "العنوان";
-      case "notes": return "ملاحظات";
-      default: return key;
-    }
-  };
+  // حذفنا التعريف المكرر لدالة getFieldLabel هنا
 
   return (
     <Card className="overflow-hidden shadow-sm">
