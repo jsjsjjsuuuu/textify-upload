@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,7 +7,8 @@ import {
   generateBookmarkletCode, 
   generateEnhancedBookmarkletCode,
   clearStoredItems,
-  getStorageStats 
+  getStorageStats,
+  saveToLocalStorage // استيراد الوظيفة المفقودة
 } from "@/utils/bookmarkletService";
 import ExportDataSection from "./ExportDataSection";
 import BookmarkletSection from "./BookmarkletSection";
@@ -287,4 +287,3 @@ const EnhancedIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export default BookmarkletGenerator;
-
