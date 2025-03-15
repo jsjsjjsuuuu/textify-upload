@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import BookmarkletLink from "./BookmarkletLink";
 import AdvancedOptions from "./AdvancedOptions";
@@ -5,7 +6,7 @@ import ImprovedFormFillerSection from "./ImprovedFormFillerSection";
 import ExportDataSection from "./ExportDataSection";
 import BookmarkletInstructions from "./BookmarkletInstructions";
 import BookmarkletStats from "./BookmarkletStats";
-import SeleniumLikeSection from "./SeleniumLikeSection"; // إضافة استيراد المكون الجديد
+import SeleniumLikeSection from "./SeleniumLikeSection";
 import { getBookmarkletCode } from "@/utils/bookmarklet/bookmarkletCode";
 import { BookmarkletOptions } from "@/types/BookmarkletOptions";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +22,7 @@ const BookmarkletGenerator: React.FC = () => {
     includeFormFiller: true,
     includeExportTools: true,
   });
-  const [stats, setStats] = useState({ total: 0, ready: 0, success: 0, error: 0 });
+  const [stats, setStats] = useState({ total: 0, ready: 0, success: 0, error: 0, lastUpdate: null as Date | null });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -81,19 +82,19 @@ const BookmarkletGenerator: React.FC = () => {
       />
       
       <BookmarkletLink 
-        link={bookmarkletLink} 
-        isGenerating={isGenerating}
-        onGenerateLinkClick={generateBookmarkletLink} 
+        bookmarkletUrl={bookmarkletLink} 
+        isGeneratingUrl={isGenerating}
+        onGenerateBookmarklet={generateBookmarkletLink} 
       />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ImprovedFormFillerSection
-          onUseFormFillerChange={setUseFormFiller}
-          useFormFiller={useFormFiller}
+          enabled={useFormFiller}
+          onToggle={setUseFormFiller}
         />
         <ExportDataSection
-          onUseExportToolsChange={setUseExportTools}
-          useExportTools={useExportTools}
+          enabled={useExportTools}
+          onToggle={setUseExportTools}
         />
       </div>
       
@@ -103,8 +104,8 @@ const BookmarkletGenerator: React.FC = () => {
       />
       
       <AdvancedOptions
-        onAdvancedOptionsChange={handleAdvancedOptionsChange}
-        currentValues={advancedOptions}
+        options={advancedOptions}
+        onChange={handleAdvancedOptionsChange}
       />
       
       <BookmarkletInstructions />

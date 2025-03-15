@@ -5,7 +5,7 @@
 
 import { convertCodeToBookmarklet } from './converter';
 import { STORAGE_KEY } from '../bookmarkletService';
-import { initEnhancedFormFiller } from './enhancedFormFiller';
+import { enhancedFormFiller } from './enhancedFormFiller';
 import { fillFormFields } from './fieldFiller';
 
 // إنشاء شفرة البوكماركلت
@@ -160,10 +160,10 @@ export function generateEnhancedBookmarkletCode(): string {
   const code = `
 (function() {
   try {
-    const initEnhancedFormFiller = ${initEnhancedFormFiller.toString()};
+    const enhancedFormFiller = ${enhancedFormFiller.toString()};
     
     // تشغيل محرك ملء النماذج المحسّن
-    initEnhancedFormFiller();
+    enhancedFormFiller();
   } catch (error) {
     console.error("خطأ في تنفيذ أداة الإدخال التلقائي المحسّنة:", error);
     alert("حدث خطأ في تنفيذ الأداة: " + error.message);

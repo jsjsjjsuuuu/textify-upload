@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { CodeBlock } from "@/components/ui/code-block";
 import { Badge } from "@/components/ui/badge";
 import { BookmarkletItem } from "@/types/ImageData";
 
@@ -81,24 +80,18 @@ window.bookmarkletControls.runQuickAutomation(data);`;
               <TabsContent value="auto" className="mt-2">
                 <div className="text-sm">
                   <p className="mb-2">الاستخدام الأبسط - يكتشف الحقول ويملؤها تلقائيًا:</p>
-                  <CodeBlock
-                    language="javascript"
-                    code={autoFillCode}
-                    showLineNumbers
-                    className="text-xs"
-                  />
+                  <pre className="bg-slate-950 text-slate-50 p-4 overflow-x-auto text-xs font-mono rounded-md">
+                    {autoFillCode}
+                  </pre>
                 </div>
               </TabsContent>
               
               <TabsContent value="custom" className="mt-2">
                 <div className="text-sm">
                   <p className="mb-2">تخصيص كامل لتسلسل الإجراءات:</p>
-                  <CodeBlock
-                    language="javascript"
-                    code={seleniumLikeCode}
-                    showLineNumbers
-                    className="text-xs"
-                  />
+                  <pre className="bg-slate-950 text-slate-50 p-4 overflow-x-auto text-xs font-mono rounded-md">
+                    {seleniumLikeCode}
+                  </pre>
                 </div>
               </TabsContent>
             </Tabs>
