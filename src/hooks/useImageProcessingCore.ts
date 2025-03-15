@@ -89,7 +89,14 @@ export const useImageProcessingCore = () => {
         body: JSON.stringify({
           id: id,
           extractedText: image.extractedText,
-          extractedData: image.extractedData,
+          // تصحيح: إزالة extractedData لأنها غير موجودة في نوع ImageData
+          // استبدالها بإرسال البيانات المستخرجة بشكل مباشر
+          code: image.code,
+          senderName: image.senderName,
+          phoneNumber: image.phoneNumber,
+          province: image.province,
+          price: image.price,
+          companyName: image.companyName
         }),
       });
 
@@ -100,11 +107,12 @@ export const useImageProcessingCore = () => {
       const result = await response.json();
       console.log("API Response:", result);
 
-      updateImage(id, { status: "success" });
+      // تصحيح: تغيير "success" إلى "completed" لتتوافق مع النوع المحدد
+      updateImage(id, { status: "completed" });
       
       toast({
         title: "نجاح",
-        description: `تم إرسال البيانات بنجاح لـ ${image.originalFilename}!`,
+        description: `تم إرسال البيانات بنجاح لـ ${image.file.name}!`,
       });
       
       await updateBookmarkletStats();
@@ -114,7 +122,7 @@ export const useImageProcessingCore = () => {
       
       toast({
         title: "خطأ",
-        description: `فشل إرسال البيانات لـ ${image.originalFilename}: ${error.message}`,
+        description: `فشل إرسال البيانات لـ ${image.file.name}: ${error.message}`,
         variant: "destructive",
       });
     } finally {
