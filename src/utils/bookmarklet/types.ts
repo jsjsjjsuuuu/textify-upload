@@ -61,7 +61,7 @@ export interface StorageStats {
 export interface ExternalSubmitOptions {
   enabled: boolean;
   url: string;
-  method: 'GET' | 'POST' | 'PUT';  // تحديث هذا السطر للتأكد من تضمين 'GET'
+  method: 'GET' | 'POST' | 'PUT';  // تم تحديث هذا السطر لتضمين 'GET' كقيمة محتملة
   headers?: Record<string, string>;
   mapFields?: Record<string, string>;
 }
