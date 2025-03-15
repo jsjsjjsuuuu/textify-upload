@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { getFromLocalStorage, getItemsByStatus } from "@/utils/bookmarkletService";
 import { useToast } from "@/hooks/use-toast";
-import { Monitor, RotateCw, CheckCircle2, ClipboardCopy, X, Info, ChevronLeft, ChevronRight, Play, Pause, ExternalLink, Video } from "lucide-react";
+import { Monitor, RotateCw, CheckCircle2, ClipboardCopy, X, Info, ChevronLeft, ChevronRight, Play, Pause, Video } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
 
@@ -28,10 +28,10 @@ type SimulationItem = {
 
 interface DataSimulatorProps {
   storedCount: number;
-  externalUrl?: string; // إضافة خاصية لعنوان URL الخارجي
+  externalUrl?: string;
 }
 
-const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externalUrl = "https://malshalal-exp.com/add_newwaslinserter.php?add" }) => {
+const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externalUrl = "" }) => {
   const { toast } = useToast();
   const [items, setItems] = useState<SimulationItem[]>([]);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
@@ -63,8 +63,8 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const formRef = useRef<HTMLDivElement>(null);
-  const [simulationUrl, setSimulationUrl] = useState(externalUrl);
-  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [showEmbeddedForm, setShowEmbeddedForm] = useState(false);
+  const [simulationStatus, setSimulationStatus] = useState<"idle" | "running" | "completed" | "saved">("idle");
   
   // بيانات المحاكاة الافتراضية
   const defaultItems: SimulationItem[] = [
@@ -205,10 +205,12 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
 
     setIsSimulating(true);
     setSimulatorMode("simulation");
+    setShowEmbeddedForm(true);
     
     // إنشاء معرف فريد للنموذج المحاكى
     const randomId = `mock-form-${Math.random().toString(36).substring(2, 9)}`;
     setMockFormId(randomId);
+    setSimulationStatus("idle");
     
     toast({
       title: "تم بدء المحاكاة",
@@ -225,6 +227,8 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
     setActiveField(null);
     setProgress(0);
     setCurrentStep(0);
+    setShowEmbeddedForm(false);
+    setSimulationStatus("idle");
     
     toast({
       title: "تم إيقاف المحاكاة",
@@ -242,6 +246,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
     setIsLiveSimulation(true);
     setProgress(0);
     setCurrentStep(0);
+    setSimulationStatus("running");
     setSimulatedFields({
       code: "",
       senderName: "",
@@ -262,6 +267,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
     setActiveField(null);
     setProgress(0);
     setCurrentStep(0);
+    setSimulationStatus("idle");
   };
 
   // محاكاة عملية الكتابة حقلاً بعد حقل
@@ -307,16 +313,39 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
     // إنهاء المحاكاة
     setActiveField(null);
     setProgress(100);
+    setSimulationStatus("completed");
+    
+    // محاكاة عملية الحفظ
+    setTimeout(() => {
+      simulateSaveAction();
+    }, 1000);
+  };
+
+  // محاكاة عملية الحفظ
+  const simulateSaveAction = () => {
+    setSimulationStatus("saved");
     
     toast({
-      title: "اكتملت عملية المحاكاة",
-      description: "تم إدخال جميع البيانات بنجاح."
+      title: "تم حفظ البيانات بنجاح",
+      description: "تمت عملية إدخال وحفظ البيانات في نظام مال الشلال",
+      variant: "success"
     });
     
     // إيقاف المحاكاة المباشرة بعد ثانيتين
     setTimeout(() => {
       if (isLiveSimulation) {
         setIsLiveSimulation(false);
+        
+        // انتقل إلى العنصر التالي إذا كان موجوداً
+        if (currentItemIndex < items.length - 1) {
+          setTimeout(() => {
+            navigateToItem(currentItemIndex + 1);
+            // إعادة تشغيل المحاكاة للعنصر التالي بعد لحظة
+            setTimeout(() => {
+              startLiveSimulation();
+            }, 1000);
+          }, 1500);
+        }
       }
     }, 2000);
   };
@@ -329,30 +358,6 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
         description: `تم نسخ ${fieldName} إلى الحافظة`
       });
     });
-  };
-
-  // فتح موقع المحاكاة الخارجي
-  const openExternalSite = () => {
-    if (simulationUrl) {
-      window.open(simulationUrl, '_blank');
-      toast({
-        title: "تم فتح الموقع الخارجي",
-        description: "يمكنك الآن إدخال البيانات في الموقع الخارجي.",
-      });
-
-      // تعرض إرشادات حول كيفية استخدام البيانات في الموقع الخارجي
-      toast({
-        title: "كيفية الاستخدام",
-        description: "انسخ البيانات من نظام المحاكاة وألصقها في الحقول المناسبة في الموقع الخارجي.",
-        duration: 6000,
-      });
-    } else {
-      toast({
-        title: "خطأ",
-        description: "لا يوجد رابط للموقع الخارجي.",
-        variant: "destructive"
-      });
-    }
   };
 
   // إنشاء عنصر معاينة للعنصر الحالي
@@ -423,7 +428,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
             <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             <AlertTitle className="text-blue-800 dark:text-blue-300">محاكاة بالبث المباشر</AlertTitle>
             <AlertDescription className="text-blue-700 dark:text-blue-400">
-              يمكنك تشغيل المحاكاة المباشرة لمشاهدة كيفية إدخال البيانات تلقائياً، كأنها تُكتب بواسطة شخص حقيقي.
+              يمكنك تشغيل المحاكاة المباشرة لمشاهدة كيفية إدخال البيانات تلقائياً في نموذج مال الشلال، كأنها تُكتب بواسطة شخص حقيقي.
             </AlertDescription>
           </Alert>
           
@@ -440,61 +445,143 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
               <Video className="h-4 w-4 ml-2" />
               بدء المحاكاة المباشرة
             </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openExternalSite}
-            >
-              <ExternalLink className="h-4 w-4 ml-2" />
-              فتح موقع مال الشلال
-            </Button>
           </div>
         </div>
+      </div>
+    );
+  };
+
+  // إنشاء محاكاة لواجهة مال الشلال
+  const renderMalshalal = () => {
+    return (
+      <div className="border rounded-md bg-white shadow-lg p-0 overflow-hidden">
+        <div className="bg-[#242f59] text-white p-3 flex justify-between items-center">
+          <div className="flex items-center">
+            <img src="/lovable-uploads/e3521185-21aa-443a-ae91-7a1b8f5c5400.png" 
+                alt="مال الشلال" 
+                className="h-8 w-auto ml-2" />
+            <h3 className="text-lg font-semibold">مال الشلال للتوصيل السريع</h3>
+          </div>
+          <span className="text-sm">إضافة وصل جديد</span>
+        </div>
         
-        {showUrlInput && (
-          <div className="mt-4 p-4 border rounded-md bg-muted/30">
-            <h4 className="font-medium mb-2">أدخل عنوان الموقع للمحاكاة</h4>
-            <div className="flex space-x-2 space-x-reverse">
-              <Input
-                value={simulationUrl}
-                onChange={(e) => setSimulationUrl(e.target.value)}
-                placeholder="https://example.com/form"
-                className="flex-1"
-              />
-              <Button
-                onClick={() => {
-                  if (simulationUrl) {
-                    // فتح النافذة في علامة تبويب جديدة
-                    window.open(simulationUrl, '_blank');
-                    setShowUrlInput(false);
-                    toast({
-                      title: "تم فتح الموقع الخارجي",
-                      description: "يمكنك الآن تجربة إدخال البيانات يدوياً في الموقع."
-                    });
-                  } else {
-                    toast({
-                      title: "خطأ",
-                      description: "يرجى إدخال عنوان URL صالح.",
-                      variant: "destructive"
-                    });
-                  }
-                }}
-              >
-                فتح
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setShowUrlInput(false)}
+        <div className="p-4">
+          <div className="border rounded-md bg-gray-50 p-4 mb-4">
+            <h4 className="text-[#242f59] font-semibold mb-4 border-b pb-2">بيانات الوصل الجديد</h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="malsh-code" className={activeField === "code" ? "text-blue-600 font-medium" : ""}>
+                  رقم الشحنة: <span className="text-red-500">*</span>
+                </Label>
+                <Input 
+                  id="malsh-code" 
+                  value={isLiveSimulation ? simulatedFields.code : formFields.code}
+                  className={`h-9 border-gray-300 ${activeField === "code" ? "border-blue-500 ring-1 ring-blue-500" : ""}`}
+                  disabled={isLiveSimulation}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="malsh-senderName" className={activeField === "senderName" ? "text-blue-600 font-medium" : ""}>
+                  اسم المرسل: <span className="text-red-500">*</span>
+                </Label>
+                <Input 
+                  id="malsh-senderName" 
+                  value={isLiveSimulation ? simulatedFields.senderName : formFields.senderName}
+                  className={`h-9 border-gray-300 ${activeField === "senderName" ? "border-blue-500 ring-1 ring-blue-500" : ""}`}
+                  disabled={isLiveSimulation}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="malsh-phoneNumber" className={activeField === "phoneNumber" ? "text-blue-600 font-medium" : ""}>
+                  رقم الهاتف: <span className="text-red-500">*</span>
+                </Label>
+                <Input 
+                  id="malsh-phoneNumber" 
+                  value={isLiveSimulation ? simulatedFields.phoneNumber : formFields.phoneNumber}
+                  className={`h-9 border-gray-300 ${activeField === "phoneNumber" ? "border-blue-500 ring-1 ring-blue-500" : ""}`}
+                  disabled={isLiveSimulation}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="malsh-province" className={activeField === "province" ? "text-blue-600 font-medium" : ""}>
+                  المحافظة: <span className="text-red-500">*</span>
+                </Label>
+                <Input 
+                  id="malsh-province" 
+                  value={isLiveSimulation ? simulatedFields.province : formFields.province}
+                  className={`h-9 border-gray-300 ${activeField === "province" ? "border-blue-500 ring-1 ring-blue-500" : ""}`}
+                  disabled={isLiveSimulation}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="malsh-price" className={activeField === "price" ? "text-blue-600 font-medium" : ""}>
+                  المبلغ: <span className="text-red-500">*</span>
+                </Label>
+                <Input 
+                  id="malsh-price" 
+                  value={isLiveSimulation ? simulatedFields.price : formFields.price}
+                  className={`h-9 border-gray-300 ${activeField === "price" ? "border-blue-500 ring-1 ring-blue-500" : ""}`}
+                  disabled={isLiveSimulation}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="malsh-address" className={activeField === "address" ? "text-blue-600 font-medium" : ""}>
+                  العنوان: <span className="text-red-500">*</span>
+                </Label>
+                <Input 
+                  id="malsh-address" 
+                  value={isLiveSimulation ? simulatedFields.address : formFields.address}
+                  className={`h-9 border-gray-300 ${activeField === "address" ? "border-blue-500 ring-1 ring-blue-500" : ""}`}
+                  disabled={isLiveSimulation}
+                />
+              </div>
+              
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="malsh-notes" className={activeField === "notes" ? "text-blue-600 font-medium" : ""}>
+                  ملاحظات:
+                </Label>
+                <Input 
+                  id="malsh-notes" 
+                  value={isLiveSimulation ? simulatedFields.notes : formFields.notes}
+                  className={`h-9 border-gray-300 ${activeField === "notes" ? "border-blue-500 ring-1 ring-blue-500" : ""}`}
+                  disabled={isLiveSimulation}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center mt-6">
+            <div className="text-sm text-gray-500">
+              {simulationStatus === "running" && "جاري إدخال البيانات..."}
+              {simulationStatus === "completed" && "تم إدخال البيانات بنجاح."}
+              {simulationStatus === "saved" && "تم حفظ البيانات بنجاح ✓"}
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-gray-700"
+                disabled={isLiveSimulation || simulationStatus === "running"}
               >
                 إلغاء
               </Button>
+              <Button
+                variant="default"
+                size="sm"
+                className={simulationStatus === "saved" ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}
+                disabled={isLiveSimulation && simulationStatus !== "completed"}
+              >
+                {simulationStatus === "saved" ? "تم الحفظ ✓" : "حفظ"}
+              </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              ملاحظة: سيتم فتح الموقع في علامة تبويب جديدة.
-            </p>
           </div>
-        )}
+        </div>
       </div>
     );
   };
@@ -512,7 +599,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
                 <li>هذا نموذج محاكاة لإدخال البيانات مشابه لما ستجده في موقع مال الشلال للشحن.</li>
                 <li>يمكنك التنقل بين العناصر باستخدام أزرار "السابق" و"التالي".</li>
                 <li>استخدم زر "إيقاف المحاكاة" للعودة إلى وضع المعاينة.</li>
-                <li>يمكنك فتح موقع مال الشلال في نافذة جديدة للتطبيق العملي مع المحاكاة.</li>
+                <li>اضغط على زر "محاكاة مباشرة" لمشاهدة عملية إدخال وحفظ البيانات تلقائياً.</li>
               </ul>
               <Button 
                 variant="outline" 
@@ -579,11 +666,11 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
           </motion.div>
         )}
 
-        <div className="border p-4 rounded-md bg-white dark:bg-gray-800 shadow-sm" ref={formRef}>
-          <div className="flex justify-between items-center border-b pb-2 mb-4">
-            <div>
-              <h3 className="font-semibold">نموذج إدخال البيانات المحاكى</h3>
-              <p className="text-xs text-muted-foreground">العنصر {currentItemIndex + 1} من {items.length}</p>
+        <div className="border rounded-md bg-white dark:bg-gray-800 overflow-hidden p-0" ref={formRef}>
+          <div className="bg-[#242f59] text-white p-3 flex justify-between items-center">
+            <div className="flex items-center">
+              <h3 className="font-semibold text-lg">محاكاة موقع مال الشلال</h3>
+              <p className="text-xs text-gray-200 mr-2">العنصر {currentItemIndex + 1} من {items.length}</p>
             </div>
             <div className="flex space-x-2 space-x-reverse">
               {!isLiveSimulation && (
@@ -603,100 +690,11 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4" id={mockFormId || undefined}>
-            <div className="space-y-2">
-              <Label htmlFor="sim-code" className={activeField === "code" ? "text-brand-green font-medium" : ""}>
-                رقم الشحنة:
-              </Label>
-              <Input 
-                id="sim-code" 
-                value={isLiveSimulation ? simulatedFields.code : formFields.code} 
-                onChange={(e) => setFormFields(prev => ({ ...prev, code: e.target.value }))}
-                className={`h-9 ${activeField === "code" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
-                disabled={isLiveSimulation}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="sim-senderName" className={activeField === "senderName" ? "text-brand-green font-medium" : ""}>
-                اسم المرسل:
-              </Label>
-              <Input 
-                id="sim-senderName" 
-                value={isLiveSimulation ? simulatedFields.senderName : formFields.senderName} 
-                onChange={(e) => setFormFields(prev => ({ ...prev, senderName: e.target.value }))}
-                className={`h-9 ${activeField === "senderName" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
-                disabled={isLiveSimulation}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="sim-phoneNumber" className={activeField === "phoneNumber" ? "text-brand-green font-medium" : ""}>
-                رقم الهاتف:
-              </Label>
-              <Input 
-                id="sim-phoneNumber" 
-                value={isLiveSimulation ? simulatedFields.phoneNumber : formFields.phoneNumber} 
-                onChange={(e) => setFormFields(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                className={`h-9 ${activeField === "phoneNumber" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
-                disabled={isLiveSimulation}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="sim-province" className={activeField === "province" ? "text-brand-green font-medium" : ""}>
-                المحافظة:
-              </Label>
-              <Input 
-                id="sim-province" 
-                value={isLiveSimulation ? simulatedFields.province : formFields.province} 
-                onChange={(e) => setFormFields(prev => ({ ...prev, province: e.target.value }))}
-                className={`h-9 ${activeField === "province" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
-                disabled={isLiveSimulation}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="sim-price" className={activeField === "price" ? "text-brand-green font-medium" : ""}>
-                السعر:
-              </Label>
-              <Input 
-                id="sim-price" 
-                value={isLiveSimulation ? simulatedFields.price : formFields.price} 
-                onChange={(e) => setFormFields(prev => ({ ...prev, price: e.target.value }))}
-                className={`h-9 ${activeField === "price" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
-                disabled={isLiveSimulation}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="sim-address" className={activeField === "address" ? "text-brand-green font-medium" : ""}>
-                العنوان:
-              </Label>
-              <Input 
-                id="sim-address" 
-                value={isLiveSimulation ? simulatedFields.address : formFields.address} 
-                onChange={(e) => setFormFields(prev => ({ ...prev, address: e.target.value }))}
-                className={`h-9 ${activeField === "address" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
-                disabled={isLiveSimulation}
-              />
-            </div>
-            
-            <div className="space-y-2 col-span-2">
-              <Label htmlFor="sim-notes" className={activeField === "notes" ? "text-brand-green font-medium" : ""}>
-                ملاحظات:
-              </Label>
-              <Input 
-                id="sim-notes" 
-                value={isLiveSimulation ? simulatedFields.notes : formFields.notes} 
-                onChange={(e) => setFormFields(prev => ({ ...prev, notes: e.target.value }))}
-                className={`h-9 ${activeField === "notes" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
-                disabled={isLiveSimulation}
-              />
-            </div>
+          <div className="p-0" id={mockFormId || undefined}>
+            {showEmbeddedForm && renderMalshalal()}
           </div>
-          
-          <div className="flex justify-between mt-6 pt-2 border-t">
+
+          <div className="flex justify-between p-3 border-t">
             <div className="flex space-x-2 space-x-reverse">
               <Button 
                 variant="outline" 
@@ -712,16 +710,6 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
               >
                 <ClipboardCopy className="h-4 w-4 ml-1" />
                 نسخ كل البيانات
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={openExternalSite}
-                disabled={isLiveSimulation}
-              >
-                <ExternalLink className="h-4 w-4 ml-1" />
-                فتح موقع مال الشلال
               </Button>
             </div>
             <div className="flex space-x-2 space-x-reverse">
@@ -770,10 +758,10 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center text-brand-brown dark:text-brand-beige">
           <Monitor className="h-5 w-5 ml-2 text-brand-green" />
-          محاكاة إدخال البيانات
+          محاكاة إدخال البيانات في موقع مال الشلال
         </CardTitle>
         <CardDescription>
-          محاكاة عملية إدخال البيانات في نماذج الشحن مثل مال الشلال بعرض مباشر لكيفية إدخال البيانات
+          محاكاة حية لعملية إدخال البيانات في موقع مال الشلال وحفظها بشكل تلقائي
         </CardDescription>
       </CardHeader>
       
@@ -823,14 +811,6 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
       <CardFooter className="bg-muted/20 border-t flex justify-between items-center px-4 py-2 text-xs text-muted-foreground">
         <span>عدد العناصر المتاحة: {items.length}</span>
         <div className="flex items-center space-x-2 space-x-reverse">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-7 text-xs"
-            onClick={openExternalSite}
-          >
-            <ExternalLink className="h-3 w-3 ml-1" /> فتح موقع مال الشلال
-          </Button>
           <Button 
             variant="ghost" 
             size="sm" 

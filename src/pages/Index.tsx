@@ -9,7 +9,7 @@ import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, ExternalLink, Video } from "lucide-react";
+import { Play, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -29,7 +29,7 @@ const Index = () => {
   const simulatorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [showDemo, setShowDemo] = useState(false);
-  const [simulationUrl, setSimulationUrl] = useState("https://malshalal-exp.com/add_newwaslinserter.php?add");
+  const [simulationUrl, setSimulationUrl] = useState("");
 
   // التنقل إلى قسم محاكاة الإدخال
   const scrollToSimulator = () => {
@@ -52,22 +52,6 @@ const Index = () => {
         }
       }, 500);
     }
-  };
-
-  // فتح موقع المحاكاة في نافذة جديدة وإظهار الإرشادات
-  const openSimulationWebsite = () => {
-    // فتح الموقع في نافذة جديدة
-    window.open(simulationUrl, '_blank');
-    
-    // إظهار إشعار بالخطوات التالية
-    toast({
-      title: "تم فتح موقع المحاكاة",
-      description: "استخدم البوكماركليت المنشأ لملء البيانات تلقائيًا في الموقع الخارجي",
-      duration: 5000,
-    });
-    
-    // إظهار فيديو الشرح
-    setShowDemo(true);
   };
 
   // وظيفة wrapper لمعالجة توقيع الدالة للحفاظ على التوافق مع واجهة ImagePreviewContainer
@@ -127,13 +111,6 @@ const Index = () => {
                     <Play className="h-4 w-4 ml-2" />
                     بدء المحاكاة المباشرة
                   </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={openSimulationWebsite}
-                  >
-                    <ExternalLink className="h-4 w-4 ml-2" />
-                    فتح موقع مال الشلال
-                  </Button>
                 </div>
               </div>
             </div>
@@ -150,11 +127,11 @@ const Index = () => {
                     <div className="text-center p-6">
                       <p className="text-lg font-medium mb-2">عرض توضيحي لاستخدام النظام في موقع مال الشلال:</p>
                       <ol className="text-right list-decimal list-inside space-y-2 mb-4">
-                        <li>انتقل إلى موقع مال الشلال الذي تم فتحه في النافذة الجديدة</li>
-                        <li>قم بتسجيل الدخول إذا كان مطلوباً</li>
-                        <li>اضغط على زر "إضافة وصل جديد"</li>
-                        <li>في نموذج المحاكاة أدناه، اضغط على "محاكاة مباشرة" لتشغيل محاكاة الإدخال</li>
-                        <li>انسخ البيانات من النموذج وألصقها في موقع مال الشلال أو استخدم البوكماركليت المنشأ</li>
+                        <li>انتقل إلى نموذج المحاكاة أدناه</li>
+                        <li>اضغط على زر "بدء المحاكاة المباشرة"</li>
+                        <li>شاهد كيف يتم إدخال البيانات تلقائياً في النموذج</li>
+                        <li>يمكنك التحكم في سرعة الإدخال من خلال الخيارات المتاحة</li>
+                        <li>بعد اكتمال العملية، سيتم حفظ البيانات تلقائياً</li>
                       </ol>
                       <img 
                         src="/lovable-uploads/e3521185-21aa-443a-ae91-7a1b8f5c5400.png" 
