@@ -21,8 +21,8 @@ type SimulationItem = {
   province: string;
   price: string;
   companyName: string;
-  address: string;
-  notes: string;
+  address?: string; // تم تغييرها من إجبارية إلى اختيارية
+  notes?: string;   // تم تغييرها من إجبارية إلى اختيارية
   status?: string;
 };
 
@@ -121,9 +121,25 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
       const storedItems = getItemsByStatus("ready");
       
       if (storedItems && storedItems.length > 0) {
-        setItems(storedItems);
+        // تحويل عناصر BookmarkletItem إلى SimulationItem مع التأكد من وجود الحقول المطلوبة
+        const simulationItems: SimulationItem[] = storedItems.map(item => ({
+          id: item.id,
+          code: item.code || "",
+          senderName: item.senderName || "",
+          phoneNumber: item.phoneNumber || "",
+          province: item.province || "",
+          price: item.price || "",
+          companyName: item.companyName || "",
+          address: item.address || "",
+          notes: item.notes || "",
+          status: item.status
+        }));
+        
+        setItems(simulationItems);
         setCurrentItemIndex(0);
-        updateFormFields(storedItems[0]);
+        if (simulationItems.length > 0) {
+          updateFormFields(simulationItems[0]);
+        }
       } else {
         console.log("استخدام بيانات المحاكاة الافتراضية");
         setItems(defaultItems);
