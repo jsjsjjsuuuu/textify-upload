@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { submitTextToApi } from "@/lib/apiService";
 import { useToast } from "@/hooks/use-toast";
-import { ExternalSubmitResponse } from "@/utils/bookmarklet/types";
+import { ExternalSubmitOptions, ExternalSubmitResponse } from "@/utils/bookmarklet/types";
 
 export const useSubmission = (updateImage: (id: string, fields: Partial<ImageData>) => void) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,12 +87,7 @@ export const useSubmission = (updateImage: (id: string, fields: Partial<ImageDat
   };
 
   // إضافة وظيفة محسنة للإرسال إلى واجهة خارجية
-  const handleExternalSubmit = async (formData: Record<string, any>, options: {
-    url: string,
-    method: 'GET' | 'POST' | 'PUT',  // تم تحديث هذا السطر ليطابق نوع ExternalSubmitOptions
-    headers?: Record<string, string>,
-    mapFields?: Record<string, string>
-  }): Promise<ExternalSubmitResponse> => {
+  const handleExternalSubmit = async (formData: Record<string, any>, options: ExternalSubmitOptions): Promise<ExternalSubmitResponse> => {
     setIsSubmitting(true);
     
     try {
