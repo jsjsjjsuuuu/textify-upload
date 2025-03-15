@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,15 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Trash, Plus, MoreHorizontal, Repeat, ArrowDownUp } from "lucide-react";
+import { 
+  Trash, Plus, MoreHorizontal, Repeat, ArrowDownUp, 
+  PlayCircle, Download, Copy, AlertCircle
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { AutomationService } from "@/utils/automationService";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ElementAction {
   id: string;
@@ -25,6 +32,7 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
   projectName = "malhalal-exp.com",
   projectUrl = "https://malhalal-exp.com/add_newwaslinserter.php?add"
 }) => {
+  
   const [actions, setActions] = useState<ElementAction[]>([
     { id: "1", name: "", finder: "//input[@name=\"id_wasl\"][@id=\"id_wasl\"][@value=\"\"]", value: "12421311", delay: "" },
     { id: "2", name: "", finder: "//input[@name=\"phone_customer\"][@id=\"phone_customer\"]", value: "07710284844", delay: "" },
@@ -37,6 +45,120 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
   const [enabled, setEnabled] = useState(true);
   const [projectNameInput, setProjectNameInput] = useState(projectName);
   const [projectUrlInput, setProjectUrlInput] = useState(projectUrl);
+  
+  // إضافة حالات جديدة للأتمتة
+  const [isRunningAutomation, setIsRunningAutomation] = useState(false);
+  const [automationResults, setAutomationResults] = useState<any>(null);
+  const [showResultsDialog, setShowResultsDialog] = useState(false);
+  const [automationProgress, setAutomationProgress] = useState(0);
+  const [serverStatus, setServerStatus] = useState<{ status: string; message: string } | null>(null);
+  const { toast } = useToast();
+
+  // التحقق من حالة الخادم عند تحميل المكون
+  useEffect(() => {
+    checkServerStatus();
+  }, []);
+
+  // التحقق من حالة خادم الأتمتة
+  const checkServerStatus = async () => {
+    try {
+      const status = await AutomationService.checkServerStatus();
+      setServerStatus(status);
+      if (status.status === 'running') {
+        toast({
+          title: "خادم الأتمتة متصل",
+          description: "تم الاتصال بخادم الأتمتة بنجاح",
+        });
+      } else {
+        toast({
+          title: "خادم الأتمتة غير متصل",
+          description: "تعذر الاتصال بخادم الأتمتة. تأكد من تشغيل الخادم المحلي.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      setServerStatus({
+        status: 'error',
+        message: 'فشل الاتصال بخادم الأتمتة'
+      });
+      toast({
+        title: "خطأ في الاتصال",
+        description: "تعذر الاتصال بخادم الأتمتة. تأكد من تشغيل الخادم المحلي.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // تشغيل الأتمتة مع Puppeteer
+  const runAutomation = async () => {
+    if (isRunningAutomation) return;
+    
+    // التحقق من وجود URL للمشروع
+    if (!projectUrlInput) {
+      toast({
+        title: "خطأ",
+        description: "الرجاء إدخال عنوان URL للمشروع",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // التحقق من وجود إجراءات
+    if (actions.length === 0) {
+      toast({
+        title: "خطأ",
+        description: "لا توجد إجراءات للتنفيذ",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsRunningAutomation(true);
+    setAutomationProgress(10);
+    
+    try {
+      // إعداد تكوين الأتمتة
+      const config = {
+        projectName: projectNameInput,
+        projectUrl: projectUrlInput,
+        actions: actions
+      };
+      
+      setAutomationProgress(30);
+      
+      // تشغيل الأتمتة
+      const result = await AutomationService.runAutomation(config);
+      
+      setAutomationProgress(100);
+      setAutomationResults(result);
+      
+      if (result.success) {
+        toast({
+          title: "نجاح",
+          description: "تم تنفيذ الأتمتة بنجاح",
+        });
+        // عرض نتائج الأتمتة
+        setShowResultsDialog(true);
+      } else {
+        toast({
+          title: "خطأ",
+          description: result.message || "فشل تنفيذ الأتمتة",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("خطأ في تنفيذ الأتمتة:", error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تنفيذ الأتمتة. تأكد من تشغيل خادم الأتمتة المحلي.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRunningAutomation(false);
+    }
+  };
+
+  
   
   const addNewAction = () => {
     const newId = (actions.length + 1).toString();
@@ -83,6 +205,8 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
   }, [actions, projectNameInput, projectUrlInput, enabled]);
   
   const generateScript = () => {
+    
+    
     const scriptTemplate = `// سكريبت تكوين تلقائي تم إنشاؤه
 const config = {
   projectName: "${projectNameInput}",
@@ -226,7 +350,7 @@ if (window.location.href !== config.projectUrl) {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center">
-            <span>التكوين.العنوان</span>
+            <span>مكتشف العناصر</span>
             <Badge variant="outline" className="mr-2 bg-amber-100">جديد</Badge>
           </div>
           <div className="flex items-center gap-2">
@@ -236,14 +360,28 @@ if (window.location.href !== config.projectUrl) {
               checked={enabled}
               onCheckedChange={setEnabled}
             />
-            <Button variant="outline" size="icon">
-              <ArrowDownUp className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" onClick={checkServerStatus}>
               <Repeat className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => setActions([])} 
+              title="مسح جميع الإجراءات"
+            >
+              <Trash className="h-4 w-4" />
             </Button>
           </div>
         </CardTitle>
+        
+        {serverStatus && serverStatus.status !== 'running' && (
+          <Alert variant="destructive" className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              خادم الأتمتة غير متصل. يُرجى تشغيل الخادم المحلي باستخدام الأمر: <code>node src/server/server.js</code>
+            </AlertDescription>
+          </Alert>
+        )}
         
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div>
@@ -257,7 +395,7 @@ if (window.location.href !== config.projectUrl) {
           </div>
           
           <div>
-            <Label htmlFor="project-url">configuration.url <span className="text-red-500">*</span></Label>
+            <Label htmlFor="project-url">رابط المشروع <span className="text-red-500">*</span></Label>
             <Input
               id="project-url"
               value={projectUrlInput}
@@ -270,17 +408,30 @@ if (window.location.href !== config.projectUrl) {
       
       <CardContent>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="font-medium text-lg">عمل.عنوان</h3>
+          <h3 className="font-medium text-lg">الإجراءات</h3>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              الدفعة.العنوان
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={runAutomation}
+              disabled={isRunningAutomation || serverStatus?.status !== 'running'}
+            >
+              <PlayCircle className="h-4 w-4 ml-1" />
+              تشغيل الأتمتة
             </Button>
             <Button variant="outline" size="sm" onClick={addNewAction}>
               <Plus className="h-4 w-4 ml-1" />
-              عمل.إضافة
+              إضافة إجراء
             </Button>
           </div>
         </div>
+        
+        {isRunningAutomation && (
+          <div className="mb-4">
+            <Progress value={automationProgress} className="h-2" />
+            <p className="text-center text-sm mt-1">جاري تنفيذ الأتمتة... {automationProgress}%</p>
+          </div>
+        )}
         
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -289,11 +440,11 @@ if (window.location.href !== config.projectUrl) {
                 <th className="pb-2 font-medium text-sm">#</th>
                 <th className="pb-2 font-medium text-sm">الاسم</th>
                 <th className="pb-2 font-medium text-sm">
-                  اكتشف العناصر <span className="text-red-500">*</span>
+                  مكتشف العناصر <span className="text-red-500">*</span>
                 </th>
                 <th className="pb-2 font-medium text-sm">قيمة</th>
                 <th className="pb-2 font-medium text-sm">
-                  الفاصل الزمني R
+                  الفاصل الزمني
                 </th>
                 <th className="pb-2 font-medium text-sm" colSpan={2}></th>
               </tr>
@@ -307,6 +458,7 @@ if (window.location.href !== config.projectUrl) {
                       value={action.name}
                       onChange={(e) => updateAction(action.id, 'name', e.target.value)}
                       className="w-full"
+                      placeholder="اسم الإجراء"
                     />
                   </td>
                   <td className="py-2 pr-2">
@@ -314,6 +466,7 @@ if (window.location.href !== config.projectUrl) {
                       value={action.finder}
                       onChange={(e) => updateAction(action.id, 'finder', e.target.value)}
                       className="w-full"
+                      placeholder="//xpath | #id | .class | Name::name"
                     />
                   </td>
                   <td className="py-2 pr-2">
@@ -321,6 +474,7 @@ if (window.location.href !== config.projectUrl) {
                       value={action.value}
                       onChange={(e) => updateAction(action.id, 'value', e.target.value)}
                       className="w-full"
+                      placeholder="القيمة المُدخلة"
                     />
                   </td>
                   <td className="py-2 pr-2">
@@ -328,6 +482,10 @@ if (window.location.href !== config.projectUrl) {
                       value={action.delay}
                       onChange={(e) => updateAction(action.id, 'delay', e.target.value)}
                       className="w-full"
+                      placeholder="بالثواني"
+                      type="number"
+                      min="0"
+                      step="1"
                     />
                   </td>
                   <td className="py-2">
@@ -366,9 +524,13 @@ if (window.location.href !== config.projectUrl) {
               // نسخ السكريبت إلى الحافظة
               const script = generateScript();
               navigator.clipboard.writeText(script);
-              alert("تم نسخ السكريبت إلى الحافظة");
+              toast({
+                title: "تم النسخ",
+                description: "تم نسخ السكريبت إلى الحافظة",
+              });
             }}
           >
+            <Copy className="h-4 w-4 ml-1" />
             نسخ السكريبت
           </Button>
           
@@ -386,12 +548,84 @@ if (window.location.href !== config.projectUrl) {
               link.click();
               document.body.removeChild(link);
               URL.revokeObjectURL(href);
+              toast({
+                title: "تم التصدير",
+                description: "تم تصدير السكريبت بنجاح",
+              });
             }}
           >
+            <Download className="h-4 w-4 ml-1" />
             تصدير
           </Button>
         </div>
       </CardFooter>
+      
+      {/* مربع حوار لعرض نتائج الأتمتة */}
+      <Dialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>نتائج التشغيل الآلي</DialogTitle>
+          </DialogHeader>
+          
+          {automationResults && (
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <Badge variant={automationResults.success ? "success" : "destructive"} className="ml-2">
+                  {automationResults.success ? "ناجح" : "فشل"}
+                </Badge>
+                <span>{automationResults.message}</span>
+              </div>
+              
+              {automationResults.results && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">تفاصيل الإجراءات:</h4>
+                  <div className="border rounded-md overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-muted/50">
+                        <tr className="text-right">
+                          <th className="p-2 text-sm font-medium">الإجراء</th>
+                          <th className="p-2 text-sm font-medium">الحالة</th>
+                          <th className="p-2 text-sm font-medium">التفاصيل</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {automationResults.results.map((result: any, index: number) => (
+                          <tr key={index} className="border-t">
+                            <td className="p-2 text-sm">{result.name}</td>
+                            <td className="p-2 text-sm">
+                              <Badge variant={result.success ? "success" : "destructive"}>
+                                {result.success ? "ناجح" : "فشل"}
+                              </Badge>
+                            </td>
+                            <td className="p-2 text-sm">{result.message}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              
+              {automationResults.screenshot && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">لقطة شاشة:</h4>
+                  <div className="border rounded-md overflow-hidden">
+                    <img 
+                      src={automationResults.screenshot} 
+                      alt="لقطة شاشة من التشغيل الآلي" 
+                      className="w-full h-auto"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button onClick={() => setShowResultsDialog(false)}>إغلاق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
