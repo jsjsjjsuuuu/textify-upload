@@ -10,6 +10,8 @@ interface ExtractedDataFieldsProps {
     province: string;
     price: string;
     companyName: string;
+    address: string;
+    notes: string;
   };
   editMode: boolean;
   onTempChange: (field: string, value: string) => void;
@@ -65,16 +67,30 @@ const ExtractedDataFields = ({
         options={IRAQ_PROVINCES}
       />
 
-      <div className="col-span-2">
-        <ExtractedDataField 
-          label="السعر"
-          value={tempData.price}
-          editMode={editMode}
-          placeholder="أدخل السعر"
-          onChange={(value) => onTempChange("price", value)}
-          fieldType="price"
-        />
-      </div>
+      <ExtractedDataField 
+        label="السعر"
+        value={tempData.price}
+        editMode={editMode}
+        placeholder="أدخل السعر"
+        onChange={(value) => onTempChange("price", value)}
+        fieldType="price"
+      />
+
+      <ExtractedDataField 
+        label="العنوان"
+        value={tempData.address}
+        editMode={editMode}
+        placeholder="أدخل العنوان"
+        onChange={(value) => onTempChange("address", value)}
+      />
+
+      <ExtractedDataField 
+        label="ملاحظات"
+        value={tempData.notes}
+        editMode={editMode}
+        placeholder="أدخل ملاحظات إضافية"
+        onChange={(value) => onTempChange("notes", value)}
+      />
     </div>
   );
 };
