@@ -21,6 +21,9 @@ export interface FieldMapping {
   aliases?: string[];
   required?: boolean;
   transform?: (value: string) => string;
+  // حذف الحقول التي تسبب المشكلة
+  // sourceField: string; 
+  // targetField: string;
 }
 
 // عنصر البوكماركلت (العناصر المخزنة في localStorage)
@@ -78,13 +81,6 @@ export interface ExternalSubmitResponse {
   timestamp: string;
 }
 
-// تعيين العلاقة بين حقول البيانات المستخرجة وحقول النموذج
-export interface FieldMapping {
-  sourceField: string;    // اسم الحقل في البيانات المستخرجة
-  targetField: string;    // اسم الحقل في النموذج المستهدف
-  transform?: (value: string) => string;  // وظيفة لتحويل القيمة
-}
-
 // نوع خيارات البوكماركلت
 export interface BookmarkletOptions {
   version: string;
@@ -92,5 +88,9 @@ export interface BookmarkletOptions {
   includeExportTools: boolean;
   includeSeleniumLike?: boolean;
   debugMode?: boolean;
+  advancedOptions?: {
+    useAdvancedFieldDetection?: boolean;
+    refreshAfterFill?: boolean;
+  };
   fieldMappings?: FieldMapping[];
 }

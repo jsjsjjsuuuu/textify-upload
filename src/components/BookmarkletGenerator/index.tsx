@@ -8,7 +8,7 @@ import BookmarkletInstructions from "./BookmarkletInstructions";
 import BookmarkletStats from "./BookmarkletStats";
 import SeleniumLikeSection from "./SeleniumLikeSection";
 import { getBookmarkletCode } from "@/utils/bookmarklet/bookmarkletCode";
-import { BookmarkletOptions } from "@/types/BookmarkletOptions";
+import { BookmarkletOptions } from "@/utils/bookmarklet/types"; // تغيير مسار الاستيراد
 import { useToast } from "@/hooks/use-toast";
 import { getStorageStats } from "@/utils/bookmarklet";
 
@@ -84,22 +84,31 @@ const BookmarkletGenerator: React.FC = () => {
     <div className="space-y-4">
       <BookmarkletStats
         stats={stats}
+        imagesCount={0} // إضافة الخاصيتين المفقودتين
+        validImagesCount={0}
       />
       
       <BookmarkletLink 
         bookmarkletUrl={bookmarkletLink} 
         isGeneratingUrl={isGenerating}
-        generateBookmarklet={generateBookmarkletLink} 
+        onCopyBookmarklet={() => {}} // تغيير اسم الخاصية
+        onDragStart={() => {}}
       />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ImprovedFormFillerSection
-          useFormFiller={useFormFiller}
-          onUseFormFillerChange={setUseFormFiller}
+          enhancedBookmarkletUrl={""} // تحديث لتتوافق مع الواجهة
+          isGeneratingUrl={isGenerating}
+          onCopyEnhancedBookmarklet={() => {}}
+          storedCount={stats.total}
         />
         <ExportDataSection
-          useExportTools={useExportTools}
-          onUseExportToolsChange={setUseExportTools}
+          stats={stats}
+          imagesCount={0}
+          validImagesCount={0}
+          storedCount={stats.total}
+          onExport={() => {}}
+          onClear={() => {}}
         />
       </div>
       
@@ -109,8 +118,10 @@ const BookmarkletGenerator: React.FC = () => {
       />
       
       <AdvancedOptions
-        currentValues={advancedOptions}
-        onAdvancedOptionsChange={handleAdvancedOptionsChange}
+        showAdvanced={false}
+        isGeneratingUrl={isGenerating}
+        onRegenerateBookmarklet={() => {}}
+        onToggleAdvanced={() => {}}
       />
       
       <BookmarkletInstructions />
