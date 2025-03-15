@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -328,7 +327,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
     toast({
       title: "تم حفظ البيانات بنجاح",
       description: "تمت عملية إدخال وحفظ البيانات في نظام مال الشلال",
-      variant: "success"
+      variant: "default"  // تغيير من "success" إلى "default"
     });
     
     // إيقاف المحاكاة المباشرة بعد ثانيتين
@@ -809,20 +808,3 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
       </CardContent>
       
       <CardFooter className="bg-muted/20 border-t flex justify-between items-center px-4 py-2 text-xs text-muted-foreground">
-        <span>عدد العناصر المتاحة: {items.length}</span>
-        <div className="flex items-center space-x-2 space-x-reverse">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-7 text-xs"
-            onClick={loadItems}
-          >
-            <RotateCw className="h-3 w-3 ml-1" /> تحديث
-          </Button>
-        </div>
-      </CardFooter>
-    </Card>
-  );
-};
-
-export default DataEntrySimulator;
