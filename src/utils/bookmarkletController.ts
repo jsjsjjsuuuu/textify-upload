@@ -727,7 +727,7 @@ export const findAndClickSaveButton = (): boolean => {
   
   for (const button of Array.from(allButtons)) {
     const buttonText = button.textContent?.trim().toLowerCase() || '';
-    const buttonValue = button.getAttribute('value')?.toLowerCase() || '';
+    const buttonValue = (button as HTMLInputElement).value?.toLowerCase() || '';
     
     // تحقق من النص أو القيمة
     if (
@@ -760,7 +760,8 @@ export const findAndClickSaveButton = (): boolean => {
   if (potentialSaveButtons.length > 0) {
     try {
       const button = potentialSaveButtons[0] as HTMLElement;
-      console.log(`[Bookmarklet] محاولة النقر على الزر المحتمل: ${button.textContent || button.value}`);
+      const buttonValue = (button instanceof HTMLInputElement) ? button.value : '';
+      console.log(`[Bookmarklet] محاولة النقر على الزر المحتمل: ${button.textContent || buttonValue}`);
       button.click();
       return true;
     } catch (e) {
