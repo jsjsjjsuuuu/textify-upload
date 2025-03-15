@@ -22,7 +22,13 @@ const BookmarkletGenerator: React.FC = () => {
     includeFormFiller: true,
     includeExportTools: true,
   });
-  const [stats, setStats] = useState({ total: 0, ready: 0, success: 0, error: 0, lastUpdate: null as Date | null });
+  const [stats, setStats] = useState({ 
+    total: 0, 
+    ready: 0, 
+    success: 0, 
+    error: 0, 
+    lastUpdate: null as Date | null 
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -36,8 +42,8 @@ const BookmarkletGenerator: React.FC = () => {
     } catch (error) {
       console.error("Failed to fetch bookmarklet stats:", error);
       toast({
-        title: "Error",
-        description: "Failed to fetch bookmarklet stats",
+        title: "خطأ",
+        description: "فشل في جلب إحصائيات البوكماركلت",
         variant: "destructive",
       });
     }
@@ -58,8 +64,8 @@ const BookmarkletGenerator: React.FC = () => {
     } catch (error) {
       console.error("Error generating bookmarklet link:", error);
       toast({
-        title: "Error",
-        description: "Failed to generate bookmarklet link",
+        title: "خطأ",
+        description: "فشل في إنشاء رابط البوكماركلت",
         variant: "destructive",
       });
     } finally {
@@ -78,23 +84,22 @@ const BookmarkletGenerator: React.FC = () => {
     <div className="space-y-4">
       <BookmarkletStats
         stats={stats}
-        onRefreshStats={fetchBookmarkletStats}
       />
       
       <BookmarkletLink 
         bookmarkletUrl={bookmarkletLink} 
         isGeneratingUrl={isGenerating}
-        onGenerateBookmarklet={generateBookmarkletLink} 
+        generateBookmarklet={generateBookmarkletLink} 
       />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ImprovedFormFillerSection
-          enabled={useFormFiller}
-          onToggle={setUseFormFiller}
+          useFormFiller={useFormFiller}
+          onUseFormFillerChange={setUseFormFiller}
         />
         <ExportDataSection
-          enabled={useExportTools}
-          onToggle={setUseExportTools}
+          useExportTools={useExportTools}
+          onUseExportToolsChange={setUseExportTools}
         />
       </div>
       
@@ -104,8 +109,8 @@ const BookmarkletGenerator: React.FC = () => {
       />
       
       <AdvancedOptions
-        options={advancedOptions}
-        onChange={handleAdvancedOptionsChange}
+        currentValues={advancedOptions}
+        onAdvancedOptionsChange={handleAdvancedOptionsChange}
       />
       
       <BookmarkletInstructions />

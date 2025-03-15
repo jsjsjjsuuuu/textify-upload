@@ -17,6 +17,9 @@ interface FormFillerResults {
   attempted: number;
 }
 
+// استيراد IRAQ_PROVINCE_MAP من fieldMappings
+import { IRAQ_PROVINCE_MAP } from './fieldMappings';
+
 // تعبئة الحقول في الصفحة المستهدفة
 export const fillFormFields = (item: any): FormFillerResults => {
   if (!item) return { filled: [], failed: [], message: 'لا توجد بيانات', success: false, attempted: 0 };
@@ -41,13 +44,17 @@ export const fillFormFields = (item: any): FormFillerResults => {
         'input[name*="tracking"]',
         'input[id*="tracking"]',
         'input[name*="reference"]',
-        'input[id*="reference"]'
+        'input[id*="reference"]',
+        'input[name="bill_number"]',
+        'input[id="bill_number"]',
+        'input[name="shipment_number"]',
+        'input[id="shipment_number"]'
       ]
     },
     {
       key: 'phoneNumber',
       label: 'رقم الهاتف',
-      value: item.phoneNumber ? item.phoneNumber.replace(/\D/g, '') : '',
+      value: formatPhoneNumber(item.phoneNumber),
       selectors: [
         'input[name*="phone"]',
         'input[id*="phone"]',
@@ -59,7 +66,11 @@ export const fillFormFields = (item: any): FormFillerResults => {
         'input[id*="mobile"]',
         'input[placeholder*="تليفون"]',
         'input[name*="tel"]',
-        'input[id*="tel"]'
+        'input[id*="tel"]',
+        'input[name="client_phone"]',
+        'input[id="client_phone"]',
+        'input[name="customer_mobile"]',
+        'input[id="customer_mobile"]'
       ]
     },
     {
@@ -77,7 +88,11 @@ export const fillFormFields = (item: any): FormFillerResults => {
         'input[placeholder*="المرسل"]',
         'input[name*="client"]',
         'input[id*="client"]',
-        'input[name="name"]'
+        'input[name="name"]',
+        'input[id="client_name"]',
+        'input[name="client_name"]',
+        'select[name="client_id"]',
+        'select[id="client_id"]'
       ]
     },
     {
@@ -111,15 +126,19 @@ export const fillFormFields = (item: any): FormFillerResults => {
         'select[name*="area"]',
         'select[id*="area"]',
         'select[placeholder*="منطقة"]',
+        'select[name="destination"]',
+        'select[id="destination"]',
         'input[name*="province"]',
         'input[id*="province"]',
-        'input[placeholder*="المحافظة"]'
+        'input[placeholder*="المحافظة"]',
+        'input[name="city"]',
+        'input[id="city"]'
       ]
     },
     {
       key: 'price',
       label: 'المبلغ',
-      value: item.price ? item.price.replace(/[^\d.]/g, '') : '',
+      value: formatPrice(item.price),
       selectors: [
         'input[name*="price"]',
         'input[name*="amount"]',
@@ -132,7 +151,30 @@ export const fillFormFields = (item: any): FormFillerResults => {
         'input[id*="total"]',
         'input[name*="cost"]',
         'input[id*="cost"]',
-        'input[placeholder*="التكلفة"]'
+        'input[placeholder*="التكلفة"]',
+        'input[name="total_amount"]',
+        'input[id="total_amount"]',
+        'input[name="cod_amount"]',
+        'input[id="cod_amount"]',
+        'input[name="grand_total"]',
+        'input[id="grand_total"]'
+      ]
+    },
+    {
+      key: 'delegateName',
+      label: 'اسم المندوب',
+      value: item.delegateName || '',
+      selectors: [
+        'select[name*="delegate"]',
+        'select[id*="delegate"]',
+        'select[name*="agent"]',
+        'select[id*="agent"]',
+        'select[placeholder*="المندوب"]',
+        'select[placeholder*="الموظف"]',
+        'select[name="employee_id"]',
+        'select[id="employee_id"]',
+        'select[name="driver_id"]',
+        'select[id="driver_id"]'
       ]
     },
     {
@@ -148,7 +190,9 @@ export const fillFormFields = (item: any): FormFillerResults => {
         'textarea[placeholder*="تعليق"]',
         'input[name*="note"]',
         'input[id*="note"]',
-        'input[placeholder*="ملاحظات"]'
+        'input[placeholder*="ملاحظات"]',
+        'textarea[name="description"]',
+        'textarea[id="description"]'
       ]
     },
     {
@@ -166,7 +210,29 @@ export const fillFormFields = (item: any): FormFillerResults => {
         'input[placeholder*="نوع البضاعة"]',
         'textarea[name*="product"]',
         'textarea[id*="product"]',
-        'textarea[placeholder*="نوع البضاعة"]'
+        'textarea[placeholder*="نوع البضاعة"]',
+        'select[name="goods_type"]',
+        'select[id="goods_type"]',
+        'input[name="content"]',
+        'input[id="content"]'
+      ]
+    },
+    {
+      key: 'pieceCount',
+      label: 'عدد القطع',
+      value: item.pieceCount || '1',
+      selectors: [
+        'input[name*="count"]',
+        'input[id*="count"]',
+        'input[name*="quantity"]',
+        'input[id*="quantity"]',
+        'input[name*="pieces"]',
+        'input[id*="pieces"]',
+        'input[placeholder*="عدد القطع"]',
+        'input[name="items_count"]',
+        'input[id="items_count"]',
+        'input[name="qty"]',
+        'input[id="qty"]'
       ]
     }
   ];
@@ -303,9 +369,50 @@ export const fillFormFields = (item: any): FormFillerResults => {
   return results;
 };
 
+// دالة مساعدة لتنسيق رقم الهاتف العراقي
+function formatPhoneNumber(phoneNumber: string): string {
+  if (!phoneNumber) return '';
+  
+  // إزالة كل شيء ما عدا الأرقام
+  const digitsOnly = phoneNumber.replace(/[^\d]/g, '');
+  
+  // معالجة الصيغ المختلفة من الأرقام العراقية
+  if (digitsOnly.length === 10 && digitsOnly.startsWith('7')) {
+    return '0' + digitsOnly; // إضافة الصفر في البداية
+  } else if (digitsOnly.length === 11 && digitsOnly.startsWith('07')) {
+    return digitsOnly; // الحفاظ على الرقم كما هو
+  } else if (digitsOnly.length === 13 && digitsOnly.startsWith('9647')) {
+    return '0' + digitsOnly.substring(3); // تحويل الرقم الدولي إلى محلي
+  } else if (digitsOnly.length === 14 && digitsOnly.startsWith('00964')) {
+    return '0' + digitsOnly.substring(5); // تحويل الرقم الدولي بصيغة 00 إلى محلي
+  }
+  
+  return phoneNumber; // إرجاع الرقم كما هو إذا لم يطابق أي صيغة
+}
+
+// دالة مساعدة لتنسيق سعر الشحنة
+function formatPrice(price: string): string {
+  if (!price) return '0';
+  
+  // التعامل مع القيم النصية الخاصة
+  if (price.toLowerCase() === 'مجاني' || price.toLowerCase() === 'free' || 
+      price.toLowerCase() === 'واصل' || price.toLowerCase() === 'توصيل') {
+    return '0';
+  }
+  
+  // إزالة كل شيء عدا الأرقام والعلامة العشرية
+  const numericValue = price.replace(/[^\d.]/g, '');
+  
+  // التحقق من وجود قيمة صالحة
+  if (!numericValue || isNaN(Number(numericValue))) {
+    return '0';
+  }
+  
+  return numericValue;
+}
+
 // دالة مساعدة لملء حقل واحد
 const fillSingleField = (element: ElementWithValue, mapping: any, results: FormFillerResults): boolean => {
-  // البحث عن العنصر في الصفحة - لم نعد بحاجة للبحث لأن العنصر تم العثور عليه بالفعل
   try {
     // إذا وجدنا عنصرًا وكان لدينا قيمة، نحاول ملئه
     if (element && mapping.value) {
@@ -357,40 +464,9 @@ const fillSelectField = (element: HTMLSelectElement, mapping: any, results: Form
   }
   
   // 3. محاولة مطابقة خاصة للمحافظات العراقية
-  if (!matchedOption && mapping.key === 'province') {
-    // خريطة المحافظات العراقية وبداائلها
-    const provinceMap: {[key: string]: string[]} = {
-      'بغداد': ['baghdad', 'بقداد', 'بغدات'],
-      'البصرة': ['basra', 'basrah', 'البصره'],
-      'نينوى': ['nineveh', 'mosul', 'الموصل', 'موصل', 'نينوه'],
-      'أربيل': ['erbil', 'arbil', 'اربيل', 'اربل'],
-      'النجف': ['najaf', 'نجف'],
-      'كربلاء': ['karbala', 'كربلا'],
-      'ذي قار': ['dhi qar', 'thi qar', 'ذيقار', 'ذى قار', 'الناصرية'],
-      'الأنبار': ['anbar', 'الانبار', 'انبار', 'الرمادي'],
-      'ديالى': ['diyala', 'ديالا', 'بعقوبة'],
-      'كركوك': ['kirkuk', 'كرگوک'],
-      'صلاح الدين': ['salah al-din', 'saladin', 'صلاحدين', 'صلاح دين', 'تكريت'],
-      'بابل': ['babylon', 'babil', 'الحلة', 'hillah'],
-      'المثنى': ['muthanna', 'مثنى', 'السماوة'],
-      'القادسية': ['qadisiyyah', 'قادسية', 'الديوانية', 'diwaniyah'],
-      'واسط': ['wasit', 'kut', 'الكوت'],
-      'ميسان': ['maysan', 'missan', 'العمارة'],
-      'دهوك': ['dhok', 'dohuk'],
-      'السليمانية': ['sulaymaniyah', 'سليمانية', 'سلیمانیة']
-    };
-    
-    // محاولة العثور على المحافظة بقائمة البدائل
-    for (const [province, aliases] of Object.entries(provinceMap)) {
-      if (value === province.toLowerCase() || aliases.some(alias => value.includes(alias.toLowerCase()))) {
-        matchedOption = options.find(opt => 
-          opt.text.toLowerCase().includes(province.toLowerCase()) || 
-          aliases.some(alias => opt.text.toLowerCase().includes(alias.toLowerCase()))
-        );
-        
-        if (matchedOption) break;
-      }
-    }
+  if (!matchedOption && (mapping.key === 'province' || mapping.key === 'area')) {
+    // استخدام بيانات المحافظات والبدائل لها
+    matchedOption = findProvinceMatchOption(options, value);
   }
   
   // إذا وجدنا خيارًا مناسبًا
@@ -424,6 +500,47 @@ const fillSelectField = (element: HTMLSelectElement, mapping: any, results: Form
   return false;
 };
 
+// دالة مساعدة للعثور على خيار المحافظة المناسب
+const findProvinceMatchOption = (options: HTMLOptionElement[], value: string): HTMLOptionElement | undefined => {
+  // فحص كل محافظة والبحث عن مطابقة
+  for (const province of IRAQ_PROVINCE_MAP.provinces) {
+    // إذا كان الاسم الذي لدينا هو اسم المحافظة نفسه
+    if (value === province.toLowerCase()) {
+      return options.find(opt => 
+        opt.text.toLowerCase().includes(province.toLowerCase())
+      );
+    }
+    
+    // التحقق من البدائل
+    const alternatives = IRAQ_PROVINCE_MAP.alternativeNames[province] || [];
+    if (alternatives.some(alt => alt.toLowerCase() === value)) {
+      return options.find(opt => 
+        opt.text.toLowerCase().includes(province.toLowerCase()) || 
+        alternatives.some(alt => opt.text.toLowerCase().includes(alt.toLowerCase()))
+      );
+    }
+  }
+  
+  // البحث بالاتجاه المعاكس - للمحافظة التي ترد في نص الخيار
+  for (const option of options) {
+    const optionText = option.text.toLowerCase();
+    
+    for (const province of IRAQ_PROVINCE_MAP.provinces) {
+      if (optionText.includes(province.toLowerCase())) {
+        return option;
+      }
+      
+      // التحقق من البدائل
+      const alternatives = IRAQ_PROVINCE_MAP.alternativeNames[province] || [];
+      if (alternatives.some(alt => optionText.includes(alt.toLowerCase()))) {
+        return option;
+      }
+    }
+  }
+  
+  return undefined;
+};
+
 // دالة مساعدة لملء حقول الإدخال النصية
 const fillInputField = (element: ElementWithValue, mapping: any, results: FormFillerResults): boolean => {
   try {
@@ -438,10 +555,10 @@ const fillInputField = (element: ElementWithValue, mapping: any, results: FormFi
       
       if (element.type === 'tel' || mapping.key === 'phoneNumber') {
         // تنظيف رقم الهاتف
-        finalValue = mapping.value.replace(/\D/g, '');
+        finalValue = formatPhoneNumber(mapping.value);
       } else if (element.type === 'number' || mapping.key === 'price') {
         // تنظيف المبالغ من الأحرف غير الرقمية
-        finalValue = mapping.value.replace(/[^\d.]/g, '');
+        finalValue = formatPrice(mapping.value);
       }
       
       // تعيين القيمة مباشرة وكذلك defaultValue للتغلب على بعض الحماية
@@ -520,15 +637,15 @@ const guessFieldType = (element: ElementWithValue): string => {
   const allText = `${name} ${id} ${type} ${placeholder} ${labelText}`;
   
   // البحث عن كلمات مفتاحية للحقول المختلفة
-  if (allText.match(/كود|code|رقم.*وصل|رقم.*طلب|رقم.*شحنة|reference|ref|order/)) {
+  if (allText.match(/كود|code|رقم.*وصل|رقم.*طلب|رقم.*شحنة|reference|ref|order|bill_number|shipment_number/)) {
     return 'code';
   }
   
-  if (allText.match(/هاتف|phone|موبايل|جوال|tel|mobile|اتصال/) || type === 'tel') {
+  if (allText.match(/هاتف|phone|موبايل|جوال|tel|mobile|اتصال|client_phone|customer_mobile/) || type === 'tel') {
     return 'phoneNumber';
   }
   
-  if (allText.match(/اسم.*مرسل|اسم.*عميل|sender|customer|client|name/) && !allText.match(/مستلم|receiver/)) {
+  if (allText.match(/اسم.*مرسل|اسم.*عميل|sender|customer|client|name|client_name/) && !allText.match(/مستلم|receiver/)) {
     return 'senderName';
   }
   
@@ -536,20 +653,28 @@ const guessFieldType = (element: ElementWithValue): string => {
     return 'recipientName';
   }
   
-  if (allText.match(/محافظة|province|مدينة|city|منطقة|area/)) {
+  if (allText.match(/محافظة|province|مدينة|city|منطقة|area|destination/)) {
     return 'province';
   }
   
-  if (allText.match(/سعر|مبلغ|price|amount|cost|total/) || type === 'number') {
+  if (allText.match(/سعر|مبلغ|price|amount|cost|total|cod_amount|total_amount|grand_total/) || type === 'number') {
     return 'price';
   }
   
-  if (allText.match(/ملاحظات|notes|comments|تعليق/)) {
+  if (allText.match(/ملاحظات|notes|comments|تعليق|description/)) {
     return 'notes';
   }
   
-  if (allText.match(/نوع.*بضاعة|type|product|package/)) {
+  if (allText.match(/نوع.*بضاعة|type|product|package|content|goods_type/)) {
     return 'packageType';
+  }
+  
+  if (allText.match(/عدد.*قطع|count|quantity|pieces|qty|items_count/)) {
+    return 'pieceCount';
+  }
+  
+  if (allText.match(/مندوب|agent|موظف|delegate|employee|driver|employee_id|driver_id/)) {
+    return 'delegateName';
   }
   
   return 'unknown';
@@ -559,8 +684,25 @@ const guessFieldType = (element: ElementWithValue): string => {
 const findAndClickSaveButton = (): boolean => {
   console.log("البحث عن زر الحفظ...");
   
-  // محددات محتملة لزر الحفظ
+  // محاولة العثور على زر الحفظ المحدد في المتطلبات
+  try {
+    const exactButton = document.querySelector('button[type="submit"][name="submit"][class*="btn-primary"]');
+    if (exactButton) {
+      console.log("تم العثور على زر الحفظ المطلوب بالضبط!");
+      (exactButton as HTMLElement).click();
+      return true;
+    }
+  } catch (e) {
+    console.warn("خطأ أثناء البحث عن زر الحفظ المحدد:", e);
+  }
+  
+  // محددات محتملة أخرى لزر الحفظ
   const saveButtonSelectors = [
+    // أزرار عامة
+    'button[type="submit"]',
+    'input[type="submit"]',
+    'button.btn-primary',
+    'button.btn-success',
     // أزرار مع نص متعلق بالحفظ
     'button:contains("حفظ")', 
     'button:contains("احفظ")',
@@ -571,7 +713,6 @@ const findAndClickSaveButton = (): boolean => {
     'input[type="submit"][value*="إرسال"]',
     'input[type="button"][value*="حفظ"]',
     // أزرار بناء على أنماط CSS
-    'button[type="submit"]',
     '.save-button', 
     '.btn-save',
     '.btn-primary',
@@ -687,4 +828,3 @@ const findAndClickSaveButton = (): boolean => {
   console.log("لم يتم العثور على زر حفظ مناسب");
   return false;
 };
-

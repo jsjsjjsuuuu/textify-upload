@@ -37,6 +37,9 @@ export interface BookmarkletItem {
   address?: string;
   notes?: string;
   recipientName?: string;
+  delegateName?: string;
+  packageType?: string;
+  pieceCount?: string;
   // بيانات إضافية يمكن استخدامها في ملء النماذج
   [key: string]: any;
 }
@@ -61,7 +64,7 @@ export interface StorageStats {
 export interface ExternalSubmitOptions {
   enabled: boolean;
   url: string;
-  method: 'GET' | 'POST' | 'PUT';  // تم تحديث هذا السطر لتضمين 'GET' كقيمة محتملة
+  method: 'GET' | 'POST' | 'PUT';
   headers?: Record<string, string>;
   mapFields?: Record<string, string>;
 }
@@ -73,4 +76,21 @@ export interface ExternalSubmitResponse {
   code: number;
   responseData?: any;
   timestamp: string;
+}
+
+// تعيين العلاقة بين حقول البيانات المستخرجة وحقول النموذج
+export interface FieldMapping {
+  sourceField: string;    // اسم الحقل في البيانات المستخرجة
+  targetField: string;    // اسم الحقل في النموذج المستهدف
+  transform?: (value: string) => string;  // وظيفة لتحويل القيمة
+}
+
+// نوع خيارات البوكماركلت
+export interface BookmarkletOptions {
+  version: string;
+  includeFormFiller: boolean;
+  includeExportTools: boolean;
+  includeSeleniumLike?: boolean;
+  debugMode?: boolean;
+  fieldMappings?: FieldMapping[];
 }

@@ -37,3 +37,5 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     </div>
   );
 };
+
+export default CodeBlock;
