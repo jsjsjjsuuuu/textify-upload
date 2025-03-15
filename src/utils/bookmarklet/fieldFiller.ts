@@ -36,6 +36,15 @@ export const fillFormFields = (item: any) => {
         // دعم إضافي للأنماط العراقية
         'input[name*="wasl"]', 'input[id*="wasl"]',
         'input[placeholder*="الواصل"]'
+      ],
+      // إضافة دعم XPath للعثور على حقول مخفية أو معقدة
+      xpaths: [
+        "//input[contains(@name, 'code')]",
+        "//input[contains(@placeholder, 'رقم') and contains(@placeholder, 'وصل')]",
+        "//label[contains(text(), 'رقم الوصل')]/following::input[1]",
+        "//label[contains(text(), 'رقم الشحنة')]/following::input[1]",
+        "//div[contains(text(), 'رقم الطلب')]/following::input[1]",
+        "//span[contains(text(), 'كود')]/following::input[1]"
       ]
     },
     {
@@ -54,6 +63,15 @@ export const fillFormFields = (item: any) => {
         'input[name*="tel"]', 'input[id*="tel"]',
         'input[name="client_phone"]', 'input[id="client_phone"]',
         'input[name="customer_mobile"]', 'input[id="customer_mobile"]'
+      ],
+      xpaths: [
+        "//input[contains(@name, 'phone')]",
+        "//input[contains(@name, 'mobile')]",
+        "//input[@type='tel']",
+        "//label[contains(text(), 'هاتف')]/following::input[1]",
+        "//label[contains(text(), 'موبايل')]/following::input[1]",
+        "//span[contains(text(), 'رقم الهاتف')]/following::input[1]",
+        "//div[contains(text(), 'موبايل')]/following::input[1]"
       ]
     },
     {
@@ -77,6 +95,18 @@ export const fillFormFields = (item: any) => {
         'select[name*="ameel"]', 'select[id*="ameel"]',
         'select[name*="customer"]', 'select[id*="customer"]',
         'select[name*="client"]', 'select[id*="client"]'
+      ],
+      xpaths: [
+        "//input[contains(@name, 'sender')]",
+        "//input[contains(@name, 'customer')]",
+        "//input[contains(@name, 'client')]",
+        "//input[contains(@name, 'name')]",
+        "//label[contains(text(), 'اسم المرسل')]/following::input[1]",
+        "//label[contains(text(), 'اسم العميل')]/following::input[1]",
+        "//label[contains(text(), 'الزبون')]/following::input[1]",
+        "//span[contains(text(), 'اسم')]/following::input[1]",
+        "//select[contains(@name, 'client')]",
+        "//select[contains(@name, 'customer')]"
       ]
     },
     {
@@ -99,6 +129,16 @@ export const fillFormFields = (item: any) => {
         'select[name*="muhafaza"]', 'select[id*="muhafaza"]',
         'select[name*="mouhafaza"]', 'select[id*="mouhafaza"]',
         'select[placeholder*="المنطقة"]', 'select[placeholder*="إلى"]'
+      ],
+      xpaths: [
+        "//select[contains(@name, 'province')]",
+        "//select[contains(@name, 'city')]",
+        "//select[contains(@name, 'governorate')]",
+        "//select[contains(@name, 'area')]",
+        "//label[contains(text(), 'المحافظة')]/following::select[1]",
+        "//label[contains(text(), 'المدينة')]/following::select[1]",
+        "//span[contains(text(), 'المحافظة')]/following::select[1]",
+        "//div[contains(text(), 'إلى')]/following::select[1]"
       ]
     },
     {
@@ -121,6 +161,16 @@ export const fillFormFields = (item: any) => {
         'input[name*="mablagh"]', 'input[id*="mablagh"]',
         'input[placeholder*="المبلغ بالدينار"]', 'input[placeholder*="سعر"]',
         'input[placeholder*="قيمة"]'
+      ],
+      xpaths: [
+        "//input[contains(@name, 'price')]",
+        "//input[contains(@name, 'amount')]",
+        "//input[contains(@name, 'total')]",
+        "//input[contains(@name, 'cost')]",
+        "//label[contains(text(), 'المبلغ')]/following::input[1]",
+        "//label[contains(text(), 'السعر')]/following::input[1]",
+        "//span[contains(text(), 'المبلغ')]/following::input[1]",
+        "//div[contains(text(), 'سعر')]/following::input[1]"
       ]
     },
     {
@@ -138,6 +188,15 @@ export const fillFormFields = (item: any) => {
         'select[name*="delivery_man"]', 'select[id*="delivery_man"]',
         'select[name*="delivery_guy"]', 'select[id*="delivery_guy"]',
         'select[placeholder*="السائق"]'
+      ],
+      xpaths: [
+        "//select[contains(@name, 'delegate')]",
+        "//select[contains(@name, 'agent')]",
+        "//select[contains(@name, 'employee')]",
+        "//select[contains(@name, 'driver')]",
+        "//label[contains(text(), 'المندوب')]/following::select[1]",
+        "//label[contains(text(), 'الموظف')]/following::select[1]",
+        "//span[contains(text(), 'المندوب')]/following::select[1]"
       ]
     }
   ];
@@ -180,6 +239,23 @@ export const fillFormFields = (item: any) => {
   // تحسين: إضافة معلومات تشخيصية عن العناصر المميزة في الصفحة
   detectFormType();
   
+  // وظيفة للبحث عن عنصر باستخدام XPath
+  const findElementByXPath = (xpath: string, doc: Document): Element | null => {
+    try {
+      const result = document.evaluate(
+        xpath,
+        doc,
+        null,
+        XPathResult.FIRST_ORDERED_NODE_TYPE,
+        null
+      );
+      return result.singleNodeValue as Element;
+    } catch (e) {
+      console.warn(`[تشخيص البوكماركلت] خطأ في محاولة البحث عن العنصر باستخدام XPath "${xpath}":`, e);
+      return null;
+    }
+  };
+  
   // البحث في عناصر الصفحة ومحاولة ملئها
   fieldMappings.forEach((mapping) => {
     results.attempted++;
@@ -191,6 +267,7 @@ export const fillFormFields = (item: any) => {
       for (const doc of documents) {
         if (filled) break;
         
+        // محاولة العثور على العنصر باستخدام CSS Selectors
         for (const selector of mapping.selectors) {
           const elements = doc.querySelectorAll(selector);
           
@@ -212,6 +289,29 @@ export const fillFormFields = (item: any) => {
             if (filledStatus) {
               filled = true;
               break;
+            }
+          }
+        }
+        
+        // إذا لم يتم العثور على العنصر باستخدام CSS Selectors، حاول استخدام XPath
+        if (!filled && mapping.xpaths) {
+          for (const xpath of mapping.xpaths) {
+            const element = findElementByXPath(xpath, doc);
+            if (element) {
+              console.log(`[تشخيص البوكماركلت] وجدت عنصر للحقل ${mapping.key} باستخدام XPath ${xpath}`);
+              
+              // معلومات إضافية حول العنصر
+              if ((element as HTMLInputElement).name) 
+                console.log(`[تشخيص البوكماركلت] اسم العنصر: ${(element as HTMLInputElement).name}`);
+              if (element.id) 
+                console.log(`[تشخيص البوكماركلت] معرّف العنصر: ${element.id}`);
+              
+              // محاولة ملء الحقل
+              const filledStatus = fillSingleField(element as HTMLElement, mapping, results);
+              if (filledStatus) {
+                filled = true;
+                break;
+              }
             }
           }
         }
