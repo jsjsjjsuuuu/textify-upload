@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Clipboard, ExternalLink, AlertCircle, ArrowLeft } from "lucide-react";
+import { Clipboard, ExternalLink, AlertCircle, ArrowLeft, Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ImprovedFormFillerSectionProps {
@@ -21,24 +21,28 @@ const ImprovedFormFillerSection: React.FC<ImprovedFormFillerSectionProps> = ({
     <div className="space-y-4">
       <div className="space-y-3">
         <h3 className="text-lg font-semibold text-brand-brown dark:text-brand-beige">
-          طريقة الإدخال المحسّنة (الموصى بها)
+          أداة الإدخال المحسّنة للمواقع الخارجية
         </h3>
         
         <p className="text-sm text-muted-foreground">
-          لقد طورنا طريقة جديدة ومحسّنة لإدخال البيانات تستخدم تقنيات أكثر تقدمًا للكشف عن حقول النماذج وملئها بشكل أكثر موثوقية.
+          هذه الأداة تساعدك على ملء نماذج البيانات في مواقع الشحن الخارجية. استخدمها عندما تكون في الموقع الفعلي وتحتاج لإدخال البيانات بسرعة.
         </p>
         
         {storedCount > 0 ? (
           <div className="space-y-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">كيفية استخدام هذه الأداة:</h4>
-              <ol className="text-sm list-decimal list-inside text-blue-700 dark:text-blue-400 space-y-2">
-                <li>اسحب الزر "أداة الإدخال المحسّنة" إلى شريط المفضلة في متصفحك</li>
-                <li>انتقل إلى موقع شركة التوصيل وقم بفتح صفحة إضافة شحنة جديدة</li>
-                <li>انقر على زر الأداة في شريط المفضلة لفتح لوحة التحكم</li>
-                <li>استخدم أزرار "ملء البيانات تلقائيًا" للعناصر</li>
-              </ol>
-            </div>
+            <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <AlertTitle className="text-blue-800 dark:text-blue-300">كيفية استخدام هذه الأداة:</AlertTitle>
+              <AlertDescription className="text-blue-700 dark:text-blue-400">
+                <ol className="text-sm list-decimal list-inside space-y-2 mt-1">
+                  <li>اسحب الزر "أداة الإدخال المحسّنة" إلى شريط المفضلة في متصفحك</li>
+                  <li>انتقل إلى موقع شركة التوصيل وقم بفتح صفحة إضافة شحنة جديدة</li>
+                  <li>انقر على زر الأداة في شريط المفضلة لفتح لوحة التحكم</li>
+                  <li>استخدم القائمة المنسدلة لاختيار العنصر المراد إدخاله</li>
+                  <li>انقر على زر "املأ النموذج" لإدخال البيانات تلقائيًا</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
             
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
@@ -78,9 +82,19 @@ const ImprovedFormFillerSection: React.FC<ImprovedFormFillerSectionProps> = ({
             
             <Alert className="mt-4 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
               <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <AlertTitle className="text-amber-800 dark:text-amber-300">ملاحظة هامة</AlertTitle>
+              <AlertTitle className="text-amber-800 dark:text-amber-300">هل تفضل طريقة داخلية؟</AlertTitle>
               <AlertDescription className="text-amber-700 dark:text-amber-400">
-                هذه الأداة مصممة للعمل مع معظم مواقع شركات التوصيل العراقية. إذا واجهت أي مشاكل، يمكنك التبديل إلى طريقة الإدخال اليدوي.
+                يمكنك استخدام <strong>نظام محاكاة إدخال البيانات</strong> داخل التطبيق لتجربة إدخال البيانات دون الحاجة لزيارة المواقع الخارجية.
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400"
+                    onClick={() => document.querySelector('[data-simulator-tab="simulation"]')?.dispatchEvent(new Event('click'))}
+                  >
+                    جرب نظام المحاكاة الداخلي
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           </div>

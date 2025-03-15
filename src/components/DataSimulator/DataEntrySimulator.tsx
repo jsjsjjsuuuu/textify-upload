@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { BookmarkletItem } from "@/utils/bookmarklet/types";
 import { getItemsByStatus } from "@/utils/bookmarkletService";
 import { useToast } from "@/hooks/use-toast";
-import { Monitor, RotateCw, CheckCircle2, ClipboardCopy, X } from "lucide-react";
+import { Monitor, RotateCw, CheckCircle2, ClipboardCopy, X, Info, ChevronLeft, ChevronRight } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface DataSimulatorProps {
   storedCount: number;
@@ -31,6 +32,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
   });
   const [mockFormId, setMockFormId] = useState<string | null>(null);
   const [simulatorMode, setSimulatorMode] = useState<"preview" | "simulation">("preview");
+  const [showInstructions, setShowInstructions] = useState(true);
 
   // استرجاع العناصر عند تحميل المكون
   useEffect(() => {
@@ -124,6 +126,14 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
             <X className="h-10 w-10 mb-2" />
           </div>
           <p>لا توجد بيانات متاحة للمعاينة. يرجى تصدير البيانات أولاً.</p>
+          <Button 
+            variant="link" 
+            size="sm" 
+            onClick={() => document.querySelector('[data-value="export"]')?.dispatchEvent(new Event('click'))}
+            className="mt-2"
+          >
+            الذهاب إلى صفحة التصدير
+          </Button>
         </div>
       );
     }
@@ -132,7 +142,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
     
     return (
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-2">
           <h3 className="font-semibold text-lg">العنصر {currentItemIndex + 1} من {items.length}</h3>
           <div className="flex space-x-2 space-x-reverse">
             <Button 
@@ -141,6 +151,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
               onClick={() => navigateToItem(currentItemIndex - 1)}
               disabled={currentItemIndex === 0}
             >
+              <ChevronRight className="h-4 w-4 ml-1" />
               السابق
             </Button>
             <Button 
@@ -150,6 +161,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
               disabled={currentItemIndex === items.length - 1}
             >
               التالي
+              <ChevronLeft className="h-4 w-4 mr-1" />
             </Button>
           </div>
         </div>
@@ -165,6 +177,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
                     size="sm"
                     className="h-6 w-6 p-0"
                     onClick={() => copyFieldToClipboard(getFieldLabel(key), value)}
+                    title="نسخ إلى الحافظة"
                   >
                     <ClipboardCopy className="h-3.5 w-3.5" />
                   </Button>
@@ -174,6 +187,21 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
             ) : null
           ))}
         </div>
+
+        <div className="flex justify-center mt-4">
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={() => {
+              setSimulatorMode("simulation");
+              startSimulation();
+            }}
+            className="bg-brand-green hover:bg-brand-green/90"
+          >
+            <CheckCircle2 className="h-4 w-4 ml-2" />
+            بدء محاكاة إدخال البيانات
+          </Button>
+        </div>
       </div>
     );
   };
@@ -181,103 +209,150 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
   // إنشاء نموذج المحاكاة
   const renderSimulationForm = () => {
     return (
-      <div className="space-y-4 border p-4 rounded-md bg-white shadow-sm">
-        <div className="flex justify-between items-center border-b pb-2">
-          <h3 className="font-semibold">نموذج إدخال البيانات المحاكى</h3>
-          <Button variant="destructive" size="sm" onClick={stopSimulation}>
-            إيقاف المحاكاة
-          </Button>
-        </div>
+      <div className="space-y-4">
+        {showInstructions && (
+          <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <AlertTitle className="text-blue-800 dark:text-blue-300">كيفية استخدام المحاكي</AlertTitle>
+            <AlertDescription className="text-blue-700 dark:text-blue-400">
+              <ul className="list-disc list-inside text-sm space-y-1 mt-1">
+                <li>هذا نموذج محاكاة لإدخال البيانات مشابه لما ستجده في مواقع شركات الشحن.</li>
+                <li>يمكنك التنقل بين العناصر باستخدام أزرار "السابق" و"التالي".</li>
+                <li>استخدم زر "إيقاف المحاكاة" للعودة إلى وضع المعاينة.</li>
+              </ul>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowInstructions(false)} 
+                className="mt-2 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400"
+              >
+                فهمت، لا تعرض هذه الرسالة مرة أخرى
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
-        <div className="grid grid-cols-2 gap-4" id={mockFormId || undefined}>
-          <div className="space-y-2">
-            <Label htmlFor="sim-code">رقم الشحنة:</Label>
-            <Input 
-              id="sim-code" 
-              value={formFields.code} 
-              onChange={(e) => setFormFields(prev => ({ ...prev, code: e.target.value }))}
-              className="h-9" 
-            />
+        <div className="border p-4 rounded-md bg-white dark:bg-gray-800 shadow-sm">
+          <div className="flex justify-between items-center border-b pb-2 mb-4">
+            <div>
+              <h3 className="font-semibold">نموذج إدخال البيانات المحاكى</h3>
+              <p className="text-xs text-muted-foreground">العنصر {currentItemIndex + 1} من {items.length}</p>
+            </div>
+            <Button variant="destructive" size="sm" onClick={stopSimulation}>
+              إيقاف المحاكاة
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4" id={mockFormId || undefined}>
+            <div className="space-y-2">
+              <Label htmlFor="sim-code">رقم الشحنة:</Label>
+              <Input 
+                id="sim-code" 
+                value={formFields.code} 
+                onChange={(e) => setFormFields(prev => ({ ...prev, code: e.target.value }))}
+                className="h-9" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sim-senderName">اسم المرسل:</Label>
+              <Input 
+                id="sim-senderName" 
+                value={formFields.senderName} 
+                onChange={(e) => setFormFields(prev => ({ ...prev, senderName: e.target.value }))}
+                className="h-9" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sim-phoneNumber">رقم الهاتف:</Label>
+              <Input 
+                id="sim-phoneNumber" 
+                value={formFields.phoneNumber} 
+                onChange={(e) => setFormFields(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                className="h-9" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sim-province">المحافظة:</Label>
+              <Input 
+                id="sim-province" 
+                value={formFields.province} 
+                onChange={(e) => setFormFields(prev => ({ ...prev, province: e.target.value }))}
+                className="h-9" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sim-price">السعر:</Label>
+              <Input 
+                id="sim-price" 
+                value={formFields.price} 
+                onChange={(e) => setFormFields(prev => ({ ...prev, price: e.target.value }))}
+                className="h-9" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sim-address">العنوان:</Label>
+              <Input 
+                id="sim-address" 
+                value={formFields.address} 
+                onChange={(e) => setFormFields(prev => ({ ...prev, address: e.target.value }))}
+                className="h-9" 
+              />
+            </div>
+            
+            <div className="space-y-2 col-span-2">
+              <Label htmlFor="sim-notes">ملاحظات:</Label>
+              <Input 
+                id="sim-notes" 
+                value={formFields.notes} 
+                onChange={(e) => setFormFields(prev => ({ ...prev, notes: e.target.value }))}
+                className="h-9" 
+              />
+            </div>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="sim-senderName">اسم المرسل:</Label>
-            <Input 
-              id="sim-senderName" 
-              value={formFields.senderName} 
-              onChange={(e) => setFormFields(prev => ({ ...prev, senderName: e.target.value }))}
-              className="h-9" 
-            />
+          <div className="flex justify-between mt-6 pt-2 border-t">
+            <div className="flex space-x-2 space-x-reverse">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  navigator.clipboard.writeText(JSON.stringify(formFields, null, 2));
+                  toast({
+                    title: "تم النسخ",
+                    description: "تم نسخ كافة البيانات إلى الحافظة"
+                  });
+                }}
+              >
+                <ClipboardCopy className="h-4 w-4 ml-1" />
+                نسخ كل البيانات
+              </Button>
+            </div>
+            <div className="flex space-x-2 space-x-reverse">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={() => navigateToItem(currentItemIndex - 1)}
+                disabled={currentItemIndex === 0}
+              >
+                <ChevronRight className="h-4 w-4 ml-1" />
+                السابق
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={() => navigateToItem(currentItemIndex + 1)}
+                disabled={currentItemIndex === items.length - 1}
+              >
+                التالي
+                <ChevronLeft className="h-4 w-4 mr-1" />
+              </Button>
+            </div>
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="sim-phoneNumber">رقم الهاتف:</Label>
-            <Input 
-              id="sim-phoneNumber" 
-              value={formFields.phoneNumber} 
-              onChange={(e) => setFormFields(prev => ({ ...prev, phoneNumber: e.target.value }))}
-              className="h-9" 
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="sim-province">المحافظة:</Label>
-            <Input 
-              id="sim-province" 
-              value={formFields.province} 
-              onChange={(e) => setFormFields(prev => ({ ...prev, province: e.target.value }))}
-              className="h-9" 
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="sim-price">السعر:</Label>
-            <Input 
-              id="sim-price" 
-              value={formFields.price} 
-              onChange={(e) => setFormFields(prev => ({ ...prev, price: e.target.value }))}
-              className="h-9" 
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="sim-address">العنوان:</Label>
-            <Input 
-              id="sim-address" 
-              value={formFields.address} 
-              onChange={(e) => setFormFields(prev => ({ ...prev, address: e.target.value }))}
-              className="h-9" 
-            />
-          </div>
-          
-          <div className="space-y-2 col-span-2">
-            <Label htmlFor="sim-notes">ملاحظات:</Label>
-            <Input 
-              id="sim-notes" 
-              value={formFields.notes} 
-              onChange={(e) => setFormFields(prev => ({ ...prev, notes: e.target.value }))}
-              className="h-9" 
-            />
-          </div>
-        </div>
-        
-        <div className="flex justify-end space-x-2 space-x-reverse pt-2 border-t">
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            onClick={() => navigateToItem(currentItemIndex - 1)}
-            disabled={currentItemIndex === 0}
-          >
-            السابق
-          </Button>
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            onClick={() => navigateToItem(currentItemIndex + 1)}
-            disabled={currentItemIndex === items.length - 1}
-          >
-            التالي
-          </Button>
         </div>
       </div>
     );
@@ -301,14 +376,22 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
   return (
     <Card className="overflow-hidden shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle>محاكاة إدخال البيانات</CardTitle>
+        <CardTitle className="flex items-center text-brand-brown dark:text-brand-beige">
+          <Monitor className="h-5 w-5 ml-2 text-brand-green" />
+          محاكاة إدخال البيانات
+        </CardTitle>
         <CardDescription>
           محاكاة عملية إدخال البيانات في نماذج الشحن بدون الحاجة لزيارة مواقع خارجية
         </CardDescription>
       </CardHeader>
       
       <CardContent className="p-0">
-        <Tabs value={simulatorMode} onValueChange={(val) => setSimulatorMode(val as "preview" | "simulation")}>
+        <Tabs value={simulatorMode} onValueChange={(val) => {
+          if (val === "simulation" && !isSimulating) {
+            startSimulation();
+          }
+          setSimulatorMode(val as "preview" | "simulation");
+        }}>
           <TabsList className="w-full rounded-none grid grid-cols-2">
             <TabsTrigger value="preview" className="rounded-none data-[state=active]:bg-background">
               <Monitor className="h-4 w-4 ml-2" />
@@ -334,7 +417,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
                     variant="default" 
                     onClick={startSimulation}
                     disabled={items.length === 0}
-                    className="mx-auto"
+                    className="mx-auto bg-brand-green hover:bg-brand-green/90"
                   >
                     <RotateCw className="h-4 w-4 ml-2" />
                     بدء المحاكاة

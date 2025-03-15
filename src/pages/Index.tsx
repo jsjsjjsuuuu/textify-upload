@@ -1,3 +1,4 @@
+
 import BackgroundPattern from "@/components/BackgroundPattern";
 import ImageUploader from "@/components/ImageUploader";
 import AppHeader from "@/components/AppHeader";
@@ -8,7 +9,7 @@ import DataEntrySimulator from "@/components/DataSimulator/DataEntrySimulator";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 import { getStorageStats } from "@/utils/bookmarkletService";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ImageData } from "@/types/ImageData";
 
 const Index = () => {
@@ -28,6 +29,8 @@ const Index = () => {
     total: 0,
     ready: 0
   });
+  
+  const simulatorRef = useRef<HTMLDivElement>(null);
 
   // تحديث إحصائيات البوكماركلت عند تحميل الصفحة وكل دقيقة
   useEffect(() => {
@@ -82,6 +85,13 @@ const Index = () => {
       handleSubmitToApi(id, image);
     }
   };
+  
+  // التنقل إلى قسم محاكاة الإدخال
+  const scrollToSimulator = () => {
+    if (simulatorRef.current) {
+      simulatorRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="relative min-h-screen pb-20">
@@ -110,7 +120,7 @@ const Index = () => {
             {/* مكوّنات الأدوات */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               {/* محاكي إدخال البيانات */}
-              <div>
+              <div ref={simulatorRef} id="simulator-section">
                 <DataEntrySimulator storedCount={bookmarkletStats.total} />
               </div>
               
