@@ -4,12 +4,12 @@ import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { useImageState } from "@/hooks/useImageState";
 import { useFileUpload } from "@/hooks/useFileUpload";
-import { useSubmission } from "@/hooks/useSubmission";
 import { saveToLocalStorage, getStorageStats } from "@/utils/bookmarklet";
 
 export const useImageProcessingCore = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [bookmarkletStats, setBookmarkletStats] = useState({ total: 0, ready: 0, success: 0, error: 0 });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
   const { 
@@ -30,11 +30,6 @@ export const useImageProcessingCore = () => {
     updateImage,
     setProcessingProgress
   });
-  
-  const { 
-    isSubmitting, 
-    handleSubmitToApi 
-  } = useSubmission(updateImage);
 
   // حفظ البيانات المكتملة في localStorage وتحديث الإحصائيات
   useEffect(() => {
@@ -82,6 +77,51 @@ export const useImageProcessingCore = () => {
     }
   };
 
+  // وظيفة إرسال البيانات إلى API
+  const handleSubmitToApi = async (id: string, image: ImageData) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/submit-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: id,
+          extractedText: image.extractedText,
+          extractedData: image.extractedData,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("API Response:", result);
+
+      updateImage(id, { status: "success" });
+      
+      toast({
+        title: "نجاح",
+        description: `تم إرسال البيانات بنجاح لـ ${image.originalFilename}!`,
+      });
+      
+      await updateBookmarkletStats();
+    } catch (error: any) {
+      console.error("خطأ في إرسال البيانات:", error);
+      updateImage(id, { status: "error" });
+      
+      toast({
+        title: "خطأ",
+        description: `فشل إرسال البيانات لـ ${image.originalFilename}: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return {
     images,
     isProcessing,
@@ -96,4 +136,3 @@ export const useImageProcessingCore = () => {
     updateBookmarkletStats
   };
 };
-
