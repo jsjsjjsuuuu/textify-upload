@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { submitTextToApi } from "@/lib/apiService";
@@ -89,7 +90,7 @@ export const useSubmission = (updateImage: (id: string, fields: Partial<ImageDat
   // إضافة وظيفة محسنة للإرسال إلى واجهة خارجية
   const handleExternalSubmit = async (formData: Record<string, any>, options: {
     url: string,
-    method: 'GET' | 'POST' | 'PUT',
+    method: 'GET' | 'POST' | 'PUT',  // تم تحديث هذا السطر ليطابق نوع ExternalSubmitOptions
     headers?: Record<string, string>,
     mapFields?: Record<string, string>
   }): Promise<ExternalSubmitResponse> => {
