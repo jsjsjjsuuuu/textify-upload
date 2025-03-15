@@ -28,9 +28,10 @@ type SimulationItem = {
 
 interface DataSimulatorProps {
   storedCount: number;
+  externalUrl?: string; // إضافة خاصية لعنوان URL الخارجي
 }
 
-const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
+const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externalUrl = "https://malshalal-exp.com/add_newwaslinserter.php?add" }) => {
   const { toast } = useToast();
   const [items, setItems] = useState<SimulationItem[]>([]);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
@@ -62,43 +63,43 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const formRef = useRef<HTMLDivElement>(null);
-  const [simulationUrl, setSimulationUrl] = useState("");
+  const [simulationUrl, setSimulationUrl] = useState(externalUrl);
   const [showUrlInput, setShowUrlInput] = useState(false);
   
   // بيانات المحاكاة الافتراضية
   const defaultItems: SimulationItem[] = [
     {
       id: '1',
-      code: '1234567',
+      code: 'MS12345',
       senderName: 'محمد أحمد',
       phoneNumber: '07801234567',
       province: 'بغداد',
       price: '25000',
-      companyName: 'شركة النورس',
+      companyName: 'مال الشلال للشحن',
       address: 'حي الجامعة، شارع 14',
       notes: 'اتصال قبل التسليم'
     },
     {
       id: '2',
-      code: '7654321',
+      code: 'MS67890',
       senderName: 'علي حسين',
       phoneNumber: '07709876543',
       province: 'البصرة',
       price: '18000',
-      companyName: 'مكتبة الأمين',
+      companyName: 'مال الشلال للشحن',
       address: 'شارع الكورنيش، بجانب فندق البصرة',
       notes: 'الدفع عند الاستلام'
     },
     {
       id: '3',
-      code: '9876543',
+      code: 'MS24680',
       senderName: 'نور الهدى',
       phoneNumber: '07711223344',
       province: 'أربيل',
       price: '32500',
-      companyName: 'متجر الياسمين',
+      companyName: 'مال الشلال للشحن',
       address: 'عينكاوا، قرب مول فاميلي',
-      notes: ''
+      notes: 'توصيل سريع'
     }
   ];
 
@@ -330,6 +331,30 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
     });
   };
 
+  // فتح موقع المحاكاة الخارجي
+  const openExternalSite = () => {
+    if (simulationUrl) {
+      window.open(simulationUrl, '_blank');
+      toast({
+        title: "تم فتح الموقع الخارجي",
+        description: "يمكنك الآن إدخال البيانات في الموقع الخارجي.",
+      });
+
+      // تعرض إرشادات حول كيفية استخدام البيانات في الموقع الخارجي
+      toast({
+        title: "كيفية الاستخدام",
+        description: "انسخ البيانات من نظام المحاكاة وألصقها في الحقول المناسبة في الموقع الخارجي.",
+        duration: 6000,
+      });
+    } else {
+      toast({
+        title: "خطأ",
+        description: "لا يوجد رابط للموقع الخارجي.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // إنشاء عنصر معاينة للعنصر الحالي
   const renderItemPreview = () => {
     if (items.length === 0) {
@@ -419,10 +444,10 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowUrlInput(true)}
+              onClick={openExternalSite}
             >
               <ExternalLink className="h-4 w-4 ml-2" />
-              محاكاة موقع خارجي
+              فتح موقع مال الشلال
             </Button>
           </div>
         </div>
@@ -484,9 +509,10 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
             <AlertTitle className="text-blue-800 dark:text-blue-300">كيفية استخدام المحاكي</AlertTitle>
             <AlertDescription className="text-blue-700 dark:text-blue-400">
               <ul className="list-disc list-inside text-sm space-y-1 mt-1">
-                <li>هذا نموذج محاكاة لإدخال البيانات مشابه لما ستجده في مواقع شركات الشحن.</li>
+                <li>هذا نموذج محاكاة لإدخال البيانات مشابه لما ستجده في موقع مال الشلال للشحن.</li>
                 <li>يمكنك التنقل بين العناصر باستخدام أزرار "السابق" و"التالي".</li>
                 <li>استخدم زر "إيقاف المحاكاة" للعودة إلى وضع المعاينة.</li>
+                <li>يمكنك فتح موقع مال الشلال في نافذة جديدة للتطبيق العملي مع المحاكاة.</li>
               </ul>
               <Button 
                 variant="outline" 
@@ -687,6 +713,16 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
                 <ClipboardCopy className="h-4 w-4 ml-1" />
                 نسخ كل البيانات
               </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openExternalSite}
+                disabled={isLiveSimulation}
+              >
+                <ExternalLink className="h-4 w-4 ml-1" />
+                فتح موقع مال الشلال
+              </Button>
             </div>
             <div className="flex space-x-2 space-x-reverse">
               <Button 
@@ -737,7 +773,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
           محاكاة إدخال البيانات
         </CardTitle>
         <CardDescription>
-          محاكاة عملية إدخال البيانات في نماذج الشحن بعرض مباشر لكيفية إدخال البيانات
+          محاكاة عملية إدخال البيانات في نماذج الشحن مثل مال الشلال بعرض مباشر لكيفية إدخال البيانات
         </CardDescription>
       </CardHeader>
       
@@ -786,14 +822,24 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
       
       <CardFooter className="bg-muted/20 border-t flex justify-between items-center px-4 py-2 text-xs text-muted-foreground">
         <span>عدد العناصر المتاحة: {items.length}</span>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-7 text-xs"
-          onClick={loadItems}
-        >
-          <RotateCw className="h-3 w-3 ml-1" /> تحديث
-        </Button>
+        <div className="flex items-center space-x-2 space-x-reverse">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 text-xs"
+            onClick={openExternalSite}
+          >
+            <ExternalLink className="h-3 w-3 ml-1" /> فتح موقع مال الشلال
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 text-xs"
+            onClick={loadItems}
+          >
+            <RotateCw className="h-3 w-3 ml-1" /> تحديث
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );

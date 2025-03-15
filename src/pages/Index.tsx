@@ -9,7 +9,8 @@ import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, ExternalLink } from "lucide-react";
+import { Play, ExternalLink, Video } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const {
@@ -26,6 +27,9 @@ const Index = () => {
   } = useImageProcessing();
   
   const simulatorRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const [showDemo, setShowDemo] = useState(false);
+  const [simulationUrl, setSimulationUrl] = useState("https://malshalal-exp.com/add_newwaslinserter.php?add");
 
   // التنقل إلى قسم محاكاة الإدخال
   const scrollToSimulator = () => {
@@ -48,6 +52,22 @@ const Index = () => {
         }
       }, 500);
     }
+  };
+
+  // فتح موقع المحاكاة في نافذة جديدة وإظهار الإرشادات
+  const openSimulationWebsite = () => {
+    // فتح الموقع في نافذة جديدة
+    window.open(simulationUrl, '_blank');
+    
+    // إظهار إشعار بالخطوات التالية
+    toast({
+      title: "تم فتح موقع المحاكاة",
+      description: "استخدم البوكماركليت المنشأ لملء البيانات تلقائيًا في الموقع الخارجي",
+      duration: 5000,
+    });
+    
+    // إظهار فيديو الشرح
+    setShowDemo(true);
   };
 
   // وظيفة wrapper لمعالجة توقيع الدالة للحفاظ على التوافق مع واجهة ImagePreviewContainer
@@ -89,36 +109,69 @@ const Index = () => {
             </div>
 
             {/* قسم للإعلان عن محاكاة الإدخال المباشر */}
-            {images.length > 0 && (
-              <div className="mb-8 p-4 rounded-lg bg-gradient-to-r from-brand-green/10 to-brand-brown/10 border border-brand-green/20">
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                  <div>
-                    <h3 className="text-lg font-medium text-brand-brown dark:text-brand-beige mb-1">
-                      جرب نظام محاكاة الإدخال المباشر
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      شاهد كيف يتم إدخال البيانات في النماذج بشكل تلقائي كما لو كان يكتبها شخص حقيقي
-                    </p>
+            <div className="mb-8 p-4 rounded-lg bg-gradient-to-r from-brand-green/10 to-brand-brown/10 border border-brand-green/20">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div>
+                  <h3 className="text-lg font-medium text-brand-brown dark:text-brand-beige mb-1">
+                    جرب نظام محاكاة الإدخال المباشر
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    شاهد كيف يتم إدخال البيانات في نموذج مال الشلال للشحن بشكل تلقائي
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={scrollToSimulator}
+                    className="bg-brand-green hover:bg-brand-green/90"
+                  >
+                    <Play className="h-4 w-4 ml-2" />
+                    بدء المحاكاة المباشرة
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={openSimulationWebsite}
+                  >
+                    <ExternalLink className="h-4 w-4 ml-2" />
+                    فتح موقع مال الشلال
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* عرض فيديو شرح أو صورة متحركة توضيحية */}
+            {showDemo && (
+              <div className="mb-8 p-4 rounded-lg border bg-card">
+                <div className="flex items-center mb-3">
+                  <Video className="h-5 w-5 ml-2 text-brand-green" />
+                  <h3 className="text-lg font-medium">طريقة الاستخدام في موقع مال الشلال</h3>
+                </div>
+                <div className="relative pt-[56.25%] bg-muted rounded-md overflow-hidden">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center p-6">
+                      <p className="text-lg font-medium mb-2">عرض توضيحي لاستخدام النظام في موقع مال الشلال:</p>
+                      <ol className="text-right list-decimal list-inside space-y-2 mb-4">
+                        <li>انتقل إلى موقع مال الشلال الذي تم فتحه في النافذة الجديدة</li>
+                        <li>قم بتسجيل الدخول إذا كان مطلوباً</li>
+                        <li>اضغط على زر "إضافة وصل جديد"</li>
+                        <li>في نموذج المحاكاة أدناه، اضغط على "محاكاة مباشرة" لتشغيل محاكاة الإدخال</li>
+                        <li>انسخ البيانات من النموذج وألصقها في موقع مال الشلال أو استخدم البوكماركليت المنشأ</li>
+                      </ol>
+                      <img 
+                        src="/lovable-uploads/e3521185-21aa-443a-ae91-7a1b8f5c5400.png" 
+                        alt="صورة توضيحية للمحاكاة"
+                        className="max-w-full h-auto rounded-lg shadow-md mx-auto" 
+                      />
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={scrollToSimulator}
-                      className="bg-brand-green hover:bg-brand-green/90"
-                    >
-                      <Play className="h-4 w-4 ml-2" />
-                      بدء المحاكاة المباشرة
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => {
-                        const url = "https://aramex.com/new-shipment";
-                        window.open(url, '_blank');
-                      }}
-                    >
-                      <ExternalLink className="h-4 w-4 ml-2" />
-                      تجربة موقع خارجي
-                    </Button>
-                  </div>
+                </div>
+                <div className="flex justify-end mt-3">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setShowDemo(false)}
+                  >
+                    إغلاق
+                  </Button>
                 </div>
               </div>
             )}
@@ -126,7 +179,10 @@ const Index = () => {
             {/* نظام محاكاة إدخال البيانات فقط */}
             <div className="mb-8">
               <div ref={simulatorRef} id="simulator-section">
-                <DataEntrySimulator storedCount={bookmarkletStats.total} />
+                <DataEntrySimulator 
+                  storedCount={bookmarkletStats.total} 
+                  externalUrl={simulationUrl}
+                />
               </div>
             </div>
 
