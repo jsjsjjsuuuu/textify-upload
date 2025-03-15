@@ -4,7 +4,7 @@ import ImageUploader from "@/components/ImageUploader";
 import AppHeader from "@/components/AppHeader";
 import ImagePreviewContainer from "@/components/ImageViewer/ImagePreviewContainer";
 import LearningStats from "@/components/LearningStats";
-import SeleniumLikeSection from "@/components/BookmarkletGenerator/SeleniumLikeSection";
+import ElementFinderSection from "@/components/BookmarkletGenerator/ElementFinderSection";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 import { useState } from "react";
@@ -64,11 +64,9 @@ const Index = () => {
               </div>
             </div>
 
-            {/* إضافة قسم محاكاة السيلينيوم */}
+            {/* قسم مكتشف العناصر الجديد */}
             <div className="mb-8">
-              <SeleniumLikeSection 
-                recordsCount={bookmarkletStats?.total || 0} 
-              />
+              <ElementFinderSection />
             </div>
 
             <ImagePreviewContainer 
