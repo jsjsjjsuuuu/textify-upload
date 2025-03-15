@@ -1,6 +1,5 @@
-
-import { saveToLocalStorage, getStorageStats } from "@/utils/bookmarklet";
-import { BookmarkletItem } from "@/utils/bookmarklet/types";
+import { BookmarkletItem } from "@/types/ImageData";
+import { saveToLocalStorage as saveToStorage, getStorageStats as getStats } from "@/utils/bookmarklet/storage";
 
 // استرجاع العناصر من التخزين المحلي
 export const getFromLocalStorage = (): BookmarkletItem[] => {
@@ -86,4 +85,6 @@ export const getErrorItemsCount = (): number => {
   return getItemsByStatus("error").length;
 };
 
-export { saveToLocalStorage, getStorageStats };
+// تصدير الوظائف المساعدة بأسماء مختلفة لتجنب الدائرية
+export const saveToLocalStorage = saveToStorage;
+export const getStorageStats = getStats;

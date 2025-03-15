@@ -5,12 +5,14 @@ import AppHeader from "@/components/AppHeader";
 import ImagePreviewContainer from "@/components/ImageViewer/ImagePreviewContainer";
 import LearningStats from "@/components/LearningStats";
 import DataEntrySimulator from "@/components/DataSimulator/DataEntrySimulator";
+import LiveFrameSimulator from "@/components/DataSimulator/LiveFrameSimulator";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Video, ExternalLink } from "lucide-react";
+import { Play, Video, ExternalLink, Menu } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
   const {
@@ -31,12 +33,16 @@ const Index = () => {
   const [showDemo, setShowDemo] = useState(false);
   const [simulationUrl, setSimulationUrl] = useState("");
   const [simulationStarted, setSimulationStarted] = useState(false);
+  const [activeTab, setActiveTab] = useState("bookmarklet");
   
   // استرجاع عنوان URL الخارجي عند التحميل
   useEffect(() => {
     const externalUrl = localStorage.getItem('external_form_url');
     if (externalUrl) {
       setSimulationUrl(externalUrl);
+    } else {
+      // القيمة الافتراضية
+      setSimulationUrl("https://malshalal-exp.com/home.php");
     }
   }, []);
 
@@ -45,26 +51,9 @@ const Index = () => {
     if (simulatorRef.current) {
       simulatorRef.current.scrollIntoView({ behavior: 'smooth' });
       
-      // تأخير قصير ثم تفعيل علامة التبويب "نموذج المحاكاة"
+      // تأخير قصير ثم تفعيل علامة التبويب المناسبة
       setTimeout(() => {
-        const simTab = document.querySelector('[data-simulator-tab="simulation"]');
-        if (simTab) {
-          (simTab as HTMLElement).click();
-          
-          // محاولة تشغيل المحاكاة المباشرة
-          setTimeout(() => {
-            const liveSimBtn = document.querySelector('[data-simulator-tab="simulation"] button:has(.lucide-play)');
-            if (liveSimBtn) {
-              (liveSimBtn as HTMLElement).click();
-              setSimulationStarted(true);
-              
-              toast({
-                title: "تم بدء المحاكاة",
-                description: "جاري عرض المحاكاة المباشرة لإدخال البيانات"
-              });
-            }
-          }, 500);
-        }
+        setActiveTab("iframe");
       }, 500);
     }
   };
@@ -122,10 +111,10 @@ const Index = () => {
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div>
                   <h3 className="text-lg font-medium text-brand-brown dark:text-brand-beige mb-1">
-                    جرب نظام محاكاة الإدخال المباشر
+                    جرب نظام محاكاة الإدخال المباشر الجديد
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    شاهد كيف يتم إدخال البيانات في نموذج مال الشلال للشحن بشكل تلقائي
+                    شاهد كيف يتم إدخال البيانات في نموذج مال الشلال للشحن بشكل تلقائي مع دعم iframe مباشر
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -194,13 +183,37 @@ const Index = () => {
             )}
 
             {/* نظام محاكاة إدخال البيانات */}
-            <div className="mb-8">
-              <div ref={simulatorRef} id="simulator-section">
-                <DataEntrySimulator 
-                  storedCount={bookmarkletStats.total} 
-                  externalUrl={simulationUrl}
-                />
-              </div>
+            <div className="mb-8" ref={simulatorRef} id="simulator-section">
+              <Tabs 
+                value={activeTab} 
+                onValueChange={setActiveTab}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="bookmarklet" data-simulator-tab="bookmarklet">
+                    <Menu className="h-4 w-4 ml-2" />
+                    نموذج المحاكاة التقليدي
+                  </TabsTrigger>
+                  <TabsTrigger value="iframe" data-simulator-tab="iframe">
+                    <ExternalLink className="h-4 w-4 ml-2" />
+                    نموذج مال الشلال المباشر
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="bookmarklet">
+                  <DataEntrySimulator 
+                    storedCount={bookmarkletStats.total} 
+                    externalUrl={simulationUrl}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="iframe">
+                  <LiveFrameSimulator 
+                    externalUrl={simulationUrl}
+                    extractedData={images.length > 0 && images[0].extractedData ? images[0].extractedData : undefined}
+                  />
+                </TabsContent>
+              </Tabs>
             </div>
 
             <ImagePreviewContainer 

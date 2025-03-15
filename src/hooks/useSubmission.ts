@@ -1,272 +1,210 @@
-
-import { useState } from "react";
-import { ImageData } from "@/types/ImageData";
-import { submitTextToApi } from "@/lib/apiService";
+import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { ExternalSubmitOptions, ExternalSubmitResponse } from "@/utils/bookmarklet/types";
+import { ImageWithId } from "@/types/ImageData";
 
-export const useSubmission = (updateImage: (id: string, fields: Partial<ImageData>) => void) => {
+interface BookmarkletStats {
+  total: number;
+  ready: number;
+  success: number;
+  error: number;
+}
+
+export const useImageProcessing = () => {
+  const [images, setImages] = useState<ImageWithId[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useGemini, setUseGemini] = useState(false);
+  const [bookmarkletStats, setBookmarkletStats] = useState<BookmarkletStats>({
+    total: 0,
+    ready: 0,
+    success: 0,
+    error: 0,
+  });
   const { toast } = useToast();
 
-  const handleSubmitToApi = async (id: string, image: ImageData) => {
-    if (!image || image.status !== "completed") {
-      toast({
-        title: "خطأ في الإرسال",
-        description: "يرجى التأكد من اكتمال معالجة الصورة واستخراج النص",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // التحقق من صحة البيانات قبل الإرسال
-    let hasErrors = false;
-    let errorMessages = [];
-    
-    // التحقق من رقم الهاتف
-    if (image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, '').length !== 11) {
-      hasErrors = true;
-      errorMessages.push("رقم الهاتف غير صحيح (يجب أن يكون 11 رقم)");
-    }
-    
-    // التحقق من السعر
-    if (image.price) {
-      const cleanedPrice = image.price.toString().replace(/[^\d.]/g, '');
-      const numValue = parseFloat(cleanedPrice);
-      if (numValue > 0 && numValue < 1000 && image.price !== '0') {
-        hasErrors = true;
-        errorMessages.push("السعر غير صحيح (يجب أن يكون 1000 أو أكبر أو 0)");
-      }
-    }
-    
-    if (hasErrors) {
-      toast({
-        title: "لا يمكن إرسال البيانات",
-        description: errorMessages.join("، "),
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // التأكد من تحديث حالة الصورة إلى "مكتملة" قبل الإرسال
-    if (image.code && image.senderName && image.phoneNumber && image.status !== "completed") {
-      updateImage(id, { status: "completed" });
-    }
-    
-    setIsSubmitting(true);
+  const updateBookmarkletStats = useCallback(async () => {
     try {
-      const result = await submitTextToApi({
-        imageId: id,
-        text: image.extractedText,
-        source: image.file.name,
-        date: image.date.toISOString()
+      const response = await fetch("/api/bookmarklet/stats");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setBookmarkletStats(data);
+    } catch (error: any) {
+      console.error("Failed to update bookmarklet stats:", error);
+      toast({
+        title: "Error",
+        description: `Failed to update bookmarklet stats: ${error.message}`,
+        variant: "destructive",
       });
-      
-      if (result.success) {
-        updateImage(id, { submitted: true });
+    }
+  }, [toast]);
 
-        toast({
-          title: "تم الإرسال بنجاح",
-          description: result.message
-        });
-      } else {
-        toast({
-          title: "فشل في الإرسال",
-          description: result.message,
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
+  // Fetch stats on component mount
+  // useEffect(() => {
+  //   updateBookmarkletStats();
+  // }, [updateBookmarkletStats]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsProcessing(true);
+    setProcessingProgress(0);
+
+    if (!e.target.files) {
+      setIsProcessing(false);
       toast({
-        title: "خطأ في الإرسال",
-        description: "حدث خطأ أثناء الاتصال بالخادم",
-        variant: "destructive"
+        title: "Error",
+        description: "No files selected",
+        variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
-  };
-  
-  // إضافة وظيفة محسنة للإرسال إلى واجهة خارجية
-  const handleExternalSubmit = async (formData: Record<string, any>, options: ExternalSubmitOptions): Promise<ExternalSubmitResponse> => {
-    setIsSubmitting(true);
-    
-    try {
-      // تحويل البيانات حسب تعيين الحقول إذا كان هناك تعيين محدد
-      const mappedData: Record<string, any> = {};
-      if (options.mapFields) {
-        for (const [key, value] of Object.entries(formData)) {
-          if (value && options.mapFields[key]) {
-            mappedData[options.mapFields[key]] = value;
-          }
-        }
-      } else {
-        // استخدام البيانات كما هي
-        Object.assign(mappedData, formData);
-      }
-      
-      console.log("بدء إرسال البيانات إلى:", options.url);
-      console.log("البيانات المرسلة:", mappedData);
-      
-      // التحقق من نوع الطلب الذي سيتم إرساله
-      if (options.method === "GET") {
-        // محاولة JSONP للتغلب على قيود CORS
-        return await jsonpRequest(options.url, mappedData);
-      }
-      
-      // طريقة 2: استخدام وضع no-cors وإضافة تحقق ثانوي
-      const requestOptions: RequestInit = {
-        method: options.method,
-        headers: options.headers || {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        mode: 'no-cors', // استخدام وضع no-cors منذ البداية
-        body: options.method !== "GET" ? JSON.stringify(mappedData) : undefined,
-      };
-      
-      // إرسال الطلب
-      console.log("إرسال طلب بوضع no-cors...");
-      const response = await fetch(options.url, requestOptions);
-      
-      // لا يمكن قراءة استجابة no-cors، لذا سنقوم بإرسال طلب تحقق ثانوي
-      // إنشاء رمز فريد للتحقق
-      const verificationCode = Date.now().toString();
-      
-      // إعداد متغير للحالة
-      let verificationSuccess = false;
-      
-      // في حالة استخدام موقع مال الشلال، يمكن تنفيذ تحقق مخصص
-      if (options.url.includes('malshalal')) {
-        // استراتيجية مخصصة للتحقق من إضافة البيانات في موقع مال الشلال
-        try {
-          // إرسال طلب بحث عن الوصل بعد الإضافة - هذا مثال فقط
-          const checkUrl = `https://malshalal-exp.com/search.php?code=${mappedData.code}`;
-          
-          console.log("إرسال طلب تحقق ثانوي إلى:", checkUrl);
-          
-          // سنرسل طلب للتحقق بعد تأخير قصير
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          
-          // تجنب تنفيذ هذا الطلب مباشرة لأنه قد يعاني من قيود CORS أيضًا
-          // بدلاً من ذلك، سنعتبر العملية ناجحة ونقدم تقريرًا مفصلاً
-          
-          // إذا وصلنا إلى هنا، فالإضافة تمت على الأرجح بنجاح
-          verificationSuccess = true;
-          
-          console.log("تم التحقق من الإضافة للكود:", mappedData.code);
-        } catch (verifyError) {
-          console.warn("فشل التحقق الثانوي:", verifyError);
-        }
-      }
-      
-      // إنشاء استجابة مخصصة بناءً على التحقق الثانوي
-      return {
-        success: true, // نفترض النجاح عند استخدام no-cors
-        message: verificationSuccess 
-          ? "تم التحقق من إضافة البيانات بنجاح" 
-          : "تم إرسال البيانات (تعذر التحقق بسبب قيود CORS، لكن الطلب أكمل بنجاح)",
-        code: response.status,
-        responseData: verificationSuccess ? { code: mappedData.code, status: "success" } : null,
-        timestamp: new Date().toISOString()
-      };
-      
-    } catch (error) {
-      // معالجة أي أخطاء غير متوقعة
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : "حدث خطأ غير معروف أثناء إرسال البيانات";
-      
-      console.error("خطأ في إرسال البيانات:", errorMessage);
-      
-      return {
-        success: false,
-        message: errorMessage,
-        code: 0,
-        timestamp: new Date().toISOString()
-      };
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
-  // وظيفة مساعدة لتنفيذ طلب JSONP
-  const jsonpRequest = (url: string, data: Record<string, any>): Promise<ExternalSubmitResponse> => {
-    return new Promise((resolve) => {
+
+    const files = Array.from(e.target.files);
+    const newImages: ImageWithId[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       try {
-        // إضافة كل البيانات كمعلمات استعلام
-        const queryParams = new URLSearchParams();
-        for (const [key, value] of Object.entries(data)) {
-          queryParams.append(key, String(value));
+        const base64 = await convertToBase64(file);
+        const response = await fetch("/api/process-image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ image: base64, useGemini: useGemini }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        // إضافة معرف فريد لتجنب التخزين المؤقت
-        queryParams.append('_', Date.now().toString());
-        
-        // إنشاء عنصر script
-        const script = document.createElement('script');
-        const callbackName = `jsonp_callback_${Date.now()}`;
-        
-        // إنشاء دالة رد النداء العالمية
-        (window as any)[callbackName] = (responseData: any) => {
-          // تنظيف
-          document.body.removeChild(script);
-          delete (window as any)[callbackName];
-          
-          // حل الوعد مع البيانات
-          resolve({
-            success: true,
-            message: "تم استلام البيانات بنجاح من خلال JSONP",
-            code: 200,
-            responseData,
-            timestamp: new Date().toISOString()
-          });
-        };
-        
-        // تعيين منتهي مهلة للتعامل مع حالات الفشل
-        const timeout = setTimeout(() => {
-          if (document.body.contains(script)) {
-            document.body.removeChild(script);
-            delete (window as any)[callbackName];
-            
-            resolve({
-              success: false,
-              message: "انتهت مهلة طلب JSONP",
-              code: 0,
-              timestamp: new Date().toISOString()
-            });
-          }
-        }, 10000); // 10 ثوان
-        
-        // ضبط المصدر وإضافة العنصر script إلى الصفحة
-        script.src = `${url}${url.includes('?') ? '&' : '?'}${queryParams.toString()}&callback=${callbackName}`;
-        document.body.appendChild(script);
-        
-        // إضافة معالج للأخطاء
-        script.onerror = () => {
-          clearTimeout(timeout);
-          document.body.removeChild(script);
-          delete (window as any)[callbackName];
-          
-          // حاول بطريقة مختلفة عند فشل JSONP
-          resolve({
-            success: false,
-            message: "فشل طلب JSONP، سيتم المحاولة بطريقة أخرى",
-            code: 0,
-            timestamp: new Date().toISOString()
-          });
-        };
-      } catch (error) {
-        resolve({
-          success: false,
-          message: error instanceof Error ? error.message : "حدث خطأ أثناء تنفيذ طلب JSONP",
-          code: 0,
-          timestamp: new Date().toISOString()
+
+        const data = await response.json();
+        newImages.push({
+          id: data.id,
+          src: base64 as string,
+          alt: file.name,
+          extractedText: data.extractedText,
+          status: "pending",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          originalFilename: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          processingTime: data.processingTime,
+          extractedData: data.extractedData,
+        });
+
+        setProcessingProgress(((i + 1) / files.length) * 100);
+      } catch (error: any) {
+        console.error("Error processing image:", error);
+        toast({
+          title: "Error",
+          description: `Failed to process ${file.name}: ${error.message}`,
+          variant: "destructive",
         });
       }
+    }
+
+    setImages((prevImages) => [...prevImages, ...newImages]);
+    setIsProcessing(false);
+    toast({
+      title: "Success",
+      description: "Images processed successfully!",
     });
   };
 
-  return { isSubmitting, handleSubmitToApi, handleExternalSubmit };
+  const handleTextChange = (id: string, newText: string) => {
+    setImages((prevImages) =>
+      prevImages.map((img) =>
+        img.id === id ? { ...img, extractedText: newText } : img
+      )
+    );
+  };
+
+  const handleDelete = (id: string) => {
+    setImages((prevImages) => prevImages.filter((img) => img.id !== id));
+  };
+
+  const handleSubmitToApi = async (id: string, image: ImageWithId) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/submit-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: id,
+          extractedText: image.extractedText,
+          extractedData: image.extractedData,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("API Response:", result);
+
+      setImages((prevImages) =>
+        prevImages.map((img) =>
+          img.id === id ? { ...img, status: "success" } : img
+        )
+      );
+      toast({
+        title: "Success",
+        description: `Data submitted successfully for ${image.originalFilename}!`,
+      });
+      await updateBookmarkletStats();
+    } catch (error: any) {
+      console.error("Error submitting data:", error);
+      setImages((prevImages) =>
+        prevImages.map((img) =>
+          img.id === id ? { ...img, status: "error" } : img
+        )
+      );
+      toast({
+        title: "Error",
+        description: `Failed to submit data for ${image.originalFilename}: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const convertToBase64 = (file: File): Promise<string | null> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === "string") {
+          resolve(result);
+        } else {
+          resolve(null);
+        }
+      };
+      reader.onerror = () => {
+        reject(reader.error);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  return {
+    images,
+    isProcessing,
+    processingProgress,
+    isSubmitting,
+    useGemini,
+    bookmarkletStats,
+    setUseGemini,
+    handleFileChange,
+    handleTextChange,
+    handleDelete,
+    handleSubmitToApi,
+    updateBookmarkletStats,
+  };
 };
