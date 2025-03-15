@@ -36,7 +36,20 @@ export class AutomationService {
    */
   static async checkServerStatus(): Promise<{ status: string; message: string }> {
     try {
-      const response = await fetch(`${this.API_URL}/status`);
+      const response = await fetch(`${this.API_URL}/status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
+        // إضافة خيارات وقت انتهاء الطلب للتعامل مع حالة عدم استجابة الخادم
+        signal: AbortSignal.timeout(5000) // 5 ثوانٍ كحد أقصى
+      });
+      
+      if (!response.ok) {
+        throw new Error(`فشل الطلب بحالة: ${response.status}`);
+      }
+      
       return await response.json();
     } catch (error) {
       console.error('خطأ في الاتصال بخادم الأتمتة:', error);
@@ -67,26 +80,44 @@ export class AutomationService {
         };
       }
 
-      // إرسال طلب إلى خادم الأتمتة
-      const response = await fetch(`${this.API_URL}/automate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          projectUrl: config.projectUrl,
-          actions: config.actions
-        })
-      });
+      // إعداد إشارة لإلغاء الطلب بعد مهلة زمنية
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // مهلة دقيقتين
 
-      // التحقق من استجابة الخادم
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'فشل طلب الأتمتة');
+      try {
+        // إرسال طلب إلى خادم الأتمتة
+        const response = await fetch(`${this.API_URL}/automate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            projectUrl: config.projectUrl,
+            actions: config.actions.map(action => ({
+              name: action.name,
+              finder: action.finder,
+              value: action.value,
+              delay: action.delay
+            }))
+          })
+        });
+
+        // إلغاء مؤقت المهلة الزمنية
+        clearTimeout(timeoutId);
+
+        // التحقق من استجابة الخادم
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `فشل طلب الأتمتة بحالة: ${response.status}`);
+        }
+
+        // معالجة نتائج التشغيل الآلي
+        return await response.json();
+      } finally {
+        // تأكد من إلغاء المؤقت في جميع الحالات
+        clearTimeout(timeoutId);
       }
-
-      // معالجة نتائج التشغيل الآلي
-      return await response.json();
     } catch (error) {
       console.error('خطأ في تنفيذ التشغيل الآلي:', error);
       return {

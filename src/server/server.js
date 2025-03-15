@@ -34,8 +34,14 @@ app.post('/api/automate', async (req, res) => {
   try {
     // بدء متصفح جديد
     browser = await puppeteer.launch({
-      headless: false, // جعله مرئيًا للتجربة، يمكن تغييره إلى true للتشغيل في وضع الخلفية
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: 'new', // استخدام وضع headless الجديد لتحسين الأداء والتوافق
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu'
+      ],
       defaultViewport: { width: 1366, height: 768 }
     });
 
@@ -44,6 +50,28 @@ app.post('/api/automate', async (req, res) => {
     // تكوين المتصفح لتجاوز حماية مكافحة الروبوتات
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     await page.setJavaScriptEnabled(true); // تمكين JavaScript
+    
+    // إضافة تعديلات متقدمة لتجاوز كشف البوتات
+    await page.evaluateOnNewDocument(() => {
+      // إخفاء خصائص webdriver
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      
+      // إضافة متصفح كامل window.chrome
+      window.chrome = {
+        runtime: {},
+        loadTimes: function() {},
+        csi: function() {},
+        app: {}
+      };
+      
+      // أغراض كاذبة للمساعدة في تجاوز كشف الروبوتات
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters) => (
+        parameters.name === 'notifications' ?
+          Promise.resolve({ state: Notification.permission }) :
+          originalQuery(parameters)
+      );
+    });
     
     // الانتقال إلى الصفحة المطلوبة
     await page.goto(projectUrl, { waitUntil: 'networkidle2', timeout: 60000 });
@@ -117,6 +145,21 @@ app.post('/api/automate', async (req, res) => {
           continue;
         }
         
+        // توثيق العنصر قبل التفاعل
+        await page.evaluate(el => {
+          // إضافة تأثير بصري مؤقت
+          const originalBackground = el.style.backgroundColor;
+          const originalBorder = el.style.border;
+          el.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+          el.style.border = '2px solid #ff5722';
+          
+          // إعادة الأسلوب الأصلي بعد فترة وجيزة
+          setTimeout(() => {
+            el.style.backgroundColor = originalBackground;
+            el.style.border = originalBorder;
+          }, 500);
+        }, element);
+        
         // الحصول على نوع العنصر
         const tagName = await page.evaluate(el => el.tagName.toLowerCase(), element);
         
@@ -142,6 +185,9 @@ app.post('/api/automate', async (req, res) => {
           // أزرار أو عناصر أخرى
           await element.click();
         }
+        
+        // إضافة تأخير صغير بعد كل إجراء لمحاكاة تفاعل المستخدم
+        await page.waitForTimeout(500);
         
         results.push({
           name: name || 'بلا اسم',
@@ -191,5 +237,6 @@ app.post('/api/automate', async (req, res) => {
 // بدء تشغيل الخادم
 app.listen(port, () => {
   console.log(`خادم الأتمتة يعمل على المنفذ ${port}`);
+  console.log(`للتحقق من عمل الخادم، افتح المتصفح على: http://localhost:${port}/api/status`);
+  console.log('لإيقاف الخادم، اضغط على: Ctrl+C');
 });
-
