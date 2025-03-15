@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { submitTextToApi } from "@/lib/apiService";
@@ -108,7 +109,7 @@ export const useSubmission = (updateImage: (id: string, fields: Partial<ImageDat
       console.log("البيانات المرسلة:", mappedData);
       
       // التحقق من نوع الطلب الذي سيتم إرساله
-      if (options.method === 'GET') {
+      if (options.method === "GET") {
         // محاولة JSONP للتغلب على قيود CORS
         return await jsonpRequest(options.url, mappedData);
       }
@@ -122,7 +123,7 @@ export const useSubmission = (updateImage: (id: string, fields: Partial<ImageDat
           'X-Requested-With': 'XMLHttpRequest'
         },
         mode: 'no-cors', // استخدام وضع no-cors منذ البداية
-        body: options.method !== 'GET' ? JSON.stringify(mappedData) : undefined,
+        body: options.method !== "GET" ? JSON.stringify(mappedData) : undefined,
       };
       
       // إرسال الطلب

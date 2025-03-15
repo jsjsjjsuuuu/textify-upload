@@ -9,7 +9,7 @@ import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Video } from "lucide-react";
+import { Play, Video, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -30,6 +30,7 @@ const Index = () => {
   const { toast } = useToast();
   const [showDemo, setShowDemo] = useState(false);
   const [simulationUrl, setSimulationUrl] = useState("");
+  const [simulationStarted, setSimulationStarted] = useState(false);
   
   // استرجاع عنوان URL الخارجي عند التحميل
   useEffect(() => {
@@ -39,7 +40,7 @@ const Index = () => {
     }
   }, []);
 
-  // التنقل إلى قسم محاكاة الإدخال
+  // التنقل إلى قسم محاكاة الإدخال وبدء المحاكاة
   const scrollToSimulator = () => {
     if (simulatorRef.current) {
       simulatorRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -48,18 +49,29 @@ const Index = () => {
       setTimeout(() => {
         const simTab = document.querySelector('[data-simulator-tab="simulation"]');
         if (simTab) {
-          simTab.dispatchEvent(new Event('click'));
+          (simTab as HTMLElement).click();
           
           // محاولة تشغيل المحاكاة المباشرة
           setTimeout(() => {
             const liveSimBtn = document.querySelector('[data-simulator-tab="simulation"] button:has(.lucide-play)');
             if (liveSimBtn) {
-              liveSimBtn.dispatchEvent(new Event('click'));
+              (liveSimBtn as HTMLElement).click();
+              setSimulationStarted(true);
+              
+              toast({
+                title: "تم بدء المحاكاة",
+                description: "جاري عرض المحاكاة المباشرة لإدخال البيانات"
+              });
             }
           }, 500);
         }
       }, 500);
     }
+  };
+
+  // إظهار الفيديو التوضيحي
+  const toggleDemoVideo = () => {
+    setShowDemo(!showDemo);
   };
 
   // وظيفة wrapper لمعالجة توقيع الدالة للحفاظ على التوافق مع واجهة ImagePreviewContainer
@@ -74,6 +86,11 @@ const Index = () => {
     if (image) {
       handleSubmitToApi(id, image);
     }
+  };
+  
+  // التوجه إلى صفحة الإعدادات لضبط النموذج الخارجي
+  const goToApiSettings = () => {
+    window.location.href = "/api";
   };
 
   return (
@@ -119,6 +136,13 @@ const Index = () => {
                     <Play className="h-4 w-4 ml-2" />
                     بدء المحاكاة المباشرة
                   </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={toggleDemoVideo}
+                  >
+                    <Video className="h-4 w-4 ml-2" />
+                    {showDemo ? "إخفاء الشرح" : "مشاهدة الشرح"}
+                  </Button>
                 </div>
               </div>
             </div>
@@ -149,7 +173,15 @@ const Index = () => {
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-end mt-3">
+                <div className="flex justify-between mt-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={goToApiSettings}
+                  >
+                    <ExternalLink className="h-4 w-4 ml-1" />
+                    إعدادات النظام الخارجي
+                  </Button>
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -161,7 +193,7 @@ const Index = () => {
               </div>
             )}
 
-            {/* نظام محاكاة إدخال البيانات فقط */}
+            {/* نظام محاكاة إدخال البيانات */}
             <div className="mb-8">
               <div ref={simulatorRef} id="simulator-section">
                 <DataEntrySimulator 
