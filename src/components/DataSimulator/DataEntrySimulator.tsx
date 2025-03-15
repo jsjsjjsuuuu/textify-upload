@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,11 @@ import { Label } from "@/components/ui/label";
 import { BookmarkletItem } from "@/utils/bookmarklet/types";
 import { getItemsByStatus } from "@/utils/bookmarkletService";
 import { useToast } from "@/hooks/use-toast";
-import { Monitor, RotateCw, CheckCircle2, ClipboardCopy, X, Info, ChevronLeft, ChevronRight } from "lucide-react";
+import { Monitor, RotateCw, CheckCircle2, ClipboardCopy, X, Info, ChevronLeft, ChevronRight, Play, Pause, ExternalLink, Video } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { motion } from "framer-motion";
 
 interface DataSimulatorProps {
   storedCount: number;
@@ -21,6 +24,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
   const [items, setItems] = useState<BookmarkletItem[]>([]);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [isLiveSimulation, setIsLiveSimulation] = useState(false);
   const [formFields, setFormFields] = useState({
     code: "",
     senderName: "",
@@ -30,9 +34,32 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
     address: "",
     notes: ""
   });
+  const [simulatedFields, setSimulatedFields] = useState({
+    code: "",
+    senderName: "",
+    phoneNumber: "",
+    province: "",
+    price: "",
+    address: "",
+    notes: ""
+  });
+  const [activeField, setActiveField] = useState<string | null>(null);
   const [mockFormId, setMockFormId] = useState<string | null>(null);
   const [simulatorMode, setSimulatorMode] = useState<"preview" | "simulation">("preview");
   const [showInstructions, setShowInstructions] = useState(true);
+  const [simulationSpeed, setSimulationSpeed] = useState<"slow" | "medium" | "fast">("medium");
+  const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+  const formRef = useRef<HTMLDivElement>(null);
+  const [simulationUrl, setSimulationUrl] = useState("");
+  const [showUrlInput, setShowUrlInput] = useState(false);
+
+  // سرعة الكتابة حسب الإعداد المختار
+  const typingSpeed = {
+    slow: 120,
+    medium: 70,
+    fast: 30
+  };
 
   // استرجاع العناصر عند تحميل المكون
   useEffect(() => {
@@ -61,6 +88,17 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
       address: item.address || "",
       notes: item.notes || ""
     });
+    
+    // إعادة تعيين الحقول المحاكاة
+    setSimulatedFields({
+      code: "",
+      senderName: "",
+      phoneNumber: "",
+      province: "",
+      price: "",
+      address: "",
+      notes: ""
+    });
   };
 
   // التنقل بين العناصر
@@ -68,6 +106,11 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
     if (index >= 0 && index < items.length) {
       setCurrentItemIndex(index);
       updateFormFields(items[index]);
+      if (isLiveSimulation) {
+        // إيقاف المحاكاة الحالية وإعادة تشغيلها للعنصر الجديد
+        stopLiveSimulation();
+        setTimeout(() => startLiveSimulation(), 500);
+      }
     }
   };
 
@@ -98,13 +141,106 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
   // إيقاف المحاكاة
   const stopSimulation = () => {
     setIsSimulating(false);
+    setIsLiveSimulation(false);
     setMockFormId(null);
     setSimulatorMode("preview");
+    setActiveField(null);
+    setProgress(0);
+    setCurrentStep(0);
     
     toast({
       title: "تم إيقاف المحاكاة",
       description: "تم إيقاف المحاكاة بنجاح."
     });
+  };
+
+  // بدء المحاكاة المباشرة
+  const startLiveSimulation = async () => {
+    if (!isSimulating) {
+      startSimulation();
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    setIsLiveSimulation(true);
+    setProgress(0);
+    setCurrentStep(0);
+    setSimulatedFields({
+      code: "",
+      senderName: "",
+      phoneNumber: "",
+      province: "",
+      price: "",
+      address: "",
+      notes: ""
+    });
+    
+    // البدء بالمحاكاة المباشرة
+    simulateTyping();
+  };
+
+  // إيقاف المحاكاة المباشرة
+  const stopLiveSimulation = () => {
+    setIsLiveSimulation(false);
+    setActiveField(null);
+    setProgress(0);
+    setCurrentStep(0);
+  };
+
+  // محاكاة عملية الكتابة حقلاً بعد حقل
+  const simulateTyping = async () => {
+    const fields = ["code", "senderName", "phoneNumber", "province", "price", "address", "notes"];
+    const fieldsWithValues = fields.filter(field => formFields[field as keyof typeof formFields]);
+    
+    for (let i = 0; i < fieldsWithValues.length; i++) {
+      const field = fieldsWithValues[i];
+      const value = formFields[field as keyof typeof formFields];
+      setActiveField(field);
+      setCurrentStep(i + 1);
+      
+      // التركيز على الحقل الحالي
+      const input = document.getElementById(`sim-${field}`);
+      if (input) {
+        input.focus();
+        input.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      
+      // محاكاة الكتابة حرفاً حرفاً
+      for (let j = 0; j <= value.length; j++) {
+        if (!isLiveSimulation) break; // توقف إذا تم إيقاف المحاكاة
+        
+        setSimulatedFields(prev => ({
+          ...prev,
+          [field]: value.substring(0, j)
+        }));
+        
+        // حساب التقدم الإجمالي
+        const fieldProgress = j / value.length;
+        const overallProgress = (i + fieldProgress) / fieldsWithValues.length;
+        setProgress(overallProgress * 100);
+        
+        // انتظار للمحاكاة الواقعية للكتابة
+        await new Promise(resolve => setTimeout(resolve, typingSpeed[simulationSpeed]));
+      }
+      
+      // التأخير قبل الانتقال إلى الحقل التالي
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    // إنهاء المحاكاة
+    setActiveField(null);
+    setProgress(100);
+    
+    toast({
+      title: "اكتملت عملية المحاكاة",
+      description: "تم إدخال جميع البيانات بنجاح."
+    });
+    
+    // إيقاف المحاكاة المباشرة بعد ثانيتين
+    setTimeout(() => {
+      if (isLiveSimulation) {
+        setIsLiveSimulation(false);
+      }
+    }, 2000);
   };
 
   // نسخ البيانات إلى الحافظة
@@ -188,20 +324,83 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
           ))}
         </div>
 
-        <div className="flex justify-center mt-4">
-          <Button 
-            variant="default" 
-            size="sm" 
-            onClick={() => {
-              setSimulatorMode("simulation");
-              startSimulation();
-            }}
-            className="bg-brand-green hover:bg-brand-green/90"
-          >
-            <CheckCircle2 className="h-4 w-4 ml-2" />
-            بدء محاكاة إدخال البيانات
-          </Button>
+        <div className="flex flex-col space-y-2 mt-6">
+          <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <AlertTitle className="text-blue-800 dark:text-blue-300">محاكاة بالبث المباشر</AlertTitle>
+            <AlertDescription className="text-blue-700 dark:text-blue-400">
+              يمكنك تشغيل المحاكاة المباشرة لمشاهدة كيفية إدخال البيانات تلقائياً، كأنها تُكتب بواسطة شخص حقيقي.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="flex justify-center space-x-4 space-x-reverse mt-2">
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => {
+                setSimulatorMode("simulation");
+                startLiveSimulation();
+              }}
+              className="bg-brand-green hover:bg-brand-green/90"
+            >
+              <Video className="h-4 w-4 ml-2" />
+              بدء المحاكاة المباشرة
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowUrlInput(true)}
+            >
+              <ExternalLink className="h-4 w-4 ml-2" />
+              محاكاة موقع خارجي
+            </Button>
+          </div>
         </div>
+        
+        {showUrlInput && (
+          <div className="mt-4 p-4 border rounded-md bg-muted/30">
+            <h4 className="font-medium mb-2">أدخل عنوان الموقع للمحاكاة</h4>
+            <div className="flex space-x-2 space-x-reverse">
+              <Input
+                value={simulationUrl}
+                onChange={(e) => setSimulationUrl(e.target.value)}
+                placeholder="https://example.com/form"
+                className="flex-1"
+              />
+              <Button
+                onClick={() => {
+                  if (simulationUrl) {
+                    // فتح النافذة في علامة تبويب جديدة
+                    window.open(simulationUrl, '_blank');
+                    setShowUrlInput(false);
+                    toast({
+                      title: "تم فتح الموقع الخارجي",
+                      description: "استخدم البوكماركلت المحسن في شريط المفضلة لملء البيانات."
+                    });
+                  } else {
+                    toast({
+                      title: "خطأ",
+                      description: "يرجى إدخال عنوان URL صالح.",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+              >
+                فتح
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setShowUrlInput(false)}
+              >
+                إلغاء
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              ملاحظة: سيتم فتح الموقع في علامة تبويب جديدة. استخدم البوكماركلت المحسن من شريط المفضلة لملء البيانات.
+            </p>
+          </div>
+        )}
       </div>
     );
   };
@@ -232,85 +431,172 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
           </Alert>
         )}
 
-        <div className="border p-4 rounded-md bg-white dark:bg-gray-800 shadow-sm">
+        {isLiveSimulation && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-brand-green/10 border border-brand-green/30 p-3 rounded-md mb-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Play className="h-4 w-4 text-brand-green mr-2 animate-pulse" />
+                <span className="font-medium text-brand-green">محاكاة مباشرة قيد التشغيل...</span>
+              </div>
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <Select
+                  value={simulationSpeed}
+                  onValueChange={(value) => setSimulationSpeed(value as "slow" | "medium" | "fast")}
+                >
+                  <SelectTrigger className="h-7 w-24 text-xs">
+                    <SelectValue placeholder="السرعة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="slow">بطيء</SelectItem>
+                    <SelectItem value="medium">متوسط</SelectItem>
+                    <SelectItem value="fast">سريع</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={stopLiveSimulation}
+                  className="h-7 text-xs"
+                >
+                  <Pause className="h-3 w-3 ml-1" />
+                  إيقاف
+                </Button>
+              </div>
+            </div>
+            
+            <div className="mt-2">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                <div 
+                  className="bg-brand-green h-2.5 rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+                <span>الخطوة {currentStep} من {Object.values(formFields).filter(Boolean).length}</span>
+                <span>{Math.round(progress)}%</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="border p-4 rounded-md bg-white dark:bg-gray-800 shadow-sm" ref={formRef}>
           <div className="flex justify-between items-center border-b pb-2 mb-4">
             <div>
               <h3 className="font-semibold">نموذج إدخال البيانات المحاكى</h3>
               <p className="text-xs text-muted-foreground">العنصر {currentItemIndex + 1} من {items.length}</p>
             </div>
-            <Button variant="destructive" size="sm" onClick={stopSimulation}>
-              إيقاف المحاكاة
-            </Button>
+            <div className="flex space-x-2 space-x-reverse">
+              {!isLiveSimulation && (
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="bg-brand-green hover:bg-brand-green/90"
+                  onClick={startLiveSimulation}
+                >
+                  <Play className="h-4 w-4 ml-1" />
+                  محاكاة مباشرة
+                </Button>
+              )}
+              <Button variant="destructive" size="sm" onClick={stopSimulation}>
+                إيقاف المحاكاة
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4" id={mockFormId || undefined}>
             <div className="space-y-2">
-              <Label htmlFor="sim-code">رقم الشحنة:</Label>
+              <Label htmlFor="sim-code" className={activeField === "code" ? "text-brand-green font-medium" : ""}>
+                رقم الشحنة:
+              </Label>
               <Input 
                 id="sim-code" 
-                value={formFields.code} 
+                value={isLiveSimulation ? simulatedFields.code : formFields.code} 
                 onChange={(e) => setFormFields(prev => ({ ...prev, code: e.target.value }))}
-                className="h-9" 
+                className={`h-9 ${activeField === "code" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
+                disabled={isLiveSimulation}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="sim-senderName">اسم المرسل:</Label>
+              <Label htmlFor="sim-senderName" className={activeField === "senderName" ? "text-brand-green font-medium" : ""}>
+                اسم المرسل:
+              </Label>
               <Input 
                 id="sim-senderName" 
-                value={formFields.senderName} 
+                value={isLiveSimulation ? simulatedFields.senderName : formFields.senderName} 
                 onChange={(e) => setFormFields(prev => ({ ...prev, senderName: e.target.value }))}
-                className="h-9" 
+                className={`h-9 ${activeField === "senderName" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
+                disabled={isLiveSimulation}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="sim-phoneNumber">رقم الهاتف:</Label>
+              <Label htmlFor="sim-phoneNumber" className={activeField === "phoneNumber" ? "text-brand-green font-medium" : ""}>
+                رقم الهاتف:
+              </Label>
               <Input 
                 id="sim-phoneNumber" 
-                value={formFields.phoneNumber} 
+                value={isLiveSimulation ? simulatedFields.phoneNumber : formFields.phoneNumber} 
                 onChange={(e) => setFormFields(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                className="h-9" 
+                className={`h-9 ${activeField === "phoneNumber" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
+                disabled={isLiveSimulation}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="sim-province">المحافظة:</Label>
+              <Label htmlFor="sim-province" className={activeField === "province" ? "text-brand-green font-medium" : ""}>
+                المحافظة:
+              </Label>
               <Input 
                 id="sim-province" 
-                value={formFields.province} 
+                value={isLiveSimulation ? simulatedFields.province : formFields.province} 
                 onChange={(e) => setFormFields(prev => ({ ...prev, province: e.target.value }))}
-                className="h-9" 
+                className={`h-9 ${activeField === "province" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
+                disabled={isLiveSimulation}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="sim-price">السعر:</Label>
+              <Label htmlFor="sim-price" className={activeField === "price" ? "text-brand-green font-medium" : ""}>
+                السعر:
+              </Label>
               <Input 
                 id="sim-price" 
-                value={formFields.price} 
+                value={isLiveSimulation ? simulatedFields.price : formFields.price} 
                 onChange={(e) => setFormFields(prev => ({ ...prev, price: e.target.value }))}
-                className="h-9" 
+                className={`h-9 ${activeField === "price" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
+                disabled={isLiveSimulation}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="sim-address">العنوان:</Label>
+              <Label htmlFor="sim-address" className={activeField === "address" ? "text-brand-green font-medium" : ""}>
+                العنوان:
+              </Label>
               <Input 
                 id="sim-address" 
-                value={formFields.address} 
+                value={isLiveSimulation ? simulatedFields.address : formFields.address} 
                 onChange={(e) => setFormFields(prev => ({ ...prev, address: e.target.value }))}
-                className="h-9" 
+                className={`h-9 ${activeField === "address" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
+                disabled={isLiveSimulation}
               />
             </div>
             
             <div className="space-y-2 col-span-2">
-              <Label htmlFor="sim-notes">ملاحظات:</Label>
+              <Label htmlFor="sim-notes" className={activeField === "notes" ? "text-brand-green font-medium" : ""}>
+                ملاحظات:
+              </Label>
               <Input 
                 id="sim-notes" 
-                value={formFields.notes} 
+                value={isLiveSimulation ? simulatedFields.notes : formFields.notes} 
                 onChange={(e) => setFormFields(prev => ({ ...prev, notes: e.target.value }))}
-                className="h-9" 
+                className={`h-9 ${activeField === "notes" ? "border-brand-green ring-1 ring-brand-green" : ""}`}
+                disabled={isLiveSimulation}
               />
             </div>
           </div>
@@ -327,6 +613,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
                     description: "تم نسخ كافة البيانات إلى الحافظة"
                   });
                 }}
+                disabled={isLiveSimulation}
               >
                 <ClipboardCopy className="h-4 w-4 ml-1" />
                 نسخ كل البيانات
@@ -337,7 +624,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
                 variant="secondary" 
                 size="sm" 
                 onClick={() => navigateToItem(currentItemIndex - 1)}
-                disabled={currentItemIndex === 0}
+                disabled={currentItemIndex === 0 || isLiveSimulation}
               >
                 <ChevronRight className="h-4 w-4 ml-1" />
                 السابق
@@ -346,7 +633,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
                 variant="secondary" 
                 size="sm" 
                 onClick={() => navigateToItem(currentItemIndex + 1)}
-                disabled={currentItemIndex === items.length - 1}
+                disabled={currentItemIndex === items.length - 1 || isLiveSimulation}
               >
                 التالي
                 <ChevronLeft className="h-4 w-4 mr-1" />
@@ -381,7 +668,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
           محاكاة إدخال البيانات
         </CardTitle>
         <CardDescription>
-          محاكاة عملية إدخال البيانات في نماذج الشحن بدون الحاجة لزيارة مواقع خارجية
+          محاكاة عملية إدخال البيانات في نماذج الشحن بعرض مباشر لكيفية إدخال البيانات
         </CardDescription>
       </CardHeader>
       
@@ -391,7 +678,7 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount }) => {
             startSimulation();
           }
           setSimulatorMode(val as "preview" | "simulation");
-        }}>
+        }} data-simulator-tab={simulatorMode}>
           <TabsList className="w-full rounded-none grid grid-cols-2">
             <TabsTrigger value="preview" className="rounded-none data-[state=active]:bg-background">
               <Monitor className="h-4 w-4 ml-2" />

@@ -10,7 +10,8 @@ import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 import { getStorageStats } from "@/utils/bookmarkletService";
 import { useEffect, useState, useRef } from "react";
-import { ImageData } from "@/types/ImageData";
+import { Button } from "@/components/ui/button";
+import { Play, ExternalLink } from "lucide-react";
 
 const Index = () => {
   const {
@@ -19,58 +20,37 @@ const Index = () => {
     processingProgress,
     isSubmitting,
     useGemini,
+    bookmarkletStats,
     handleFileChange,
     handleTextChange,
     handleDelete,
     handleSubmitToApi
   } = useImageProcessing();
-
-  const [bookmarkletStats, setBookmarkletStats] = useState({
-    total: 0,
-    ready: 0
-  });
   
   const simulatorRef = useRef<HTMLDivElement>(null);
 
-  // تحديث إحصائيات البوكماركلت عند تحميل الصفحة وكل دقيقة
-  useEffect(() => {
-    // الدالة التي تقوم بتحديث الإحصائيات
-    const updateStats = () => {
-      console.log("تحديث إحصائيات البوكماركلت");
-      const stats = getStorageStats();
-      setBookmarkletStats({
-        total: stats.total,
-        ready: stats.ready
-      });
-    };
-
-    // تحديث الإحصائيات عند التحميل الأولي
-    updateStats();
-
-    // إعداد مؤقت لتحديث الإحصائيات كل دقيقة
-    const intervalId = setInterval(updateStats, 60000);
-
-    // تنظيف المؤقت عند إزالة المكون
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, []);
-
-  // تحديث إحصائيات البوكماركلت عند تغيير الصور (بتأخير لتجنب التحديثات المتكررة)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      console.log("تحديث إحصائيات البوكماركلت بعد تغيير الصور");
-      const stats = getStorageStats();
-      setBookmarkletStats({
-        total: stats.total,
-        ready: stats.ready
-      });
-    }, 1000);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [images]);
+  // التنقل إلى قسم محاكاة الإدخال
+  const scrollToSimulator = () => {
+    if (simulatorRef.current) {
+      simulatorRef.current.scrollIntoView({ behavior: 'smooth' });
+      
+      // تأخير قصير ثم تفعيل علامة التبويب "نموذج المحاكاة"
+      setTimeout(() => {
+        const simTab = document.querySelector('[data-simulator-tab="simulation"]');
+        if (simTab) {
+          simTab.dispatchEvent(new Event('click'));
+          
+          // محاولة تشغيل المحاكاة المباشرة
+          setTimeout(() => {
+            const liveSimBtn = document.querySelector('[data-simulator-tab="simulation"] button:has(.lucide-play)');
+            if (liveSimBtn) {
+              liveSimBtn.dispatchEvent(new Event('click'));
+            }
+          }, 500);
+        }
+      }, 500);
+    }
+  };
 
   // وظيفة wrapper لمعالجة توقيع الدالة للحفاظ على التوافق مع واجهة ImagePreviewContainer
   const handleDeleteImage = (id: string) => {
@@ -83,13 +63,6 @@ const Index = () => {
     const image = images.find(img => img.id === id);
     if (image) {
       handleSubmitToApi(id, image);
-    }
-  };
-  
-  // التنقل إلى قسم محاكاة الإدخال
-  const scrollToSimulator = () => {
-    if (simulatorRef.current) {
-      simulatorRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -116,6 +89,41 @@ const Index = () => {
                 <LearningStats />
               </div>
             </div>
+
+            {/* قسم للإعلان عن محاكاة الإدخال المباشر */}
+            {images.length > 0 && (
+              <div className="mb-8 p-4 rounded-lg bg-gradient-to-r from-brand-green/10 to-brand-brown/10 border border-brand-green/20">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-brand-brown dark:text-brand-beige mb-1">
+                      جرب نظام محاكاة الإدخال المباشر
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      شاهد كيف يتم إدخال البيانات في النماذج بشكل تلقائي كما لو كان يكتبها شخص حقيقي
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={scrollToSimulator}
+                      className="bg-brand-green hover:bg-brand-green/90"
+                    >
+                      <Play className="h-4 w-4 ml-2" />
+                      بدء المحاكاة المباشرة
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        const url = "https://aramex.com/new-shipment";
+                        window.open(url, '_blank');
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4 ml-2" />
+                      تجربة موقع خارجي
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* مكوّنات الأدوات */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">

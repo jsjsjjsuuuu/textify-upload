@@ -13,6 +13,8 @@ interface TempData {
   province: string;
   price: string;
   companyName: string;
+  address: string;
+  notes: string;
   [key: string]: string; // Add index signature to allow string indexing
 }
 
@@ -24,6 +26,8 @@ interface ExtractedData {
   province?: string;
   price?: string;
   companyName?: string;
+  address?: string;
+  notes?: string;
   [key: string]: string | undefined;
 }
 
@@ -39,7 +43,9 @@ export const useDataExtraction = (
     phoneNumber: image.phoneNumber || "",
     province: image.province || "",
     price: image.price || "",
-    companyName: image.companyName || ""
+    companyName: image.companyName || "",
+    address: image.address || "",
+    notes: image.notes || ""
   });
   
   const [correctionsMade, setCorrectionsMade] = useState(false);
@@ -54,7 +60,9 @@ export const useDataExtraction = (
         phoneNumber: image.phoneNumber || "",
         province: image.province || "",
         price: image.price || "",
-        companyName: image.companyName || ""
+        companyName: image.companyName || "",
+        address: image.address || "",
+        notes: image.notes || ""
       };
       
       // التحقق من صحة رقم الهاتف قبل الحفظ
@@ -85,7 +93,9 @@ export const useDataExtraction = (
         phoneNumber: image.phoneNumber || "",
         province: image.province || "",
         price: image.price || "",
-        companyName: image.companyName || ""
+        companyName: image.companyName || "",
+        address: image.address || "",
+        notes: image.notes || ""
       });
     }
     setEditMode(!editMode);
@@ -99,7 +109,9 @@ export const useDataExtraction = (
       phoneNumber: image.phoneNumber || "",
       province: image.province || "",
       price: image.price || "",
-      companyName: image.companyName || ""
+      companyName: image.companyName || "",
+      address: image.address || "",
+      notes: image.notes || ""
     });
   };
 
@@ -163,7 +175,9 @@ export const useDataExtraction = (
       phoneNumber: extractedData.phoneNumber || prev.phoneNumber,
       province: extractedData.province || prev.province,
       price: extractedData.price || prev.price,
-      companyName: extractedData.companyName || prev.companyName
+      companyName: extractedData.companyName || prev.companyName,
+      address: extractedData.address || prev.address,
+      notes: extractedData.notes || prev.notes
     }));
 
     if (!editMode) {

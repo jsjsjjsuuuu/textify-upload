@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Clipboard, ExternalLink, AlertCircle, ArrowLeft, Info } from "lucide-react";
+import { Clipboard, ExternalLink, AlertCircle, ArrowLeft, Info, Play } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ImprovedFormFillerSectionProps {
@@ -90,9 +90,23 @@ const ImprovedFormFillerSection: React.FC<ImprovedFormFillerSectionProps> = ({
                     variant="outline" 
                     size="sm" 
                     className="border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400"
-                    onClick={() => document.querySelector('[data-simulator-tab="simulation"]')?.dispatchEvent(new Event('click'))}
+                    onClick={() => {
+                      const tab = document.querySelector('[data-simulator-tab="simulation"]');
+                      if (tab) {
+                        tab.dispatchEvent(new Event('click'));
+                        
+                        // محاولة تشغيل المحاكاة المباشرة
+                        setTimeout(() => {
+                          const liveSimButton = document.querySelector('[data-simulator-tab="simulation"] button:has(.lucide-play)');
+                          if (liveSimButton) {
+                            liveSimButton.dispatchEvent(new Event('click'));
+                          }
+                        }, 500);
+                      }
+                    }}
                   >
-                    جرب نظام المحاكاة الداخلي
+                    <Play className="h-4 w-4 ml-2" />
+                    جرب المحاكاة المباشرة
                   </Button>
                 </div>
               </AlertDescription>
