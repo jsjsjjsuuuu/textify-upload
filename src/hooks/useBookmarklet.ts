@@ -1,230 +1,239 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { ImageData } from "@/types/ImageData";
-import { 
-  getStoredItemsCount, 
-  clearStoredItems, 
-  generateBookmarkletCode,
-  generateEnhancedBookmarkletCode,
-  saveToLocalStorage, 
-  getStorageStats 
-} from "@/utils/bookmarkletService";
+import { useState, useEffect } from 'react';
+import { BookmarkletOptions } from '@/types/BookmarkletOptions';
+import { getStorageStats, getFromLocalStorage } from '@/utils/bookmarklet';
+import { getBookmarkletCode } from '@/utils/bookmarklet/bookmarkletCode';
+import { BookmarkletItem, StorageStats } from '@/utils/bookmarklet/types';
+import { useToast } from './use-toast';
 
-export const useBookmarklet = (images: ImageData[]) => {
-  const { toast } = useToast();
-  const [storedCount, setStoredCount] = useState(0);
-  const [bookmarkletUrl, setBookmarkletUrl] = useState("");
-  const [enhancedBookmarkletUrl, setEnhancedBookmarkletUrl] = useState("");
-  const [isGeneratingUrl, setIsGeneratingUrl] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [stats, setStats] = useState({
-    total: 0,
-    ready: 0,
-    success: 0,
-    error: 0,
-    lastUpdate: null as Date | null
+/**
+ * هوك مخصص للتعامل مع وظائف البوكماركلت
+ */
+export const useBookmarklet = () => {
+  const [bookmarkletLink, setBookmarkletLink] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [useFormFiller, setUseFormFiller] = useState<boolean>(true);
+  const [useExportTools, setUseExportTools] = useState<boolean>(true);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [advancedOptions, setAdvancedOptions] = useState<BookmarkletOptions>({
+    version: "2.0",
+    includeFormFiller: true,
+    includeExportTools: true,
+    includeSeleniumLike: false,
+    debugMode: false,
+    advancedOptions: {
+      useAdvancedFieldDetection: true,
+      refreshAfterFill: false
+    }
   });
-
-  // تحديث عدد العناصر المخزنة والكود عند التحميل
-  useEffect(() => {
-    console.log("useBookmarklet: تحميل البيانات الأولية");
-    updateStoredCount();
-    generateBookmarkletUrlWithDelay();
-    updateStats();
-  }, []); 
   
-  // تحديث البيانات عند تغيير الصور
+  const [stats, setStats] = useState<StorageStats>({ 
+    total: 0, 
+    ready: 0, 
+    success: 0, 
+    error: 0, 
+    lastUpdate: null
+  });
+  
+  const { toast } = useToast();
+  
+  // تحميل إحصائيات البوكماركلت عند التحميل الأولي
   useEffect(() => {
-    console.log("تحديث إحصائيات البوكماركلت بعد تغيير الصور");
-    updateStats();
-  }, [images]);
-
-  // توليد رابط البوكماركلت مع تأخير
-  const generateBookmarkletUrlWithDelay = useCallback(() => {
-    setIsGeneratingUrl(true);
-    setTimeout(() => {
-      try {
-        // توليد رابط البوكماركلت التقليدي
-        const url = generateBookmarkletCode();
-        setBookmarkletUrl(url);
-        
-        // توليد رابط البوكماركلت المحسّن
-        const enhancedUrl = generateEnhancedBookmarkletCode();
-        setEnhancedBookmarkletUrl(enhancedUrl);
-        
-        console.log("تم إنشاء روابط البوكماركلت");
-      } catch (error) {
-        console.error("خطأ في إنشاء روابط البوكماركلت:", error);
-        toast({
-          title: "خطأ في إنشاء روابط الأداة",
-          description: "حدث خطأ أثناء توليد روابط البوكماركلت. حاول مرة أخرى.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsGeneratingUrl(false);
-      }
-    }, 500);
-  }, [toast]);
-
-  // تحديث عدد العناصر المخزنة
-  const updateStoredCount = useCallback(() => {
-    const count = getStoredItemsCount();
-    console.log("تحديث عدد العناصر المخزنة:", count);
-    setStoredCount(count);
+    fetchBookmarkletStats();
+    generateBookmarkletLink();
   }, []);
   
-  // تحديث إحصائيات التخزين
-  const updateStats = useCallback(() => {
-    const currentStats = getStorageStats();
-    console.log("تحديث إحصائيات التخزين:", currentStats);
-    
-    // تأكد من أن lastUpdate هو Date أو null
-    setStats({
-      total: currentStats.total,
-      ready: currentStats.ready,
-      success: currentStats.success,
-      error: currentStats.error,
-      lastUpdate: currentStats.lastUpdate ? new Date(currentStats.lastUpdate) : null
-    });
-  }, []);
-
-  // تصدير البيانات إلى localStorage
-  const handleExport = useCallback(() => {
-    console.log("تصدير البيانات:", images.length, "صورة");
-    
-    // تصفية الصور للتأكد من وجود البيانات الأساسية
-    const validImages = images.filter(img => img.code && img.senderName && img.phoneNumber);
-    console.log("عدد الصور الصالحة:", validImages.length);
-    
-    if (validImages.length === 0) {
-      toast({
-        title: "لا توجد بيانات كاملة",
-        description: "تأكد من إكمال الحقول الأساسية (الكود، الاسم، رقم الهاتف) لصورة واحدة على الأقل",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const count = saveToLocalStorage(validImages);
-    updateStoredCount();
-    updateStats();
-    
-    if (count > 0) {
-      toast({
-        title: "تم تصدير البيانات بنجاح",
-        description: `تم تصدير ${count} عنصر إلى ذاكرة المتصفح`,
-        variant: "default"
-      });
-    } else {
-      toast({
-        title: "تعذر تصدير البيانات",
-        description: "تأكد من وجود بيانات كاملة (الكود، الاسم، رقم الهاتف)",
-        variant: "destructive"
-      });
-    }
-  }, [images, toast, updateStoredCount, updateStats]);
-
-  // مسح البيانات المخزنة
-  const handleClear = useCallback(() => {
-    clearStoredItems();
-    updateStoredCount();
-    updateStats();
-    toast({
-      title: "تم مسح البيانات",
-      description: "تم مسح جميع البيانات المخزنة من ذاكرة المتصفح",
-      variant: "default"
-    });
-  }, [toast, updateStoredCount, updateStats]);
-
-  // نسخ رابط Bookmarklet التقليدي
-  const handleCopyBookmarklet = useCallback(() => {
-    if (!bookmarkletUrl) {
-      toast({
-        title: "الرابط غير جاهز",
-        description: "جاري إنشاء الرابط، انتظر لحظة من فضلك",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    navigator.clipboard.writeText(bookmarkletUrl).then(() => {
-      toast({
-        title: "تم نسخ الرابط",
-        description: "تم نسخ رابط Bookmarklet إلى الحافظة",
-        variant: "default"
-      });
-    });
-  }, [bookmarkletUrl, toast]);
+  // تحديث رابط البوكماركلت عند تغيير الخيارات
+  useEffect(() => {
+    generateBookmarkletLink();
+  }, [useFormFiller, useExportTools, advancedOptions]);
   
-  // نسخ رابط Bookmarklet المحسّن
-  const handleCopyEnhancedBookmarklet = useCallback(() => {
-    if (!enhancedBookmarkletUrl) {
-      toast({
-        title: "الرابط غير جاهز",
-        description: "جاري إنشاء الرابط، انتظر لحظة من فضلك",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    navigator.clipboard.writeText(enhancedBookmarkletUrl).then(() => {
-      toast({
-        title: "تم نسخ الرابط",
-        description: "تم نسخ رابط أداة الإدخال المحسّنة إلى الحافظة",
-        variant: "default"
-      });
-    });
-  }, [enhancedBookmarkletUrl, toast]);
-  
-  // إعادة إنشاء كود Bookmarklet
-  const handleRegenerateBookmarklet = useCallback(() => {
+  /**
+   * جلب إحصائيات البوكماركلت المخزنة
+   */
+  const fetchBookmarkletStats = () => {
     try {
-      setIsGeneratingUrl(true);
-      // توليد رابط البوكماركلت التقليدي
-      const newUrl = generateBookmarkletCode();
-      setBookmarkletUrl(newUrl);
+      const storageStats = getStorageStats();
+      setStats(storageStats);
+    } catch (error) {
+      console.error("خطأ في جلب إحصائيات البوكماركلت:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في جلب إحصائيات البوكماركلت",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  /**
+   * إنشاء رابط البوكماركلت
+   */
+  const generateBookmarkletLink = () => {
+    setIsGenerating(true);
+    try {
+      const options: BookmarkletOptions = {
+        version: advancedOptions.version || "2.0",
+        includeFormFiller: useFormFiller,
+        includeExportTools: useExportTools,
+        includeSeleniumLike: advancedOptions.includeSeleniumLike,
+        debugMode: advancedOptions.debugMode,
+        advancedOptions: advancedOptions.advancedOptions
+      };
       
-      // توليد رابط البوكماركلت المحسّن
-      const enhancedUrl = generateEnhancedBookmarkletCode();
-      setEnhancedBookmarkletUrl(enhancedUrl);
+      const code = getBookmarkletCode(options);
+      const encodedCode = encodeURIComponent(code);
+      const link = `javascript:${encodedCode}`;
+      setBookmarkletLink(link);
+    } catch (error) {
+      console.error("خطأ في إنشاء رابط البوكماركلت:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في إنشاء رابط البوكماركلت",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  
+  /**
+   * معالجة تغيير الخيارات المتقدمة
+   */
+  const handleAdvancedOptionsChange = (newOptions: Partial<BookmarkletOptions>) => {
+    setAdvancedOptions((prevOptions) => ({
+      ...prevOptions,
+      ...newOptions,
+    }));
+  };
+  
+  /**
+   * نسخ رابط البوكماركلت
+   */
+  const handleCopyBookmarklet = () => {
+    if (navigator.clipboard && bookmarkletLink) {
+      navigator.clipboard.writeText(bookmarkletLink)
+        .then(() => {
+          toast({
+            title: "تم النسخ",
+            description: "تم نسخ رابط البوكماركلت بنجاح",
+          });
+        })
+        .catch((err) => {
+          console.error("فشل نسخ الرابط:", err);
+          toast({
+            title: "خطأ",
+            description: "فشل في نسخ الرابط",
+            variant: "destructive",
+          });
+        });
+    }
+  };
+  
+  /**
+   * تصدير بيانات البوكماركلت
+   */
+  const handleExport = () => {
+    try {
+      const bookmarkletItems = getFromLocalStorage();
+      if (!bookmarkletItems || bookmarkletItems.length === 0) {
+        toast({
+          title: "معلومات",
+          description: "لا توجد بيانات للتصدير",
+        });
+        return;
+      }
       
-      setIsGeneratingUrl(false);
+      // إنشاء ملف للتصدير
+      const exportData = {
+        version: "2.0",
+        exportDate: new Date().toISOString(),
+        items: bookmarkletItems
+      };
+      
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      // إنشاء رابط تنزيل وتنزيل الملف
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bookmarklet_data_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       
       toast({
-        title: "تم إعادة إنشاء الروابط",
-        description: "تم تحديث رموز البوكماركلت بأحدث التغييرات",
-        variant: "default"
+        title: "تصدير",
+        description: "تم تصدير البيانات بنجاح",
       });
     } catch (error) {
-      console.error("خطأ في إعادة إنشاء روابط البوكماركلت:", error);
-      setIsGeneratingUrl(false);
-      
+      console.error("خطأ في تصدير البيانات:", error);
       toast({
-        title: "خطأ في إعادة إنشاء الروابط",
-        description: "حدث خطأ أثناء توليد روابط البوكماركلت. حاول مرة أخرى.",
-        variant: "destructive"
+        title: "خطأ",
+        description: "فشل في تصدير البيانات",
+        variant: "destructive",
       });
     }
-  }, [toast]);
-
-  // تغيير حالة إظهار الخيارات المتقدمة
-  const toggleAdvancedOptions = useCallback(() => {
-    setShowAdvanced(prev => !prev);
-  }, []);
-
+  };
+  
+  /**
+   * مسح بيانات البوكماركلت
+   */
+  const handleClear = () => {
+    try {
+      localStorage.removeItem('bookmarklet_data_v1');
+      setStats({ 
+        total: 0, 
+        ready: 0, 
+        success: 0, 
+        error: 0, 
+        lastUpdate: null
+      });
+      
+      toast({
+        title: "مسح",
+        description: "تم مسح البيانات بنجاح",
+      });
+    } catch (error) {
+      console.error("خطأ في مسح البيانات:", error);
+      toast({
+        title: "خطأ",
+        description: "فشل في مسح البيانات",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  /**
+   * إعادة إنشاء رابط البوكماركلت
+   */
+  const handleRegenerateBookmarklet = () => {
+    generateBookmarkletLink();
+    toast({
+      title: "تحديث",
+      description: "تم إعادة إنشاء رابط البوكماركلت",
+    });
+  };
+  
   return {
-    storedCount,
-    bookmarkletUrl,
-    enhancedBookmarkletUrl,
-    isGeneratingUrl,
+    bookmarkletLink,
+    isGenerating,
+    useFormFiller,
+    setUseFormFiller,
+    useExportTools,
+    setUseExportTools,
     showAdvanced,
+    setShowAdvanced,
+    advancedOptions,
     stats,
+    handleAdvancedOptionsChange,
+    handleCopyBookmarklet,
     handleExport,
     handleClear,
-    handleCopyBookmarklet,
-    handleCopyEnhancedBookmarklet,
     handleRegenerateBookmarklet,
-    toggleAdvancedOptions
+    fetchBookmarkletStats
   };
 };
+
+export default useBookmarklet;
