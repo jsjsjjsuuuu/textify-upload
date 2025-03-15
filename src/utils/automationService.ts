@@ -29,14 +29,39 @@ interface AutomationResult {
 }
 
 export class AutomationService {
-  private static readonly API_URL = 'http://localhost:3001/api';
+  // السماح بتكوين عنوان API ديناميكيًا
+  private static API_URL = 'http://localhost:3001/api';
+
+  /**
+   * تعيين عنوان URL للواجهة البرمجية
+   */
+  static setApiUrl(url: string) {
+    this.API_URL = url;
+    localStorage.setItem('automation_api_url', url);
+    console.log(`تم تعيين عنوان خادم الأتمتة إلى: ${url}`);
+  }
+
+  /**
+   * الحصول على عنوان URL للواجهة البرمجية
+   */
+  static getApiUrl(): string {
+    // استرجاع العنوان المخزن أو استخدام القيمة الافتراضية
+    const savedUrl = localStorage.getItem('automation_api_url');
+    if (savedUrl) {
+      this.API_URL = savedUrl;
+    }
+    return this.API_URL;
+  }
 
   /**
    * التحقق من حالة خادم الأتمتة
    */
-  static async checkServerStatus(): Promise<{ status: string; message: string }> {
+  static async checkServerStatus(): Promise<{ status: string; message: string; time?: string; systemInfo?: any }> {
     try {
-      const response = await fetch(`${this.API_URL}/status`, {
+      const apiUrl = this.getApiUrl();
+      console.log(`التحقق من حالة الخادم على: ${apiUrl}/status`);
+      
+      const response = await fetch(`${apiUrl}/status`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -55,7 +80,7 @@ export class AutomationService {
       console.error('خطأ في الاتصال بخادم الأتمتة:', error);
       return {
         status: 'error',
-        message: 'فشل الاتصال بخادم الأتمتة. تأكد من تشغيل الخادم.'
+        message: 'فشل الاتصال بخادم الأتمتة. تأكد من تشغيل الخادم على المنفذ 3001.'
       };
     }
   }
@@ -80,13 +105,16 @@ export class AutomationService {
         };
       }
 
+      const apiUrl = this.getApiUrl();
+      console.log(`إرسال طلب أتمتة إلى: ${apiUrl}/automate`);
+
       // إعداد إشارة لإلغاء الطلب بعد مهلة زمنية
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 120000); // مهلة دقيقتين
 
       try {
         // إرسال طلب إلى خادم الأتمتة
-        const response = await fetch(`${this.API_URL}/automate`, {
+        const response = await fetch(`${apiUrl}/automate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

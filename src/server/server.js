@@ -3,18 +3,97 @@ const express = require('express');
 const puppeteer = require('puppeteer');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const port = process.env.PORT || 3001;
 
 // إضافة middleware
-app.use(cors());
-app.use(bodyParser.json());
+app.use(cors({
+  origin: '*', // السماح لجميع الأصول بالوصول (يمكن تقييده لبيئة الإنتاج)
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// إضافة مسار لصفحة ترحيبية بسيطة
+app.get('/', (req, res) => {
+  res.send(`
+    <html dir="rtl">
+      <head>
+        <title>خادم الأتمتة</title>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+          .container { max-width: 800px; margin: 0 auto; }
+          h1 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+          .success { color: green; }
+          pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+          .endpoint { margin: 20px 0; background: #f0f8ff; padding: 15px; border-radius: 5px; }
+          .note { background: #ffffd9; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>خادم الأتمتة يعمل! <span class="success">✓</span></h1>
+          <p>خادم الأتمتة يعمل بنجاح على المنفذ <strong>${port}</strong>.</p>
+          
+          <div class="endpoint">
+            <h3>نقاط النهاية المتاحة:</h3>
+            <ul>
+              <li><strong>GET /api/status</strong> - التحقق من حالة الخادم</li>
+              <li><strong>POST /api/automate</strong> - تنفيذ السيناريو باستخدام Puppeteer</li>
+            </ul>
+          </div>
+          
+          <div class="note">
+            <h3>ملاحظة:</h3>
+            <p>يجب أن يكون عنوان واجهة المستخدم في التطبيق الرئيسي مكونًا ليشير إلى:</p>
+            <pre>http://localhost:${port}/api</pre>
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+});
 
 // مسار للتأكد من أن الخادم يعمل
 app.get('/api/status', (req, res) => {
-  res.json({ status: 'running', message: 'خادم الأتمتة يعمل بنجاح' });
+  // إضافة معلومات النظام للمساعدة في التشخيص
+  const systemInfo = {
+    nodeVersion: process.version,
+    platform: process.platform,
+    memory: process.memoryUsage(),
+    uptime: process.uptime(),
+    cwd: process.cwd(),
+    env: process.env.NODE_ENV || 'development'
+  };
+  
+  res.json({ 
+    status: 'running', 
+    message: 'خادم الأتمتة يعمل بنجاح', 
+    time: new Date().toISOString(),
+    systemInfo
+  });
 });
+
+// التحقق من تثبيت Puppeteer
+const checkPuppeteer = async () => {
+  try {
+    const browser = await puppeteer.launch({ 
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      timeout: 10000 
+    });
+    await browser.close();
+    return true;
+  } catch (error) {
+    console.error('خطأ في تهيئة Puppeteer:', error.message);
+    return false;
+  }
+};
 
 // مسار لتنفيذ السيناريو باستخدام Puppeteer
 app.post('/api/automate', async (req, res) => {
@@ -30,8 +109,23 @@ app.post('/api/automate', async (req, res) => {
   console.log(`بدء أتمتة العملية على: ${projectUrl}`);
   console.log(`عدد الإجراءات: ${actions.length}`);
 
+  // التحقق من تثبيت Puppeteer قبل المتابعة
+  const puppeteerReady = await checkPuppeteer();
+  if (!puppeteerReady) {
+    return res.status(500).json({
+      success: false,
+      message: 'فشل في تهيئة Puppeteer. تأكد من تثبيت جميع الاعتماديات.'
+    });
+  }
+
   let browser;
   try {
+    // إنشاء دليل للقطات الشاشة إذا لم يكن موجودًا
+    const screenshotDir = path.join(__dirname, 'screenshots');
+    if (!fs.existsSync(screenshotDir)) {
+      fs.mkdirSync(screenshotDir, { recursive: true });
+    }
+
     // بدء متصفح جديد
     browser = await puppeteer.launch({
       headless: 'new', // استخدام وضع headless الجديد لتحسين الأداء والتوافق
@@ -86,6 +180,9 @@ app.post('/api/automate', async (req, res) => {
         if (delay && !isNaN(parseInt(delay))) {
           await page.waitForTimeout(parseInt(delay) * 1000);
         }
+        
+        // تسجيل الإجراء الحالي
+        console.log(`تنفيذ الإجراء: ${name || 'بلا اسم'} (${finder})`);
         
         // تحديد طريقة العثور على العنصر
         let element;
@@ -208,7 +305,9 @@ app.post('/api/automate', async (req, res) => {
     await page.waitForTimeout(2000);
     
     // التقاط لقطة شاشة
-    const screenshot = await page.screenshot({ type: 'png', encoding: 'base64' });
+    const screenshotPath = path.join(screenshotDir, `automation_${Date.now()}.png`);
+    await page.screenshot({ path: screenshotPath, type: 'png' });
+    const screenshot = fs.readFileSync(screenshotPath).toString('base64');
     
     // إغلاق المتصفح
     await browser.close();
@@ -236,7 +335,27 @@ app.post('/api/automate', async (req, res) => {
 
 // بدء تشغيل الخادم
 app.listen(port, () => {
-  console.log(`خادم الأتمتة يعمل على المنفذ ${port}`);
-  console.log(`للتحقق من عمل الخادم، افتح المتصفح على: http://localhost:${port}/api/status`);
-  console.log('لإيقاف الخادم، اضغط على: Ctrl+C');
+  console.log(`
+╭───────────────────────────────────────╮
+│                                       │
+│   خادم الأتمتة يعمل على المنفذ ${port}    │
+│                                       │
+│   للتحقق قم بزيارة:                   │
+│   http://localhost:${port}/api/status   │
+│                                       │
+│   لإيقاف الخادم اضغط: Ctrl+C          │
+│                                       │
+╰───────────────────────────────────────╯
+  `);
 });
+
+// التعامل مع الإغلاق الآمن
+process.on('SIGINT', async () => {
+  console.log('إيقاف خادم الأتمتة...');
+  process.exit(0);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('خطأ غير معالج:', error);
+});
+
