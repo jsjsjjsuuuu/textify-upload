@@ -56,14 +56,14 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
   });
   const [activeField, setActiveField] = useState<string | null>(null);
   const [mockFormId, setMockFormId] = useState<string | null>(null);
-  const [simulatorMode, setSimulatorMode] = useState<"preview" | "simulation">("preview");
+  const [simulatorMode, setSimulatorMode<"preview" | "simulation">("preview");
   const [showInstructions, setShowInstructions] = useState(true);
-  const [simulationSpeed, setSimulationSpeed] = useState<"slow" | "medium" | "fast">("medium");
+  const [simulationSpeed, setSimulationSpeed<"slow" | "medium" | "fast">("medium");
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const formRef = useRef<HTMLDivElement>(null);
   const [showEmbeddedForm, setShowEmbeddedForm] = useState(false);
-  const [simulationStatus, setSimulationStatus] = useState<"idle" | "running" | "completed" | "saved">("idle");
+  const [simulationStatus, setSimulationStatus<"idle" | "running" | "completed" | "saved">("idle");
   
   // بيانات المحاكاة الافتراضية
   const defaultItems: SimulationItem[] = [
@@ -808,3 +808,4 @@ const DataEntrySimulator: React.FC<DataSimulatorProps> = ({ storedCount, externa
       </CardContent>
       
       <CardFooter className="bg-muted/20 border-t flex justify-between items-center px-4 py-2 text-xs text-muted-foreground">
+        <span>عدد العناصر المتاحة:
