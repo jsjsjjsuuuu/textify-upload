@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { submitTextToApi } from "@/lib/apiService";
@@ -107,8 +108,7 @@ export const useSubmission = (updateImage: (id: string, fields: Partial<ImageDat
       console.log("بدء إرسال البيانات إلى:", options.url);
       console.log("البيانات المرسلة:", mappedData);
       
-      // طريقة 1: استخدام تقنية تحويل مسار الطلب (Proxy)
-      // نختبر أولاً استخدام طلب JSONP (مناسب للـ GET فقط)
+      // التحقق من نوع الطلب الذي سيتم إرساله
       if (options.method === 'GET') {
         // محاولة JSONP للتغلب على قيود CORS
         return await jsonpRequest(options.url, mappedData);
