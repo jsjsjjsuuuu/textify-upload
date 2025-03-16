@@ -10,3 +10,12 @@ export const formatElapsedTime = (timestamp: number): string => {
   if (seconds < 3600) return `${Math.floor(seconds / 60)} دقيقة`;
   return `${Math.floor(seconds / 3600)} ساعة`;
 };
+
+/**
+ * تنسيق الوقت الطويل
+ */
+export const formatDuration = (seconds: number): string => {
+  if (seconds < 60) return `${seconds} ثانية`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} دقيقة`;
+  return `${Math.floor(seconds / 3600)} ساعة`;
+};
