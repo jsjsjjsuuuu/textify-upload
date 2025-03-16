@@ -10,6 +10,7 @@ export interface AutomationConfig {
   projectName?: string;
   projectUrl: string;
   actions: AutomationAction[];
+  ipAddress?: string; // إضافة دعم لعنوان IP
 }
 
 /**

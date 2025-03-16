@@ -1,5 +1,6 @@
 
 import React from "react";
+import { RENDER_ALLOWED_IPS } from "@/utils/automationServerUrl";
 
 const ConfigurationTips: React.FC = () => {
   return (
@@ -12,6 +13,16 @@ const ConfigurationTips: React.FC = () => {
         <li>إذا كان الخادم المحلي يعمل بالفعل، تأكد من أنه يستمع على المنفذ 10000</li>
         <li className="font-semibold text-green-600">يتم الآن محاولة إعادة الاتصال تلقائيًا بخادم Render عند فقدان الاتصال</li>
       </ul>
+      
+      <div className="mt-4">
+        <h4 className="font-semibold mb-2">عناوين IP الصادرة الثابتة من Render:</h4>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          {RENDER_ALLOWED_IPS.map((ip, index) => (
+            <code key={index} className="bg-background px-1 py-0.5 rounded">{ip}</code>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">هذه العناوين مستخدمة في الطلبات للسماح بالوصول من خلال قيود الشبكة.</p>
+      </div>
     </div>
   );
 };

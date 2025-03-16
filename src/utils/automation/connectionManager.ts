@@ -2,7 +2,7 @@
 /**
  * إدارة الاتصال بخادم الأتمتة
  */
-import { getAutomationServerUrl, updateConnectionStatus, getLastConnectionStatus } from "../automationServerUrl";
+import { getAutomationServerUrl, updateConnectionStatus, getLastConnectionStatus, RENDER_ALLOWED_IPS } from "../automationServerUrl";
 import { toast } from "sonner";
 import { ServerStatusResponse } from "./types";
 
@@ -27,16 +27,21 @@ export class ConnectionManager {
     try {
       console.log("التحقق من حالة الخادم:", serverUrl);
       
-      // إنشاء طلب مع رأس مخصص لتجنب مشاكل CORS
+      // إنشاء طلب مع رؤوس مخصصة لتجنب مشاكل CORS
       const response = await fetch(`${serverUrl}/api/status`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
           'Accept': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': '*',
+          'X-Forwarded-For': RENDER_ALLOWED_IPS[0],
+          'X-Render-Client-IP': RENDER_ALLOWED_IPS[0]
         },
         mode: 'cors',
+        cache: 'no-cache',
         credentials: 'same-origin',
         signal: AbortSignal.timeout(15000)
       });
@@ -101,6 +106,12 @@ export class ConnectionManager {
         }
         
         console.log(`محاولة إعادة الاتصال #${connectionStatus.retryCount + 1}...`);
+        
+        // استخدام IP مختلف في كل محاولة إعادة اتصال
+        const rotatingIpIndex = connectionStatus.retryCount % RENDER_ALLOWED_IPS.length;
+        const currentIp = RENDER_ALLOWED_IPS[rotatingIpIndex];
+        console.log(`استخدام عنوان IP: ${currentIp} للمحاولة رقم ${connectionStatus.retryCount + 1}`);
+        
         const result = await this.checkServerStatus(false);
         
         if (callback) {

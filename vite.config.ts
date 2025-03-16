@@ -34,6 +34,8 @@ export default defineConfig(({ mode }) => {
             });
             proxy.on('proxyReq', (proxyReq, req, _res) => {
               console.log('طلب البروكسي:', req.method, req.url);
+              // إضافة رؤوس IP ثابتة للتواصل مع Render
+              proxyReq.setHeader('X-Forwarded-For', '44.226.145.213');
             });
             proxy.on('proxyRes', (proxyRes, req, _res) => {
               console.log('استجابة البروكسي:', proxyRes.statusCode, req.url);
