@@ -20,7 +20,14 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: automationServerUrl,
           changeOrigin: true,
+          secure: false, // السماح بالاتصالات غير الآمنة (هام للتطوير)
+          ws: true, // دعم WebSockets
           rewrite: (path) => path,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+          },
           configure: (proxy, _options) => {
             proxy.on('error', (err, _req, _res) => {
               console.log('وقع خطأ في البروكسي:', err);

@@ -14,8 +14,8 @@ interface AutomationConfig {
 export class AutomationService {
   private static isCheckingStatus = false;
   private static reconnectInterval: number | null = null;
-  private static maxRetries = 10; // زيادة عدد المحاولات
-  private static retryDelay = 5000; // تقليل التأخير إلى 5 ثوانٍ
+  private static maxRetries = 15; // زيادة عدد المحاولات
+  private static retryDelay = 10000; // زيادة وقت التأخير بين المحاولات
   
   /**
    * التحقق من حالة خادم الأتمتة
@@ -31,14 +31,20 @@ export class AutomationService {
     
     try {
       console.log("التحقق من حالة الخادم:", serverUrl);
+      
+      // إنشاء طلب مع رأس مخصص لتجنب مشاكل CORS
       const response = await fetch(`${serverUrl}/api/status`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Cache-Control': 'no-cache',
+          'Accept': 'application/json',
+          'Access-Control-Allow-Origin': '*'
         },
-        // تقليل مهلة الانتظار لمنع الانتظار الطويل
-        signal: AbortSignal.timeout(10000) // زيادة المهلة إلى 10 ثوانٍ للسماح بوقت استجابة أطول لـ Render
+        mode: 'cors', // إضافة وضع CORS صريح
+        credentials: 'same-origin',
+        // زيادة مهلة الانتظار
+        signal: AbortSignal.timeout(15000) // زيادة المهلة إلى 15 ثانية للسماح بوقت استجابة أطول
       });
       
       if (!response.ok) {
@@ -150,8 +156,11 @@ export class AutomationService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Access-Control-Allow-Origin': '*'
         },
+        mode: 'cors', // إضافة وضع CORS صريح
+        credentials: 'same-origin',
         body: JSON.stringify({
           projectUrl: config.projectUrl,
           actions: config.actions.map(action => ({
@@ -162,7 +171,7 @@ export class AutomationService {
           }))
         }),
         // إضافة خيار timeout لمنع الانتظار الطويل
-        signal: AbortSignal.timeout(60000) // توقف بعد دقيقة واحدة
+        signal: AbortSignal.timeout(90000) // زيادة مهلة الانتظار إلى 90 ثانية
       });
       
       if (!response.ok) {
