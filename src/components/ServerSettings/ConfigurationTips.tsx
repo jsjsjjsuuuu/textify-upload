@@ -15,7 +15,7 @@ const ConfigurationTips: React.FC = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <Alert variant="warning" className="bg-amber-50 border-amber-300">
+        <Alert variant="destructive" className="bg-amber-50 border-amber-300">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertTitle className="text-amber-800">حل مشكلة "Failed to fetch"</AlertTitle>
           <AlertDescription className="text-amber-700">
@@ -47,7 +47,13 @@ const ConfigurationTips: React.FC = () => {
             <h3 className="font-medium">إعدادات CORS المطلوبة في خادم الأتمتة</h3>
           </div>
           <p className="text-sm mb-2">
-            يجب تكوين خادم الأتمتة للسماح بطلبات CORS من تطبيقك:
+            يجب تكوين خادم الأتمتة للسماح بطلبات CORS من تطبيقك. تأكد من تثبيت مكتبة cors:
+          </p>
+          <div className="bg-slate-800 text-white p-3 rounded-md font-mono text-xs overflow-x-auto" dir="ltr">
+            <pre>npm install cors</pre>
+          </div>
+          <p className="text-sm mt-3 mb-2">
+            ثم قم بإضافة التكوين التالي في ملف الخادم:
           </p>
           <div className="bg-muted p-3 rounded-md font-mono text-xs overflow-x-auto" dir="ltr">
             <pre>{`
@@ -116,6 +122,19 @@ app.use(cors({
           <p className="text-sm mt-2">
             هذه الرؤوس تساعد في تجاوز مشكلات CORS وتأكيد هوية الطلب للخادم.
           </p>
+        </div>
+        
+        <div className="space-y-2 p-4 bg-blue-50 border border-blue-200 rounded-md">
+          <h3 className="font-medium text-blue-800">إستراتيجية تبديل IP في حالة فشل الاتصال</h3>
+          <p className="text-sm text-blue-700">
+            في حالة استمرار مشاكل الاتصال، يمكنك تجربة النقاط التالية:
+          </p>
+          <ul className="text-sm text-blue-700 mr-6 list-disc list-inside space-y-1">
+            <li>تأكد من تفعيل خيار إعادة الاتصال التلقائي في صفحة إعدادات الخادم.</li>
+            <li>قم بإعادة تشغيل خادم الأتمتة وتحقق من أنه يعمل بشكل صحيح.</li>
+            <li>تحقق من إعدادات DNS وقابلية الوصول للخادم.</li>
+            <li>تأكد من أن عناوين IP الثابتة لخادم Render مسموح بها في إعدادات الأمان لخادمك.</li>
+          </ul>
         </div>
       </CardContent>
     </Card>
