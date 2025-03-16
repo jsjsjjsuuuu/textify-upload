@@ -3,6 +3,11 @@ import { GeminiExtractParams, GeminiRequest, GeminiResponse } from "./types";
 import { ApiResult } from "../apiService";
 import { parseGeminiResponse } from "./parsers";
 import { getEnhancedExtractionPrompt, getBasicExtractionPrompt } from "./prompts";
+import { 
+  createFetchOptions, 
+  fetchWithRetry, 
+  getConnectionTimeout 
+} from "@/utils/automationServerUrl";
 
 /**
  * استخراج البيانات من الصور باستخدام Gemini API
@@ -69,25 +74,21 @@ export async function extractDataWithGemini({
     
     console.log("Sending request to Gemini API endpoint:", endpoint);
     
-    const response = await fetch(`${endpoint}?key=${apiKey}`, {
-      method: "POST",
-      headers: {
+    // إنشاء خيارات الطلب مع رؤوس مخصصة
+    const fetchOptions = createFetchOptions(
+      "POST", 
+      requestBody, 
+      {
         "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody)
-    });
-
+        "X-Goog-Api-Key": apiKey
+      }
+    );
+    
+    // استخدام fetchWithRetry بدلاً من fetch العادي
+    const response = await fetchWithRetry(`${endpoint}?key=${apiKey}`, fetchOptions, 3);
+    
     console.log("Gemini API Response status:", response.status);
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("خطأ في استجابة Gemini API:", errorData);
-      return {
-        success: false,
-        message: `فشل في الاتصال بـ Gemini API: ${errorData.error?.message || response.statusText}`
-      };
-    }
-
     const data: GeminiResponse = await response.json();
     console.log("Gemini API Response data:", JSON.stringify(data).substring(0, 200) + "...");
     
@@ -154,12 +155,11 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
 
   try {
     const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-    const response = await fetch(`${endpoint}?key=${apiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    
+    // إنشاء خيارات الطلب مع رؤوس مخصصة
+    const fetchOptions = createFetchOptions(
+      "POST", 
+      {
         contents: [
           {
             parts: [
@@ -171,17 +171,15 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
           temperature: 0.2,
           maxOutputTokens: 128
         }
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("خطأ في اختبار اتصال Gemini API:", errorData);
-      return {
-        success: false,
-        message: `فشل في الاتصال بـ Gemini API: ${errorData.error?.message || response.statusText}`
-      };
-    }
+      }, 
+      {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey
+      }
+    );
+    
+    // استخدام fetchWithRetry بدلاً من fetch العادي
+    const response = await fetchWithRetry(`${endpoint}?key=${apiKey}`, fetchOptions, 3);
 
     return {
       success: true,

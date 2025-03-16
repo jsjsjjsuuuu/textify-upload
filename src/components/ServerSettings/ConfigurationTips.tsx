@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RENDER_ALLOWED_IPS } from "@/utils/automationServerUrl";
-import { AlertTriangle, Server, Shield, Wifi } from "lucide-react";
+import { AlertTriangle, Server, Shield, Wifi, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const ConfigurationTips: React.FC = () => {
@@ -73,6 +73,24 @@ app.use(cors({
   maxAge: 86400
 }));
             `}</pre>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5 text-rose-600" />
+            <h3 className="font-medium">آلية إعادة المحاولة التلقائية وتبديل IP</h3>
+          </div>
+          <p className="text-sm mb-2">
+            تم تطبيق آلية ذكية لإعادة المحاولة التلقائية مع تبديل عناوين IP لزيادة فرص نجاح الاتصال:
+          </p>
+          <div className="bg-rose-50 p-3 rounded-md">
+            <ul className="text-sm space-y-2 list-disc list-inside">
+              <li>عند فشل الاتصال، يقوم النظام تلقائيًا بتبديل عنوان IP والمحاولة مرة أخرى</li>
+              <li>يتم إجراء حتى 3 محاولات مع تأخير تصاعدي بينها</li>
+              <li>يتم تسجيل جميع المحاولات في السجلات (Logs) لتسهيل تتبع المشكلات</li>
+              <li>يمكن ضبط مهلة الاتصال (timeout) من خلال وظيفة <code className="text-xs bg-rose-100 px-1 rounded">setConnectionTimeout</code></li>
+            </ul>
           </div>
         </div>
         

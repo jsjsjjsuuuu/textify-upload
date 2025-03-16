@@ -28,7 +28,8 @@ let lastConnectionStatus = {
   isConnected: false,
   lastChecked: 0,
   retryCount: 0,
-  lastUsedIp: RENDER_ALLOWED_IPS[0]
+  lastUsedIp: RENDER_ALLOWED_IPS[0],
+  timeoutMs: 10000 // إضافة مهلة زمنية افتراضية للطلبات
 };
 
 /**
@@ -39,7 +40,8 @@ export const updateConnectionStatus = (isConnected: boolean, usedIp?: string): v
     isConnected,
     lastChecked: Date.now(),
     retryCount: isConnected ? 0 : lastConnectionStatus.retryCount + 1,
-    lastUsedIp: usedIp || lastConnectionStatus.lastUsedIp
+    lastUsedIp: usedIp || lastConnectionStatus.lastUsedIp,
+    timeoutMs: lastConnectionStatus.timeoutMs
   };
   
   // تسجيل حالة الاتصال للتصحيح
@@ -69,7 +71,26 @@ export const getNextIp = (): string => {
 };
 
 /**
- * إنشاء رؤوس HTTP أساسية للطلبات
+ * ضبط مهلة الاتصال (بالميلي ثانية)
+ */
+export const setConnectionTimeout = (timeoutMs: number): void => {
+  if (timeoutMs >= 5000 && timeoutMs <= 60000) {
+    lastConnectionStatus.timeoutMs = timeoutMs;
+    console.log(`تم ضبط مهلة الاتصال على ${timeoutMs} ميلي ثانية`);
+  } else {
+    console.warn("مهلة الاتصال يجب أن تكون بين 5000 و 60000 ميلي ثانية");
+  }
+};
+
+/**
+ * الحصول على مهلة الاتصال الحالية
+ */
+export const getConnectionTimeout = (): number => {
+  return lastConnectionStatus.timeoutMs;
+};
+
+/**
+ * إنشاء رؤوس HTTP أساسية للطلبات مع تحسينات للتوافق مع خادم Render
  */
 export const createBaseHeaders = (customIp?: string): Record<string, string> => {
   const ip = customIp || lastConnectionStatus.lastUsedIp || RENDER_ALLOWED_IPS[0];
@@ -87,6 +108,37 @@ export const createBaseHeaders = (customIp?: string): Record<string, string> => 
     'X-Render-Client-IP': ip,
     'Origin': CLOUD_AUTOMATION_SERVER,
     'Referer': CLOUD_AUTOMATION_SERVER
+  };
+};
+
+/**
+ * إنشاء خيارات الطلب مع إعدادات زمنية وإلغاء
+ */
+export const createFetchOptions = (
+  method: string = 'GET', 
+  body?: any, 
+  customHeaders?: Record<string, string>,
+  customIp?: string
+): RequestInit => {
+  const controller = new AbortController();
+  const signal = controller.signal;
+  
+  // إلغاء الطلب بعد المهلة المحددة
+  setTimeout(() => {
+    controller.abort();
+  }, lastConnectionStatus.timeoutMs);
+  
+  return {
+    method,
+    headers: {
+      ...createBaseHeaders(customIp),
+      ...(customHeaders || {})
+    },
+    body: body ? JSON.stringify(body) : undefined,
+    mode: 'cors',
+    credentials: 'omit',
+    signal,
+    cache: 'no-store'
   };
 };
 
@@ -144,4 +196,65 @@ export const isValidServerUrl = (url: string): boolean => {
   } catch (error) {
     return false;
   }
+};
+
+/**
+ * إجراء طلب API مع محاولات إعادة الاتصال التلقائية وتبديل IP
+ */
+export const fetchWithRetry = async (
+  endpoint: string, 
+  options: RequestInit, 
+  maxRetries: number = 3
+): Promise<Response> => {
+  let currentRetry = 0;
+  let lastError: Error | null = null;
+  
+  while (currentRetry < maxRetries) {
+    try {
+      // إذا كانت هذه إعادة محاولة، قم بتبديل عنوان IP
+      if (currentRetry > 0) {
+        const nextIp = getNextIp();
+        console.log(`إعادة المحاولة ${currentRetry}/${maxRetries} باستخدام IP: ${nextIp}`);
+        
+        // تحديث الرؤوس مع عنوان IP الجديد
+        if (options.headers) {
+          const headers = options.headers as Record<string, string>;
+          headers['X-Forwarded-For'] = nextIp;
+          headers['X-Render-Client-IP'] = nextIp;
+        }
+        
+        // تحديث حالة الاتصال
+        updateConnectionStatus(false, nextIp);
+      }
+      
+      const response = await fetch(endpoint, options);
+      
+      if (response.ok) {
+        // تحديث حالة الاتصال في حالة النجاح
+        updateConnectionStatus(true, (options.headers as Record<string, string>)['X-Forwarded-For']);
+        return response;
+      } else {
+        // معالجة استجابات الخطأ HTTP
+        const errorText = await response.text();
+        lastError = new Error(`HTTP error ${response.status}: ${errorText}`);
+        console.error(`فشل الطلب (${response.status}):`, errorText);
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.error(`خطأ في الطلب (محاولة ${currentRetry + 1}/${maxRetries}):`, error);
+    }
+    
+    // زيادة عداد المحاولة
+    currentRetry++;
+    
+    // انتظار قبل إعادة المحاولة التالية (200ms * رقم المحاولة)
+    if (currentRetry < maxRetries) {
+      const delayMs = 200 * currentRetry;
+      console.log(`الانتظار ${delayMs}ms قبل إعادة المحاولة التالية...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  
+  // إذا وصلنا إلى هنا، فقد فشلت جميع المحاولات
+  throw lastError || new Error('فشلت جميع محاولات الاتصال');
 };
