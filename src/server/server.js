@@ -1,15 +1,9 @@
 
-import express from 'express';
-import puppeteer from 'puppeteer';
-import cors from 'cors';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-// الحصول على المسار الحالي بطريقة متوافقة مع ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const express = require('express');
+const puppeteer = require('puppeteer');
+const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const port = process.env.PORT || 3001;
