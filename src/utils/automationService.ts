@@ -23,7 +23,9 @@ export class AutomationService {
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache'
-        }
+        },
+        // إضافة خيار timeout لمنع الانتظار الطويل
+        signal: AbortSignal.timeout(5000) // توقف بعد 5 ثوانٍ
       });
       
       if (!response.ok) {
@@ -57,7 +59,9 @@ export class AutomationService {
             value: action.value,
             delay: action.delay
           }))
-        })
+        }),
+        // إضافة خيار timeout لمنع الانتظار الطويل
+        signal: AbortSignal.timeout(60000) // توقف بعد دقيقة واحدة
       });
       
       if (!response.ok) {

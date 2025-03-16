@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { 
   Trash, Plus, MoreHorizontal, Repeat, ArrowDownUp, 
-  PlayCircle, Download, Copy, AlertCircle
+  PlayCircle, Download, Copy, AlertCircle, CheckCircle2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AutomationService } from "@/utils/automationService";
@@ -52,6 +53,7 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
   const [showResultsDialog, setShowResultsDialog] = useState(false);
   const [automationProgress, setAutomationProgress] = useState(0);
   const [serverStatus, setServerStatus] = useState<{ status: string; message: string } | null>(null);
+  const [offlineMode, setOfflineMode] = useState(false);
   const { toast } = useToast();
 
   // التحقق من حالة الخادم عند تحميل المكون
@@ -64,6 +66,7 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
     try {
       const status = await AutomationService.checkServerStatus();
       setServerStatus(status);
+      setOfflineMode(false);
       if (status.status === 'running') {
         toast({
           title: "خادم الأتمتة متصل",
@@ -81,15 +84,16 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
         status: 'error',
         message: 'فشل الاتصال بخادم الأتمتة'
       });
+      
       toast({
         title: "خطأ في الاتصال",
-        description: "تعذر الاتصال بخادم الأتمتة. تأكد من تشغيل الخادم المحلي.",
+        description: "تعذر الاتصال بخادم الأتمتة. تم تفعيل الوضع التجريبي.",
         variant: "destructive"
       });
     }
   };
 
-  // تشغيل الأتمتة مع Puppeteer
+  // تشغيل الأتمتة مع Puppeteer أو في الوضع التجريبي
   const runAutomation = async () => {
     if (isRunningAutomation) return;
     
@@ -126,8 +130,38 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
       
       setAutomationProgress(30);
       
-      // تشغيل الأتمتة
-      const result = await AutomationService.runAutomation(config);
+      // تنفيذ الأتمتة على الخادم أو محاكاة في وضع غير متصل
+      let result;
+      
+      if ((serverStatus?.status === 'running' && !offlineMode)) {
+        // استخدام خادم الأتمتة
+        result = await AutomationService.runAutomation(config);
+      } else {
+        // محاكاة الأتمتة في وضع غير متصل (التجريبي)
+        setAutomationProgress(50);
+        
+        // محاكاة تأخير لجعل التجربة واقعية
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        setAutomationProgress(70);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // إنشاء نتائج محاكاة
+        result = {
+          success: true,
+          message: "تم تنفيذ المحاكاة بنجاح (وضع غير متصل)",
+          results: actions.map(action => ({
+            name: action.name || "بلا اسم",
+            success: Math.random() > 0.1, // 90% فرصة للنجاح
+            message: Math.random() > 0.1 ? "تم تنفيذ الإجراء بنجاح" : "حدثت مشكلة في تنفيذ الإجراء"
+          })),
+          // صورة مزيفة للعرض في وضع غير متصل
+          screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAAET0lEQVR4nO3UQREAAAjDMOZf9DDBwQeSVsAHJiuAwE8BYBKWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlguLbsATrKqz7CAAAAAElFTkSuQmCC"
+        };
+        
+        // تحديث حالة الوضع غير المتصل
+        setOfflineMode(true);
+      }
       
       setAutomationProgress(100);
       setAutomationResults(result);
@@ -148,11 +182,32 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
       }
     } catch (error) {
       console.error("خطأ في تنفيذ الأتمتة:", error);
+      
+      // الانتقال تلقائيًا إلى وضع المحاكاة عند حدوث خطأ
+      setOfflineMode(true);
+      
+      // إنشاء نتائج محاكاة في حالة الخطأ
+      const simulatedResult = {
+        success: true,
+        message: "تم تنفيذ المحاكاة بنجاح (وضع تجريبي)",
+        results: actions.map(action => ({
+          name: action.name || "بلا اسم",
+          success: true,
+          message: "تم تنفيذ الإجراء بنجاح (محاكاة)"
+        })),
+        screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAAET0lEQVR4nO3UQREAAAjDMOZf9DDBwQeSVsAHJiuAwE8BYBKWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlguLbsATrKqz7CAAAAAElFTkSuQmCC"
+      };
+      
+      setAutomationProgress(100);
+      setAutomationResults(simulatedResult);
+      
       toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء تنفيذ الأتمتة. تأكد من تشغيل خادم الأتمتة المحلي.",
-        variant: "destructive"
+        title: "تم التشغيل في الوضع التجريبي",
+        description: "تعذر الاتصال بالخادم. تم تنفيذ المحاكاة بنجاح.",
       });
+      
+      // عرض نتائج المحاكاة
+      setShowResultsDialog(true);
     } finally {
       setIsRunningAutomation(false);
     }
@@ -374,11 +429,28 @@ if (window.location.href !== config.projectUrl) {
           </div>
         </CardTitle>
         
-        {serverStatus && serverStatus.status !== 'running' && (
+        {offlineMode && (
+          <Alert className="mt-4 bg-yellow-50 border-yellow-200">
+            <CheckCircle2 className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-yellow-700">
+              الوضع التجريبي نشط - سيتم محاكاة العمليات بدون الحاجة للاتصال بالخادم
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {serverStatus && serverStatus.status !== 'running' && !offlineMode && (
           <Alert variant="destructive" className="mt-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               خادم الأتمتة غير متصل. يُرجى تشغيل الخادم المحلي باستخدام الأمر: <code>node src/server/server.js</code>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 ml-auto mr-2 block bg-white"
+                onClick={() => setOfflineMode(true)}
+              >
+                استخدام الوضع التجريبي
+              </Button>
             </AlertDescription>
           </Alert>
         )}
@@ -414,10 +486,10 @@ if (window.location.href !== config.projectUrl) {
               variant="outline" 
               size="sm"
               onClick={runAutomation}
-              disabled={isRunningAutomation || serverStatus?.status !== 'running'}
+              disabled={isRunningAutomation}
             >
               <PlayCircle className="h-4 w-4 ml-1" />
-              تشغيل الأتمتة
+              {offlineMode ? "تشغيل المحاكاة" : "تشغيل الأتمتة"}
             </Button>
             <Button variant="outline" size="sm" onClick={addNewAction}>
               <Plus className="h-4 w-4 ml-1" />
@@ -564,7 +636,7 @@ if (window.location.href !== config.projectUrl) {
       <Dialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>نتائج التشغيل الآلي</DialogTitle>
+            <DialogTitle>نتائج التشغيل الآلي {offlineMode ? "(الوضع التجريبي)" : ""}</DialogTitle>
           </DialogHeader>
           
           {automationResults && (
@@ -616,13 +688,35 @@ if (window.location.href !== config.projectUrl) {
                       className="w-full h-auto"
                     />
                   </div>
+                  {offlineMode && (
+                    <p className="text-xs text-muted-foreground mt-1 text-center">
+                      (صورة توضيحية في الوضع التجريبي)
+                    </p>
+                  )}
                 </div>
               )}
+              
+              <Alert className={offlineMode ? "bg-yellow-50 border-yellow-200" : "bg-green-50 border-green-200"}>
+                <CheckCircle2 className={`h-4 w-4 ${offlineMode ? "text-yellow-600" : "text-green-600"}`} />
+                <AlertDescription className={offlineMode ? "text-yellow-700" : "text-green-700"}>
+                  {offlineMode 
+                    ? "تم تنفيذ المحاكاة بنجاح في الوضع التجريبي. لتشغيل الأتمتة الحقيقية، يرجى تشغيل خادم الأتمتة." 
+                    : "تمت إضافة البيانات بنجاح من خلال خادم الأتمتة."}
+                </AlertDescription>
+              </Alert>
             </div>
           )}
           
           <DialogFooter>
             <Button onClick={() => setShowResultsDialog(false)}>إغلاق</Button>
+            {offlineMode && (
+              <Button variant="outline" onClick={() => {
+                setOfflineMode(false);
+                checkServerStatus();
+              }}>
+                محاولة الاتصال بالخادم
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
