@@ -15,7 +15,7 @@ export class AutomationService {
   private static isCheckingStatus = false;
   private static reconnectInterval: number | null = null;
   private static maxRetries = 5;
-  private static retryDelay = 10000; // 10 ثوانٍ
+  private static retryDelay = 5000; // تقليل التأخير إلى 5 ثوانٍ
   
   /**
    * التحقق من حالة خادم الأتمتة
@@ -37,8 +37,8 @@ export class AutomationService {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache'
         },
-        // إضافة خيار timeout لمنع الانتظار الطويل
-        signal: AbortSignal.timeout(10000) // توقف بعد 10 ثوانٍ
+        // تقليل مهلة الانتظار لمنع الانتظار الطويل
+        signal: AbortSignal.timeout(5000) // توقف بعد 5 ثوانٍ
       });
       
       if (!response.ok) {
