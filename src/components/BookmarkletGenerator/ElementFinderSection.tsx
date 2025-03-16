@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -161,8 +162,8 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
             success: Math.random() > 0.1, // 90% فرصة للنجاح
             message: Math.random() > 0.1 ? "تم تنفيذ الإجراء بنجاح" : "حدثت مشكلة في تنفيذ الإجراء"
           })),
-          // صورة مزيفة للعرض في وضع غير متصل
-          screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAAET0lEQVR4nO3UQREAAAjDMOZf9DDBwQeSVsAHJiuAwE8BYBKWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlguLbsATrKqz7CAAAAAElFTkSuQmCC"
+          // صورة مزيفة للعرض في وضع غير متصل - تقصير للمساحة
+          screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
         };
         
         // تحديث حالة الوضع غير المتصل
@@ -201,7 +202,8 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
           success: true,
           message: "تم تنفيذ الإجراء بنجاح (محاكاة)"
         })),
-        screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAAET0lEQVR4nO3UQREAAAjDMOZf9DDBwQeSVsAHJiuAwE8BYBKWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlguLbsATrKqz7CAAAAAElFTkSuQmCC
+        // صورة مزيفة للعرض في وضع غير متصل - تقصير للمساحة
+        screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
       };
       
       setAutomationProgress(100);
@@ -656,4 +658,61 @@ if (window.location.href !== config.projectUrl) {
               
               {automationResults.results && (
                 <div>
-                  <h4 className="text-sm font-medium mb
+                  <h4 className="text-sm font-medium mb-2">تفاصيل الإجراءات</h4>
+                  <div className="border rounded-md overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50">
+                        <tr className="text-right border-b">
+                          <th className="px-4 py-2 font-medium">الإجراء</th>
+                          <th className="px-4 py-2 font-medium">الحالة</th>
+                          <th className="px-4 py-2 font-medium">الرسالة</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {automationResults.results.map((result: any, index: number) => (
+                          <tr key={index} className="border-b last:border-b-0">
+                            <td className="px-4 py-2 font-medium">{result.name}</td>
+                            <td className="px-4 py-2">
+                              <Badge variant={result.success ? "success" : "destructive"} className="ml-2">
+                                {result.success ? "نجاح" : "فشل"}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-2">{result.message}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              
+              {automationResults.screenshot && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">لقطة شاشة</h4>
+                  <div className="border rounded-md p-2 bg-slate-50">
+                    <img 
+                      src={automationResults.screenshot} 
+                      alt="لقطة شاشة نتيجة التنفيذ" 
+                      className="max-w-full"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowResultsDialog(false)}
+                >
+                  إغلاق
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+};
+
+export default ElementFinderSection;
