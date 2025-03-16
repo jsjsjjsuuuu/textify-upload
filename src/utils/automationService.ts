@@ -3,6 +3,7 @@
  * خدمة للتفاعل مع خادم الأتمتة
  */
 import { getAutomationServerUrl } from "./automationServerUrl";
+import { toast } from "sonner";
 
 interface AutomationConfig {
   projectName?: string;
@@ -18,6 +19,7 @@ export class AutomationService {
     const serverUrl = getAutomationServerUrl();
     
     try {
+      console.log("التحقق من حالة الخادم:", serverUrl);
       const response = await fetch(`${serverUrl}/api/status`, {
         method: 'GET',
         headers: {
@@ -32,7 +34,9 @@ export class AutomationService {
         throw new Error(`فشل الاتصال: ${response.status} ${response.statusText}`);
       }
       
-      return await response.json();
+      const result = await response.json();
+      console.log("نتيجة التحقق من حالة الخادم:", result);
+      return result;
     } catch (error) {
       console.error("خطأ في التحقق من حالة الخادم:", error);
       throw error;
@@ -46,10 +50,22 @@ export class AutomationService {
     const serverUrl = getAutomationServerUrl();
     
     try {
+      // إظهار رسالة توضح أن الأتمتة قيد التنفيذ
+      toast.info("جاري تنفيذ سيناريو الأتمتة...", {
+        duration: 3000,
+      });
+      
+      console.log("بدء تنفيذ الأتمتة على الخادم:", serverUrl);
+      console.log("بيانات الطلب:", {
+        projectUrl: config.projectUrl,
+        actionsCount: config.actions.length
+      });
+      
       const response = await fetch(`${serverUrl}/api/automate`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           projectUrl: config.projectUrl,
@@ -65,13 +81,50 @@ export class AutomationService {
       });
       
       if (!response.ok) {
-        throw new Error(`فشل في تنفيذ الأتمتة: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`فشل في تنفيذ الأتمتة: ${response.status} ${response.statusText} - ${errorText}`);
       }
       
-      return await response.json();
+      const result = await response.json();
+      console.log("نتيجة تنفيذ الأتمتة:", result);
+      
+      // إظهار رسالة نجاح
+      if (result.success) {
+        toast.success("تم تنفيذ سيناريو الأتمتة بنجاح!", {
+          duration: 5000,
+        });
+      } else {
+        toast.error(`فشل في تنفيذ الأتمتة: ${result.message}`, {
+          duration: 5000,
+        });
+      }
+      
+      return result;
     } catch (error) {
       console.error("خطأ في تنفيذ الأتمتة:", error);
+      
+      // إظهار رسالة خطأ
+      toast.error(`حدث خطأ أثناء تنفيذ الأتمتة: ${error.message}`, {
+        duration: 5000,
+      });
+      
       throw error;
+    }
+  }
+  
+  /**
+   * التحقق من اتصال الخادم قبل تشغيل الأتمتة
+   */
+  static async validateAndRunAutomation(config: AutomationConfig) {
+    try {
+      // التحقق من حالة الخادم أولاً
+      await this.checkServerStatus();
+      
+      // إذا نجح التحقق، نقوم بتشغيل الأتمتة
+      return await this.runAutomation(config);
+    } catch (error) {
+      console.error("فشل التحقق من الخادم:", error);
+      throw new Error(`تعذر الاتصال بخادم الأتمتة: ${error.message}`);
     }
   }
 }

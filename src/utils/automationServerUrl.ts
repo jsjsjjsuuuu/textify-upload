@@ -20,11 +20,14 @@ export const getAutomationServerUrl = (): string => {
   // التحقق من وجود تخطي في localStorage
   const overrideUrl = localStorage.getItem('automation_server_url');
   if (overrideUrl) {
+    console.log("استخدام عنوان URL مخصص من localStorage:", overrideUrl);
     return overrideUrl;
   }
   
   // استخدام الخادم السحابي في الإنتاج، والمحلي في التطوير
-  return isProduction ? CLOUD_AUTOMATION_SERVER : LOCAL_AUTOMATION_SERVER;
+  const serverUrl = isProduction ? CLOUD_AUTOMATION_SERVER : LOCAL_AUTOMATION_SERVER;
+  console.log("استخدام عنوان خادم الأتمتة:", serverUrl, "isProduction:", isProduction);
+  return serverUrl;
 };
 
 /**
@@ -32,8 +35,10 @@ export const getAutomationServerUrl = (): string => {
  */
 export const setCustomAutomationServerUrl = (url: string): void => {
   if (url && url.trim() !== '') {
+    console.log("تعيين عنوان URL مخصص:", url);
     localStorage.setItem('automation_server_url', url.trim());
   } else {
+    console.log("إزالة عنوان URL المخصص");
     localStorage.removeItem('automation_server_url');
   }
 };
@@ -42,5 +47,18 @@ export const setCustomAutomationServerUrl = (url: string): void => {
  * إعادة تعيين عنوان URL لخادم الأتمتة إلى القيمة الافتراضية
  */
 export const resetAutomationServerUrl = (): void => {
+  console.log("إعادة تعيين عنوان URL لخادم الأتمتة إلى القيمة الافتراضية");
   localStorage.removeItem('automation_server_url');
+};
+
+/**
+ * التحقق من صلاحية عنوان URL لخادم الأتمتة
+ */
+export const isValidServerUrl = (url: string): boolean => {
+  try {
+    new URL(url);
+    return true;
+  } catch (error) {
+    return false;
+  }
 };

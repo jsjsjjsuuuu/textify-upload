@@ -18,6 +18,18 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: automationServerUrl,
           changeOrigin: true,
+          rewrite: (path) => path,
+          configure: (proxy, _options) => {
+            proxy.on('error', (err, _req, _res) => {
+              console.log('وقع خطأ في البروكسي:', err);
+            });
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              console.log('طلب البروكسي:', req.method, req.url);
+            });
+            proxy.on('proxyRes', (proxyRes, req, _res) => {
+              console.log('استجابة البروكسي:', proxyRes.statusCode, req.url);
+            });
+          }
         }
       }
     },
