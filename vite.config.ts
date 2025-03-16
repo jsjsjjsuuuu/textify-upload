@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       host: "::",
-      port: process.env.PORT ? parseInt(process.env.PORT) : 8080,
+      port: 8080, // استخدام المنفذ 8080 بشكل ثابت للتطوير المحلي
       proxy: {
         // إعادة توجيه طلبات API الأتمتة للخادم المناسب
         '/api': {

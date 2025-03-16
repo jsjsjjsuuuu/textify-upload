@@ -1,9 +1,14 @@
 
-const express = require('express');
-const puppeteer = require('puppeteer');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
+import express from 'express';
+import puppeteer from 'puppeteer';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+// تحويل __dirname في ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3001;
