@@ -2,6 +2,8 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RENDER_ALLOWED_IPS } from "@/utils/automationServerUrl";
+import { AlertTriangle, Server, Shield, Wifi } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const ConfigurationTips: React.FC = () => {
   return (
@@ -12,13 +14,25 @@ const ConfigurationTips: React.FC = () => {
           معلومات حول كيفية ضمان الاتصال الصحيح بخادم Render
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <h3 className="font-medium mb-2">عناوين IP الصادرة الثابتة من Render</h3>
+      <CardContent className="space-y-6">
+        <Alert variant="warning" className="bg-amber-50 border-amber-300">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-800">حل مشكلة "Failed to fetch"</AlertTitle>
+          <AlertDescription className="text-amber-700">
+            إذا كنت تواجه خطأ "Failed to fetch"، فذلك يشير إلى وجود مشكلة في الاتصال بخادم Render. 
+            اتبع الإرشادات أدناه لحل المشكلة.
+          </AlertDescription>
+        </Alert>
+        
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Server className="h-5 w-5 text-blue-600" />
+            <h3 className="font-medium">عناوين IP الصادرة الثابتة من Render</h3>
+          </div>
           <p className="text-sm mb-2">
             ستأتي طلبات الشبكة من خدمتك إلى الإنترنت العام من أحد عناوين IP التالية. تأكد من أن خادمك مكوّن لقبول هذه العناوين:
           </p>
-          <div className="bg-muted p-2 rounded-md">
+          <div className="bg-muted p-3 rounded-md">
             <ul className="text-sm font-mono">
               {RENDER_ALLOWED_IPS.map((ip, index) => (
                 <li key={index} className="mb-1">{ip}</li>
@@ -27,25 +41,80 @@ const ConfigurationTips: React.FC = () => {
           </div>
         </div>
         
-        <div>
-          <h3 className="font-medium mb-2">إرشادات للاتصال الناجح:</h3>
-          <ol className="text-sm space-y-2 list-decimal list-inside mr-4">
-            <li>تأكد من أن خادم الأتمتة يعمل ومتاح على الإنترنت.</li>
-            <li>إذا كنت تستخدم خادمًا محليًا، تأكد من تشغيله على المنفذ الصحيح (10000).</li>
-            <li>لاحظ أن النظام يستخدم تدوير عناوين IP تلقائيًا في حالة فشل الاتصال.</li>
-            <li>إذا استمرت مشاكل الاتصال، جرب تعيين عنوان URL مخصص يتجاوز إعدادات CORS.</li>
-            <li>تأكد من أن الجدار الناري أو إعدادات الأمان لا تمنع الاتصالات الخارجية.</li>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-green-600" />
+            <h3 className="font-medium">إعدادات CORS المطلوبة في خادم الأتمتة</h3>
+          </div>
+          <p className="text-sm mb-2">
+            يجب تكوين خادم الأتمتة للسماح بطلبات CORS من تطبيقك:
+          </p>
+          <div className="bg-muted p-3 rounded-md font-mono text-xs overflow-x-auto" dir="ltr">
+            <pre>{`
+// إعدادات CORS المطلوبة
+const cors = require('cors');
+app.use(cors({
+  origin: '*',  // يفضل تحديد نطاقك بدلاً من '*' في الإنتاج
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'X-Forwarded-For', 
+    'X-Render-Client-IP'
+  ],
+  credentials: true,
+  maxAge: 86400
+}));
+            `}</pre>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Wifi className="h-5 w-5 text-purple-600" />
+            <h3 className="font-medium">خطوات اختبار الاتصال وحل المشكلات</h3>
+          </div>
+          <ol className="text-sm space-y-3 list-decimal list-inside mr-4">
+            <li className="pb-2 border-b border-gray-100">
+              <span className="font-medium">تأكد من تشغيل خادم الأتمتة</span>
+              <p className="mt-1 mr-6 text-gray-600">تحقق من أن خادم الأتمتة يعمل ومتاح على الإنترنت. يمكنك التحقق من حالته عن طريق زيارة عنوان URL الخاص به مباشرة في المتصفح.</p>
+            </li>
+            <li className="pb-2 border-b border-gray-100">
+              <span className="font-medium">تحقق من جدار الحماية والشبكة</span>
+              <p className="mt-1 mr-6 text-gray-600">تأكد من أن الجدار الناري أو إعدادات الأمان لا تمنع الاتصالات من أو إلى عناوين IP لـ Render المذكورة أعلاه.</p>
+            </li>
+            <li className="pb-2 border-b border-gray-100">
+              <span className="font-medium">اختبر الطلبات باستخدام أداة مثل Postman</span>
+              <p className="mt-1 mr-6 text-gray-600">قم بإجراء طلبات اختبار إلى الخادم مع تضمين الرؤوس المطلوبة للتأكد من أنها تعمل بشكل صحيح.</p>
+            </li>
+            <li className="pb-2 border-b border-gray-100">
+              <span className="font-medium">فعّل تدوير عناوين IP</span>
+              <p className="mt-1 mr-6 text-gray-600">التطبيق يستخدم آلية تدوير عناوين IP تلقائيًا في حالة فشل الاتصال. تأكد من تفعيل وضع إعادة الاتصال التلقائي.</p>
+            </li>
+            <li className="pb-2 border-b border-gray-100">
+              <span className="font-medium">تحقق من سجلات الخادم</span>
+              <p className="mt-1 mr-6 text-gray-600">راجع سجلات خادم الأتمتة للبحث عن أية أخطاء أو مشكلات في معالجة الطلبات.</p>
+            </li>
           </ol>
         </div>
         
-        <div>
-          <h3 className="font-medium mb-2">لمطوري الخادم:</h3>
+        <div className="space-y-2">
+          <h3 className="font-medium mb-2">الرؤوس الإضافية المطلوبة:</h3>
           <p className="text-sm">
-            يجب أن يتم تكوين خادم الأتمتة للسماح بطلبات CORS وقبول الرؤوس المخصصة 
-            <code className="mx-1 px-1 bg-muted rounded">X-Forwarded-For</code>
-            و
-            <code className="mx-1 px-1 bg-muted rounded">X-Render-Client-IP</code>.
-            تأكد من تكوين قواعد الوصول لقبول عناوين IP الصادرة من Render.
+            يجب إرسال الرؤوس التالية مع كل طلب للخادم:
+          </p>
+          <div className="bg-muted p-3 rounded-md">
+            <ul className="text-sm font-mono space-y-1">
+              <li><span className="text-blue-600">X-Forwarded-For</span>: [عنوان IP من قائمة Render]</li>
+              <li><span className="text-blue-600">X-Render-Client-IP</span>: [نفس عنوان IP]</li>
+              <li><span className="text-blue-600">Origin</span>: [عنوان خادم Render]</li>
+              <li><span className="text-blue-600">Referer</span>: [عنوان خادم Render]</li>
+              <li><span className="text-blue-600">Access-Control-Allow-Origin</span>: *</li>
+            </ul>
+          </div>
+          <p className="text-sm mt-2">
+            هذه الرؤوس تساعد في تجاوز مشكلات CORS وتأكيد هوية الطلب للخادم.
           </p>
         </div>
       </CardContent>
