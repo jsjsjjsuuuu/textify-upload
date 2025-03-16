@@ -3,8 +3,9 @@
  * إدارة عنوان URL الخاص بخادم الأتمتة
  */
 
-// يمكن تغيير هذا العنوان إلى خادم الأتمتة السحابي الخاص بك بعد النشر
-const CLOUD_AUTOMATION_SERVER = 'https://your-railway-app-name.railway.app';
+// قم بتغيير هذا العنوان إلى عنوان تطبيقك على Railway بعد النشر
+// مثال: https://your-app-name.railway.app
+const CLOUD_AUTOMATION_SERVER = 'https://your-app-name.railway.app';
 
 // عنوان خادم الأتمتة المحلي
 const LOCAL_AUTOMATION_SERVER = 'http://localhost:3001';
