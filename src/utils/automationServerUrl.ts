@@ -3,9 +3,9 @@
  * إدارة عنوان URL الخاص بخادم الأتمتة
  */
 
-// قم بتغيير هذا العنوان إلى عنوان تطبيقك على Railway بعد النشر
-// مثال: https://your-app-name.railway.app
-const CLOUD_AUTOMATION_SERVER = 'https://your-app-name.railway.app';
+// قم بتغيير هذا العنوان إلى عنوان تطبيقك على Render بعد النشر
+// مثال: https://your-automation-app.onrender.com
+const CLOUD_AUTOMATION_SERVER = 'https://your-automation-app.onrender.com';
 
 // عنوان خادم الأتمتة المحلي
 const LOCAL_AUTOMATION_SERVER = 'http://localhost:3001';

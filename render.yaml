@@ -1,0 +1,31 @@
+
+services:
+  # خدمة الواجهة الأمامية
+  - type: web
+    name: automation-ui
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node src/server/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    healthCheckPath: /api/status
+    healthCheckTimeout: 5
+    autoDeploy: true
+
+    # إعدادات الموارد (النوع المجاني أو المدفوع)
+    plan: free # يمكن تغييره إلى starter أو standard حسب الاحتياج
+
+    # ضبط منطقة النشر (يمكن تغييرها حسب الموقع الجغرافي المفضل)
+    region: ohio # المناطق المتاحة: oregon, ohio, frankfurt, singapore
+
+# متغيرات عالمية مشتركة بين جميع الخدمات
+envVarGroups:
+  - name: automation-settings
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: NPM_VERSION
+        value: 9.x
