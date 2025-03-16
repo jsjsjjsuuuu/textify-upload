@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   getAutomationServerUrl, 
@@ -95,7 +94,7 @@ const ServerSettings = () => {
         <CardContent className="space-y-6">
           {/* عرض حالة الخادم */}
           {serverStatus === 'online' && (
-            <Alert variant="success" className="bg-green-50 border-green-300">
+            <Alert variant="default" className="bg-green-50 border-green-300">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertTitle className="text-green-800">الخادم متصل ومستجيب</AlertTitle>
               <AlertDescription className="text-green-700">
