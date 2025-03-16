@@ -10,7 +10,8 @@ export interface AutomationConfig {
   projectName?: string;
   projectUrl: string;
   actions: AutomationAction[];
-  ipAddress?: string; // إضافة دعم لعنوان IP
+  ipAddress?: string; // عنوان IP المستخدم للطلب
+  retryCount?: number; // عدد محاولات إعادة المحاولة
 }
 
 /**
@@ -30,6 +31,7 @@ export interface ServerStatusResponse {
   status: string;
   message: string;
   time: string;
+  clientIp?: string; // عنوان IP الذي تم اكتشافه بواسطة الخادم
   systemInfo?: {
     nodeVersion: string;
     platform: string;
@@ -46,4 +48,15 @@ export interface AutomationResponse {
   message: string;
   result?: any;
   error?: string;
+  clientIp?: string; // عنوان IP المستخدم
+}
+
+/**
+ * حالة الاتصال
+ */
+export interface ConnectionStatus {
+  isConnected: boolean;
+  lastChecked: number;
+  retryCount: number;
+  lastUsedIp: string;
 }

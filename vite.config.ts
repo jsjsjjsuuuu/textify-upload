@@ -11,6 +11,22 @@ export default defineConfig(({ mode }) => {
   
   console.log(`⚡️ الاتصال بخادم الأتمتة على: ${automationServerUrl}`);
   
+  // تدوير عناوين IP الثابتة لـ Render
+  const RENDER_IPS = [
+    '44.226.145.213',
+    '54.187.200.255',
+    '34.213.214.55',
+    '35.164.95.156',
+    '44.230.95.183',
+    '44.229.200.200'
+  ];
+  
+  // اختيار عنوان IP عشوائي من القائمة
+  const getRandomIp = () => {
+    const randomIndex = Math.floor(Math.random() * RENDER_IPS.length);
+    return RENDER_IPS[randomIndex];
+  };
+  
   return {
     server: {
       host: "::",
@@ -23,28 +39,37 @@ export default defineConfig(({ mode }) => {
           secure: false, // السماح بالاتصالات غير الآمنة (هام للتطوير)
           ws: true, // دعم WebSockets
           rewrite: (path) => path,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP',
-            'X-Forwarded-For': '44.226.145.213',
-            'X-Render-Client-IP': '44.226.145.213'
-          },
           configure: (proxy, _options) => {
             proxy.on('error', (err, _req, _res) => {
               console.log('وقع خطأ في البروكسي:', err);
             });
             proxy.on('proxyReq', (proxyReq, req, _res) => {
               console.log('طلب البروكسي:', req.method, req.url);
+              
               // إضافة رؤوس IP ثابتة للتواصل مع Render
-              proxyReq.setHeader('X-Forwarded-For', '44.226.145.213');
-              proxyReq.setHeader('X-Render-Client-IP', '44.226.145.213');
+              const selectedIp = getRandomIp();
+              console.log(`استخدام عنوان IP للبروكسي: ${selectedIp}`);
+              
+              proxyReq.setHeader('X-Forwarded-For', selectedIp);
+              proxyReq.setHeader('X-Render-Client-IP', selectedIp);
+              
               // إضافة رؤوس إضافية لتجنب مشاكل CORS
-              proxyReq.setHeader('Origin', 'https://textify-upload.onrender.com');
-              proxyReq.setHeader('Referer', 'https://textify-upload.onrender.com');
+              proxyReq.setHeader('Origin', automationServerUrl);
+              proxyReq.setHeader('Referer', automationServerUrl);
+              proxyReq.setHeader('Accept', 'application/json');
+              proxyReq.setHeader('Content-Type', 'application/json');
+              proxyReq.setHeader('Access-Control-Allow-Origin', '*');
+              proxyReq.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+              proxyReq.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+              proxyReq.setHeader('Access-Control-Max-Age', '86400');
             });
             proxy.on('proxyRes', (proxyRes, req, _res) => {
               console.log('استجابة البروكسي:', proxyRes.statusCode, req.url);
+              
+              // إضافة رؤوس CORS إلى الاستجابة
+              proxyRes.headers['Access-Control-Allow-Origin'] = '*';
+              proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+              proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With';
             });
           }
         }

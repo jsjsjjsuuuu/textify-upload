@@ -2,7 +2,14 @@
 /**
  * إدارة الاتصال بخادم الأتمتة
  */
-import { getAutomationServerUrl, updateConnectionStatus, getLastConnectionStatus, RENDER_ALLOWED_IPS } from "../automationServerUrl";
+import { 
+  getAutomationServerUrl, 
+  updateConnectionStatus, 
+  getLastConnectionStatus, 
+  RENDER_ALLOWED_IPS, 
+  getNextIp, 
+  createBaseHeaders 
+} from "../automationServerUrl";
 import { toast } from "sonner";
 import { ServerStatusResponse } from "./types";
 
@@ -11,16 +18,7 @@ export class ConnectionManager {
   private static reconnectInterval: number | null = null;
   private static maxRetries = 15;
   private static retryDelay = 10000;
-  private static currentIpIndex = 0;
-  
-  /**
-   * الحصول على عنوان IP القادم للمحاولة من القائمة الدورية
-   */
-  private static getNextIp(): string {
-    const ip = RENDER_ALLOWED_IPS[this.currentIpIndex];
-    this.currentIpIndex = (this.currentIpIndex + 1) % RENDER_ALLOWED_IPS.length;
-    return ip;
-  }
+  private static lastError: Error | null = null;
   
   /**
    * التحقق من حالة خادم الأتمتة
@@ -38,29 +36,19 @@ export class ConnectionManager {
       console.log("التحقق من حالة الخادم:", serverUrl);
       
       // استخدام عنوان IP متناوب في كل محاولة
-      const currentIp = this.getNextIp();
+      const currentIp = getNextIp();
       console.log("استخدام عنوان IP:", currentIp);
       
-      // إنشاء طلب مع رؤوس مخصصة لتجنب مشاكل CORS
+      // إنشاء طلب مع رؤوس مخصصة
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       
+      const headers = createBaseHeaders(currentIp);
+      console.log("الرؤوس المستخدمة:", headers);
+      
       const response = await fetch(`${serverUrl}/api/status`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-          'Accept': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, X-Requested-With',
-          'X-Forwarded-For': currentIp,
-          'X-Render-Client-IP': currentIp,
-          'Origin': serverUrl,
-          'Referer': serverUrl
-        },
+        headers,
         mode: 'cors',
         cache: 'no-cache',
         credentials: 'omit',
@@ -71,7 +59,7 @@ export class ConnectionManager {
       
       if (!response.ok) {
         const errorMessage = `فشل الاتصال: ${response.status} ${response.statusText}`;
-        updateConnectionStatus(false);
+        updateConnectionStatus(false, currentIp);
         throw new Error(errorMessage);
       }
       
@@ -79,7 +67,8 @@ export class ConnectionManager {
       console.log("نتيجة التحقق من حالة الخادم:", result);
       
       // تحديث حالة الاتصال
-      updateConnectionStatus(true);
+      updateConnectionStatus(true, currentIp);
+      this.lastError = null;
       
       // إظهار رسالة نجاح (فقط إذا كان الاتصال غير ناجح في السابق)
       const connectionStatus = getLastConnectionStatus();
@@ -94,11 +83,13 @@ export class ConnectionManager {
     } catch (error) {
       console.error("خطأ في التحقق من حالة الخادم:", error);
       
-      // تحديث حالة الاتصال
-      updateConnectionStatus(false);
+      // تحديث حالة الاتصال وتخزين الخطأ الأخير
+      const currentIp = getLastConnectionStatus().lastUsedIp;
+      updateConnectionStatus(false, currentIp);
+      this.lastError = error instanceof Error ? error : new Error(String(error));
       
       if (showToasts) {
-        toast.error(`تعذر الاتصال بالخادم: ${error.message}`);
+        toast.error(`تعذر الاتصال بالخادم: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
       }
       
       throw error;
@@ -149,6 +140,8 @@ export class ConnectionManager {
         console.error("فشلت محاولة إعادة الاتصال:", error);
       }
     }, this.retryDelay);
+    
+    console.log(`بدء محاولات إعادة الاتصال التلقائية كل ${this.retryDelay / 1000} ثوانٍ`);
   }
   
   /**
@@ -160,5 +153,21 @@ export class ConnectionManager {
       this.reconnectInterval = null;
       this.retryDelay = 10000; // إعادة التعيين إلى القيمة الافتراضية
     }
+  }
+  
+  /**
+   * الحصول على الخطأ الأخير
+   */
+  static getLastError(): Error | null {
+    return this.lastError;
+  }
+  
+  /**
+   * إعادة تعيين حالة الاتصال
+   */
+  static resetConnectionState(): void {
+    this.stopReconnect();
+    this.lastError = null;
+    updateConnectionStatus(false);
   }
 }

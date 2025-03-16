@@ -16,12 +16,12 @@ export const RENDER_ALLOWED_IPS = [
 // عنوان تطبيقك على Render 
 const CLOUD_AUTOMATION_SERVER = 'https://textify-upload.onrender.com';
 
-// عنوان خادم الأتمتة المحلي - تحديث للمنفذ 10000
+// عنوان خادم الأتمتة المحلي
 const LOCAL_AUTOMATION_SERVER = 'http://localhost:10000';
 
 // تحديد ما إذا كان التطبيق يعمل في وضع الإنتاج
-// تم تعديله للاتصال بخادم Render دائماً
-const isProduction = true; // تغيير هذه القيمة لاستخدام خادم Render دائمًا
+// true = استخدام خادم Render, false = استخدام الخادم المحلي
+const isProduction = true; 
 
 // تخزين حالة الاتصال
 let lastConnectionStatus = {
@@ -56,6 +56,38 @@ export const updateConnectionStatus = (isConnected: boolean, usedIp?: string): v
  */
 export const getLastConnectionStatus = () => {
   return { ...lastConnectionStatus };
+};
+
+/**
+ * الحصول على عنوان IP التالي من القائمة الدورية
+ */
+export const getNextIp = (): string => {
+  const currentStatus = getLastConnectionStatus();
+  const currentIndex = RENDER_ALLOWED_IPS.indexOf(currentStatus.lastUsedIp);
+  const nextIndex = (currentIndex + 1) % RENDER_ALLOWED_IPS.length;
+  return RENDER_ALLOWED_IPS[nextIndex];
+};
+
+/**
+ * إنشاء رؤوس HTTP أساسية للطلبات
+ */
+export const createBaseHeaders = (customIp?: string): Record<string, string> => {
+  const ip = customIp || lastConnectionStatus.lastUsedIp || RENDER_ALLOWED_IPS[0];
+  
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'X-Forwarded-For': ip,
+    'X-Render-Client-IP': ip,
+    'Origin': CLOUD_AUTOMATION_SERVER,
+    'Referer': CLOUD_AUTOMATION_SERVER
+  };
 };
 
 /**

@@ -1,29 +1,55 @@
 
 import React from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RENDER_ALLOWED_IPS } from "@/utils/automationServerUrl";
 
 const ConfigurationTips: React.FC = () => {
   return (
-    <div className="mt-8 max-w-2xl mx-auto bg-muted p-4 rounded-md">
-      <h3 className="font-semibold mb-2">تلميحات للتكوين:</h3>
-      <ul className="space-y-2 list-disc list-inside text-sm">
-        <li>للاتصال بخادم محلي، استخدم: <code className="text-xs bg-background px-1 py-0.5 rounded">http://localhost:10000</code></li>
-        <li>للاتصال بخادم Render، استخدم: <code className="text-xs bg-background px-1 py-0.5 rounded">https://textify-upload.onrender.com</code></li>
-        <li>للتأكد من عمل خادم الأتمتة المحلي، قم بتشغيله باستخدام: <code className="text-xs bg-background px-1 py-0.5 rounded">node src/server/server.js</code></li>
-        <li>إذا كان الخادم المحلي يعمل بالفعل، تأكد من أنه يستمع على المنفذ 10000</li>
-        <li className="font-semibold text-green-600">يتم الآن محاولة إعادة الاتصال تلقائيًا بخادم Render عند فقدان الاتصال</li>
-      </ul>
-      
-      <div className="mt-4">
-        <h4 className="font-semibold mb-2">عناوين IP الصادرة الثابتة من Render:</h4>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          {RENDER_ALLOWED_IPS.map((ip, index) => (
-            <code key={index} className="bg-background px-1 py-0.5 rounded">{ip}</code>
-          ))}
+    <Card className="mt-8 max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle className="text-xl">نصائح الاتصال بـ Render</CardTitle>
+        <CardDescription>
+          معلومات حول كيفية ضمان الاتصال الصحيح بخادم Render
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <h3 className="font-medium mb-2">عناوين IP الصادرة الثابتة من Render</h3>
+          <p className="text-sm mb-2">
+            ستأتي طلبات الشبكة من خدمتك إلى الإنترنت العام من أحد عناوين IP التالية. تأكد من أن خادمك مكوّن لقبول هذه العناوين:
+          </p>
+          <div className="bg-muted p-2 rounded-md">
+            <ul className="text-sm font-mono">
+              {RENDER_ALLOWED_IPS.map((ip, index) => (
+                <li key={index} className="mb-1">{ip}</li>
+              ))}
+            </ul>
+          </div>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">هذه العناوين مستخدمة في الطلبات للسماح بالوصول من خلال قيود الشبكة.</p>
-      </div>
-    </div>
+        
+        <div>
+          <h3 className="font-medium mb-2">إرشادات للاتصال الناجح:</h3>
+          <ol className="text-sm space-y-2 list-decimal list-inside mr-4">
+            <li>تأكد من أن خادم الأتمتة يعمل ومتاح على الإنترنت.</li>
+            <li>إذا كنت تستخدم خادمًا محليًا، تأكد من تشغيله على المنفذ الصحيح (10000).</li>
+            <li>لاحظ أن النظام يستخدم تدوير عناوين IP تلقائيًا في حالة فشل الاتصال.</li>
+            <li>إذا استمرت مشاكل الاتصال، جرب تعيين عنوان URL مخصص يتجاوز إعدادات CORS.</li>
+            <li>تأكد من أن الجدار الناري أو إعدادات الأمان لا تمنع الاتصالات الخارجية.</li>
+          </ol>
+        </div>
+        
+        <div>
+          <h3 className="font-medium mb-2">لمطوري الخادم:</h3>
+          <p className="text-sm">
+            يجب أن يتم تكوين خادم الأتمتة للسماح بطلبات CORS وقبول الرؤوس المخصصة 
+            <code className="mx-1 px-1 bg-muted rounded">X-Forwarded-For</code>
+            و
+            <code className="mx-1 px-1 bg-muted rounded">X-Render-Client-IP</code>.
+            تأكد من تكوين قواعد الوصول لقبول عناوين IP الصادرة من Render.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
