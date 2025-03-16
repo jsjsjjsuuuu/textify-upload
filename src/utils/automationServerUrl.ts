@@ -4,8 +4,8 @@
  */
 
 // قم بتغيير هذا العنوان إلى عنوان تطبيقك على Render بعد النشر
-// مثال: https://your-automation-app.onrender.com
-const CLOUD_AUTOMATION_SERVER = 'https://your-automation-app.onrender.com';
+// عنوان تطبيقك الجديد المنشور على Render
+const CLOUD_AUTOMATION_SERVER = 'https://textify-upload.onrender.com';
 
 // عنوان خادم الأتمتة المحلي
 const LOCAL_AUTOMATION_SERVER = 'http://localhost:3001';
