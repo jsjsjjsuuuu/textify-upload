@@ -13,6 +13,31 @@ const LOCAL_AUTOMATION_SERVER = 'http://localhost:10000';
 // تحديد ما إذا كان التطبيق يعمل في وضع الإنتاج
 const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
 
+// تخزين حالة الاتصال
+let lastConnectionStatus = {
+  isConnected: false,
+  lastChecked: 0,
+  retryCount: 0
+};
+
+/**
+ * تحديث حالة الاتصال
+ */
+export const updateConnectionStatus = (isConnected: boolean): void => {
+  lastConnectionStatus = {
+    isConnected,
+    lastChecked: Date.now(),
+    retryCount: isConnected ? 0 : lastConnectionStatus.retryCount + 1
+  };
+};
+
+/**
+ * الحصول على حالة الاتصال الأخيرة
+ */
+export const getLastConnectionStatus = () => {
+  return { ...lastConnectionStatus };
+};
+
 /**
  * الحصول على عنوان URL الخاص بخادم الأتمتة بناءً على البيئة الحالية
  */

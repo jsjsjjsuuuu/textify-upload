@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   getAutomationServerUrl, 
   setCustomAutomationServerUrl, 
   resetAutomationServerUrl,
-  isValidServerUrl
+  isValidServerUrl,
+  getLastConnectionStatus
 } from '../utils/automationServerUrl';
 import { AutomationService } from '../utils/automationService';
 import { Button } from '../components/ui/button';
@@ -11,20 +13,77 @@ import { Input } from '../components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle2, RefreshCw, Clock } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 const ServerSettings = () => {
   const [serverUrl, setServerUrl] = useState('');
   const [serverStatus, setServerStatus] = useState<'idle' | 'checking' | 'online' | 'offline'>('idle');
   const [serverInfo, setServerInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [autoReconnect, setAutoReconnect] = useState(true);
+  const [reconnectStatus, setReconnectStatus] = useState<{
+    active: boolean;
+    lastAttempt: number;
+    attempts: number;
+  }>({
+    active: false,
+    lastAttempt: 0,
+    attempts: 0
+  });
   
   useEffect(() => {
     // استرجاع عنوان URL الحالي عند تحميل الصفحة
     setServerUrl(getAutomationServerUrl());
+    
     // التحقق من حالة الخادم عند تحميل الصفحة
     checkServerStatus();
+    
+    // بدء إعادة الاتصال التلقائي إذا كان مفعلًا
+    if (autoReconnect) {
+      startAutoReconnect();
+    }
+    
+    // تنظيف عند إزالة المكون
+    return () => {
+      AutomationService.stopReconnect();
+    };
   }, []);
+  
+  // تابع للتعامل مع تغيير وضع إعادة الاتصال التلقائي
+  useEffect(() => {
+    if (autoReconnect) {
+      startAutoReconnect();
+    } else {
+      AutomationService.stopReconnect();
+      setReconnectStatus(prev => ({ ...prev, active: false }));
+    }
+  }, [autoReconnect]);
+  
+  const startAutoReconnect = () => {
+    if (serverStatus === 'offline') {
+      setReconnectStatus({
+        active: true,
+        lastAttempt: Date.now(),
+        attempts: getLastConnectionStatus().retryCount
+      });
+      
+      AutomationService.startAutoReconnect((isConnected) => {
+        if (isConnected) {
+          setServerStatus('online');
+          checkServerStatus(false);
+        } else {
+          setServerStatus('offline');
+        }
+        
+        setReconnectStatus({
+          active: !isConnected,
+          lastAttempt: Date.now(),
+          attempts: getLastConnectionStatus().retryCount
+        });
+      });
+    }
+  };
   
   const handleSaveUrl = () => {
     try {
@@ -59,7 +118,7 @@ const ServerSettings = () => {
     }, 500);
   };
   
-  const checkServerStatus = async () => {
+  const checkServerStatus = async (showToasts = true) => {
     setServerStatus('checking');
     setIsLoading(true);
     
@@ -67,18 +126,43 @@ const ServerSettings = () => {
       const currentUrl = getAutomationServerUrl();
       console.log("التحقق من حالة الخادم:", currentUrl);
       
-      const result = await AutomationService.checkServerStatus();
+      const result = await AutomationService.checkServerStatus(showToasts);
       setServerStatus('online');
       setServerInfo(result);
-      toast.success('الخادم متصل ويعمل بشكل صحيح');
+      
+      if (showToasts) {
+        toast.success('الخادم متصل ويعمل بشكل صحيح');
+      }
+      
+      // إيقاف إعادة المحاولة إذا كانت نشطة
+      AutomationService.stopReconnect();
+      setReconnectStatus(prev => ({ ...prev, active: false }));
     } catch (error) {
       console.error("خطأ في التحقق من حالة الخادم:", error);
       setServerStatus('offline');
       setServerInfo(null);
-      toast.error(`تعذر الاتصال بالخادم: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+      
+      if (showToasts) {
+        toast.error(`تعذر الاتصال بالخادم: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+      }
+      
+      // بدء إعادة المحاولة التلقائية إذا كان مفعلًا
+      if (autoReconnect) {
+        startAutoReconnect();
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // تنسيق الوقت المنقضي
+  const formatElapsedTime = (timestamp: number): string => {
+    const now = Date.now();
+    const seconds = Math.floor((now - timestamp) / 1000);
+    
+    if (seconds < 60) return `${seconds} ثانية`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} دقيقة`;
+    return `${Math.floor(seconds / 3600)} ساعة`;
   };
   
   return (
@@ -92,6 +176,19 @@ const ServerSettings = () => {
         </CardHeader>
         
         <CardContent className="space-y-6">
+          {/* إعدادات إعادة الاتصال التلقائي */}
+          <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 p-4 rounded-md">
+            <div className="space-y-1">
+              <h3 className="font-medium">إعادة الاتصال التلقائي</h3>
+              <p className="text-sm text-muted-foreground">عند تمكين هذا الخيار، سيحاول التطبيق إعادة الاتصال بالخادم تلقائيًا</p>
+            </div>
+            <Switch
+              checked={autoReconnect}
+              onCheckedChange={setAutoReconnect}
+              aria-label="تفعيل إعادة الاتصال التلقائي"
+            />
+          </div>
+        
           {/* عرض حالة الخادم */}
           {serverStatus === 'online' && (
             <Alert variant="default" className="bg-green-50 border-green-300">
@@ -109,16 +206,37 @@ const ServerSettings = () => {
               <AlertTitle>تعذر الاتصال بالخادم</AlertTitle>
               <AlertDescription>
                 تأكد من أن خادم الأتمتة يعمل وأن العنوان المدخل صحيح.
-                <div className="mt-2">
+                {reconnectStatus.active && (
+                  <div className="mt-2 p-2 bg-destructive/10 rounded-md flex items-center gap-2">
+                    <Clock className="h-4 w-4 animate-pulse" />
+                    <span className="text-sm">
+                      جاري محاولة إعادة الاتصال. 
+                      {reconnectStatus.attempts > 0 && ` المحاولة #${reconnectStatus.attempts}.`}
+                      {reconnectStatus.lastAttempt > 0 && ` آخر محاولة منذ ${formatElapsedTime(reconnectStatus.lastAttempt)}.`}
+                    </span>
+                  </div>
+                )}
+                <div className="mt-2 flex gap-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={checkServerStatus}
+                    onClick={() => checkServerStatus()}
                     disabled={isLoading}
                   >
                     <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                     إعادة المحاولة
                   </Button>
+                  {!autoReconnect && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setAutoReconnect(true);
+                      }}
+                    >
+                      تفعيل إعادة الاتصال التلقائي
+                    </Button>
+                  )}
                 </div>
               </AlertDescription>
             </Alert>
@@ -144,7 +262,7 @@ const ServerSettings = () => {
               />
               <Button 
                 variant="secondary" 
-                onClick={checkServerStatus}
+                onClick={() => checkServerStatus()}
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -195,6 +313,7 @@ const ServerSettings = () => {
           <li>للاتصال بخادم Render، استخدم: <code className="text-xs bg-background px-1 py-0.5 rounded">https://textify-upload.onrender.com</code></li>
           <li>للتأكد من عمل خادم الأتمتة المحلي، قم بتشغيله باستخدام: <code className="text-xs bg-background px-1 py-0.5 rounded">node src/server/server.js</code></li>
           <li>إذا كان الخادم المحلي يعمل بالفعل، تأكد من أنه يستمع على المنفذ 10000</li>
+          <li className="font-semibold text-green-600">يتم الآن محاولة إعادة الاتصال تلقائيًا بخادم Render عند فقدان الاتصال</li>
         </ul>
       </div>
     </div>
