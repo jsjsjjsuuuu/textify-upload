@@ -19,7 +19,7 @@ export interface AutomationAction {
   name: string;
   finder: string;
   value: string;
-  delay: number;
+  delay: number;  // يجب أن يكون الفاصل الزمني رقمًا وليس نصًا
 }
 
 /**

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,13 +14,15 @@ import { AutomationService } from "@/utils/automationService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AutomationAction } from "@/utils/automation/types";
 
+// تحديث واجهة ElementAction لتتوافق مع AutomationAction
 interface ElementAction {
   id: string;
   name: string;
   finder: string;
   value: string;
-  delay: string;
+  delay: string; // نبقي على النوع string في واجهة المستخدم لسهولة الإدخال
 }
 
 interface ElementFinderSectionProps {
@@ -121,11 +122,16 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
     setAutomationProgress(10);
     
     try {
-      // إعداد تكوين الأتمتة
+      // إعداد تكوين الأتمتة - تحويل delay من string إلى number
       const config = {
         projectName: projectNameInput,
         projectUrl: projectUrlInput,
-        actions: actions
+        actions: actions.map(action => ({
+          name: action.name,
+          finder: action.finder,
+          value: action.value,
+          delay: action.delay ? parseInt(action.delay, 10) : 0 // تحويل delay إلى رقم
+        })) as AutomationAction[]
       };
       
       setAutomationProgress(30);
@@ -195,7 +201,7 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
           success: true,
           message: "تم تنفيذ الإجراء بنجاح (محاكاة)"
         })),
-        screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAAET0lEQVR4nO3UQREAAAjDMOZf9DDBwQeSVsAHJiuAwE8BYBKWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlguLbsATrKqz7CAAAAAElFTkSuQmCC"
+        screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAAET0lEQVR4nO3UQREAAAjDMOZf9DDBwQeSVsAHJiuAwE8BYBKWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlgEJYABmEJYBCWAAZhCWAQlgAGYQlguLbsATrKqz7CAAAAAElFTkSuQmCC
       };
       
       setAutomationProgress(100);
@@ -271,7 +277,7 @@ ${actions.map(action => `    {
       name: "${action.name}",
       finder: "${action.finder.replace(/"/g, '\\"')}",
       value: "${action.value.replace(/"/g, '\\"')}",
-      delay: "${action.delay}"
+      delay: ${action.delay ? parseInt(action.delay, 10) : 0}
     }`).join(',\n')}
   ]
 };
@@ -283,7 +289,7 @@ async function runActions() {
   for (const action of config.actions) {
     try {
       // تأخير قبل كل إجراء
-      const delay = parseInt(action.delay) || 0;
+      const delay = action.delay || 0;
       if (delay > 0) {
         await new Promise(r => setTimeout(r, delay * 1000));
       }
@@ -650,78 +656,4 @@ if (window.location.href !== config.projectUrl) {
               
               {automationResults.results && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2">تفاصيل الإجراءات:</h4>
-                  <div className="border rounded-md overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-muted/50">
-                        <tr className="text-right">
-                          <th className="p-2 text-sm font-medium">الإجراء</th>
-                          <th className="p-2 text-sm font-medium">الحالة</th>
-                          <th className="p-2 text-sm font-medium">التفاصيل</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {automationResults.results.map((result: any, index: number) => (
-                          <tr key={index} className="border-t">
-                            <td className="p-2 text-sm">{result.name}</td>
-                            <td className="p-2 text-sm">
-                              <Badge variant={result.success ? "success" : "destructive"}>
-                                {result.success ? "ناجح" : "فشل"}
-                              </Badge>
-                            </td>
-                            <td className="p-2 text-sm">{result.message}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-              
-              {automationResults.screenshot && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">لقطة شاشة:</h4>
-                  <div className="border rounded-md overflow-hidden">
-                    <img 
-                      src={automationResults.screenshot} 
-                      alt="لقطة شاشة من التشغيل الآلي" 
-                      className="w-full h-auto"
-                    />
-                  </div>
-                  {offlineMode && (
-                    <p className="text-xs text-muted-foreground mt-1 text-center">
-                      (صورة توضيحية في الوضع التجريبي)
-                    </p>
-                  )}
-                </div>
-              )}
-              
-              <Alert className={offlineMode ? "bg-yellow-50 border-yellow-200" : "bg-green-50 border-green-200"}>
-                <CheckCircle2 className={`h-4 w-4 ${offlineMode ? "text-yellow-600" : "text-green-600"}`} />
-                <AlertDescription className={offlineMode ? "text-yellow-700" : "text-green-700"}>
-                  {offlineMode 
-                    ? "تم تنفيذ المحاكاة بنجاح في الوضع التجريبي. لتشغيل الأتمتة الحقيقية، يرجى تشغيل خادم الأتمتة." 
-                    : "تمت إضافة البيانات بنجاح من خلال خادم الأتمتة."}
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button onClick={() => setShowResultsDialog(false)}>إغلاق</Button>
-            {offlineMode && (
-              <Button variant="outline" onClick={() => {
-                setOfflineMode(false);
-                checkServerStatus();
-              }}>
-                محاولة الاتصال بالخادم
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-};
-
-export default ElementFinderSection;
+                  <h4 className="text-sm font-medium mb
