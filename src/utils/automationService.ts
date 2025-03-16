@@ -14,7 +14,7 @@ interface AutomationConfig {
 export class AutomationService {
   private static isCheckingStatus = false;
   private static reconnectInterval: number | null = null;
-  private static maxRetries = 5;
+  private static maxRetries = 10; // زيادة عدد المحاولات
   private static retryDelay = 5000; // تقليل التأخير إلى 5 ثوانٍ
   
   /**
@@ -38,7 +38,7 @@ export class AutomationService {
           'Cache-Control': 'no-cache'
         },
         // تقليل مهلة الانتظار لمنع الانتظار الطويل
-        signal: AbortSignal.timeout(5000) // توقف بعد 5 ثوانٍ
+        signal: AbortSignal.timeout(10000) // زيادة المهلة إلى 10 ثوانٍ للسماح بوقت استجابة أطول لـ Render
       });
       
       if (!response.ok) {

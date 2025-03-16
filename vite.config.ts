@@ -6,8 +6,8 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // استخدام المنفذ 10000 كمنفذ افتراضي لخادم الأتمتة
-  const automationServerUrl = 'http://localhost:10000';
+  // استخدام خادم Render كمنفذ افتراضي لخادم الأتمتة
+  const automationServerUrl = 'https://textify-upload.onrender.com';
   
   console.log(`⚡️ الاتصال بخادم الأتمتة على: ${automationServerUrl}`);
   

@@ -11,8 +11,8 @@ const CLOUD_AUTOMATION_SERVER = 'https://textify-upload.onrender.com';
 const LOCAL_AUTOMATION_SERVER = 'http://localhost:10000';
 
 // تحديد ما إذا كان التطبيق يعمل في وضع الإنتاج
-// تعديل هنا: استخدام خادم محلي دائماً للاختبار
-const isProduction = false; // تغيير هذه القيمة لإجبار الاتصال بالخادم المحلي
+// تم تعديله للاتصال بخادم Render دائماً
+const isProduction = true; // تغيير هذه القيمة لاستخدام خادم Render دائمًا
 
 // تخزين حالة الاتصال
 let lastConnectionStatus = {
@@ -50,8 +50,8 @@ export const getAutomationServerUrl = (): string => {
     return overrideUrl;
   }
   
-  // استخدام الخادم المحلي دائماً للاختبار حتى يتم التأكد من عمله
-  const serverUrl = LOCAL_AUTOMATION_SERVER;
+  // استخدام خادم Render دائمًا
+  const serverUrl = CLOUD_AUTOMATION_SERVER;
   console.log("استخدام عنوان خادم الأتمتة:", serverUrl, "isProduction:", isProduction);
   return serverUrl;
 };
