@@ -6,8 +6,8 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // الحصول على عنوان خادم الأتمتة من المتغيرات البيئية أو استخدام الافتراضي
-  const automationServerUrl = process.env.AUTOMATION_SERVER_URL || 'http://localhost:3001';
+  // الحصول على عنوان خادم الأتمتة من المتغيرات البيئية أو استخدام المنفذ 10000 كافتراضي
+  const automationServerUrl = process.env.AUTOMATION_SERVER_URL || 'http://localhost:10000';
   
   return {
     server: {

@@ -125,7 +125,7 @@ const ServerSettings = () => {
       <div className="mt-8 max-w-2xl mx-auto bg-muted p-4 rounded-md">
         <h3 className="font-semibold mb-2">تلميحات للتكوين:</h3>
         <ul className="space-y-2 list-disc list-inside text-sm">
-          <li>للاتصال بخادم محلي، استخدم: <code className="text-xs bg-background px-1 py-0.5 rounded">http://localhost:3001</code></li>
+          <li>للاتصال بخادم محلي، استخدم: <code className="text-xs bg-background px-1 py-0.5 rounded">http://localhost:10000</code></li>
           <li>للاتصال بخادم Render، استخدم: <code className="text-xs bg-background px-1 py-0.5 rounded">https://textify-upload.onrender.com</code></li>
           <li>تأكد من أن الخادم يستمع على المنفذ المحدد</li>
         </ul>

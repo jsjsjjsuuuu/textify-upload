@@ -7,8 +7,8 @@
 // عنوان تطبيقك الجديد المنشور على Render
 const CLOUD_AUTOMATION_SERVER = 'https://textify-upload.onrender.com';
 
-// عنوان خادم الأتمتة المحلي
-const LOCAL_AUTOMATION_SERVER = 'http://localhost:3001';
+// عنوان خادم الأتمتة المحلي - تحديث للمنفذ 10000
+const LOCAL_AUTOMATION_SERVER = 'http://localhost:10000';
 
 // تحديد ما إذا كان التطبيق يعمل في وضع الإنتاج
 const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
