@@ -11,6 +11,16 @@ export class ConnectionManager {
   private static reconnectInterval: number | null = null;
   private static maxRetries = 15;
   private static retryDelay = 10000;
+  private static currentIpIndex = 0;
+  
+  /**
+   * الحصول على عنوان IP القادم للمحاولة من القائمة الدورية
+   */
+  private static getNextIp(): string {
+    const ip = RENDER_ALLOWED_IPS[this.currentIpIndex];
+    this.currentIpIndex = (this.currentIpIndex + 1) % RENDER_ALLOWED_IPS.length;
+    return ip;
+  }
   
   /**
    * التحقق من حالة خادم الأتمتة
@@ -27,7 +37,14 @@ export class ConnectionManager {
     try {
       console.log("التحقق من حالة الخادم:", serverUrl);
       
+      // استخدام عنوان IP متناوب في كل محاولة
+      const currentIp = this.getNextIp();
+      console.log("استخدام عنوان IP:", currentIp);
+      
       // إنشاء طلب مع رؤوس مخصصة لتجنب مشاكل CORS
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
       const response = await fetch(`${serverUrl}/api/status`, {
         method: 'GET',
         headers: {
@@ -37,14 +54,20 @@ export class ConnectionManager {
           'Expires': '0',
           'Accept': 'application/json',
           'Access-Control-Allow-Origin': '*',
-          'X-Forwarded-For': RENDER_ALLOWED_IPS[0],
-          'X-Render-Client-IP': RENDER_ALLOWED_IPS[0]
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, X-Requested-With',
+          'X-Forwarded-For': currentIp,
+          'X-Render-Client-IP': currentIp,
+          'Origin': serverUrl,
+          'Referer': serverUrl
         },
         mode: 'cors',
         cache: 'no-cache',
-        credentials: 'same-origin',
-        signal: AbortSignal.timeout(15000)
+        credentials: 'omit',
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorMessage = `فشل الاتصال: ${response.status} ${response.statusText}`;

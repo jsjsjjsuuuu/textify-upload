@@ -26,7 +26,9 @@ export default defineConfig(({ mode }) => {
           headers: {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP',
+            'X-Forwarded-For': '44.226.145.213',
+            'X-Render-Client-IP': '44.226.145.213'
           },
           configure: (proxy, _options) => {
             proxy.on('error', (err, _req, _res) => {
@@ -36,6 +38,10 @@ export default defineConfig(({ mode }) => {
               console.log('طلب البروكسي:', req.method, req.url);
               // إضافة رؤوس IP ثابتة للتواصل مع Render
               proxyReq.setHeader('X-Forwarded-For', '44.226.145.213');
+              proxyReq.setHeader('X-Render-Client-IP', '44.226.145.213');
+              // إضافة رؤوس إضافية لتجنب مشاكل CORS
+              proxyReq.setHeader('Origin', 'https://textify-upload.onrender.com');
+              proxyReq.setHeader('Referer', 'https://textify-upload.onrender.com');
             });
             proxy.on('proxyRes', (proxyRes, req, _res) => {
               console.log('استجابة البروكسي:', proxyRes.statusCode, req.url);

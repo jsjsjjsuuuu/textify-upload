@@ -2,12 +2,23 @@
 /**
  * تشغيل سيناريوهات الأتمتة
  */
-import { getAutomationServerUrl, updateConnectionStatus } from "../automationServerUrl";
+import { getAutomationServerUrl, updateConnectionStatus, RENDER_ALLOWED_IPS } from "../automationServerUrl";
 import { toast } from "sonner";
 import { AutomationConfig, AutomationResponse } from "./types";
 import { ConnectionManager } from "./connectionManager";
 
 export class AutomationRunner {
+  private static currentIpIndex = 0;
+  
+  /**
+   * الحصول على عنوان IP القادم للمحاولة من القائمة الدورية
+   */
+  private static getNextIp(): string {
+    const ip = RENDER_ALLOWED_IPS[this.currentIpIndex];
+    this.currentIpIndex = (this.currentIpIndex + 1) % RENDER_ALLOWED_IPS.length;
+    return ip;
+  }
+  
   /**
    * تشغيل سيناريو الأتمتة باستخدام Puppeteer
    */
@@ -20,32 +31,49 @@ export class AutomationRunner {
         duration: 3000,
       });
       
+      // استخدام عنوان IP متناوب في كل محاولة
+      const currentIp = this.getNextIp();
+      console.log("استخدام عنوان IP للطلب:", currentIp);
+      
       console.log("بدء تنفيذ الأتمتة على الخادم:", serverUrl);
       console.log("بيانات الطلب:", {
         projectUrl: config.projectUrl,
-        actionsCount: config.actions.length
+        actionsCount: config.actions.length,
+        ipAddress: currentIp
       });
+      
+      // إضافة عنوان IP إلى التكوين للاستخدام في الخادم
+      const configWithIp = {
+        ...config,
+        ipAddress: currentIp
+      };
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000);
       
       const response = await fetch(`${serverUrl}/api/automate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, X-Requested-With',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'X-Forwarded-For': currentIp,
+          'X-Render-Client-IP': currentIp,
+          'Origin': serverUrl,
+          'Referer': serverUrl
         },
         mode: 'cors',
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          projectUrl: config.projectUrl,
-          actions: config.actions.map(action => ({
-            name: action.name,
-            finder: action.finder,
-            value: action.value,
-            delay: action.delay
-          }))
-        }),
-        signal: AbortSignal.timeout(90000)
+        credentials: 'omit',
+        body: JSON.stringify(configWithIp),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorText = await response.text();

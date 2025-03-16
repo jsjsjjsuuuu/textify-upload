@@ -27,18 +27,28 @@ const isProduction = true; // تغيير هذه القيمة لاستخدام خ
 let lastConnectionStatus = {
   isConnected: false,
   lastChecked: 0,
-  retryCount: 0
+  retryCount: 0,
+  lastUsedIp: RENDER_ALLOWED_IPS[0]
 };
 
 /**
  * تحديث حالة الاتصال
  */
-export const updateConnectionStatus = (isConnected: boolean): void => {
+export const updateConnectionStatus = (isConnected: boolean, usedIp?: string): void => {
   lastConnectionStatus = {
     isConnected,
     lastChecked: Date.now(),
-    retryCount: isConnected ? 0 : lastConnectionStatus.retryCount + 1
+    retryCount: isConnected ? 0 : lastConnectionStatus.retryCount + 1,
+    lastUsedIp: usedIp || lastConnectionStatus.lastUsedIp
   };
+  
+  // تسجيل حالة الاتصال للتصحيح
+  console.log("تحديث حالة الاتصال:", {
+    isConnected,
+    retryCount: lastConnectionStatus.retryCount,
+    lastUsedIp: lastConnectionStatus.lastUsedIp,
+    time: new Date().toISOString()
+  });
 };
 
 /**
@@ -76,6 +86,9 @@ export const setCustomAutomationServerUrl = (url: string): void => {
     console.log("إزالة عنوان URL المخصص");
     localStorage.removeItem('automation_server_url');
   }
+  
+  // إعادة تعيين حالة الاتصال عند تغيير URL
+  updateConnectionStatus(false);
 };
 
 /**
@@ -84,6 +97,9 @@ export const setCustomAutomationServerUrl = (url: string): void => {
 export const resetAutomationServerUrl = (): void => {
   console.log("إعادة تعيين عنوان URL لخادم الأتمتة إلى القيمة الافتراضية");
   localStorage.removeItem('automation_server_url');
+  
+  // إعادة تعيين حالة الاتصال
+  updateConnectionStatus(false);
 };
 
 /**
