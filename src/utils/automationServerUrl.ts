@@ -41,6 +41,7 @@ export function isValidServerUrl(url: string): boolean {
     new URL(url);
     return true;
   } catch (error) {
+    console.error("عنوان URL غير صالح:", url, error);
     return false;
   }
 }
@@ -48,14 +49,28 @@ export function isValidServerUrl(url: string): boolean {
 // دالة جديدة لتعيين عنوان URL لخادم الأتمتة
 export function setAutomationServerUrl(url: string): void {
   if (!isValidServerUrl(url)) {
+    console.error("محاولة تعيين عنوان URL غير صالح:", url);
     throw new Error("عنوان URL غير صالح");
   }
   
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('automationServerUrl', url);
+  try {
+    if (typeof window !== 'undefined') {
+      console.log("تعيين عنوان URL في localStorage:", url);
+      localStorage.setItem('automationServerUrl', url);
+      
+      // للتأكد من أن العنوان تم حفظه بشكل صحيح
+      const savedUrl = localStorage.getItem('automationServerUrl');
+      if (savedUrl !== url) {
+        console.error("فشل في حفظ عنوان URL في localStorage. القيمة المتوقعة:", url, "القيمة الفعلية:", savedUrl);
+        throw new Error("فشل في حفظ عنوان URL");
+      }
+    }
+    
+    console.log("تم تعيين عنوان URL لخادم الأتمتة بنجاح:", url);
+  } catch (error) {
+    console.error("خطأ أثناء تعيين عنوان URL:", error);
+    throw new Error("حدث خطأ أثناء حفظ عنوان URL");
   }
-  
-  console.log("تم تعيين عنوان URL لخادم الأتمتة:", url);
 }
 
 // كشف وتعيين URL الخادم بترتيب أولوية معين
@@ -130,7 +145,15 @@ export function getAutomationServerUrl(): string {
 
 // دالة لإعادة تعيين عنوان URL لخادم الأتمتة إلى القيمة الافتراضية
 export function resetAutomationServerUrl(): void {
-  localStorage.removeItem('automationServerUrl');
+  try {
+    if (typeof window !== 'undefined') {
+      console.log("إزالة عنوان URL من localStorage");
+      localStorage.removeItem('automationServerUrl');
+    }
+    console.log("تم إعادة تعيين عنوان URL لخادم الأتمتة إلى القيمة الافتراضية");
+  } catch (error) {
+    console.error("خطأ أثناء إعادة تعيين عنوان URL:", error);
+  }
 }
 
 // دالة للتحقق من حالة الاتصال بالخادم

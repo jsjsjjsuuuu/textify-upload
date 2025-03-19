@@ -14,7 +14,6 @@ import { toast } from 'sonner';
 import ServerSettingsComponent from '@/components/ServerSettings';
 
 const ServerSettings = () => {
-  // ... keep existing code (state definitions)
   const [serverUrl, setServerUrl] = useState('');
   const [serverStatus, setServerStatus] = useState<'idle' | 'checking' | 'online' | 'offline'>('idle');
   const [serverInfo, setServerInfo] = useState<any>(null);
@@ -30,9 +29,12 @@ const ServerSettings = () => {
     attempts: 0
   });
   
+  // تحميل الإعدادات عند بدء الصفحة
   useEffect(() => {
     // استرجاع عنوان URL الحالي عند تحميل الصفحة
-    setServerUrl(getAutomationServerUrl());
+    const currentUrl = getAutomationServerUrl();
+    setServerUrl(currentUrl);
+    console.log("تم تحميل عنوان URL الحالي:", currentUrl);
     
     // التحقق من حالة الخادم عند تحميل الصفحة
     checkServerStatus();
@@ -99,16 +101,19 @@ const ServerSettings = () => {
         return;
       }
       
-      // حفظ URL الجديد (استخدام الدالة الصحيحة)
+      // حفظ URL الجديد وتحديث الواجهة
       setAutomationServerUrl(serverUrl);
       toast.success('تم حفظ عنوان الخادم بنجاح');
+      console.log("تم حفظ عنوان URL الجديد:", serverUrl);
       
-      // إعادة التحقق من حالة الخادم بعد تغيير العنوان
+      // إعادة تحميل الصفحة لتطبيق الإعدادات الجديدة
+      // هذا مهم لتطبيق العنوان الجديد بشكل صحيح في جميع أنحاء التطبيق
       setTimeout(() => {
-        checkServerStatus();
-      }, 500);
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       toast.error('حدث خطأ أثناء حفظ عنوان الخادم');
+      console.error("خطأ في حفظ العنوان:", error);
     }
   };
   
@@ -117,11 +122,12 @@ const ServerSettings = () => {
     const defaultUrl = getAutomationServerUrl();
     setServerUrl(defaultUrl);
     toast.success('تم إعادة تعيين عنوان الخادم إلى القيمة الافتراضية');
+    console.log("تم إعادة تعيين العنوان إلى:", defaultUrl);
     
-    // إعادة التحقق من حالة الخادم بعد إعادة تعيين العنوان
+    // إعادة تحميل الصفحة لتطبيق الإعدادات الافتراضية
     setTimeout(() => {
-      checkServerStatus();
-    }, 500);
+      window.location.reload();
+    }, 1500);
   };
   
   const checkServerStatus = async (showToasts = true) => {
