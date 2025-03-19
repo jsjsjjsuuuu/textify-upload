@@ -9,6 +9,8 @@ export default defineConfig(({ mode }) => {
   // استخدام خادم Render كمنفذ افتراضي لخادم الأتمتة
   const automationServerUrl = 'https://textify-upload.onrender.com';
   
+  console.log(`⚡️ الاتصال بخادم الأتمتة على: ${automationServerUrl}`);
+  
   // تدوير عناوين IP الثابتة لـ Render
   const RENDER_IPS = [
     '44.226.145.213',
@@ -25,8 +27,6 @@ export default defineConfig(({ mode }) => {
     return RENDER_IPS[randomIndex];
   };
   
-  console.log(`⚡️ الاتصال بخادم الأتمتة على: ${automationServerUrl}`);
-  
   return {
     server: {
       host: "::",
@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         // إعادة توجيه طلبات API الأتمتة للخادم المناسب
         '/api': {
-          target: 'http://localhost:10000', // تغيير الهدف إلى الخادم المحلي في وضع التطوير
+          target: automationServerUrl,
           changeOrigin: true,
           secure: false, // السماح بالاتصالات غير الآمنة (هام للتطوير)
           ws: true, // دعم WebSockets
@@ -73,15 +73,6 @@ export default defineConfig(({ mode }) => {
             });
           }
         }
-      },
-      // إضافة خيارات CORS
-      cors: {
-        origin: '*',
-        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-        credentials: true,
-        preflightContinue: false,
-        optionsSuccessStatus: 204
       }
     },
     plugins: [

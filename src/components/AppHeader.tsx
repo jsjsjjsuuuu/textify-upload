@@ -1,26 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Sun, Moon, AlertTriangle, Wifi, Server, Menu, X } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Sun, Moon, AlertTriangle, Wifi, Server } from 'lucide-react';
 import { useTheme } from '@/components/ui/theme-provider';
 import ConnectionStatusIndicator from '@/components/ui/connection-status-indicator';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 import { isConnected, getLastConnectionStatus } from '@/utils/automationServerUrl';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 
 const AppHeader = () => {
   const { setTheme, theme } = useTheme();
   const location = useLocation();
-  const navigate = useNavigate();
   const [serverConnected, setServerConnected] = useState<boolean | null>(null);
   const [showConnectionBanner, setShowConnectionBanner] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -28,11 +21,6 @@ const AppHeader = () => {
   
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
-
-  // الانتقال إلى صفحة إعدادات الخادم
-  const goToServerSettings = () => {
-    navigate('/server-settings');
   };
 
   // التحقق من حالة الاتصال بالخادم عند تحميل الصفحة
@@ -61,7 +49,7 @@ const AppHeader = () => {
                 action: {
                   label: "الإعدادات",
                   onClick: () => {
-                    navigate('/server-settings');
+                    window.location.href = '/server-settings';
                   }
                 }
               }
@@ -84,11 +72,16 @@ const AppHeader = () => {
     return () => {
       clearInterval(intervalId);
     };
-  }, [location.pathname, navigate]);
+  }, [location.pathname]);
 
   // إغلاق شريط الإشعار
   const dismissConnectionBanner = () => {
     setShowConnectionBanner(false);
+  };
+
+  // الانتقال إلى صفحة إعدادات الخادم
+  const goToServerSettings = () => {
+    window.location.href = '/server-settings';
   };
 
   return (
@@ -115,7 +108,6 @@ const AppHeader = () => {
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 max-w-screen-2xl items-center">
           <div className="flex flex-1 items-center justify-between">
-            {/* القائمة للشاشات الكبيرة */}
             <div className="mr-4 hidden md:flex">
               <nav className="flex items-center gap-6 text-sm">
                 <Link to="/" className={`transition-colors hover:text-foreground/80 ${isActive('/') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
@@ -130,77 +122,17 @@ const AppHeader = () => {
                 <Link to="/api-settings" className={`transition-colors hover:text-foreground/80 ${isActive('/api-settings') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
                   إعدادات API
                 </Link>
-                <Link 
-                  to="/server-settings" 
-                  className={`transition-colors hover:text-foreground/80 ${isActive('/server-settings') 
-                    ? 'text-foreground font-medium' 
-                    : serverConnected === false 
-                      ? 'text-yellow-600 font-medium' 
-                      : 'text-foreground/60'}`}
-                >
-                  {serverConnected === false && <AlertTriangle className="inline h-3 w-3 mr-1 text-yellow-600" />}
+                <Link to="/server-settings" className={`transition-colors hover:text-foreground/80 ${isActive('/server-settings') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
                   إعدادات الخادم
                 </Link>
               </nav>
             </div>
-            
-            {/* قائمة للأجهزة المحمولة */}
-            <div className="md:hidden">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="mr-2">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[250px] sm:w-[300px]" dir="rtl">
-                  <div className="flex flex-col space-y-4 mt-8">
-                    <Link 
-                      to="/" 
-                      className={`px-2 py-1 rounded-md transition-colors ${isActive('/') ? 'bg-primary/10 text-primary font-medium' : ''}`}
-                    >
-                      الرئيسية
-                    </Link>
-                    <Link 
-                      to="/bookmarklet" 
-                      className={`px-2 py-1 rounded-md transition-colors ${isActive('/bookmarklet') ? 'bg-primary/10 text-primary font-medium' : ''}`}
-                    >
-                      أدوات سطر العناوين
-                    </Link>
-                    <Link 
-                      to="/records" 
-                      className={`px-2 py-1 rounded-md transition-colors ${isActive('/records') ? 'bg-primary/10 text-primary font-medium' : ''}`}
-                    >
-                      السجلات
-                    </Link>
-                    <Link 
-                      to="/api-settings" 
-                      className={`px-2 py-1 rounded-md transition-colors ${isActive('/api-settings') ? 'bg-primary/10 text-primary font-medium' : ''}`}
-                    >
-                      إعدادات API
-                    </Link>
-                    <Link 
-                      to="/server-settings" 
-                      className={`px-2 py-1 rounded-md transition-colors ${isActive('/server-settings') 
-                        ? 'bg-primary/10 text-primary font-medium' 
-                        : serverConnected === false 
-                          ? 'bg-yellow-100 text-yellow-700 font-medium' 
-                          : ''}`}
-                    >
-                      {serverConnected === false && <AlertTriangle className="inline h-3 w-3 mr-1 text-yellow-600" />}
-                      إعدادات الخادم
-                    </Link>
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-            
             <div className="flex items-center justify-end gap-4">
               <div className="flex items-center space-x-2">
                 <ConnectionStatusIndicator 
                   showText={true} 
-                  className="bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-md cursor-pointer"
+                  className="bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-md"
                   onStatusChange={setServerConnected}
-                  onClickSettings={goToServerSettings}
                 />
               </div>
               <Button
