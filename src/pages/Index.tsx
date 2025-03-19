@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import ImageUploader from '../components/ImageUploader';
 import ImageList from '../components/ImageList';
@@ -14,6 +15,17 @@ import ConnectionStatusIndicator from '@/components/ui/connection-status-indicat
 import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
+  const [serverConnected, setServerConnected] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const navigate = useNavigate();
+
+  // تعريف دالة onTextChange التي ستستخدم في عمليات تحديث النص
+  const onTextChange = (id: string, field: string, value: string) => {
+    console.log("تحديث النص:", id, field, value);
+    // هنا يمكن إضافة منطق إضافي للتعامل مع تحديثات النص
+  };
+  
   const { 
     images,
     isProcessing,
@@ -30,17 +42,6 @@ const Index = () => {
     handleAutoExtract,
     handleTempChange,
   } = useDataExtraction(images?.[0], onTextChange, false, setEditMode);
-  
-  const [serverConnected, setServerConnected] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [editMode, setEditMode] = useState<boolean>(false);
-  const navigate = useNavigate();
-
-  // تعريف دالة onTextChange التي ستستخدم في عمليات تحديث النص
-  const onTextChange = (id: string, field: string, value: string) => {
-    console.log("تحديث النص:", id, field, value);
-    // هنا يمكن إضافة منطق إضافي للتعامل مع تحديثات النص
-  };
 
   useEffect(() => {
     // التحقق من حالة الاتصال بخادم Render عند تحميل الصفحة
