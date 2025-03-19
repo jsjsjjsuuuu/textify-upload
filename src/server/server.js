@@ -1,4 +1,3 @@
-
 import express from 'express';
 import puppeteer from 'puppeteer';
 import cors from 'cors';
@@ -13,16 +12,21 @@ const __dirname = path.dirname(__filename);
 // تهيئة المتغيرات البيئية
 const PORT = process.env.PORT || 10000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const AUTOMATION_SERVER_URL = process.env.AUTOMATION_SERVER_URL || 
+
+// تحسين اكتشاف URL الخادم - تجربة جميع المصادر المحتملة
+const AUTOMATION_SERVER_URL = process.env.VITE_AUTOMATION_SERVER_URL || 
+                             process.env.AUTOMATION_SERVER_URL || 
                              process.env.RENDER_EXTERNAL_URL || 
                              process.env.RAILWAY_PUBLIC_DOMAIN || 
-                             process.env.HEROKU_APP_NAME && `https://${process.env.HEROKU_APP_NAME}.herokuapp.com` || 
+                             (process.env.HEROKU_APP_NAME && `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`) || 
                              `http://localhost:${PORT}`;
 
 console.log('تهيئة خادم الأتمتة...');
 console.log(`NODE_ENV: ${NODE_ENV}`);
 console.log(`PORT: ${PORT}`);
 console.log(`AUTOMATION_SERVER_URL: ${AUTOMATION_SERVER_URL}`);
+console.log(`VITE_AUTOMATION_SERVER_URL: ${process.env.VITE_AUTOMATION_SERVER_URL || 'not set'}`);
+console.log(`RENDER_EXTERNAL_URL: ${process.env.RENDER_EXTERNAL_URL || 'not set'}`);
 
 const app = express();
 
@@ -34,16 +38,42 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 
-// خدمة الملفات الثابتة من مجلد dist إذا كان موجودًا، وإلا استخدم public
+// عرض كل المتغيرات البيئية (باستثناء السرية) للتشخيص
+const printableEnvVars = {};
+for (const key in process.env) {
+  if (!key.includes('KEY') && !key.includes('SECRET') && !key.includes('PASSWORD') && !key.includes('TOKEN')) {
+    printableEnvVars[key] = process.env[key];
+  }
+}
+
+// التحقق من وجود مجلد dist
 let staticDir = path.join(__dirname, '../../dist');
+let publicDir = path.join(__dirname, '../../public');
+console.log(`التحقق من وجود dist في: ${staticDir}`);
+console.log(`التحقق من وجود public في: ${publicDir}`);
+
 if (!fs.existsSync(staticDir)) {
   console.log('مجلد dist غير موجود، استخدام مجلد public بدلاً منه');
-  staticDir = path.join(__dirname, '../../public');
+  staticDir = publicDir;
+} else {
+  console.log('تم العثور على مجلد dist، ستتم خدمة الملفات الثابتة منه');
 }
+
+// إضافة خدمة الملفات الثابتة
 app.use(express.static(staticDir));
 
 // إضافة مسار لصفحة ترحيبية بسيطة
 app.get('/', (req, res) => {
+  // التحقق من وجود مجلد dist/index.html
+  const indexPath = path.join(staticDir, 'index.html');
+  
+  if (fs.existsSync(indexPath)) {
+    console.log(`تم العثور على index.html، إرسال الملف من ${indexPath}`);
+    return res.sendFile(indexPath);
+  }
+  
+  console.log('لم يتم العثور على index.html، إرسال صفحة HTML المضمنة');
+  
   res.send(`
     <html dir="rtl">
       <head>
@@ -76,12 +106,19 @@ app.get('/', (req, res) => {
             <h3>ملاحظة:</h3>
             <p>يجب أن يكون عنوان واجهة المستخدم في التطبيق الرئيسي مكونًا ليشير إلى:</p>
             <pre>${AUTOMATION_SERVER_URL}/api</pre>
-            <p>متغيرات البيئة:</p>
+            <p>متغيرات البيئة الرئيسية:</p>
             <pre>PORT=${PORT}</pre>
             <pre>NODE_ENV=${NODE_ENV}</pre>
             <pre>AUTOMATION_SERVER_URL=${AUTOMATION_SERVER_URL}</pre>
+            <pre>VITE_AUTOMATION_SERVER_URL=${process.env.VITE_AUTOMATION_SERVER_URL || 'not set'}</pre>
             <pre>RENDER_EXTERNAL_URL=${process.env.RENDER_EXTERNAL_URL || 'not set'}</pre>
-            <pre>RAILWAY_PUBLIC_DOMAIN=${process.env.RAILWAY_PUBLIC_DOMAIN || 'not set'}</pre>
+          </div>
+          
+          <div class="note">
+            <h3>موقع الملفات الثابتة:</h3>
+            <pre>Static Dir: ${staticDir}</pre>
+            <pre>Public Dir: ${publicDir}</pre>
+            <pre>Index Exists: ${fs.existsSync(path.join(staticDir, 'index.html')) ? 'نعم' : 'لا'}</pre>
           </div>
         </div>
       </body>
@@ -101,12 +138,13 @@ app.get('/api/status', (req, res) => {
     env: NODE_ENV,
     port: PORT,
     automationServerUrl: AUTOMATION_SERVER_URL,
+    viteAutomationServerUrl: process.env.VITE_AUTOMATION_SERVER_URL || 'not set',
     renderExternalUrl: process.env.RENDER_EXTERNAL_URL || 'not set',
     railwayPublicDomain: process.env.RAILWAY_PUBLIC_DOMAIN || 'not set',
-    allEnvVars: Object.keys(process.env).filter(key => !key.includes('KEY') && !key.includes('SECRET') && !key.includes('PASSWORD')).reduce((obj, key) => {
-      obj[key] = process.env[key];
-      return obj;
-    }, {})
+    staticDir: staticDir,
+    publicDir: publicDir,
+    indexExists: fs.existsSync(path.join(staticDir, 'index.html')),
+    allEnvVars: printableEnvVars
   };
   
   res.json({ 
@@ -116,7 +154,12 @@ app.get('/api/status', (req, res) => {
     systemInfo,
     host: req.headers.host,
     ip: req.ip,
-    headers: req.headers
+    headers: req.headers,
+    staticFiles: {
+      dist: fs.existsSync(path.join(__dirname, '../../dist')),
+      public: fs.existsSync(path.join(__dirname, '../../public')),
+      indexHtml: fs.existsSync(path.join(staticDir, 'index.html'))
+    }
   });
 });
 
@@ -372,6 +415,47 @@ app.post('/api/automate', async (req, res) => {
       message: `حدث خطأ أثناء الأتمتة: ${error.message}`
     });
   }
+});
+
+// إضافة '*' كمسار لتوجيه أي طلب آخر إلى index.html (SPA)
+app.get('*', (req, res) => {
+  // التحقق مما إذا كان الطلب موجهًا إلى مسار API
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ 
+      status: 'error',
+      message: `مسار API غير موجود: ${req.path}` 
+    });
+  }
+
+  // خدمة index.html للتطبيق وحيد الصفحة (SPA)
+  const indexPath = path.join(staticDir, 'index.html');
+  
+  if (fs.existsSync(indexPath)) {
+    console.log(`توجيه الطلب ${req.path} إلى index.html`);
+    return res.sendFile(indexPath);
+  }
+  
+  // إذا لم يتم العثور على index.html، أعرض رسالة خطأ
+  res.status(404).send(`
+    <html dir="rtl">
+      <head><title>صفحة غير موجودة</title></head>
+      <body>
+        <h1>لم يتم العثور على الصفحة المطلوبة</h1>
+        <p>لم يتم العثور على index.html في مجلد الملفات الثابتة.</p>
+        <p>مسار: ${indexPath}</p>
+        <p>معلومات إضافية:</p>
+        <pre>${JSON.stringify({
+          staticDir,
+          publicDir,
+          exists: {
+            staticDir: fs.existsSync(staticDir),
+            publicDir: fs.existsSync(publicDir)
+          },
+          files: fs.existsSync(staticDir) ? fs.readdirSync(staticDir) : []
+        }, null, 2)}</pre>
+      </body>
+    </html>
+  `);
 });
 
 // بدء تشغيل الخادم

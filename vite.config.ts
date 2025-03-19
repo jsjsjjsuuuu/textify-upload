@@ -8,11 +8,18 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => {
   // استخدام خادم محلي للتطوير وخادم Render للإنتاج
   const isProduction = mode === 'production';
+  
+  // تحسين إعداد URL الخادم بترتيب أولوية واضح
   const automationServerUrl = isProduction 
-    ? process.env.VITE_AUTOMATION_SERVER_URL || process.env.AUTOMATION_SERVER_URL || 'https://textify-upload.onrender.com' 
+    ? (process.env.VITE_AUTOMATION_SERVER_URL || 
+       process.env.AUTOMATION_SERVER_URL || 
+       process.env.RENDER_EXTERNAL_URL || 
+       process.env.RAILWAY_PUBLIC_DOMAIN || 
+       'https://textify-upload.onrender.com')
     : 'http://localhost:10000';
   
   console.log(`⚡️ الاتصال بخادم الأتمتة على: ${automationServerUrl}, isProduction: ${isProduction}`);
+  console.log(`⚡️ متغيرات البيئة: VITE_AUTOMATION_SERVER_URL=${process.env.VITE_AUTOMATION_SERVER_URL}, RENDER_EXTERNAL_URL=${process.env.RENDER_EXTERNAL_URL}`);
   
   // تدوير عناوين IP الثابتة لـ Render
   const RENDER_IPS = [
@@ -32,7 +39,7 @@ export default defineConfig(({ mode }) => {
   
   return {
     define: {
-      // تعريف متغيرات البيئة بالطريقة الصحيحة
+      // تعريف متغيرات البيئة بالطريقة الصحيحة - مهم جدًا للواجهة الأمامية
       'import.meta.env.VITE_AUTOMATION_SERVER_URL': JSON.stringify(automationServerUrl),
       'process.env.AUTOMATION_SERVER_URL': JSON.stringify(automationServerUrl),
       'process.env.VITE_AUTOMATION_SERVER_URL': JSON.stringify(automationServerUrl)

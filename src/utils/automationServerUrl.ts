@@ -1,5 +1,3 @@
-// src/utils/automationServerUrl.ts
-
 // قائمة بعناوين IP المسموح بها لخادم Render
 export const RENDER_ALLOWED_IPS = [
   "34.106.88.0",
@@ -46,16 +44,11 @@ export function isValidServerUrl(url: string): boolean {
   }
 }
 
-// دالة لحفظ عنوان URL لخادم الأتمتة في التخزين المحلي
-export function setAutomationServerUrl(url: string): void {
-  localStorage.setItem('automationServerUrl', url);
-}
-
-// دالة لاسترجاع عنوان URL لخادم الأتمتة من التخزين المحلي
+// كشف وتعيين URL الخادم بترتيب أولوية معين
 export function getAutomationServerUrl(): string {
   // تحقق أولاً من متغير البيئة في المتصفح
   if (typeof window !== 'undefined') {
-    // إذا كان لدينا import.meta.env متاح (بيئة Vite)
+    // 1. البحث في import.meta.env (أعلى أولوية)
     if (typeof import.meta !== 'undefined' && 
         import.meta.env && 
         import.meta.env.VITE_AUTOMATION_SERVER_URL) {
@@ -63,30 +56,53 @@ export function getAutomationServerUrl(): string {
       return import.meta.env.VITE_AUTOMATION_SERVER_URL;
     }
     
-    // إذا كان متغير process.env متاح
-    if (typeof process !== 'undefined' && 
-        process.env && 
-        (process.env.VITE_AUTOMATION_SERVER_URL || process.env.AUTOMATION_SERVER_URL)) {
-      const url = process.env.VITE_AUTOMATION_SERVER_URL || process.env.AUTOMATION_SERVER_URL;
-      console.log("استخدام متغير البيئة من process.env:", url);
-      return url;
+    // 2. البحث في process.env
+    if (typeof process !== 'undefined' && process.env) {
+      // تحقق من متغيرات البيئة المختلفة بترتيب الأولوية
+      const envVars = [
+        'VITE_AUTOMATION_SERVER_URL',
+        'AUTOMATION_SERVER_URL',
+        'RENDER_EXTERNAL_URL',
+        'RAILWAY_PUBLIC_DOMAIN'
+      ];
+      
+      for (const varName of envVars) {
+        if (process.env[varName]) {
+          console.log(`استخدام متغير البيئة ${varName} من process.env:`, process.env[varName]);
+          return process.env[varName];
+        }
+      }
     }
     
-    // محاولة استرجاع القيمة المخزنة محليًا
+    // 3. محاولة استرجاع القيمة المخزنة محليًا
     const savedUrl = localStorage.getItem('automationServerUrl');
     if (savedUrl) {
       console.log("استخدام عنوان URL المخزن محليًا:", savedUrl);
       return savedUrl;
     }
     
-    // عودة إلى أصل الموقع الحالي كخيار أخير
-    console.log("استخدام أصل الموقع الحالي:", window.location.origin);
-    return window.location.origin;
+    // 4. عودة إلى أصل الموقع الحالي
+    const origin = window.location.origin;
+    console.log("استخدام أصل الموقع الحالي:", origin);
+    return origin;
   }
   
-  // الخيار الافتراضي في بيئة Node.js
-  if (typeof process !== 'undefined' && process.env && process.env.AUTOMATION_SERVER_URL) {
-    return process.env.AUTOMATION_SERVER_URL;
+  // في بيئة Node.js
+  if (typeof process !== 'undefined' && process.env) {
+    // تحقق من متغيرات البيئة المختلفة بترتيب الأولوية
+    const envVars = [
+      'VITE_AUTOMATION_SERVER_URL',
+      'AUTOMATION_SERVER_URL',
+      'RENDER_EXTERNAL_URL',
+      'RAILWAY_PUBLIC_DOMAIN'
+    ];
+    
+    for (const varName of envVars) {
+      if (process.env[varName]) {
+        console.log(`[Node.js] استخدام متغير البيئة ${varName}:`, process.env[varName]);
+        return process.env[varName];
+      }
+    }
   }
   
   // القيمة الافتراضية

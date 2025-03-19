@@ -4,9 +4,9 @@
   "deploy": {
     "numReplicas": 1,
     "buildCommand": {
-      "command": "npm install && VITE_AUTOMATION_SERVER_URL=$RAILWAY_PUBLIC_DOMAIN npx vite build"
+      "command": "npm install && VITE_AUTOMATION_SERVER_URL=$RAILWAY_PUBLIC_DOMAIN npm run build"
     },
-    "startCommand": "node src/server/server.js",
+    "startCommand": "VITE_AUTOMATION_SERVER_URL=$RAILWAY_PUBLIC_DOMAIN node src/server/server.js",
     "restartPolicyType": "ON_FAILURE",
     "envs": [
       {
