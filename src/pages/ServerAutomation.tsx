@@ -7,7 +7,7 @@ import AppHeader from "@/components/AppHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { PlayCircle, Server, FileText, Wifi, WifiOff, AlertTriangle } from "lucide-react";
+import { PlayCircle, Server, FileText, Wifi, WifiOff, AlertTriangle, Settings } from "lucide-react";
 import { getLastConnectionStatus } from "@/utils/automationServerUrl";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
