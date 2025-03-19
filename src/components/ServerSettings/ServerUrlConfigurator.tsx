@@ -22,8 +22,30 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
   isLoading
 }) => {
   const [validUrl, setValidUrl] = useState(true);
-  const [inputUrl, setInputUrl] = useState(serverUrl || "https://textify-upload.onrender.com");
+  const [inputUrl, setInputUrl] = useState("https://textify-upload.onrender.com");
   const [currentServerUrl, setCurrentServerUrl] = useState(getAutomationServerUrl());
+  
+  // التعيين الأولي للرابط الجديد عند تحميل المكون
+  useEffect(() => {
+    // تطبيق الرابط الجديد فورًا
+    const newUrl = "https://textify-upload.onrender.com";
+    if (currentServerUrl !== newUrl) {
+      setAutomationServerUrl(newUrl);
+      onServerUrlChange(newUrl);
+      setCurrentServerUrl(newUrl);
+      setInputUrl(newUrl);
+      
+      // اختبار الاتصال بالرابط الجديد
+      setTimeout(() => {
+        onCheckStatus();
+      }, 500);
+      
+      toast.success("تم تطبيق الرابط الجديد", {
+        description: "يتم الآن استخدام خادم Render الرسمي",
+        duration: 3000
+      });
+    }
+  }, []);
   
   // تحديث حقل الإدخال عند تغيير serverUrl من الخارج
   useEffect(() => {
