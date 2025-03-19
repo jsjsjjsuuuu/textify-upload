@@ -43,9 +43,9 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
       const result = await checkConnection();
       
       if (result.isConnected) {
-        toast("متصل بخادم Render", {
+        toast.success("متصل بخادم Render", {
           description: "تم الاتصال بخادم Render بنجاح.",
-          variant: "default",
+          duration: 5000
         });
         
         // إعادة تعيين عداد المحاولات
@@ -59,9 +59,8 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
           ? "استمرار فشل الاتصال. يرجى التحقق من إعدادات الخادم وتجربة استخدام عنوان IP مختلف."
           : result.message || "تعذر الاتصال بخادم Render. تأكد من أن الخادم يعمل وأن عنوان URL صحيح.";
           
-        toast("فشل الاتصال", {
+        toast.error("فشل الاتصال", {
           description: failMsg,
-          variant: "destructive",
           duration: 10000,
           action: {
             label: "إعدادات الخادم",
@@ -88,9 +87,8 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
         detailedError = "انتهت مهلة الاتصال. قد تكون سرعة الاتصال بالإنترنت بطيئة أو الخادم غير مستجيب.";
       }
       
-      toast("خطأ في الاتصال", {
+      toast.error("خطأ في الاتصال", {
         description: detailedError,
-        variant: "destructive",
         duration: 10000,
         action: {
           label: "إعدادات الخادم",
