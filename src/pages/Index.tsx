@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import ImageUploader from '../components/ImageUploader';
 import ImageList from '../components/ImageList';
@@ -30,7 +29,7 @@ const Index = () => {
     handleCopyText,
     handleAutoExtract,
     handleTempChange,
-  } = useDataExtraction();
+  } = useDataExtraction(images?.[0]?.id, images?.[0]?.extractedText, false, false);
   
   const [serverConnected, setServerConnected] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
