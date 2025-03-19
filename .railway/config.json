@@ -4,7 +4,7 @@
   "deploy": {
     "numReplicas": 1,
     "buildCommand": {
-      "command": "npm install && npm install vite && npx vite build"
+      "command": "npm install && npm install -D vite && npx vite build"
     },
     "startCommand": "node src/server/server.js",
     "restartPolicyType": "ON_FAILURE"
