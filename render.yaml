@@ -4,7 +4,7 @@ services:
   - type: web
     name: textify-upload
     env: node
-    buildCommand: npm install && npx vite build
+    buildCommand: npm install && npm install vite && npx vite build
     startCommand: node src/server/server.js
     envVars:
       - key: NODE_ENV
@@ -15,8 +15,6 @@ services:
         value: /usr/bin/google-chrome-stable
       - key: PUPPETEER_SKIP_DOWNLOAD
         value: true
-      - key: PATH
-        value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/.npm/bin:/node_modules/.bin
     healthCheckPath: /api/status
     healthCheckTimeout: 5
     autoDeploy: true
@@ -29,11 +27,10 @@ services:
 
 # متغيرات عالمية مشتركة بين جميع الخدمات
 envVarGroups:
-  - name: automation-settings
+  - name: common-settings
     envVars:
       - key: NODE_VERSION
         value: 18.x
       - key: NPM_VERSION
         value: 9.x
-      - key: VITE_IS_INSTALLED
-        value: "true"
+
