@@ -6,10 +6,13 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // استخدام خادم Render كمنفذ افتراضي لخادم الأتمتة
-  const automationServerUrl = 'https://textify-upload.onrender.com';
+  // استخدام خادم محلي للتطوير وخادم Render للإنتاج
+  const isProduction = mode === 'production';
+  const automationServerUrl = isProduction 
+    ? 'https://textify-upload.onrender.com' 
+    : 'http://localhost:10000'; // استخدام المنفذ 10000 للخادم المحلي
   
-  console.log(`⚡️ الاتصال بخادم الأتمتة على: ${automationServerUrl}`);
+  console.log(`⚡️ الاتصال بخادم الأتمتة على: ${automationServerUrl}, isProduction: ${isProduction}`);
   
   // تدوير عناوين IP الثابتة لـ Render
   const RENDER_IPS = [
@@ -47,15 +50,18 @@ export default defineConfig(({ mode }) => {
               console.log('طلب البروكسي:', req.method, req.url);
               
               // إضافة رؤوس IP ثابتة للتواصل مع Render
-              const selectedIp = getRandomIp();
-              console.log(`استخدام عنوان IP للبروكسي: ${selectedIp}`);
+              if (isProduction) {
+                const selectedIp = getRandomIp();
+                console.log(`استخدام عنوان IP للبروكسي: ${selectedIp}`);
+                
+                proxyReq.setHeader('X-Forwarded-For', selectedIp);
+                proxyReq.setHeader('X-Render-Client-IP', selectedIp);
+                
+                // إضافة رؤوس إضافية لتجنب مشاكل CORS
+                proxyReq.setHeader('Origin', automationServerUrl);
+                proxyReq.setHeader('Referer', automationServerUrl);
+              }
               
-              proxyReq.setHeader('X-Forwarded-For', selectedIp);
-              proxyReq.setHeader('X-Render-Client-IP', selectedIp);
-              
-              // إضافة رؤوس إضافية لتجنب مشاكل CORS
-              proxyReq.setHeader('Origin', automationServerUrl);
-              proxyReq.setHeader('Referer', automationServerUrl);
               proxyReq.setHeader('Accept', 'application/json');
               proxyReq.setHeader('Content-Type', 'application/json');
               proxyReq.setHeader('Access-Control-Allow-Origin', '*');
