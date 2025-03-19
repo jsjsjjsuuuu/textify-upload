@@ -4,9 +4,9 @@
   "deploy": {
     "numReplicas": 1,
     "buildCommand": {
-      "command": "npm install && VITE_AUTOMATION_SERVER_URL=$AUTOMATION_SERVER_URL npx vite build"
+      "command": "npm install && VITE_AUTOMATION_SERVER_URL=$RAILWAY_PUBLIC_DOMAIN npx vite build"
     },
-    "startCommand": "PORT=10000 node src/server/server.js",
+    "startCommand": "node src/server/server.js",
     "restartPolicyType": "ON_FAILURE",
     "envs": [
       {
@@ -14,20 +14,16 @@
         "value": "production"
       },
       {
-        "key": "PORT",
-        "value": "10000"
-      },
-      {
         "key": "PUPPETEER_SKIP_DOWNLOAD",
         "value": "true"
       },
       {
         "key": "AUTOMATION_SERVER_URL",
-        "value": "https://textify-upload.up.railway.app"
+        "value": "$RAILWAY_PUBLIC_DOMAIN"
       },
       {
         "key": "VITE_AUTOMATION_SERVER_URL",
-        "value": "https://textify-upload.up.railway.app"
+        "value": "$RAILWAY_PUBLIC_DOMAIN"
       }
     ]
   }

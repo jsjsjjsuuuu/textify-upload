@@ -10,8 +10,21 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// تهيئة المتغيرات البيئية
+const PORT = process.env.PORT || 10000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const AUTOMATION_SERVER_URL = process.env.AUTOMATION_SERVER_URL || 
+                             process.env.RENDER_EXTERNAL_URL || 
+                             process.env.RAILWAY_PUBLIC_DOMAIN || 
+                             process.env.HEROKU_APP_NAME && `https://${process.env.HEROKU_APP_NAME}.herokuapp.com` || 
+                             `http://localhost:${PORT}`;
+
+console.log('تهيئة خادم الأتمتة...');
+console.log(`NODE_ENV: ${NODE_ENV}`);
+console.log(`PORT: ${PORT}`);
+console.log(`AUTOMATION_SERVER_URL: ${AUTOMATION_SERVER_URL}`);
+
 const app = express();
-const port = process.env.PORT || 10000;
 
 // إضافة middleware
 app.use(cors({
@@ -20,7 +33,14 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+
+// خدمة الملفات الثابتة من مجلد dist إذا كان موجودًا، وإلا استخدم public
+let staticDir = path.join(__dirname, '../../dist');
+if (!fs.existsSync(staticDir)) {
+  console.log('مجلد dist غير موجود، استخدام مجلد public بدلاً منه');
+  staticDir = path.join(__dirname, '../../public');
+}
+app.use(express.static(staticDir));
 
 // إضافة مسار لصفحة ترحيبية بسيطة
 app.get('/', (req, res) => {
@@ -42,7 +62,7 @@ app.get('/', (req, res) => {
       <body>
         <div class="container">
           <h1>خادم الأتمتة يعمل! <span class="success">✓</span></h1>
-          <p>خادم الأتمتة يعمل بنجاح على المنفذ <strong>${port}</strong>.</p>
+          <p>خادم الأتمتة يعمل بنجاح على المنفذ <strong>${PORT}</strong>.</p>
           
           <div class="endpoint">
             <h3>نقاط النهاية المتاحة:</h3>
@@ -55,11 +75,13 @@ app.get('/', (req, res) => {
           <div class="note">
             <h3>ملاحظة:</h3>
             <p>يجب أن يكون عنوان واجهة المستخدم في التطبيق الرئيسي مكونًا ليشير إلى:</p>
-            <pre>http://localhost:${port}/api</pre>
+            <pre>${AUTOMATION_SERVER_URL}/api</pre>
             <p>متغيرات البيئة:</p>
-            <pre>PORT=${port}</pre>
-            <pre>NODE_ENV=${process.env.NODE_ENV || 'development'}</pre>
-            <pre>AUTOMATION_SERVER_URL=${process.env.AUTOMATION_SERVER_URL || 'not set'}</pre>
+            <pre>PORT=${PORT}</pre>
+            <pre>NODE_ENV=${NODE_ENV}</pre>
+            <pre>AUTOMATION_SERVER_URL=${AUTOMATION_SERVER_URL}</pre>
+            <pre>RENDER_EXTERNAL_URL=${process.env.RENDER_EXTERNAL_URL || 'not set'}</pre>
+            <pre>RAILWAY_PUBLIC_DOMAIN=${process.env.RAILWAY_PUBLIC_DOMAIN || 'not set'}</pre>
           </div>
         </div>
       </body>
@@ -76,17 +98,25 @@ app.get('/api/status', (req, res) => {
     memory: process.memoryUsage(),
     uptime: process.uptime(),
     cwd: process.cwd(),
-    env: process.env.NODE_ENV || 'development',
-    port: port,
-    automationServerUrl: process.env.AUTOMATION_SERVER_URL || 'not set',
-    viteAutomationServerUrl: process.env.VITE_AUTOMATION_SERVER_URL || 'not set'
+    env: NODE_ENV,
+    port: PORT,
+    automationServerUrl: AUTOMATION_SERVER_URL,
+    renderExternalUrl: process.env.RENDER_EXTERNAL_URL || 'not set',
+    railwayPublicDomain: process.env.RAILWAY_PUBLIC_DOMAIN || 'not set',
+    allEnvVars: Object.keys(process.env).filter(key => !key.includes('KEY') && !key.includes('SECRET') && !key.includes('PASSWORD')).reduce((obj, key) => {
+      obj[key] = process.env[key];
+      return obj;
+    }, {})
   };
   
   res.json({ 
     status: 'ok', 
     message: 'خادم الأتمتة يعمل بنجاح', 
     time: new Date().toISOString(),
-    systemInfo
+    systemInfo,
+    host: req.headers.host,
+    ip: req.ip,
+    headers: req.headers
   });
 });
 
@@ -345,18 +375,18 @@ app.post('/api/automate', async (req, res) => {
 });
 
 // بدء تشغيل الخادم
-app.listen(port, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╭───────────────────────────────────────╮
 │                                       │
-│   خادم الأتمتة يعمل على المنفذ ${port}    │
+│   خادم الأتمتة يعمل على المنفذ ${PORT}    │
 │                                       │
 │   للتحقق قم بزيارة:                   │
-│   http://localhost:${port}/api/status   │
+│   ${AUTOMATION_SERVER_URL}/api/status   │
 │                                       │
 │   متغيرات البيئة:                     │
-│   NODE_ENV: ${process.env.NODE_ENV || 'development'}│
-│   AUTOMATION_SERVER_URL: ${process.env.AUTOMATION_SERVER_URL || 'not set'}│
+│   NODE_ENV: ${NODE_ENV}                │
+│   AUTOMATION_SERVER_URL: ${AUTOMATION_SERVER_URL}│
 │                                       │
 │   لإيقاف الخادم اضغط: Ctrl+C          │
 │                                       │

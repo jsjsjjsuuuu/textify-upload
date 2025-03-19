@@ -4,19 +4,22 @@ services:
   - type: web
     name: textify-upload
     env: node
-    buildCommand: npm install && VITE_AUTOMATION_SERVER_URL=$AUTOMATION_SERVER_URL npx vite build
-    startCommand: PORT=10000 node src/server/server.js
+    buildCommand: npm install && VITE_AUTOMATION_SERVER_URL=${RENDER_EXTERNAL_URL} npx vite build
+    startCommand: node src/server/server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        fromService:
+          type: web
+          name: textify-upload
+          envVarKey: PORT
       - key: PUPPETEER_SKIP_DOWNLOAD
         value: true
       - key: AUTOMATION_SERVER_URL
-        value: https://textify-upload.onrender.com
+        value: ${RENDER_EXTERNAL_URL}
       - key: VITE_AUTOMATION_SERVER_URL
-        value: https://textify-upload.onrender.com
+        value: ${RENDER_EXTERNAL_URL}
     healthCheckPath: /api/status
     healthCheckTimeout: 150
     autoDeploy: true
