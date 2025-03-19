@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getAutomationServerUrl, setAutomationServerUrl } from "@/utils/automationServerUrl";
+import { getAutomationServerUrl, setAutomationServerUrl, isValidServerUrl } from "@/utils/automationServerUrl";
 import { RefreshCw, Globe, Check, X, Copy, Save } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";

@@ -94,9 +94,10 @@ const ServerSettings = () => {
   };
   
   const handleServerUrlChange = (url: string) => {
+    console.log("تغيير عنوان URL إلى:", url);
     setServerUrl(url);
-    // لا نحتاج إلى استدعاء setAutomationServerUrl هنا بعد الآن
-    // لأننا قمنا بنقل هذه الوظيفة إلى داخل المكون ServerUrlConfigurator
+    // لا نحتاج إلى استدعاء setAutomationServerUrl هنا 
+    // لأننا نقوم بذلك داخل مكون ServerUrlConfigurator
   };
   
   const handleSaveUrl = () => {
@@ -141,6 +142,7 @@ const ServerSettings = () => {
     setIsLoading(true);
     
     try {
+      // الحصول على العنوان الحالي مباشرة لضمان استخدام آخر قيمة
       const currentUrl = getAutomationServerUrl();
       console.log("التحقق من حالة الخادم:", currentUrl);
       
@@ -191,7 +193,7 @@ const ServerSettings = () => {
       autoReconnect={autoReconnect}
       reconnectStatus={reconnectStatus}
       onServerUrlChange={handleServerUrlChange}
-      onCheckStatus={() => checkServerStatus()}
+      onCheckStatus={() => checkServerStatus(true)}
       onSaveUrl={handleSaveUrl}
       onResetUrl={handleResetUrl}
       onAutoReconnectChange={setAutoReconnect}
