@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Sun, Moon, AlertTriangle, Wifi, Server } from 'lucide-react';
@@ -115,6 +114,9 @@ const AppHeader = () => {
                 </Link>
                 <Link to="/bookmarklet" className={`transition-colors hover:text-foreground/80 ${isActive('/bookmarklet') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
                   أدوات سطر العناوين
+                </Link>
+                <Link to="/server-automation" className={`transition-colors hover:text-foreground/80 ${isActive('/server-automation') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
+                  الأتمتة عبر الخادم
                 </Link>
                 <Link to="/records" className={`transition-colors hover:text-foreground/80 ${isActive('/records') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
                   السجلات

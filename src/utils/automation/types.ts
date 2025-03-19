@@ -12,6 +12,7 @@ export interface AutomationConfig {
   actions: AutomationAction[];
   ipAddress?: string; // عنوان IP المستخدم للطلب
   retryCount?: number; // عدد محاولات إعادة المحاولة
+  automationType?: 'server' | 'client'; // نوع الأتمتة (خادم أو عميل)
 }
 
 /**
@@ -52,6 +53,7 @@ export interface AutomationResponse {
   result?: any;
   error?: string;
   clientIp?: string; // عنوان IP المستخدم
+  automationType?: 'server' | 'client'; // نوع الأتمتة المستخدم
 }
 
 /**
@@ -62,4 +64,41 @@ export interface ConnectionStatus {
   lastChecked: number;
   retryCount: number;
   lastUsedIp: string;
+}
+
+/**
+ * تكوين إجراءات الأتمتة
+ */
+export interface AutomationActionConfig {
+  id: string;
+  name: string;
+  description: string;
+  finder: string;
+  value: string;
+  delay: number;
+  enabled: boolean;
+}
+
+/**
+ * نتيجة تنفيذ إجراء أتمتة
+ */
+export interface AutomationActionResult {
+  actionId: string;
+  success: boolean;
+  value?: string;
+  error?: string;
+  executionTime: number;
+}
+
+/**
+ * حالة تنفيذ الأتمتة
+ */
+export interface AutomationExecutionStatus {
+  id: string;
+  startTime: number;
+  endTime?: number;
+  actions: AutomationActionResult[];
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  error?: string;
+  url: string;
 }
