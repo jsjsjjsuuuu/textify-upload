@@ -12,12 +12,14 @@ interface ConnectionStatusIndicatorProps {
   showText?: boolean;
   className?: string;
   onStatusChange?: (status: boolean) => void;
+  onClickSettings?: () => void;
 }
 
 const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   showText = true,
   className,
-  onStatusChange
+  onStatusChange,
+  onClickSettings
 }) => {
   const [status, setStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const [isChecking, setIsChecking] = useState(false);
@@ -58,10 +60,8 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
             { 
               duration: 10000,
               action: {
-                label: "معلومات إضافية",
-                onClick: () => {
-                  window.open("https://docs.render.com/network", "_blank");
-                }
+                label: "إعدادات الخادم",
+                onClick: onClickSettings
               }
             }
           );
@@ -142,16 +142,20 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
     }
   };
   
+  const handleSettingsClick = () => {
+    onClickSettings?.();
+  };
+  
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <div className={cn("flex items-center gap-2 cursor-pointer", className)}>
+        <div className={cn("flex items-center gap-2 cursor-pointer", className)} onClick={() => checkServerStatus()}>
           {status === 'checking' || isChecking ? (
             <RefreshCw className="h-4 w-4 animate-spin text-yellow-500" />
           ) : status === 'connected' ? (
             <Wifi className="h-4 w-4 text-green-500" />
           ) : (
-            <Wifi className="h-4 w-4 text-yellow-500 animate-pulse" />
+            <WifiOff className="h-4 w-4 text-yellow-500 animate-pulse" />
           )}
           
           {showText && (
@@ -164,7 +168,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
               )}
             >
               {status === 'checking' ? 'جاري الفحص...' : 
-               status === 'connected' ? 'خادم Render متصل' : `جاري الاتصال بـ Render${retryAttempt > 0 ? ` (محاولة #${retryAttempt})` : '...'}`}
+               status === 'connected' ? 'خادم Render متصل' : `غير متصل بـ Render${retryAttempt > 0 ? ` (محاولة #${retryAttempt})` : ''}`}
             </span>
           )}
         </div>
@@ -175,7 +179,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
             {status === 'connected' ? (
               <Wifi className="h-5 w-5 text-green-600 mt-0.5" />
             ) : (
-              <Wifi className="h-5 w-5 text-yellow-600 animate-pulse mt-0.5" />
+              <WifiOff className="h-5 w-5 text-yellow-600 animate-pulse mt-0.5" />
             )}
             <div>
               <h4 className="font-medium">
@@ -217,6 +221,17 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
                   يمكن لخادم Render استخدام عناوين IP مختلفة. محاولة تبديل عنوان IP قد يساعد في بعض الأحيان على تجاوز مشكلات الشبكة.
                 </p>
               </div>
+              
+              <div className="border-t pt-2 mt-2">
+                <h5 className="text-sm font-medium">الحلول المقترحة:</h5>
+                <ul className="text-xs space-y-1 list-disc list-inside mt-1">
+                  <li>تأكد من أن خادم Render يعمل ويمكن الوصول إليه من الإنترنت</li>
+                  <li>تأكد من أن عنوان URL المستخدم صحيح في إعدادات الخادم</li>
+                  <li>تفعيل خيار إعادة الاتصال التلقائي في صفحة الإعدادات</li>
+                  <li>تحقق من إعدادات الشبكة والجدران النارية</li>
+                  <li>تأكد من أن المنفذ 10000 مفتوح للخادم المحلي</li>
+                </ul>
+              </div>
             </div>
           )}
           
@@ -251,7 +266,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
               variant="ghost" 
               size="sm" 
               className="p-0 h-auto text-xs"
-              onClick={() => window.location.href = '/server-settings'}
+              onClick={handleSettingsClick}
             >
               <Settings className="h-3 w-3 mr-1" />
               إعدادات الخادم

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, RefreshCw, Settings, ExternalLink } from "lucide-react";
@@ -181,6 +182,8 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
                 <li>تحقق من إعدادات URL الخادم في صفحة إعدادات الخادم</li>
                 <li>تفعيل خيار إعادة الاتصال التلقائي</li>
                 <li>جرب تبديل عنوان IP المستخدم للاتصال</li>
+                <li>تأكد من عدم وجود جدار ناري يمنع الاتصال</li>
+                <li>تأكد من أن المنفذ 10000 مفتوح إذا كنت تستخدم خادمًا محليًا</li>
               </ul>
               
               <div className="flex items-center gap-2 mt-4">
