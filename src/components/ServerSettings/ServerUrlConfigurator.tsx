@@ -28,7 +28,7 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
   
   // التعيين الأولي للرابط عند تحميل المكون
   useEffect(() => {
-    // تطبيق رابط Render فورًا
+    // ضمان استخدام رابط Render دائماً
     if (currentServerUrl !== renderServerUrl) {
       setAutomationServerUrl(renderServerUrl);
       onServerUrlChange(renderServerUrl);

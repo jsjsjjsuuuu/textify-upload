@@ -1,290 +1,162 @@
+
 import React, { useState, useEffect } from "react";
-import { Wifi, WifiOff, RefreshCw, Clock, ExternalLink, Server, Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { checkConnection, getLastConnectionStatus, RENDER_ALLOWED_IPS, isPreviewEnvironment } from "@/utils/automationServerUrl";
+import { Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ConnectionManager } from "@/utils/automation/connectionManager";
+import { getLastConnectionStatus, isPreviewEnvironment } from "@/utils/automationServerUrl";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ServerStatusResponse } from "@/utils/automation/types";
 
 interface ConnectionStatusIndicatorProps {
-  showText?: boolean;
   className?: string;
-  onStatusChange?: (status: boolean) => void;
+  showText?: boolean;
+  onStatusChange?: (isConnected: boolean) => void;
 }
 
 const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
-  showText = true,
   className,
+  showText = false,
   onStatusChange
 }) => {
-  const [status, setStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
-  const [statusDetail, setStatusDetail] = useState("");
-  const [retryAttempt, setRetryAttempt] = useState(0);
-  const [selectedIp, setSelectedIp] = useState<string | null>(null);
-  const [isPreview, setIsPreview] = useState(false);
+  const [serverInfo, setServerInfo] = useState<ServerStatusResponse | null>(null);
   
-  // تحقق مما إذا كنا في بيئة معاينة
-  useEffect(() => {
-    setIsPreview(isPreviewEnvironment());
-  }, []);
-  
-  const checkServerStatus = async (specificIp?: string) => {
-    if (isChecking) return; // تجنب تكرار الفحص إذا كان هناك فحص قيد التقدم
-    
+  const checkConnectionStatus = async () => {
     setIsChecking(true);
-    setStatus('checking');
-    
     try {
-      // في بيئة المعاينة، محاكاة الاتصال الناجح
-      if (isPreview) {
-        setStatus('connected');
-        setStatusDetail("محاكاة الاتصال الناجح في بيئة المعاينة");
-        setRetryAttempt(0);
+      // في بيئة المعاينة، دائمًا نعتبر الاتصال ناجحًا
+      if (isPreviewEnvironment()) {
+        setIsConnected(true);
         onStatusChange?.(true);
         setIsChecking(false);
         return;
       }
       
-      const connectionResult = await checkConnection();
-      
-      if (connectionResult.isConnected) {
-        setStatus('connected');
-        setStatusDetail("متصل بخادم Render");
-        setRetryAttempt(0);
-        onStatusChange?.(true);
-        
-        if (specificIp) {
-          toast.success(`تم الاتصال بنجاح باستخدام IP: ${specificIp}`);
-        }
-      } else {
-        setStatus('disconnected');
-        setStatusDetail(connectionResult.message || "جاري محاولة الاتصال بخادم Render...");
-        onStatusChange?.(false);
-        
-        // زيادة عدد المحاولات
-        setRetryAttempt(prev => prev + 1);
-        
-        // إذا كان هناك عدة محاولات فاشلة، عرض رسالة للمستخدم
-        if (retryAttempt >= 3 && retryAttempt % 5 === 0) {
-          toast.error(
-            `تعذر الاتصال بخادم Render بعد ${retryAttempt} محاولة. تأكد من أن الخادم يعمل.`,
-            { 
-              duration: 10000,
-              action: {
-                label: "معلومات إضافية",
-                onClick: () => {
-                  window.open("https://docs.render.com/network", "_blank");
-                }
-              }
-            }
-          );
-        }
-        
-        // محاولة إعادة الاتصال تلقائيًا - استخدام فترة انتظار متزايدة
-        const retryDelay = Math.min(5000 + (retryAttempt * 1000), 15000);
-        setTimeout(() => checkServerStatus(), retryDelay);
-      }
+      // التحقق من الاتصال الفعلي
+      const status = await ConnectionManager.checkServerStatus(false);
+      setServerInfo(status);
+      setIsConnected(true);
+      onStatusChange?.(true);
     } catch (error) {
-      setStatus('disconnected');
-      const errorMsg = error instanceof Error ? error.message : "جاري محاولة الاتصال بخادم Render...";
-      
-      // إضافة تفاصيل إضافية للمستخدم
-      let detailedError = errorMsg;
-      if (errorMsg.includes("Failed to fetch")) {
-        detailedError = "تعذر الوصول إلى خادم Render - قد يكون الخادم غير متاح أو هناك مشكلة في الشبكة";
-      }
-      
-      setStatusDetail(detailedError);
+      console.error("فشل التحقق من حالة الاتصال:", error);
+      setIsConnected(false);
       onStatusChange?.(false);
-      
-      // زيادة عدد المحاولات
-      setRetryAttempt(prev => prev + 1);
-      
-      // محاولة إعادة الاتصال تلقائيًا
-      const retryDelay = Math.min(5000 + (retryAttempt * 1000), 15000);
-      setTimeout(() => checkServerStatus(), retryDelay);
     } finally {
       setIsChecking(false);
     }
   };
   
-  // محاولة الاتصال باستخدام عنوان IP محدد
-  const tryWithSpecificIp = (ip: string) => {
-    setSelectedIp(ip);
-    checkServerStatus(ip);
+  // التحقق من الاتصال عند تحميل المكون
+  useEffect(() => {
+    // التحقق أولاً من الحالة المخزنة
+    const savedStatus = getLastConnectionStatus();
+    setIsConnected(savedStatus.isConnected);
+    
+    // ثم التحقق الفعلي من الاتصال
+    checkConnectionStatus();
+    
+    // إعداد فاصل زمني للتحقق الدوري (كل 2 دقيقة)
+    const intervalId = setInterval(checkConnectionStatus, 120000);
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+  
+  const handleManualCheck = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    checkConnectionStatus();
   };
   
-  // فحص الحالة عند تحميل المكون
-  useEffect(() => {
-    // نحصل أولاً على الحالة المخزنة
-    const storedStatus = getLastConnectionStatus();
-    
-    // في بيئة المعاينة، تعيين حالة متصل افتراضيًا
-    if (isPreview) {
-      setStatus('connected');
-      setStatusDetail("متصل بخادم Render (محاكاة)");
-      onStatusChange?.(true);
-      return;
+  const getStatusText = () => {
+    if (isPreviewEnvironment()) {
+      return "متصل (بيئة معاينة)";
     }
     
-    if (storedStatus.isConnected) {
-      setStatus('connected');
-      setStatusDetail("متصل بخادم Render");
-      onStatusChange?.(true);
-    } else {
-      setStatus('disconnected');
-      setStatusDetail("جاري الاتصال بخادم Render...");
-      onStatusChange?.(false);
+    if (isChecking) {
+      return "جارٍ التحقق...";
     }
     
-    // ثم نقوم بالفحص لتحديث الحالة (تجنب الفحص المتكرر في بيئة المعاينة)
-    if (!isPreview) {
-      checkServerStatus();
-      
-      // فحص دوري كل 30 ثانية
-      const intervalId = setInterval(() => checkServerStatus(), 30000);
-      
-      return () => {
-        clearInterval(intervalId);
-      };
+    if (isConnected === true) {
+      return "متصل بالخادم";
     }
-  }, [isPreview]);
-  
-  const formatElapsedTime = (timestamp: number): string => {
-    if (!timestamp) return '';
     
-    const now = Date.now();
-    const diffInSeconds = Math.floor((now - timestamp) / 1000);
-    
-    if (diffInSeconds < 60) {
-      return `${diffInSeconds} ثانية`;
-    } else if (diffInSeconds < 3600) {
-      return `${Math.floor(diffInSeconds / 60)} دقيقة`;
-    } else {
-      return `${Math.floor(diffInSeconds / 3600)} ساعة`;
+    if (isConnected === false) {
+      return "غير متصل";
     }
+    
+    return "حالة الاتصال غير معروفة";
   };
   
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <div className={cn("flex items-center gap-2 cursor-pointer", className)}>
-          {status === 'checking' || isChecking ? (
-            <RefreshCw className="h-4 w-4 animate-spin text-yellow-500" />
-          ) : status === 'connected' ? (
-            <Wifi className="h-4 w-4 text-green-500" />
-          ) : (
-            <Wifi className="h-4 w-4 text-yellow-500 animate-pulse" />
-          )}
-          
-          {showText && (
-            <span 
-              className={cn(
-                "text-sm",
-                status === 'connected' && "text-green-600",
-                status === 'disconnected' && "text-yellow-600",
-                status === 'checking' && "text-yellow-600"
-              )}
-            >
-              {status === 'checking' ? 'جاري الفحص...' : 
-               status === 'connected' ? 'خادم Render متصل' : `جاري الاتصال بـ Render${retryAttempt > 0 ? ` (محاولة #${retryAttempt})` : '...'}`}
-            </span>
-          )}
-        </div>
-      </PopoverTrigger>
-      <PopoverContent className="w-96">
-        <div className="space-y-4">
-          <div className="flex items-start gap-2">
-            {status === 'connected' ? (
-              <Wifi className="h-5 w-5 text-green-600 mt-0.5" />
-            ) : (
-              <Wifi className="h-5 w-5 text-yellow-600 animate-pulse mt-0.5" />
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div 
+            onClick={handleManualCheck}
+            className={cn(
+              "inline-flex items-center gap-2 cursor-pointer",
+              className
             )}
-            <div>
-              <h4 className="font-medium">
-                {status === 'connected' ? 'خادم Render متصل' : 'حالة اتصال خادم Render'}
-              </h4>
-              <p className="text-sm text-muted-foreground">{statusDetail}</p>
-              {retryAttempt > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  عدد محاولات الاتصال: {retryAttempt}
-                </p>
-              )}
-            </div>
-          </div>
-          
-          {status !== 'connected' && (
-            <div className="space-y-2">
-              <h5 className="text-sm font-medium">جرب الاتصال باستخدام عنوان IP مختلف:</h5>
-              <div className="grid grid-cols-2 gap-2">
-                {RENDER_ALLOWED_IPS.map((ip) => (
-                  <Button 
-                    key={ip} 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                      "text-xs justify-start",
-                      selectedIp === ip && "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                    )}
-                    onClick={() => tryWithSpecificIp(ip)}
-                    disabled={isChecking}
-                  >
-                    <Server className="h-3 w-3 mr-1" />
-                    {ip}
-                  </Button>
-                ))}
-              </div>
-              
-              <div className="bg-yellow-50 dark:bg-yellow-950 p-2 rounded-md mt-2">
-                <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                  يمكن لخادم Render استخدام عناوين IP مختلفة. محاولة تبديل عنوان IP قد يساعد في بعض الأحيان على تجاوز مشكلات الشبكة.
-                </p>
-              </div>
-            </div>
-          )}
-          
-          <div className="flex justify-between items-center border-t pt-2">
-            <Button 
-              variant="link" 
-              size="sm" 
-              className="p-0 h-auto text-xs underline"
-              onClick={() => checkServerStatus()} 
-              disabled={isChecking}
-            >
-              تحديث الحالة
-            </Button>
-            {status === 'disconnected' && (
-              <span className="text-xs text-yellow-600">
-                {retryAttempt > 0 ? `آخر محاولة منذ ${formatElapsedTime(getLastConnectionStatus().lastChecked)}` : ''}
+          >
+            {isChecking ? (
+              <RefreshCw className="h-4 w-4 animate-spin text-amber-500" />
+            ) : isConnected ? (
+              <Wifi className="h-4 w-4 text-green-500" />
+            ) : (
+              <WifiOff className="h-4 w-4 text-red-500" />
+            )}
+            
+            {showText && (
+              <span className={cn(
+                "text-xs font-medium",
+                isChecking ? "text-amber-600" : 
+                isConnected ? "text-green-600" : 
+                "text-red-600"
+              )}>
+                {getStatusText()}
               </span>
             )}
           </div>
-          
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <a 
-              href="https://docs.render.com/network" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="flex items-center hover:underline"
-            >
-              <ExternalLink className="h-3 w-3 mr-1" />
-              دليل Render
-            </a>
-            <Button
-              variant="ghost" 
-              size="sm" 
-              className="p-0 h-auto text-xs"
-              onClick={() => window.location.href = '/server-settings'}
-            >
-              <Settings className="h-3 w-3 mr-1" />
-              إعدادات الخادم
-            </Button>
+        </TooltipTrigger>
+        <TooltipContent className="p-4 max-w-80 bg-white/95 backdrop-blur-sm">
+          <div className="space-y-2">
+            <div className="font-medium">حالة اتصال خادم الأتمتة</div>
+            
+            {isPreviewEnvironment() ? (
+              <p className="text-sm text-muted-foreground">
+                أنت في بيئة معاينة. يتم محاكاة الاتصال بالخادم.
+              </p>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-3 h-3 rounded-full",
+                    isConnected ? "bg-green-500" : "bg-red-500"
+                  )} />
+                  <span className="text-sm">
+                    {isConnected ? "متصل" : "غير متصل"}
+                  </span>
+                </div>
+                
+                {serverInfo && (
+                  <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                    <div>الوقت: {new Date(serverInfo.time).toLocaleTimeString()}</div>
+                    <div>مدة التشغيل: {Math.floor(serverInfo.uptime / 60)} دقيقة</div>
+                    <div>البيئة: {serverInfo.environment}</div>
+                  </div>
+                )}
+              </>
+            )}
+            
+            <div className="text-xs text-muted-foreground pt-2 border-t border-gray-100">
+              انقر للتحقق مرة أخرى
+            </div>
           </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

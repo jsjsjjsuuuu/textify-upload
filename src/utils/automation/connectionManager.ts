@@ -47,12 +47,17 @@ export class ConnectionManager {
       if (this.isPreviewEnvironment()) {
         console.log("بيئة المعاينة: محاكاة اتصال ناجح بالخادم");
         
-        // تحديث حالة الاتصال (مع محاكاة النجاح)
+        // تحديث حالة الاتصال (مع محاكاة النجاح بشكل دائم في بيئة المعاينة)
         updateConnectionStatus(true);
         this.lastError = null;
         
         // إيقاف إعادة المحاولة إذا كانت نشطة
         this.stopReconnect();
+        
+        // إظهار إشعار نجاح الاتصال عند الطلب
+        if (showToasts) {
+          toast.success("تم الاتصال بخادم الأتمتة بنجاح (بيئة معاينة)");
+        }
         
         // إرجاع بيانات مُحاكاة
         return {
@@ -112,10 +117,10 @@ export class ConnectionManager {
     } catch (error) {
       console.error("خطأ في التحقق من حالة الخادم:", error);
       
-      // التحقق مما إذا كنا في بيئة معاينة وتجنب إظهار رسائل الخطأ
+      // التحقق مما إذا كنا في بيئة معاينة وتجاهل إظهار رسائل الخطأ
       if (this.isPreviewEnvironment()) {
         console.log("بيئة المعاينة: تجاهل خطأ الاتصال وإرجاع حالة ناجحة");
-        // تحديث حالة الاتصال كما لو كانت ناجحة
+        // تحديث حالة الاتصال كما لو كانت ناجحة دائماً في بيئة المعاينة
         updateConnectionStatus(true);
         
         // إرجاع بيانات مُحاكاة
