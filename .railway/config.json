@@ -24,6 +24,10 @@
       {
         "key": "AUTOMATION_SERVER_URL",
         "value": "https://textify-upload.up.railway.app"
+      },
+      {
+        "key": "VITE_AUTOMATION_SERVER_URL",
+        "value": "https://textify-upload.up.railway.app"
       }
     ]
   }

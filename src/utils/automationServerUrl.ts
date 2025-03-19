@@ -54,7 +54,12 @@ export function setAutomationServerUrl(url: string): void {
 
 // دالة لاسترجاع عنوان URL لخادم الأتمتة من التخزين المحلي
 export function getAutomationServerUrl(): string {
-  // محاولة استخدام متغير البيئة إذا كان متاحًا
+  // تحقق من متغير البيئة في Vite
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_AUTOMATION_SERVER_URL) {
+    return import.meta.env.VITE_AUTOMATION_SERVER_URL;
+  }
+  
+  // تحقق من متغير البيئة التقليدي
   if (typeof process !== 'undefined' && process.env && process.env.AUTOMATION_SERVER_URL) {
     return process.env.AUTOMATION_SERVER_URL;
   }
@@ -78,7 +83,22 @@ export function resetAutomationServerUrl(): void {
 export async function isConnected(showToasts: boolean = false): Promise<boolean> {
   const url = getAutomationServerUrl();
   try {
-    const response = await fetch(`${url}/api/status`);
+    // طباعة تفاصيل الاتصال للتصحيح
+    console.log("استخدام عنوان URL للاتصال:", url);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), getConnectionTimeout());
+    
+    const response = await fetch(`${url}/api/status`, {
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
     if (!response.ok) {
       console.error(`فشل الاتصال بالخادم: ${response.status} ${response.statusText}`);
       return false;
@@ -119,7 +139,29 @@ export function updateConnectionStatus(isConnected: boolean, lastUsedIp?: string
 export async function checkConnection(): Promise<{ isConnected: boolean; message: string }> {
   const url = getAutomationServerUrl();
   try {
-    const response = await fetch(`${url}/api/status`);
+    console.log("استخدام عنوان URL للتحقق:", url);
+    
+    // استخدام رؤوس طلب أكثر تحديدًا
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Request-Source': 'textify-app'
+    };
+    
+    // طباعة الرؤوس المستخدمة للتصحيح
+    console.log("الرؤوس المستخدمة:", headers);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), getConnectionTimeout());
+    
+    const response = await fetch(`${url}/api/status`, {
+      method: 'GET',
+      headers,
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
     if (!response.ok) {
       return {
         isConnected: false,
@@ -138,9 +180,20 @@ export async function checkConnection(): Promise<{ isConnected: boolean; message
       message: 'الخادم متصل ومستجيب'
     };
   } catch (error) {
+    // تحسين رسائل الخطأ
+    let errorMessage = 'خطأ في الاتصال بالخادم';
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        errorMessage = 'انتهت مهلة الاتصال: تأكد من أن الخادم يعمل وأن العنوان صحيح';
+      } else {
+        errorMessage = `خطأ في الاتصال بالخادم: ${error.message}`;
+      }
+    }
+    
     return {
       isConnected: false,
-      message: `خطأ في الاتصال بالخادم: ${error}`
+      message: errorMessage
     };
   }
 }
@@ -172,7 +225,8 @@ export function getLastConnectionStatus(): ConnectionStatus {
 export function createBaseHeaders(clientIp?: string): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
+    'X-Request-Source': 'textify-app'
   };
   
   // إضافة رؤوس IP إذا كانت متوفرة

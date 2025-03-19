@@ -32,7 +32,9 @@ export default defineConfig(({ mode }) => {
   
   return {
     define: {
-      'process.env.VITE_AUTOMATION_SERVER_URL': JSON.stringify(automationServerUrl)
+      // تعريف متغيرات البيئة بالطريقة الصحيحة
+      'import.meta.env.VITE_AUTOMATION_SERVER_URL': JSON.stringify(automationServerUrl),
+      'process.env.AUTOMATION_SERVER_URL': JSON.stringify(automationServerUrl)
     },
     server: {
       host: "::",

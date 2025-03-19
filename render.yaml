@@ -15,6 +15,8 @@ services:
         value: true
       - key: AUTOMATION_SERVER_URL
         value: https://textify-upload.onrender.com
+      - key: VITE_AUTOMATION_SERVER_URL
+        value: https://textify-upload.onrender.com
     healthCheckPath: /api/status
     healthCheckTimeout: 150
     autoDeploy: true
