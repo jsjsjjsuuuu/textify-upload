@@ -1,4 +1,3 @@
-
 /**
  * إدارة عنوان URL الخاص بخادم الأتمتة
  */
@@ -29,19 +28,21 @@ let lastConnectionStatus = {
   lastChecked: 0,
   retryCount: 0,
   lastUsedIp: RENDER_ALLOWED_IPS[0],
-  timeoutMs: 10000 // إضافة مهلة زمنية افتراضية للطلبات
+  timeoutMs: 10000, // إضافة مهلة زمنية افتراضية للطلبات
+  lastError: null as Error | null // إضافة حقل لتخزين آخر خطأ
 };
 
 /**
  * تحديث حالة الاتصال
  */
-export const updateConnectionStatus = (isConnected: boolean, usedIp?: string): void => {
+export const updateConnectionStatus = (isConnected: boolean, usedIp?: string, error?: Error): void => {
   lastConnectionStatus = {
     isConnected,
     lastChecked: Date.now(),
     retryCount: isConnected ? 0 : lastConnectionStatus.retryCount + 1,
     lastUsedIp: usedIp || lastConnectionStatus.lastUsedIp,
-    timeoutMs: lastConnectionStatus.timeoutMs
+    timeoutMs: lastConnectionStatus.timeoutMs,
+    lastError: error || null
   };
   
   // تسجيل حالة الاتصال للتصحيح
@@ -49,14 +50,43 @@ export const updateConnectionStatus = (isConnected: boolean, usedIp?: string): v
     isConnected,
     retryCount: lastConnectionStatus.retryCount,
     lastUsedIp: lastConnectionStatus.lastUsedIp,
-    time: new Date().toISOString()
+    time: new Date().toISOString(),
+    error: error ? error.message : null
   });
+  
+  // حفظ حالة الاتصال الأخيرة في localStorage للوصول إليها بسهولة
+  try {
+    localStorage.setItem('connection_status', JSON.stringify({
+      isConnected,
+      lastChecked: Date.now(),
+      retryCount: lastConnectionStatus.retryCount,
+      lastError: error ? error.message : null
+    }));
+  } catch (e) {
+    console.error("خطأ في حفظ حالة الاتصال:", e);
+  }
 };
 
 /**
  * الحصول على حالة الاتصال الأخيرة
  */
 export const getLastConnectionStatus = () => {
+  // محاولة استرجاع الحالة المحفوظة من localStorage أولاً
+  try {
+    const savedStatus = localStorage.getItem('connection_status');
+    if (savedStatus) {
+      const parsed = JSON.parse(savedStatus);
+      // تحديث حالة الاتصال الداخلية إذا كانت الحالة المحفوظة أحدث
+      if (parsed.lastChecked > lastConnectionStatus.lastChecked) {
+        lastConnectionStatus.isConnected = parsed.isConnected;
+        lastConnectionStatus.lastChecked = parsed.lastChecked;
+        lastConnectionStatus.retryCount = parsed.retryCount;
+      }
+    }
+  } catch (e) {
+    console.error("خطأ في استرجاع حالة الاتصال:", e);
+  }
+  
   return { ...lastConnectionStatus };
 };
 
@@ -257,4 +287,67 @@ export const fetchWithRetry = async (
   
   // إذا وصلنا إلى هنا، فقد فشلت جميع المحاولات
   throw lastError || new Error('فشلت جميع محاولات الاتصال');
+};
+
+/**
+ * فحص حالة الاتصال بالخادم ورجوع نتيجة الفحص
+ * تستخدم هذه الدالة للتحقق السريع من صحة الاتصال
+ */
+export const checkConnection = async (): Promise<{ isConnected: boolean; message: string }> => {
+  try {
+    const serverUrl = getAutomationServerUrl();
+    const currentIp = getNextIp();
+    
+    // استخدام عملية fetch مبسطة مع مهلة زمنية قصيرة
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 ثوانٍ كحد أقصى للفحص
+    
+    const response = await fetch(`${serverUrl}/api/status`, {
+      method: 'GET',
+      headers: createBaseHeaders(currentIp),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      updateConnectionStatus(true, currentIp);
+      return { 
+        isConnected: true, 
+        message: "متصل بالخادم بنجاح" 
+      };
+    } else {
+      const errorMsg = `فشل الاتصال بالخادم برمز الحالة: ${response.status}`;
+      updateConnectionStatus(false, currentIp, new Error(errorMsg));
+      return { 
+        isConnected: false, 
+        message: errorMsg 
+      };
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'خطأ غير معروف في الاتصال';
+    updateConnectionStatus(false, lastConnectionStatus.lastUsedIp, error instanceof Error ? error : new Error(errorMsg));
+    return { 
+      isConnected: false, 
+      message: errorMsg 
+    };
+  }
+};
+
+/**
+ * التحقق مما إذا كان الاتصال نشطًا حاليًا
+ * يعتمد على الحالة المخزنة وإذا مضى وقت طويل يقوم بفحص جديد
+ */
+export const isConnected = async (forceCheck = false): Promise<boolean> => {
+  const status = getLastConnectionStatus();
+  const timeSinceLastCheck = Date.now() - status.lastChecked;
+  
+  // إذا كان آخر فحص حديثاً (أقل من 30 ثانية) ولم يطلب فحص قسري، فاستخدم الحالة المخزنة
+  if (!forceCheck && timeSinceLastCheck < 30000) {
+    return status.isConnected;
+  }
+  
+  // وإلا قم بالفحص وأعد النتيجة
+  const checkResult = await checkConnection();
+  return checkResult.isConnected;
 };

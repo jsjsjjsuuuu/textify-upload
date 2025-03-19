@@ -1,46 +1,59 @@
 
-import React from "react";
-import { ThemeToggle } from "./ThemeToggle";
-import { BookmarkIcon, ImageIcon, Settings, Database } from "lucide-react";
-import { Button } from "./ui/button";
-import { Link } from "react-router-dom";
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/components/ui/theme-provider';
+import ConnectionStatusIndicator from '@/components/ui/connection-status-indicator';
+import { Button } from './ui/button';
 
-const AppHeader: React.FC = () => {
+const AppHeader = () => {
+  const { setTheme, theme } = useTheme();
+  const location = useLocation();
+  
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+  
+  // أضفنا الدالة toggleTheme لتبديل السمة بين الفاتح والداكن
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
   return (
-    <header className="w-full">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center">
-          <h1 className="text-2xl font-bold text-brand-brown dark:text-brand-beige">
-            أداة تحليل الوصولات
-          </h1>
-          <div className="hidden md:flex ml-8 space-x-4 rtl:space-x-reverse">
-            <Link to="/">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-brand-coral">
-                <ImageIcon className="h-4 w-4 ml-2" />
-                معالجة الصور
-              </Button>
-            </Link>
-            <Link to="/records">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-brand-coral">
-                <Database className="h-4 w-4 ml-2" />
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 max-w-screen-2xl items-center">
+        <div className="flex flex-1 items-center justify-between">
+          <div className="mr-4 hidden md:flex">
+            <nav className="flex items-center gap-6 text-sm">
+              <Link to="/" className={`transition-colors hover:text-foreground/80 ${isActive('/') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
+                الرئيسية
+              </Link>
+              <Link to="/bookmarklet" className={`transition-colors hover:text-foreground/80 ${isActive('/bookmarklet') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
+                أدوات سطر العناوين
+              </Link>
+              <Link to="/records" className={`transition-colors hover:text-foreground/80 ${isActive('/records') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
                 السجلات
-              </Button>
-            </Link>
-            <Link to="/bookmarklet">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-brand-coral">
-                <BookmarkIcon className="h-4 w-4 ml-2" />
-                أداة نقل البيانات
-              </Button>
-            </Link>
+              </Link>
+              <Link to="/api-settings" className={`transition-colors hover:text-foreground/80 ${isActive('/api-settings') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
+                إعدادات API
+              </Link>
+              <Link to="/server-settings" className={`transition-colors hover:text-foreground/80 ${isActive('/server-settings') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
+                إعدادات الخادم
+              </Link>
+            </nav>
           </div>
-        </div>
-        <div className="flex items-center space-x-3 rtl:space-x-reverse">
-          <Link to="/api-settings">
-            <Button variant="ghost" size="icon">
-              <Settings className="h-4 w-4 text-muted-foreground hover:text-brand-coral" />
+          <div className="flex items-center justify-end gap-4">
+            <ConnectionStatusIndicator />
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Toggle Theme"
+              className="mr-2"
+              onClick={toggleTheme}
+            >
+              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
-          </Link>
-          <ThemeToggle />
+          </div>
         </div>
       </div>
     </header>

@@ -4,7 +4,9 @@ import {
   setCustomAutomationServerUrl, 
   resetAutomationServerUrl,
   isValidServerUrl,
-  getLastConnectionStatus
+  getLastConnectionStatus,
+  isConnected,
+  checkConnection
 } from '../utils/automationServerUrl';
 import { AutomationService } from '../utils/automationService';
 import { toast } from 'sonner';
@@ -28,7 +30,6 @@ const ServerSettings = () => {
   });
   
   useEffect(() => {
-    // ... keep existing code (initialization and cleanup)
     // استرجاع عنوان URL الحالي عند تحميل الصفحة
     setServerUrl(getAutomationServerUrl());
     
@@ -39,6 +40,14 @@ const ServerSettings = () => {
     if (autoReconnect) {
       startAutoReconnect();
     }
+    
+    // تحقق من حالة الاتصال الحالية
+    isConnected(true).then(connected => {
+      setServerStatus(connected ? 'online' : 'offline');
+      if (connected) {
+        toast.success("الخادم متصل ومستجيب");
+      }
+    });
     
     // تنظيف عند إزالة المكون
     return () => {
@@ -57,7 +66,6 @@ const ServerSettings = () => {
   }, [autoReconnect]);
   
   const startAutoReconnect = () => {
-    // ... keep existing code (auto reconnect logic)
     if (serverStatus === 'offline') {
       setReconnectStatus({
         active: true,
@@ -83,7 +91,6 @@ const ServerSettings = () => {
   };
   
   const handleSaveUrl = () => {
-    // ... keep existing code (save URL logic)
     try {
       // التحقق من صحة URL
       if (!isValidServerUrl(serverUrl)) {
@@ -105,7 +112,6 @@ const ServerSettings = () => {
   };
   
   const handleResetUrl = () => {
-    // ... keep existing code (reset URL logic)
     resetAutomationServerUrl();
     const defaultUrl = getAutomationServerUrl();
     setServerUrl(defaultUrl);
@@ -118,7 +124,6 @@ const ServerSettings = () => {
   };
   
   const checkServerStatus = async (showToasts = true) => {
-    // ... keep existing code (check server status logic)
     setServerStatus('checking');
     setIsLoading(true);
     
@@ -126,17 +131,25 @@ const ServerSettings = () => {
       const currentUrl = getAutomationServerUrl();
       console.log("التحقق من حالة الخادم:", currentUrl);
       
-      const result = await AutomationService.checkServerStatus(showToasts);
-      setServerStatus('online');
-      setServerInfo(result);
+      // استخدام طريقة checkConnection الجديدة للتحقق من الاتصال أولاً
+      const connectionCheck = await checkConnection();
       
-      if (showToasts) {
-        toast.success('الخادم متصل ويعمل بشكل صحيح');
+      if (connectionCheck.isConnected) {
+        // إذا نجح فحص الاتصال، استمر للحصول على معلومات الخادم
+        const result = await AutomationService.checkServerStatus(showToasts);
+        setServerStatus('online');
+        setServerInfo(result);
+        
+        if (showToasts) {
+          toast.success('الخادم متصل ويعمل بشكل صحيح');
+        }
+        
+        // إيقاف إعادة المحاولة إذا كانت نشطة
+        AutomationService.stopReconnect();
+        setReconnectStatus(prev => ({ ...prev, active: false }));
+      } else {
+        throw new Error(connectionCheck.message);
       }
-      
-      // إيقاف إعادة المحاولة إذا كانت نشطة
-      AutomationService.stopReconnect();
-      setReconnectStatus(prev => ({ ...prev, active: false }));
     } catch (error) {
       console.error("خطأ في التحقق من حالة الخادم:", error);
       setServerStatus('offline');
