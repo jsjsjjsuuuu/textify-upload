@@ -1,50 +1,26 @@
 
-import { createBrowserRouter, Navigate } from 'react-router-dom';
-import App from './App';
+import React from 'react';
+import { Route, Routes } from 'react-router-dom';
 import Index from './pages/Index';
-import NotFound from './pages/NotFound';
-import Bookmarklet from './pages/Bookmarklet';
 import ApiSettings from './pages/ApiSettings';
+import Bookmarklet from './pages/Bookmarklet';
 import Records from './pages/Records';
+import NotFound from './pages/NotFound';
 import ServerSettings from './pages/ServerSettings';
-import CloudServer from './pages/CloudServer';
 
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <App />,
-    errorElement: <NotFound />,
-    children: [
-      {
-        index: true,
-        element: <Index />,
-      },
-      {
-        path: 'bookmarklet',
-        element: <Bookmarklet />,
-      },
-      {
-        path: 'api-settings',
-        element: <ApiSettings />,
-      },
-      {
-        path: 'records',
-        element: <Records />,
-      },
-      {
-        path: 'server-settings',
-        element: <ServerSettings />,
-      },
-      {
-        path: 'cloud-server',
-        element: <CloudServer />,
-      },
-      {
-        path: '*',
-        element: <Navigate to="/" replace />,
-      },
-    ],
-  },
-]);
-
-export default router;
+/**
+ * تكوين مسارات التطبيق
+ * يمكن استيراد هذا المكون واستخدامه في App.tsx
+ */
+export const AppRoutes = () => {
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/settings" element={<ApiSettings />} />
+      <Route path="/server-settings" element={<ServerSettings />} />
+      <Route path="/bookmarklet" element={<Bookmarklet />} />
+      <Route path="/records" element={<Records />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
