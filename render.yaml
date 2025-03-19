@@ -16,7 +16,7 @@ services:
       - key: PUPPETEER_SKIP_DOWNLOAD
         value: true
       - key: PATH
-        value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/.npm/bin
+        value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/.npm/bin:/node_modules/.bin
     healthCheckPath: /api/status
     healthCheckTimeout: 5
     autoDeploy: true
@@ -35,4 +35,5 @@ envVarGroups:
         value: 18.x
       - key: NPM_VERSION
         value: 9.x
-
+      - key: VITE_IS_INSTALLED
+        value: "true"
