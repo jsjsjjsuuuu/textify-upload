@@ -1,3 +1,4 @@
+
 // قائمة بعناوين IP المسموح بها لخادم Render
 export const RENDER_ALLOWED_IPS = [
   "34.106.88.0",
@@ -42,6 +43,19 @@ export function isValidServerUrl(url: string): boolean {
   } catch (error) {
     return false;
   }
+}
+
+// دالة جديدة لتعيين عنوان URL لخادم الأتمتة
+export function setAutomationServerUrl(url: string): void {
+  if (!isValidServerUrl(url)) {
+    throw new Error("عنوان URL غير صالح");
+  }
+  
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('automationServerUrl', url);
+  }
+  
+  console.log("تم تعيين عنوان URL لخادم الأتمتة:", url);
 }
 
 // كشف وتعيين URL الخادم بترتيب أولوية معين
