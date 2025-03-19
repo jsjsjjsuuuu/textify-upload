@@ -22,18 +22,36 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
   isLoading
 }) => {
   const [validUrl, setValidUrl] = useState(true);
-  const [inputUrl, setInputUrl] = useState(serverUrl);
+  const [inputUrl, setInputUrl] = useState(serverUrl || "https://textify-upload.onrender.com");
   const [currentServerUrl, setCurrentServerUrl] = useState(getAutomationServerUrl());
   
   // تحديث حقل الإدخال عند تغيير serverUrl من الخارج
   useEffect(() => {
-    setInputUrl(serverUrl);
+    if (serverUrl) {
+      setInputUrl(serverUrl);
+    }
   }, [serverUrl]);
   
   // تحديث عنوان URL الحالي في حالة تغييره
   useEffect(() => {
-    setCurrentServerUrl(getAutomationServerUrl());
+    const storedUrl = getAutomationServerUrl();
+    setCurrentServerUrl(storedUrl);
   }, [serverUrl]);
+  
+  // تعيين عنوان URL الافتراضي إذا كان فارغًا
+  useEffect(() => {
+    const defaultUrl = "https://textify-upload.onrender.com";
+    const currentUrl = getAutomationServerUrl();
+    
+    // إذا كان عنوان URL الحالي فارغًا أو غير صالح، استخدم العنوان الافتراضي
+    if (!currentUrl || !isValidServerUrl(currentUrl)) {
+      setAutomationServerUrl(defaultUrl);
+      setCurrentServerUrl(defaultUrl);
+      setInputUrl(defaultUrl);
+      onServerUrlChange(defaultUrl);
+      console.log("تم تعيين عنوان URL الافتراضي:", defaultUrl);
+    }
+  }, [onServerUrlChange]);
   
   const validateUrl = (url: string) => {
     try {
@@ -94,6 +112,23 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
     }
   };
   
+  // أزرار اختصار للعناوين الشائعة
+  const quickServerUrls = [
+    {
+      label: "Render",
+      url: "https://textify-upload.onrender.com"
+    }
+  ];
+  
+  const applyQuickUrl = (url: string) => {
+    setInputUrl(url);
+    validateUrl(url);
+    // تطبيق فوري
+    setTimeout(() => {
+      handleApplyUrl();
+    }, 100);
+  };
+  
   return (
     <div className="space-y-5">
       <div className="space-y-3">
@@ -142,7 +177,7 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
               value={inputUrl}
               onChange={handleUrlChange}
               onKeyDown={handleKeyDown}
-              placeholder="أدخل عنوان URL للخادم مثل https://example.com"
+              placeholder="أدخل عنوان URL للخادم مثل https://textify-upload.onrender.com"
               className={`w-full ${!validUrl && inputUrl ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
             />
             {!validUrl && inputUrl && (
@@ -181,6 +216,21 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
           </div>
         </div>
         
+        {/* أزرار اختصار للعناوين الشائعة */}
+        <div className="flex flex-wrap gap-2 mt-2">
+          {quickServerUrls.map((item) => (
+            <Button
+              key={item.url}
+              variant="outline"
+              size="sm"
+              onClick={() => applyQuickUrl(item.url)}
+              className="bg-slate-50"
+            >
+              {item.label}
+            </Button>
+          ))}
+        </div>
+        
         <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-md border border-slate-200">
           <p className="mb-2 font-medium">ملاحظات:</p>
           <ul className="list-disc list-inside space-y-1">
@@ -188,6 +238,7 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
             <li>لا تضف مسارات إضافية بعد اسم النطاق (مثل /api)</li>
             <li>عند الضغط على "تطبيق" سيتم تحديث العنوان وفحص الاتصال تلقائياً</li>
             <li>يمكنك الضغط على Enter للتطبيق مباشرة</li>
+            <li>اضغط على زر "Render" لاستخدام خادم Render الرسمي</li>
           </ul>
         </div>
       </div>
