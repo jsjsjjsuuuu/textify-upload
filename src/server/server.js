@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 10000;
 
 // إضافة middleware
 app.use(cors({
@@ -56,6 +56,10 @@ app.get('/', (req, res) => {
             <h3>ملاحظة:</h3>
             <p>يجب أن يكون عنوان واجهة المستخدم في التطبيق الرئيسي مكونًا ليشير إلى:</p>
             <pre>http://localhost:${port}/api</pre>
+            <p>متغيرات البيئة:</p>
+            <pre>PORT=${port}</pre>
+            <pre>NODE_ENV=${process.env.NODE_ENV || 'development'}</pre>
+            <pre>AUTOMATION_SERVER_URL=${process.env.AUTOMATION_SERVER_URL || 'not set'}</pre>
           </div>
         </div>
       </body>
@@ -72,11 +76,14 @@ app.get('/api/status', (req, res) => {
     memory: process.memoryUsage(),
     uptime: process.uptime(),
     cwd: process.cwd(),
-    env: process.env.NODE_ENV || 'development'
+    env: process.env.NODE_ENV || 'development',
+    port: port,
+    automationServerUrl: process.env.AUTOMATION_SERVER_URL || 'not set',
+    viteAutomationServerUrl: process.env.VITE_AUTOMATION_SERVER_URL || 'not set'
   };
   
   res.json({ 
-    status: 'running', 
+    status: 'ok', 
     message: 'خادم الأتمتة يعمل بنجاح', 
     time: new Date().toISOString(),
     systemInfo
@@ -338,7 +345,7 @@ app.post('/api/automate', async (req, res) => {
 });
 
 // بدء تشغيل الخادم
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`
 ╭───────────────────────────────────────╮
 │                                       │
@@ -346,6 +353,10 @@ app.listen(port, () => {
 │                                       │
 │   للتحقق قم بزيارة:                   │
 │   http://localhost:${port}/api/status   │
+│                                       │
+│   متغيرات البيئة:                     │
+│   NODE_ENV: ${process.env.NODE_ENV || 'development'}│
+│   AUTOMATION_SERVER_URL: ${process.env.AUTOMATION_SERVER_URL || 'not set'}│
 │                                       │
 │   لإيقاف الخادم اضغط: Ctrl+C          │
 │                                       │
