@@ -4,34 +4,30 @@ services:
   - type: web
     name: textify-upload
     env: node
-    buildCommand: npm install && npm install vite && npx vite build
+    buildCommand: npm install && npm run build
     startCommand: node src/server/server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      - key: PUPPETEER_EXECUTABLE_PATH
-        value: /usr/bin/google-chrome-stable
       - key: PUPPETEER_SKIP_DOWNLOAD
         value: true
       - key: AUTOMATION_SERVER_URL
         value: https://textify-upload.onrender.com
     healthCheckPath: /api/status
-    healthCheckTimeout: 5
+    healthCheckTimeout: 100
     autoDeploy: true
 
-    # إعدادات الموارد (النوع المجاني أو المدفوع)
-    plan: free # يمكن تغييره إلى starter أو standard حسب الاحتياج
+    # إعدادات الموارد
+    plan: free
 
-    # ضبط منطقة النشر (يمكن تغييرها حسب الموقع الجغرافي المفضل)
-    region: ohio # المناطق المتاحة: oregon, ohio, frankfurt, singapore
+    # ضبط منطقة النشر
+    region: ohio
 
 # متغيرات عالمية مشتركة بين جميع الخدمات
 envVarGroups:
   - name: common-settings
     envVars:
       - key: NODE_VERSION
-        value: 18.x
-      - key: NPM_VERSION
-        value: 9.x
+        value: 18

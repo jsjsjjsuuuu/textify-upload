@@ -9,8 +9,8 @@ export default defineConfig(({ mode }) => {
   // استخدام خادم محلي للتطوير وخادم Render للإنتاج
   const isProduction = mode === 'production';
   const automationServerUrl = isProduction 
-    ? 'https://textify-upload.onrender.com' 
-    : 'http://localhost:10000'; // استخدام المنفذ 10000 للخادم المحلي
+    ? process.env.AUTOMATION_SERVER_URL || 'https://textify-upload.onrender.com' 
+    : 'http://localhost:10000';
   
   console.log(`⚡️ الاتصال بخادم الأتمتة على: ${automationServerUrl}, isProduction: ${isProduction}`);
   
@@ -33,14 +33,13 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       host: "::",
-      port: 8080, // استخدام المنفذ 8080 بشكل ثابت للتطوير المحلي
+      port: 8080,
       proxy: {
-        // إعادة توجيه طلبات API الأتمتة للخادم المناسب
         '/api': {
           target: automationServerUrl,
           changeOrigin: true,
-          secure: false, // السماح بالاتصالات غير الآمنة (هام للتطوير)
-          ws: true, // دعم WebSockets
+          secure: false,
+          ws: true,
           rewrite: (path) => path,
           configure: (proxy, _options) => {
             proxy.on('error', (err, _req, _res) => {
@@ -49,15 +48,12 @@ export default defineConfig(({ mode }) => {
             proxy.on('proxyReq', (proxyReq, req, _res) => {
               console.log('طلب البروكسي:', req.method, req.url);
               
-              // إضافة رؤوس IP ثابتة للتواصل مع Render
               if (isProduction) {
                 const selectedIp = getRandomIp();
                 console.log(`استخدام عنوان IP للبروكسي: ${selectedIp}`);
                 
                 proxyReq.setHeader('X-Forwarded-For', selectedIp);
                 proxyReq.setHeader('X-Render-Client-IP', selectedIp);
-                
-                // إضافة رؤوس إضافية لتجنب مشاكل CORS
                 proxyReq.setHeader('Origin', automationServerUrl);
                 proxyReq.setHeader('Referer', automationServerUrl);
               }
@@ -72,7 +68,6 @@ export default defineConfig(({ mode }) => {
             proxy.on('proxyRes', (proxyRes, req, _res) => {
               console.log('استجابة البروكسي:', proxyRes.statusCode, req.url);
               
-              // إضافة رؤوس CORS إلى الاستجابة
               proxyRes.headers['Access-Control-Allow-Origin'] = '*';
               proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
               proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With';
