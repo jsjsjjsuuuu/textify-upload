@@ -32,20 +32,20 @@ interface ExtractedData {
 }
 
 export const useDataExtraction = (
-  image: ImageData, 
+  image: ImageData | undefined, 
   onTextChange: (id: string, field: string, value: string) => void,
   editMode: boolean,
   setEditMode: (value: boolean) => void
 ) => {
   const [tempData, setTempData] = useState<TempData>({
-    code: image.code || "",
-    senderName: image.senderName || "",
-    phoneNumber: image.phoneNumber || "",
-    province: image.province || "",
-    price: image.price || "",
-    companyName: image.companyName || "",
-    address: image.address || "",
-    notes: image.notes || ""
+    code: image?.code || "",
+    senderName: image?.senderName || "",
+    phoneNumber: image?.phoneNumber || "",
+    province: image?.province || "",
+    price: image?.price || "",
+    companyName: image?.companyName || "",
+    address: image?.address || "",
+    notes: image?.notes || ""
   });
   
   const [correctionsMade, setCorrectionsMade] = useState(false);
@@ -54,6 +54,8 @@ export const useDataExtraction = (
 
   const handleEditToggle = () => {
     if (editMode) {
+      if (!image) return;
+      
       const originalData: Record<string, string> = {
         code: image.code || "",
         senderName: image.senderName || "",
@@ -76,17 +78,23 @@ export const useDataExtraction = (
         return; // منع الحفظ في حالة عدم صحة رقم الهاتف
       }
       
-      Object.entries(tempData).forEach(([field, value]) => {
-        onTextChange(image.id, field, value);
-      });
+      if (image.id) {
+        Object.entries(tempData).forEach(([field, value]) => {
+          onTextChange(image.id, field, value);
+        });
+      }
       
       setIsLearningActive(true);
-      handleCorrections(image.extractedText, originalData, tempData)
-        .then(() => {
-          setCorrectionsMade(true);
-          setIsLearningActive(false);
-        });
+      if (image.extractedText) {
+        handleCorrections(image.extractedText, originalData, tempData)
+          .then(() => {
+            setCorrectionsMade(true);
+            setIsLearningActive(false);
+          });
+      }
     } else {
+      if (!image) return;
+      
       setTempData({
         code: image.code || "",
         senderName: image.senderName || "",
@@ -102,6 +110,8 @@ export const useDataExtraction = (
   };
 
   const handleCancel = () => {
+    if (!image) return;
+    
     setEditMode(false);
     setTempData({
       code: image.code || "",
@@ -116,6 +126,8 @@ export const useDataExtraction = (
   };
 
   const handleCopyText = () => {
+    if (!image) return;
+    
     const textToCopy = generateCopyText(image);
     navigator.clipboard.writeText(textToCopy).then(() => {
       console.log("نسخ البيانات إلى الحافظة");
@@ -135,7 +147,7 @@ export const useDataExtraction = (
   };
 
   const handleAutoExtract = () => {
-    if (!image.extractedText) return;
+    if (!image?.extractedText) return;
     
     const extractedData: ExtractedData = autoExtractData(image.extractedText);
 
@@ -180,7 +192,7 @@ export const useDataExtraction = (
       notes: extractedData.notes || prev.notes
     }));
 
-    if (!editMode) {
+    if (!editMode && image.id) {
       Object.entries(extractedData).forEach(([field, value]) => {
         if (value) onTextChange(image.id, field, value);
       });

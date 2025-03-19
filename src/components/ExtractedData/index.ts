@@ -1,7 +1,16 @@
 
-export { default as ExtractedDataEditor } from './ExtractedDataEditor';
-export { default as ExtractedDataField } from './ExtractedDataField';
-export { default as ExtractedDataActions } from './ExtractedDataActions';
-export { default as RawTextViewer } from './RawTextViewer';
-export { default as ExtractedDataFields } from './ExtractedDataFields';
-export { default as LearningNotifications } from './LearningNotifications';
+import ExtractedDataFields from './ExtractedDataFields';
+import ExtractedDataActions from './ExtractedDataActions';
+import RawTextViewer from './RawTextViewer';
+import LearningNotifications from './LearningNotifications';
+import ExtractedDataEditor from './ExtractedDataEditor';
+
+export {
+  ExtractedDataFields,
+  ExtractedDataActions,
+  RawTextViewer,
+  LearningNotifications,
+  ExtractedDataEditor
+};
+
+export default ExtractedDataEditor;
