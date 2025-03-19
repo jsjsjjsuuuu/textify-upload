@@ -21,7 +21,7 @@ const LOCAL_AUTOMATION_SERVER = 'http://localhost:10000';
 
 // تحديد ما إذا كان التطبيق يعمل في وضع الإنتاج
 // true = استخدام خادم Render, false = استخدام الخادم المحلي
-const isProduction = true; 
+const isProduction = false; // تغيير إلى false للتطوير المحلي
 
 // تخزين حالة الاتصال
 let lastConnectionStatus = {
@@ -153,8 +153,8 @@ export const getAutomationServerUrl = (): string => {
     return overrideUrl;
   }
   
-  // استخدام خادم Render دائمًا
-  const serverUrl = CLOUD_AUTOMATION_SERVER;
+  // استخدام الخادم المناسب بناءً على إعدادات البيئة
+  const serverUrl = isProduction ? CLOUD_AUTOMATION_SERVER : LOCAL_AUTOMATION_SERVER;
   console.log("استخدام عنوان خادم الأتمتة:", serverUrl, "isProduction:", isProduction);
   return serverUrl;
 };
