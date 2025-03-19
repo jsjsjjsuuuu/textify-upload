@@ -7,6 +7,24 @@
       "command": "npm install && npm install vite && npx vite build"
     },
     "startCommand": "node src/server/server.js",
-    "restartPolicyType": "ON_FAILURE"
+    "restartPolicyType": "ON_FAILURE",
+    "envs": [
+      {
+        "key": "NODE_ENV",
+        "value": "production"
+      },
+      {
+        "key": "PORT",
+        "value": "10000"
+      },
+      {
+        "key": "PUPPETEER_SKIP_DOWNLOAD",
+        "value": "true"
+      },
+      {
+        "key": "AUTOMATION_SERVER_URL",
+        "value": "https://textify-upload.up.railway.app"
+      }
+    ]
   }
 }

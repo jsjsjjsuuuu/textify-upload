@@ -15,6 +15,8 @@ services:
         value: /usr/bin/google-chrome-stable
       - key: PUPPETEER_SKIP_DOWNLOAD
         value: true
+      - key: AUTOMATION_SERVER_URL
+        value: https://textify-upload.onrender.com
     healthCheckPath: /api/status
     healthCheckTimeout: 5
     autoDeploy: true
@@ -33,4 +35,3 @@ envVarGroups:
         value: 18.x
       - key: NPM_VERSION
         value: 9.x
-
