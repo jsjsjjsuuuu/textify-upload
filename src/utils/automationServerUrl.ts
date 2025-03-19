@@ -82,7 +82,7 @@ export function setAutomationServerUrl(url: string): void {
 
 // كشف وتعيين URL الخادم بترتيب أولوية معين
 export function getAutomationServerUrl(): string {
-  // خادم Render الرسمي (القيمة الافتراضية الجديدة)
+  // خادم Render الرسمي (القيمة الافتراضية)
   const RENDER_SERVER_URL = 'https://textify-upload.onrender.com';
   
   // في بيئة المعاينة (Lovable)، استخدم عنوان Render الافتراضي
@@ -90,25 +90,7 @@ export function getAutomationServerUrl(): string {
     return RENDER_SERVER_URL;
   }
 
-  // تحقق أولاً من متغير البيئة في المتصفح
-  if (typeof window !== 'undefined') {
-    // 1. البحث في import.meta.env (أعلى أولوية)
-    if (typeof import.meta !== 'undefined' && 
-        import.meta.env && 
-        import.meta.env.VITE_AUTOMATION_SERVER_URL) {
-      console.log("استخدام VITE_AUTOMATION_SERVER_URL من import.meta.env:", import.meta.env.VITE_AUTOMATION_SERVER_URL);
-      return import.meta.env.VITE_AUTOMATION_SERVER_URL;
-    }
-    
-    // 2. محاولة استرجاع القيمة المخزنة محليًا
-    const savedUrl = localStorage.getItem('automationServerUrl');
-    if (savedUrl && isValidServerUrl(savedUrl)) {
-      console.log("استخدام عنوان URL المخزن محليًا:", savedUrl);
-      return savedUrl;
-    }
-  }
-  
-  // إذا لم يتم العثور على أي عنوان صالح، استخدم خادم Render الرسمي
+  // تم إلغاء جميع الخيارات الأخرى واستخدام خادم Render فقط
   console.log("استخدام خادم Render الرسمي:", RENDER_SERVER_URL);
   return RENDER_SERVER_URL;
 }
