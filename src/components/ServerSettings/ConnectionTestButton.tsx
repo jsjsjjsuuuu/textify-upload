@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, RefreshCw, Settings, ExternalLink } from "lucide-react";
@@ -35,8 +34,7 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
     
     try {
       // إظهار رسالة أثناء الاختبار
-      const toastId = toast({
-        title: "جاري اختبار الاتصال",
+      toast("جاري اختبار الاتصال", {
         description: "يتم التحقق من الاتصال بخادم Render...",
         duration: 5000,
       });
@@ -45,8 +43,7 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
       const result = await checkConnection();
       
       if (result.isConnected) {
-        toast({
-          title: "متصل بخادم Render",
+        toast("متصل بخادم Render", {
           description: "تم الاتصال بخادم Render بنجاح.",
           variant: "default",
         });
@@ -62,8 +59,7 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
           ? "استمرار فشل الاتصال. يرجى التحقق من إعدادات الخادم وتجربة استخدام عنوان IP مختلف."
           : result.message || "تعذر الاتصال بخادم Render. تأكد من أن الخادم يعمل وأن عنوان URL صحيح.";
           
-        toast({
-          title: "فشل الاتصال",
+        toast("فشل الاتصال", {
           description: failMsg,
           variant: "destructive",
           duration: 10000,
@@ -92,8 +88,7 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
         detailedError = "انتهت مهلة الاتصال. قد تكون سرعة الاتصال بالإنترنت بطيئة أو الخادم غير مستجيب.";
       }
       
-      toast({
-        title: "خطأ في الاتصال",
+      toast("خطأ في الاتصال", {
         description: detailedError,
         variant: "destructive",
         duration: 10000,
