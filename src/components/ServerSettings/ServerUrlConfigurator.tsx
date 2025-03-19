@@ -1,9 +1,9 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAutomationServerUrl } from "@/utils/automationServerUrl";
-import { RefreshCw, Globe, Check, X, Copy } from "lucide-react";
+import { RefreshCw, Globe, Check, X, Copy, Save } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -22,7 +22,13 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
   isLoading
 }) => {
   const [validUrl, setValidUrl] = useState(true);
+  const [inputUrl, setInputUrl] = useState(serverUrl);
   const currentServerUrl = getAutomationServerUrl();
+  
+  // تحديث حقل الإدخال عند تغيير serverUrl من الخارج
+  useEffect(() => {
+    setInputUrl(serverUrl);
+  }, [serverUrl]);
   
   const validateUrl = (url: string) => {
     try {
@@ -37,14 +43,44 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
   
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUrl = e.target.value;
-    onServerUrlChange(newUrl);
+    setInputUrl(newUrl);
     validateUrl(newUrl);
+  };
+  
+  const handleApplyUrl = () => {
+    if (validateUrl(inputUrl)) {
+      // تطبيق التغيير فقط إذا كان الرابط مختلفًا عن الحالي
+      if (inputUrl !== serverUrl) {
+        onServerUrlChange(inputUrl);
+        toast.success("تم تطبيق العنوان الجديد", {
+          description: "سيتم اختبار الاتصال الآن...",
+          duration: 3000
+        });
+        
+        // اختبار الاتصال بعد تطبيق العنوان الجديد
+        setTimeout(() => {
+          onCheckStatus();
+        }, 500);
+      } else {
+        toast.info("العنوان المدخل مطابق للعنوان الحالي");
+      }
+    } else {
+      toast.error("يرجى إدخال عنوان URL صالح");
+    }
   };
   
   const copyToClipboard = () => {
     navigator.clipboard.writeText(currentServerUrl)
       .then(() => toast.success("تم نسخ العنوان إلى الحافظة"))
       .catch(() => toast.error("حدث خطأ أثناء نسخ العنوان"));
+  };
+
+  // تنفيذ الإجراء عند الضغط على Enter
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleApplyUrl();
+    }
   };
   
   return (
@@ -92,20 +128,21 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
             <Input
               dir="ltr"
               type="text"
-              value={serverUrl}
+              value={inputUrl}
               onChange={handleUrlChange}
+              onKeyDown={handleKeyDown}
               placeholder="أدخل عنوان URL للخادم مثل https://example.com"
-              className={`w-full ${!validUrl && serverUrl ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+              className={`w-full ${!validUrl && inputUrl ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
             />
-            {!validUrl && serverUrl && (
+            {!validUrl && inputUrl && (
               <p className="text-xs text-red-600 mt-1">يرجى إدخال عنوان URL صالح</p>
             )}
           </div>
-          <div>
+          <div className="grid grid-cols-2 gap-2">
             <Button 
               variant="secondary" 
               onClick={onCheckStatus}
-              disabled={isLoading || !validUrl}
+              disabled={isLoading}
               className="w-full h-10"
             >
               {isLoading ? (
@@ -120,6 +157,16 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
                 </>
               )}
             </Button>
+            
+            <Button
+              variant="default"
+              onClick={handleApplyUrl}
+              disabled={isLoading || !validUrl}
+              className="w-full h-10 bg-purple-600 hover:bg-purple-700"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              تطبيق
+            </Button>
           </div>
         </div>
         
@@ -128,7 +175,8 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
           <ul className="list-disc list-inside space-y-1">
             <li>أدخل عنوان URL كاملاً متضمناً البروتوكول (https:// أو http://)</li>
             <li>لا تضف مسارات إضافية بعد اسم النطاق (مثل /api)</li>
-            <li>بعد حفظ العنوان، سيتم إعادة تحميل الصفحة لتطبيق التغييرات</li>
+            <li>عند الضغط على "تطبيق" سيتم تحديث العنوان وفحص الاتصال تلقائياً</li>
+            <li>يمكنك الضغط على Enter للتطبيق مباشرة</li>
           </ul>
         </div>
       </div>
