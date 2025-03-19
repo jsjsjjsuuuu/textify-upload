@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "npx vite --version"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
