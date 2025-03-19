@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getAutomationServerUrl } from "@/utils/automationServerUrl";
+import { getAutomationServerUrl, setAutomationServerUrl } from "@/utils/automationServerUrl";
 import { RefreshCw, Globe, Check, X, Copy, Save } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,11 +23,16 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
 }) => {
   const [validUrl, setValidUrl] = useState(true);
   const [inputUrl, setInputUrl] = useState(serverUrl);
-  const currentServerUrl = getAutomationServerUrl();
+  const [currentServerUrl, setCurrentServerUrl] = useState(getAutomationServerUrl());
   
   // تحديث حقل الإدخال عند تغيير serverUrl من الخارج
   useEffect(() => {
     setInputUrl(serverUrl);
+  }, [serverUrl]);
+  
+  // تحديث عنوان URL الحالي في حالة تغييره
+  useEffect(() => {
+    setCurrentServerUrl(getAutomationServerUrl());
   }, [serverUrl]);
   
   const validateUrl = (url: string) => {
@@ -49,20 +54,26 @@ const ServerUrlConfigurator: React.FC<ServerUrlConfiguratorProps> = ({
   
   const handleApplyUrl = () => {
     if (validateUrl(inputUrl)) {
-      // تطبيق التغيير فقط إذا كان الرابط مختلفًا عن الحالي
-      if (inputUrl !== serverUrl) {
+      try {
+        // تطبيق التغيير مباشرة على عنوان URL الحالي
+        setAutomationServerUrl(inputUrl);
+        
+        // تحديث واجهة المستخدم
         onServerUrlChange(inputUrl);
+        setCurrentServerUrl(inputUrl);
+        
         toast.success("تم تطبيق العنوان الجديد", {
-          description: "سيتم اختبار الاتصال الآن...",
+          description: "سيتم اختبار الاتصال بالعنوان الجديد...",
           duration: 3000
         });
         
-        // اختبار الاتصال بعد تطبيق العنوان الجديد
+        // اختبار الاتصال بعد تطبيق العنوان الجديد مباشرة
         setTimeout(() => {
           onCheckStatus();
         }, 500);
-      } else {
-        toast.info("العنوان المدخل مطابق للعنوان الحالي");
+      } catch (error) {
+        toast.error("حدث خطأ أثناء تطبيق العنوان الجديد");
+        console.error("خطأ في تطبيق العنوان:", error);
       }
     } else {
       toast.error("يرجى إدخال عنوان URL صالح");

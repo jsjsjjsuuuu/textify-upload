@@ -93,6 +93,12 @@ const ServerSettings = () => {
     }
   };
   
+  const handleServerUrlChange = (url: string) => {
+    setServerUrl(url);
+    // لا نحتاج إلى استدعاء setAutomationServerUrl هنا بعد الآن
+    // لأننا قمنا بنقل هذه الوظيفة إلى داخل المكون ServerUrlConfigurator
+  };
+  
   const handleSaveUrl = () => {
     try {
       // التحقق من صحة URL
@@ -184,7 +190,7 @@ const ServerSettings = () => {
       isLoading={isLoading}
       autoReconnect={autoReconnect}
       reconnectStatus={reconnectStatus}
-      onServerUrlChange={setServerUrl}
+      onServerUrlChange={handleServerUrlChange}
       onCheckStatus={() => checkServerStatus()}
       onSaveUrl={handleSaveUrl}
       onResetUrl={handleResetUrl}
