@@ -82,6 +82,14 @@ export function setAutomationServerUrl(url: string): void {
 
 // كشف وتعيين URL الخادم بترتيب أولوية معين
 export function getAutomationServerUrl(): string {
+  // خادم Render الرسمي (القيمة الافتراضية الجديدة)
+  const RENDER_SERVER_URL = 'https://textify-upload.onrender.com';
+  
+  // في بيئة المعاينة (Lovable)، استخدم عنوان Render الافتراضي
+  if (isPreviewEnvironment()) {
+    return RENDER_SERVER_URL;
+  }
+
   // تحقق أولاً من متغير البيئة في المتصفح
   if (typeof window !== 'undefined') {
     // 1. البحث في import.meta.env (أعلى أولوية)
@@ -92,62 +100,17 @@ export function getAutomationServerUrl(): string {
       return import.meta.env.VITE_AUTOMATION_SERVER_URL;
     }
     
-    // 2. البحث في process.env
-    if (typeof process !== 'undefined' && process.env) {
-      // تحقق من متغيرات البيئة المختلفة بترتيب الأولوية
-      const envVars = [
-        'VITE_AUTOMATION_SERVER_URL',
-        'AUTOMATION_SERVER_URL',
-        'RENDER_EXTERNAL_URL',
-        'RAILWAY_PUBLIC_DOMAIN'
-      ];
-      
-      for (const varName of envVars) {
-        if (process.env[varName]) {
-          console.log(`استخدام متغير البيئة ${varName} من process.env:`, process.env[varName]);
-          return process.env[varName];
-        }
-      }
-    }
-    
-    // 3. محاولة استرجاع القيمة المخزنة محليًا
+    // 2. محاولة استرجاع القيمة المخزنة محليًا
     const savedUrl = localStorage.getItem('automationServerUrl');
-    if (savedUrl) {
+    if (savedUrl && isValidServerUrl(savedUrl)) {
       console.log("استخدام عنوان URL المخزن محليًا:", savedUrl);
       return savedUrl;
     }
-    
-    // 4. في بيئة المعاينة (Lovable)، استخدم عنوان Render الافتراضي
-    if (isPreviewEnvironment()) {
-      return 'https://textify-upload.onrender.com';
-    }
-    
-    // 5. عودة إلى أصل الموقع الحالي
-    const origin = window.location.origin;
-    console.log("استخدام أصل الموقع الحالي:", origin);
-    return origin;
   }
   
-  // في بيئة Node.js
-  if (typeof process !== 'undefined' && process.env) {
-    // تحقق من متغيرات البيئة المختلفة بترتيب الأولوية
-    const envVars = [
-      'VITE_AUTOMATION_SERVER_URL',
-      'AUTOMATION_SERVER_URL',
-      'RENDER_EXTERNAL_URL',
-      'RAILWAY_PUBLIC_DOMAIN'
-    ];
-    
-    for (const varName of envVars) {
-      if (process.env[varName]) {
-        console.log(`[Node.js] استخدام متغير البيئة ${varName}:`, process.env[varName]);
-        return process.env[varName];
-      }
-    }
-  }
-  
-  // القيمة الافتراضية
-  return 'https://textify-upload.onrender.com';
+  // إذا لم يتم العثور على أي عنوان صالح، استخدم خادم Render الرسمي
+  console.log("استخدام خادم Render الرسمي:", RENDER_SERVER_URL);
+  return RENDER_SERVER_URL;
 }
 
 // دالة لإعادة تعيين عنوان URL لخادم الأتمتة إلى القيمة الافتراضية

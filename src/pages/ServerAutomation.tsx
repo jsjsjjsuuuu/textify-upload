@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { PlayCircle, Server, FileText, Wifi, WifiOff, AlertTriangle, Settings } from "lucide-react";
-import { getLastConnectionStatus, isPreviewEnvironment, checkConnection } from "@/utils/automationServerUrl";
+import { getLastConnectionStatus, isPreviewEnvironment, checkConnection, getAutomationServerUrl } from "@/utils/automationServerUrl";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -27,7 +27,7 @@ const ServerAutomation = () => {
     try {
       // إذا كنا في بيئة المعاينة، تخطي فحص الاتصال الفعلي
       if (isPreviewEnvironment()) {
-        toast.warning("أنت في بيئة المعاينة. سيتم محاكاة الأتمتة فقط.", {
+        toast.info("أنت في بيئة المعاينة. سيتم محاكاة الأتمتة فقط.", {
           duration: 5000,
         });
         setServerConnected(true);
@@ -44,8 +44,10 @@ const ServerAutomation = () => {
           duration: 3000,
         });
       } else {
+        // استخدام خادم Render الافتراضي
+        const serverUrl = getAutomationServerUrl();
         toast.error("تعذر الاتصال بخادم الأتمتة", {
-          description: connectionResult.message,
+          description: `تأكد من أن خادم الأتمتة متاح على: ${serverUrl}`,
           duration: 5000,
         });
       }
@@ -82,12 +84,12 @@ const ServerAutomation = () => {
           </p>
         </div>
         
-        {!serverConnected && (
+        {!serverConnected && !isPreviewEnvironment() && (
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>تعذر الاتصال بخادم الأتمتة</AlertTitle>
             <AlertDescription className="flex justify-between items-center">
-              <span>لن تتمكن من تنفيذ سيناريوهات الأتمتة حتى يتم الاتصال بالخادم.</span>
+              <span>سيتم استخدام خادم Render الرسمي. قد يستغرق الاتصال بعض الوقت إذا كان الخادم في وضع السكون.</span>
               <Button 
                 variant="outline" 
                 size="sm" 
