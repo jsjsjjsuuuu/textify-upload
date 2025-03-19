@@ -6,9 +6,9 @@
     "buildCommand": "npm install && npx vite build"
   },
   "deploy": {
-    "startCommand": "node src/server/server.js",
+    "startCommand": "PORT=10000 node src/server/server.js",
     "healthcheckPath": "/api/status",
-    "healthcheckTimeout": 100,
+    "healthcheckTimeout": 150,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
     "envs": [

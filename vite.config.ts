@@ -31,6 +31,9 @@ export default defineConfig(({ mode }) => {
   };
   
   return {
+    define: {
+      'process.env.VITE_AUTOMATION_SERVER_URL': JSON.stringify(automationServerUrl)
+    },
     server: {
       host: "::",
       port: 8080,

@@ -5,7 +5,7 @@ services:
     name: textify-upload
     env: node
     buildCommand: npm install && npx vite build
-    startCommand: node src/server/server.js
+    startCommand: PORT=10000 node src/server/server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -16,7 +16,7 @@ services:
       - key: AUTOMATION_SERVER_URL
         value: https://textify-upload.onrender.com
     healthCheckPath: /api/status
-    healthCheckTimeout: 100
+    healthCheckTimeout: 150
     autoDeploy: true
 
     # إعدادات الموارد

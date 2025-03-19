@@ -6,7 +6,7 @@
     "buildCommand": {
       "command": "npm install && npx vite build"
     },
-    "startCommand": "node src/server/server.js",
+    "startCommand": "PORT=10000 node src/server/server.js",
     "restartPolicyType": "ON_FAILURE",
     "envs": [
       {
