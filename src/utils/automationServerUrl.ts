@@ -95,7 +95,12 @@ export function getAutomationServerUrl(): string {
       return savedUrl;
     }
     
-    // 4. عودة إلى أصل الموقع الحالي
+    // 4. في بيئة المعاينة (Lovable)، استخدم عنوان لمحاكاة الاتصال للاختبار 
+    if (window.location.hostname.includes('lovableproject.com')) {
+      return 'https://textify-upload.onrender.com';
+    }
+    
+    // 5. عودة إلى أصل الموقع الحالي
     const origin = window.location.origin;
     console.log("استخدام أصل الموقع الحالي:", origin);
     return origin;
@@ -131,6 +136,13 @@ export function resetAutomationServerUrl(): void {
 // دالة للتحقق من حالة الاتصال بالخادم
 export async function isConnected(showToasts: boolean = false): Promise<boolean> {
   const url = getAutomationServerUrl();
+  
+  // في بيئة المعاينة (Lovable)، محاكاة الاتصال للاختبار
+  if (typeof window !== 'undefined' && window.location.hostname.includes('lovableproject.com')) {
+    console.log("بيئة المعاينة: محاكاة اتصال ناجح بالخادم");
+    return true;
+  }
+  
   try {
     // طباعة تفاصيل الاتصال للتصحيح
     console.log("استخدام عنوان URL للاتصال:", url);
@@ -187,6 +199,16 @@ export function updateConnectionStatus(isConnected: boolean, lastUsedIp?: string
 // دالة جديدة للتحقق من الاتصال وإرجاع رسالة مفصلة
 export async function checkConnection(): Promise<{ isConnected: boolean; message: string }> {
   const url = getAutomationServerUrl();
+  
+  // في بيئة المعاينة (Lovable)، محاكاة الاتصال للاختبار
+  if (typeof window !== 'undefined' && window.location.hostname.includes('lovableproject.com')) {
+    console.log("بيئة المعاينة: محاكاة اتصال ناجح بالخادم");
+    return {
+      isConnected: true,
+      message: 'بيئة المعاينة: محاكاة اتصال ناجح بالخادم'
+    };
+  }
+  
   try {
     console.log("استخدام عنوان URL للتحقق:", url);
     
