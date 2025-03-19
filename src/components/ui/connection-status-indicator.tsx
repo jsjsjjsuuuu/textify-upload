@@ -30,17 +30,23 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       
       if (connectionResult.isConnected) {
         setStatus('connected');
-        setStatusDetail("متصل بالخادم");
+        setStatusDetail("متصل بخادم Render");
         onStatusChange?.(true);
       } else {
         setStatus('disconnected');
-        setStatusDetail(connectionResult.message);
+        setStatusDetail("جاري الاتصال بخادم Render...");
         onStatusChange?.(false);
+        
+        // محاولة إعادة الاتصال تلقائيًا
+        setTimeout(checkServerStatus, 5000);
       }
     } catch (error) {
       setStatus('disconnected');
-      setStatusDetail(error instanceof Error ? error.message : "خطأ غير معروف");
+      setStatusDetail("جاري الاتصال بخادم Render...");
       onStatusChange?.(false);
+      
+      // محاولة إعادة الاتصال تلقائيًا
+      setTimeout(checkServerStatus, 5000);
     } finally {
       setIsChecking(false);
     }
@@ -53,19 +59,19 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
     
     if (storedStatus.isConnected) {
       setStatus('connected');
-      setStatusDetail("متصل بالخادم");
+      setStatusDetail("متصل بخادم Render");
       onStatusChange?.(true);
     } else {
       setStatus('disconnected');
-      setStatusDetail("غير متصل بالخادم");
+      setStatusDetail("جاري الاتصال بخادم Render...");
       onStatusChange?.(false);
     }
     
     // ثم نقوم بالفحص لتحديث الحالة
     checkServerStatus();
     
-    // فحص دوري كل 60 ثانية
-    const intervalId = setInterval(checkServerStatus, 60000);
+    // فحص دوري كل 30 ثانية
+    const intervalId = setInterval(checkServerStatus, 30000);
     
     return () => {
       clearInterval(intervalId);
@@ -83,7 +89,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
               ) : status === 'connected' ? (
                 <Wifi className="h-4 w-4 text-green-500" />
               ) : (
-                <WifiOff className="h-4 w-4 text-red-500" />
+                <Wifi className="h-4 w-4 text-yellow-500 animate-pulse" />
               )}
               
               {showText && (
@@ -91,12 +97,12 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
                   className={cn(
                     "text-sm",
                     status === 'connected' && "text-green-600",
-                    status === 'disconnected' && "text-red-600",
+                    status === 'disconnected' && "text-yellow-600",
                     status === 'checking' && "text-yellow-600"
                   )}
                 >
                   {status === 'checking' ? 'جاري الفحص...' : 
-                   status === 'connected' ? 'متصل' : 'غير متصل'}
+                   status === 'connected' ? 'متصل' : 'جاري الاتصال...'}
                 </span>
               )}
             </div>
@@ -110,7 +116,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
               onClick={checkServerStatus} 
               disabled={isChecking}
             >
-              إعادة الفحص
+              تحديث الحالة
             </Button>
           </TooltipContent>
         </Tooltip>

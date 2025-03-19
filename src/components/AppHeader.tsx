@@ -43,7 +43,9 @@ const AppHeader = () => {
             </nav>
           </div>
           <div className="flex items-center justify-end gap-4">
-            <ConnectionStatusIndicator />
+            <div className="flex items-center space-x-2">
+              <ConnectionStatusIndicator />
+            </div>
             <Button
               variant="ghost"
               size="icon"
