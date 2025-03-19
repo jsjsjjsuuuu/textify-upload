@@ -21,7 +21,7 @@ const LOCAL_AUTOMATION_SERVER = 'http://localhost:10000';
 
 // تحديد ما إذا كان التطبيق يعمل في وضع الإنتاج
 // true = استخدام خادم Render, false = استخدام الخادم المحلي
-const isProduction = false; // تغيير إلى false للتطوير المحلي
+const isProduction = true; // استخدام خادم Render بشكل دائم
 
 // تخزين حالة الاتصال
 let lastConnectionStatus = {
@@ -153,8 +153,8 @@ export const getAutomationServerUrl = (): string => {
     return overrideUrl;
   }
   
-  // استخدام الخادم المناسب بناءً على إعدادات البيئة
-  const serverUrl = isProduction ? CLOUD_AUTOMATION_SERVER : LOCAL_AUTOMATION_SERVER;
+  // استخدام خادم Render دائمًا
+  const serverUrl = CLOUD_AUTOMATION_SERVER;
   console.log("استخدام عنوان خادم الأتمتة:", serverUrl, "isProduction:", isProduction);
   return serverUrl;
 };
@@ -204,7 +204,7 @@ export const isValidServerUrl = (url: string): boolean => {
 export const fetchWithRetry = async (
   endpoint: string, 
   options: RequestInit, 
-  maxRetries: number = 3
+  maxRetries: number = 5
 ): Promise<Response> => {
   let currentRetry = 0;
   let lastError: Error | null = null;
