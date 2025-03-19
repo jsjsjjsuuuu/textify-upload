@@ -8,9 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { PlayCircle, Server, FileText, Wifi, WifiOff, AlertTriangle, Settings } from "lucide-react";
-import { getLastConnectionStatus } from "@/utils/automationServerUrl";
+import { getLastConnectionStatus, isPreviewEnvironment, checkConnection } from "@/utils/automationServerUrl";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const ServerAutomation = () => {
   const [serverConnected, setServerConnected] = useState(false);
@@ -19,9 +20,45 @@ const ServerAutomation = () => {
   
   useEffect(() => {
     // التحقق من حالة الاتصال بالخادم
-    const connectionStatus = getLastConnectionStatus();
-    setServerConnected(connectionStatus.isConnected);
+    checkServerConnection();
   }, []);
+  
+  const checkServerConnection = async () => {
+    try {
+      // إذا كنا في بيئة المعاينة، تخطي فحص الاتصال الفعلي
+      if (isPreviewEnvironment()) {
+        toast.warning("أنت في بيئة المعاينة. سيتم محاكاة الأتمتة فقط.", {
+          duration: 5000,
+        });
+        setServerConnected(true);
+        return;
+      }
+      
+      // التحقق من الاتصال بالخادم
+      const connectionResult = await checkConnection();
+      
+      setServerConnected(connectionResult.isConnected);
+      
+      if (connectionResult.isConnected) {
+        toast.success("تم الاتصال بخادم الأتمتة بنجاح", {
+          duration: 3000,
+        });
+      } else {
+        toast.error("تعذر الاتصال بخادم الأتمتة", {
+          description: connectionResult.message,
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error("خطأ أثناء التحقق من الاتصال:", error);
+      setServerConnected(false);
+      
+      toast.error("تعذر الاتصال بخادم الأتمتة", {
+        description: "يرجى التحقق من إعدادات الخادم والمحاولة مرة أخرى.",
+        duration: 5000,
+      });
+    }
+  };
   
   const goToServerSettings = () => {
     navigate("/server-settings");

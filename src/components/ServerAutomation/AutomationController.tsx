@@ -1,16 +1,17 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AutomationConfig, AutomationAction } from '@/utils/automation/types';
 import { AutomationService } from '@/utils/automationService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, PlayCircle, PlusCircle, Trash2, Edit, Save } from 'lucide-react';
+import { Loader2, PlayCircle, PlusCircle, Trash2, Edit, Save, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import ActionEditor from './ActionEditor';
-import { getAutomationServerUrl } from '@/utils/automationServerUrl';
+import { getAutomationServerUrl, isPreviewEnvironment } from '@/utils/automationServerUrl';
 import { v4 as uuidv4 } from 'uuid';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AutomationControllerProps {
   defaultUrl?: string;
@@ -23,10 +24,21 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
   const [isRunning, setIsRunning] = useState(false);
   const [editingActionIndex, setEditingActionIndex] = useState<number | null>(null);
   const [serverConnected, setServerConnected] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // التحقق من حالة اتصال الخادم عند تحميل المكون
-  React.useEffect(() => {
+  useEffect(() => {
     checkServerConnection();
+    
+    // التحقق من وجودنا في بيئة المعاينة
+    const previewMode = isPreviewEnvironment();
+    setIsPreviewMode(previewMode);
+    
+    if (previewMode) {
+      toast.warning("أنت في بيئة المعاينة. ستعمل الأتمتة في وضع المحاكاة فقط.", {
+        duration: 5000,
+      });
+    }
   }, []);
 
   const checkServerConnection = async () => {
@@ -131,6 +143,18 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
             قم بتكوين إجراءات الأتمتة لتنفيذها على خادم {getAutomationServerUrl()}
           </CardDescription>
         </CardHeader>
+        
+        {isPreviewMode && (
+          <div className="px-6">
+            <Alert className="mb-4 border-amber-200 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-700">
+                أنت في بيئة المعاينة (لوفابل). ستعمل الأتمتة في وضع المحاكاة فقط ولن تتصل بالمواقع الخارجية.
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+        
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -224,7 +248,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
           </Button>
           <Button
             onClick={runAutomation}
-            disabled={isRunning || actions.length === 0 || !serverConnected}
+            disabled={isRunning || actions.length === 0 || (!serverConnected && !isPreviewMode)}
             className="bg-purple-600 hover:bg-purple-700"
           >
             {isRunning ? (

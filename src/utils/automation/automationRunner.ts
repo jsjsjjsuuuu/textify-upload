@@ -2,7 +2,7 @@
 /**
  * تشغيل سيناريوهات الأتمتة
  */
-import { getAutomationServerUrl, updateConnectionStatus, createBaseHeaders, getNextIp } from "../automationServerUrl";
+import { getAutomationServerUrl, updateConnectionStatus, createBaseHeaders, getNextIp, isPreviewEnvironment } from "../automationServerUrl";
 import { toast } from "sonner";
 import { AutomationConfig, AutomationResponse } from "./types";
 import { ConnectionManager } from "./connectionManager";
@@ -19,6 +19,23 @@ export class AutomationRunner {
       toast.info("جاري تنفيذ سيناريو الأتمتة...", {
         duration: 3000,
       });
+      
+      // إذا كنا في بيئة المعاينة، نعرض تحذيرًا
+      if (isPreviewEnvironment()) {
+        toast.warning("أنت في بيئة المعاينة (لوفابل). التنفيذ الفعلي لا يعمل هنا، سيتم محاكاة النتائج فقط.", {
+          duration: 5000,
+        });
+        
+        // محاكاة تأخير لتجربة أكثر واقعية
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // إرجاع استجابة مزيفة للمحاكاة
+        return {
+          success: true,
+          message: "تمت محاكاة تنفيذ الأتمتة بنجاح (بيئة المعاينة)",
+          automationType: 'client'
+        };
+      }
       
       // استخدام عنوان IP متناوب في كل محاولة
       const currentIp = getNextIp();
