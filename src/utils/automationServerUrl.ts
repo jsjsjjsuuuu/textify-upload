@@ -54,7 +54,7 @@ export function getAutomationServerUrl(): string {
   }
 }
 
-// تعيين عنوان URL مخصص لخادم الأتمتة
+// تعيين عنوان URL مخصص لخادم الأتمتة (نفس الوظيفة السابقة)
 export function setAutomationServerUrl(url: string): boolean {
   try {
     if (!url || url.trim() === '') {
@@ -78,6 +78,31 @@ export function setAutomationServerUrl(url: string): boolean {
     return true;
   } catch (error) {
     console.error("خطأ في تعيين عنوان خادم الأتمتة:", error);
+    return false;
+  }
+}
+
+// إضافة دالة setCustomAutomationServerUrl كاسم بديل لـ setAutomationServerUrl
+export const setCustomAutomationServerUrl = setAutomationServerUrl;
+
+// دالة للتحقق من صحة عنوان URL (مضافة حديثًا)
+export function isValidServerUrl(url: string): boolean {
+  try {
+    if (!url || url.trim() === '') {
+      return false;
+    }
+    
+    // التأكد من أن العنوان يبدأ بـ http:// أو https://
+    let urlToCheck = url;
+    if (!url.match(/^https?:\/\//)) {
+      urlToCheck = `http://${url}`;
+    }
+    
+    // محاولة إنشاء كائن URL للتحقق من الصلاحية
+    new URL(urlToCheck);
+    
+    return true;
+  } catch (error) {
     return false;
   }
 }
@@ -201,6 +226,61 @@ export async function isConnected(forceCheck: boolean = false): Promise<boolean>
     updateConnectionStatus(false);
     
     return false;
+  }
+}
+
+// دالة للتحقق من الاتصال وإرجاع معلومات مفصلة (مضافة حديثًا)
+export async function checkConnection(): Promise<{ isConnected: boolean; message: string }> {
+  try {
+    // الحصول على عنوان خادم الأتمتة
+    const serverUrl = getAutomationServerUrl();
+    
+    console.log("التحقق من الاتصال بـ:", serverUrl);
+    
+    // محاولة الاتصال بكل عنوان IP المسموح به
+    for (const ip of RENDER_ALLOWED_IPS) {
+      try {
+        // تكوين الطلب
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(`${serverUrl}/api/status`, {
+          method: 'GET',
+          headers: createBaseHeaders(ip),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // التحقق من نجاح الاستجابة
+        if (response.ok) {
+          console.log("تم الاتصال بنجاح باستخدام IP:", ip);
+          updateConnectionStatus(true, ip);
+          
+          return {
+            isConnected: true,
+            message: `تم الاتصال بنجاح باستخدام IP: ${ip}`
+          };
+        }
+      } catch (error) {
+        console.warn("فشل المحاولة باستخدام IP:", ip, error);
+      }
+    }
+    
+    // إذا وصلنا إلى هنا، فقد فشلت جميع المحاولات
+    updateConnectionStatus(false);
+    
+    return {
+      isConnected: false,
+      message: "فشل الاتصال بخادم Render بعد تجربة جميع عناوين IP المتاحة. تأكد من أن الخادم يعمل وأن العنوان المدخل صحيح."
+    };
+  } catch (error) {
+    updateConnectionStatus(false);
+    
+    return {
+      isConnected: false,
+      message: error instanceof Error ? error.message : "حدث خطأ غير متوقع أثناء الاتصال بالخادم"
+    };
   }
 }
 

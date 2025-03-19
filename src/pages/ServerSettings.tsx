@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   getAutomationServerUrl, 
-  setCustomAutomationServerUrl, 
+  setAutomationServerUrl, 
   resetAutomationServerUrl,
   isValidServerUrl,
   getLastConnectionStatus,
@@ -98,8 +99,8 @@ const ServerSettings = () => {
         return;
       }
       
-      // حفظ URL الجديد
-      setCustomAutomationServerUrl(serverUrl);
+      // حفظ URL الجديد (استخدام الدالة الصحيحة)
+      setAutomationServerUrl(serverUrl);
       toast.success('تم حفظ عنوان الخادم بنجاح');
       
       // إعادة التحقق من حالة الخادم بعد تغيير العنوان
