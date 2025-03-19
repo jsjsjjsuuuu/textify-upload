@@ -3,21 +3,36 @@ import React, { useState, useEffect } from 'react';
 import ImageUploader from '../components/ImageUploader';
 import ImageList from '../components/ImageList';
 import ExtractedData from '../components/ExtractedData';
-import { useImageState } from '../hooks/useImageState';
+import { useImageProcessingCore } from '../hooks/useImageProcessingCore';
 import { useDataExtraction } from '../hooks/useDataExtraction';
 import DataExport from '../components/DataExport/DirectExportTools';
 import LearningStats from '../components/LearningStats';
 import BackgroundPattern from '../components/BackgroundPattern';
 import AppHeader from '../components/AppHeader';
 import { toast } from 'sonner';
-import { getAutomationServerUrl, isPreviewEnvironment, checkConnection } from '@/utils/automationServerUrl';
+import { isPreviewEnvironment, checkConnection } from '@/utils/automationServerUrl';
 import ConnectionStatusIndicator from '@/components/ui/connection-status-indicator';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
-  const { loading, image, imageData, updateImageData, clearImage, addImage } = useImageState();
-  const { extractedData, extractionLoading, updateExtractedData, updateRawText } = useDataExtraction();
+  const { 
+    images,
+    isProcessing,
+    processingProgress,
+    useGemini,
+    handleFileChange,
+  } = useImageProcessingCore();
+  
+  const { 
+    tempData,
+    handleEditToggle,
+    handleCancel,
+    handleCopyText,
+    handleAutoExtract,
+    handleTempChange,
+  } = useDataExtraction();
+  
   const [serverConnected, setServerConnected] = useState<boolean>(false);
   const navigate = useNavigate();
 
@@ -43,16 +58,6 @@ const Index = () => {
     }
   };
 
-  // عند تحميل صورة
-  const handleUploadSuccess = (file: File, imageUrl: string) => {
-    addImage(file, imageUrl);
-  };
-
-  // إدارة الخطأ في التحميل
-  const handleUploadError = (error: Error) => {
-    toast.error(`خطأ في تحميل الصورة: ${error.message}`);
-  };
-
   return (
     <div className="relative min-h-screen pb-20">
       <BackgroundPattern />
@@ -69,40 +74,41 @@ const Index = () => {
               </div>
               
               <ImageUploader 
-                onUploadSuccess={handleUploadSuccess}
-                onError={handleUploadError}
+                isProcessing={isProcessing}
+                processingProgress={processingProgress}
+                useGemini={useGemini}
+                onFileChange={handleFileChange}
               />
               
-              {image && (
+              {images && images.length > 0 && (
                 <div className="mt-4">
                   <ImageList 
-                    image={image}
-                    imageData={imageData}
-                    updateImageData={updateImageData}
-                    clearImage={clearImage}
+                    images={images}
                   />
                 </div>
               )}
               
-              <LearningStats className="mt-4" />
+              <LearningStats />
             </div>
           </div>
           
           <div className="w-full md:w-1/2 lg:w-3/5 space-y-6">
             <ExtractedData 
-              image={image}
-              imageData={imageData}
-              extractedData={extractedData}
-              extractionLoading={extractionLoading}
-              updateExtractedData={updateExtractedData}
-              updateRawText={updateRawText}
+              image={images?.[0]}
+              imageData={images?.[0]}
+              extractedData={tempData}
+              extractionLoading={isProcessing}
+              updateExtractedData={handleTempChange}
+              updateRawText={(text) => {
+                if (images?.[0]?.id) {
+                  // هنا نحتاج للتعامل مع تحديث النص الخام
+                  console.log("تحديث النص الخام:", text);
+                }
+              }}
             />
             
-            {extractedData && Object.keys(extractedData).length > 0 && (
-              <DataExport 
-                extractedData={extractedData} 
-                imageData={imageData} 
-              />
+            {tempData && Object.keys(tempData).length > 0 && (
+              <DataExport />
             )}
           </div>
         </div>

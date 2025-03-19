@@ -12,6 +12,7 @@ import { PlayCircle, Globe, Server, AlertCircle } from 'lucide-react';
 import ActionEditor from './ActionEditor';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import ConnectionStatusIndicator from '@/components/ui/connection-status-indicator';
+import { AutomationConfig, AutomationAction } from '@/utils/automation/types';
 
 // ترتيب الإجراءات
 const AutomationController = () => {
@@ -120,12 +121,19 @@ const AutomationController = () => {
         duration: 5000,
       });
 
-      // تنفيذ الأتمتة
-      const response = await AutomationService.validateAndRunAutomation({
-        name,
-        url,
-        actions
-      });
+      // تنفيذ الأتمتة - تعديل البيانات لتتوافق مع واجهة AutomationConfig
+      const automationConfig: AutomationConfig = {
+        projectUrl: url,
+        actions: actions.map(action => ({
+          name: action.type || '',
+          finder: action.selector || '',
+          value: action.value || '',
+          delay: 1000 // قيمة افتراضية للتأخير
+        })),
+        projectName: name // إضافة كخاصية إضافية ولكن لن تستخدم في API
+      };
+
+      const response = await AutomationService.validateAndRunAutomation(automationConfig);
 
       setResult(response);
 
@@ -261,10 +269,9 @@ const AutomationController = () => {
                     {actions.map((action, index) => (
                       <ActionEditor 
                         key={index} 
-                        index={index}
                         action={action}
-                        onUpdate={(updatedAction) => handleUpdateAction(index, updatedAction)}
-                        onDelete={() => handleDeleteAction(index)}
+                        onSave={(updatedAction) => handleUpdateAction(index, updatedAction)}
+                        onCancel={() => handleDeleteAction(index)}
                       />
                     ))}
                   </div>

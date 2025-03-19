@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { AutomationAction } from '@/utils/automation/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,15 +7,15 @@ import { Slider } from '@/components/ui/slider';
 import { Check, X } from 'lucide-react';
 
 interface ActionEditorProps {
-  action: AutomationAction;
-  onSave: (action: AutomationAction) => void;
+  action: any;
+  onSave: (action: any) => void;
   onCancel: () => void;
 }
 
 const ActionEditor: React.FC<ActionEditorProps> = ({ action, onSave, onCancel }) => {
-  const [editedAction, setEditedAction] = useState<AutomationAction>({ ...action });
+  const [editedAction, setEditedAction] = useState<any>({ ...action });
 
-  const handleInputChange = (field: keyof AutomationAction, value: string | number) => {
+  const handleInputChange = (field: string, value: string | number) => {
     setEditedAction({
       ...editedAction,
       [field]: value
