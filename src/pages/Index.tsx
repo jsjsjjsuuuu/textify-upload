@@ -12,7 +12,6 @@ import AppHeader from '../components/AppHeader';
 import { toast } from 'sonner';
 import { isPreviewEnvironment, checkConnection } from '@/utils/automationServerUrl';
 import ConnectionStatusIndicator from '@/components/ui/connection-status-indicator';
-import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
@@ -34,6 +33,7 @@ const Index = () => {
   } = useDataExtraction();
   
   const [serverConnected, setServerConnected] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -56,6 +56,27 @@ const Index = () => {
       console.error("خطأ في التحقق من حالة الاتصال:", error);
       setServerConnected(false);
     }
+  };
+
+  // دوال مساعدة للتعامل مع قائمة الصور
+  const handleImageClick = (image) => {
+    console.log("تم النقر على الصورة:", image);
+  };
+
+  const handleTextChange = (id, field, value) => {
+    console.log("تحديث النص:", id, field, value);
+  };
+
+  const handleDelete = (id) => {
+    console.log("حذف الصورة:", id);
+  };
+
+  const handleSubmit = (id) => {
+    console.log("إرسال الصورة:", id);
+  };
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString('ar-EG');
   };
 
   return (
@@ -84,6 +105,12 @@ const Index = () => {
                 <div className="mt-4">
                   <ImageList 
                     images={images}
+                    isSubmitting={isSubmitting}
+                    onImageClick={handleImageClick}
+                    onTextChange={handleTextChange}
+                    onDelete={handleDelete}
+                    onSubmit={handleSubmit}
+                    formatDate={formatDate}
                   />
                 </div>
               )}
@@ -108,7 +135,9 @@ const Index = () => {
             />
             
             {tempData && Object.keys(tempData).length > 0 && (
-              <DataExport />
+              <DataExport 
+                images={images || []}
+              />
             )}
           </div>
         </div>

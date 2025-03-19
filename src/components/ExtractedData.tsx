@@ -4,7 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import * as ExtractedComponents from './ExtractedData/index';
 
-const ExtractedData = ({ 
+interface ExtractedDataProps {
+  image: any;
+  imageData: any;
+  extractedData: any;
+  extractionLoading: boolean;
+  updateExtractedData: (field: string, value: string) => void;
+  updateRawText: (text: string) => void;
+}
+
+const ExtractedData: React.FC<ExtractedDataProps> = ({ 
   image, 
   imageData, 
   extractedData, 
@@ -36,22 +45,25 @@ const ExtractedData = ({
           </div>
         ) : (
           <ExtractedComponents.ExtractedDataFields 
-            extractedData={extractedData}
-            onChange={updateExtractedData}
+            tempData={extractedData}
+            editMode={false}
+            onTempChange={updateExtractedData}
           />
         )}
         
         {extractedData && Object.keys(extractedData).length > 0 && (
           <>
             <ExtractedComponents.ExtractedDataActions 
-              extractedData={extractedData}
-              rawText={imageData?.extractedText}
-              onUpdateRawText={updateRawText}
+              editMode={false}
+              onEditToggle={() => {}}
+              onCancel={() => {}}
+              onCopyText={() => {}}
+              onAutoExtract={() => {}}
+              hasExtractedText={!!imageData?.extractedText}
             />
             
             <ExtractedComponents.RawTextViewer 
-              rawText={imageData?.extractedText} 
-              onUpdateText={updateRawText}
+              text={imageData?.extractedText} 
             />
           </>
         )}
