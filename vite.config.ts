@@ -91,7 +91,6 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
-    // إضافة تكوين النشر
     build: {
       outDir: 'dist',
       rollupOptions: {
@@ -100,7 +99,14 @@ export default defineConfig(({ mode }) => {
             vendor: ['react', 'react-dom', 'react-router-dom'],
           }
         }
+      },
+      commonjsOptions: {
+        include: [/node_modules/],
+        transformMixedEsModules: true
       }
     },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react-router-dom']
+    }
   };
 });

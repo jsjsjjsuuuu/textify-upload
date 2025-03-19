@@ -20,6 +20,7 @@ export const AppRoutes = () => {
       <Route path="/server-settings" element={<ServerSettings />} />
       <Route path="/bookmarklet" element={<Bookmarklet />} />
       <Route path="/records" element={<Records />} />
+      <Route path="/api-settings" element={<ApiSettings />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
