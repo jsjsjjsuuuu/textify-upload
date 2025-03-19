@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { checkConnection, getLastConnectionStatus, isConnected } from "@/utils/automationServerUrl";
+import { checkConnection, getLastConnectionStatus } from "@/utils/automationServerUrl";
 import { cn } from "@/lib/utils";
 
 interface ConnectionStatusIndicatorProps {
@@ -34,7 +34,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
         onStatusChange?.(true);
       } else {
         setStatus('disconnected');
-        setStatusDetail("جاري الاتصال بخادم Render...");
+        setStatusDetail(connectionResult.message || "جاري محاولة الاتصال بخادم Render...");
         onStatusChange?.(false);
         
         // محاولة إعادة الاتصال تلقائيًا
@@ -42,7 +42,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       }
     } catch (error) {
       setStatus('disconnected');
-      setStatusDetail("جاري الاتصال بخادم Render...");
+      setStatusDetail(error instanceof Error ? error.message : "جاري محاولة الاتصال بخادم Render...");
       onStatusChange?.(false);
       
       // محاولة إعادة الاتصال تلقائيًا
@@ -102,7 +102,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
                   )}
                 >
                   {status === 'checking' ? 'جاري الفحص...' : 
-                   status === 'connected' ? 'متصل' : 'جاري الاتصال...'}
+                   status === 'connected' ? 'خادم Render متصل' : 'جاري الاتصال بـ Render...'}
                 </span>
               )}
             </div>

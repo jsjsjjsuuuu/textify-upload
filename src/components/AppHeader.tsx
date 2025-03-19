@@ -14,7 +14,6 @@ const AppHeader = () => {
     return location.pathname === path;
   };
   
-  // أضفنا الدالة toggleTheme لتبديل السمة بين الفاتح والداكن
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
@@ -44,7 +43,7 @@ const AppHeader = () => {
           </div>
           <div className="flex items-center justify-end gap-4">
             <div className="flex items-center space-x-2">
-              <ConnectionStatusIndicator />
+              <ConnectionStatusIndicator showText={true} />
             </div>
             <Button
               variant="ghost"

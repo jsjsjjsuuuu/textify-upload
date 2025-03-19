@@ -27,7 +27,7 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
       
       if (result.isConnected) {
         toast({
-          title: "متصل بالخادم",
+          title: "متصل بخادم Render",
           description: "تم الاتصال بخادم Render بنجاح.",
           variant: "default",
         });
@@ -84,7 +84,7 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
       ) : (
         <>
           <RefreshCw className={`${showFullText ? 'mr-2' : ''} h-4 w-4`} />
-          {showFullText && "اختبار الاتصال"}
+          {showFullText && "اختبار اتصال Render"}
         </>
       )}
     </Button>
