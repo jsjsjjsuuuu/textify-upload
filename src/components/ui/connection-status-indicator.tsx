@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { checkConnection, getLastConnectionStatus } from "@/utils/automationServerUrl";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface ConnectionStatusIndicatorProps {
   showText?: boolean;
@@ -20,8 +21,11 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   const [status, setStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const [isChecking, setIsChecking] = useState(false);
   const [statusDetail, setStatusDetail] = useState("");
+  const [retryAttempt, setRetryAttempt] = useState(0);
   
   const checkServerStatus = async () => {
+    if (isChecking) return; // تجنب تكرار الفحص إذا كان هناك فحص قيد التقدم
+    
     setIsChecking(true);
     setStatus('checking');
     
@@ -31,22 +35,47 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       if (connectionResult.isConnected) {
         setStatus('connected');
         setStatusDetail("متصل بخادم Render");
+        setRetryAttempt(0);
         onStatusChange?.(true);
       } else {
         setStatus('disconnected');
         setStatusDetail(connectionResult.message || "جاري محاولة الاتصال بخادم Render...");
         onStatusChange?.(false);
         
-        // محاولة إعادة الاتصال تلقائيًا
-        setTimeout(checkServerStatus, 5000);
+        // زيادة عدد المحاولات
+        setRetryAttempt(prev => prev + 1);
+        
+        // إذا كان هناك عدة محاولات فاشلة، عرض رسالة للمستخدم
+        if (retryAttempt >= 3 && retryAttempt % 5 === 0) {
+          toast.error(
+            `تعذر الاتصال بخادم Render بعد ${retryAttempt} محاولة. تأكد من أن الخادم يعمل.`,
+            { duration: 10000 }
+          );
+        }
+        
+        // محاولة إعادة الاتصال تلقائيًا - استخدام فترة انتظار متزايدة
+        const retryDelay = Math.min(5000 + (retryAttempt * 1000), 15000);
+        setTimeout(checkServerStatus, retryDelay);
       }
     } catch (error) {
       setStatus('disconnected');
-      setStatusDetail(error instanceof Error ? error.message : "جاري محاولة الاتصال بخادم Render...");
+      const errorMsg = error instanceof Error ? error.message : "جاري محاولة الاتصال بخادم Render...";
+      
+      // إضافة تفاصيل إضافية للمستخدم
+      let detailedError = errorMsg;
+      if (errorMsg.includes("Failed to fetch")) {
+        detailedError = "تعذر الوصول إلى خادم Render - قد يكون الخادم غير متاح أو هناك مشكلة في الشبكة";
+      }
+      
+      setStatusDetail(detailedError);
       onStatusChange?.(false);
       
+      // زيادة عدد المحاولات
+      setRetryAttempt(prev => prev + 1);
+      
       // محاولة إعادة الاتصال تلقائيًا
-      setTimeout(checkServerStatus, 5000);
+      const retryDelay = Math.min(5000 + (retryAttempt * 1000), 15000);
+      setTimeout(checkServerStatus, retryDelay);
     } finally {
       setIsChecking(false);
     }
@@ -76,7 +105,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
     return () => {
       clearInterval(intervalId);
     };
-  }, [onStatusChange]);
+  }, []);
   
   return (
     <div className={cn("flex items-center gap-2", className)}>
@@ -102,22 +131,29 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
                   )}
                 >
                   {status === 'checking' ? 'جاري الفحص...' : 
-                   status === 'connected' ? 'خادم Render متصل' : 'جاري الاتصال بـ Render...'}
+                   status === 'connected' ? 'خادم Render متصل' : `جاري الاتصال بـ Render${retryAttempt > 0 ? ` (محاولة #${retryAttempt})` : '...'}`}
                 </span>
               )}
             </div>
           </TooltipTrigger>
           <TooltipContent side="bottom">
             <p>{statusDetail}</p>
-            <Button 
-              variant="link" 
-              size="sm" 
-              className="p-0 h-auto text-xs underline"
-              onClick={checkServerStatus} 
-              disabled={isChecking}
-            >
-              تحديث الحالة
-            </Button>
+            <div className="flex justify-between items-center mt-2">
+              <Button 
+                variant="link" 
+                size="sm" 
+                className="p-0 h-auto text-xs underline"
+                onClick={checkServerStatus} 
+                disabled={isChecking}
+              >
+                تحديث الحالة
+              </Button>
+              {status === 'disconnected' && (
+                <span className="text-xs text-yellow-600">
+                  {retryAttempt > 0 ? `محاولة إعادة الاتصال #${retryAttempt}` : ''}
+                </span>
+              )}
+            </div>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

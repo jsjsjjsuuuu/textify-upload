@@ -1,3 +1,4 @@
+
 /**
  * إدارة عنوان URL الخاص بخادم الأتمتة
  */
@@ -28,7 +29,7 @@ let lastConnectionStatus = {
   lastChecked: 0,
   retryCount: 0,
   lastUsedIp: RENDER_ALLOWED_IPS[0],
-  timeoutMs: 10000, // إضافة مهلة زمنية افتراضية للطلبات
+  timeoutMs: 15000, // زيادة المهلة الزمنية الافتراضية للطلبات إلى 15 ثانية
   lastError: null as Error | null // إضافة حقل لتخزين آخر خطأ
 };
 
@@ -277,9 +278,9 @@ export const fetchWithRetry = async (
     // زيادة عداد المحاولة
     currentRetry++;
     
-    // انتظار قبل إعادة المحاولة التالية (200ms * رقم المحاولة)
+    // انتظار قبل إعادة المحاولة التالية (1000ms * رقم المحاولة)
     if (currentRetry < maxRetries) {
-      const delayMs = 200 * currentRetry;
+      const delayMs = 1000 * currentRetry;
       console.log(`الانتظار ${delayMs}ms قبل إعادة المحاولة التالية...`);
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
@@ -298,26 +299,36 @@ export const checkConnection = async (): Promise<{ isConnected: boolean; message
     const serverUrl = getAutomationServerUrl();
     const currentIp = getNextIp();
     
-    // استخدام عملية fetch مبسطة مع مهلة زمنية قصيرة
+    // استخدام عملية fetch مبسطة مع مهلة زمنية قصيرة لفحص الاتصال
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 ثوانٍ كحد أقصى للفحص
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 ثوانٍ كحد أقصى للفحص - زيادة وقت الانتظار
     
+    const headers = createBaseHeaders(currentIp);
+    
+    console.log("جاري فحص الاتصال بـ:", serverUrl, "باستخدام IP:", currentIp);
+    console.log("الرؤوس المستخدمة:", headers);
+
     const response = await fetch(`${serverUrl}/api/status`, {
       method: 'GET',
-      headers: createBaseHeaders(currentIp),
-      signal: controller.signal
+      headers: headers,
+      signal: controller.signal,
+      mode: 'cors',
+      cache: 'no-store',
+      credentials: 'omit'
     });
     
     clearTimeout(timeoutId);
     
     if (response.ok) {
       updateConnectionStatus(true, currentIp);
+      console.log("تم الاتصال بالخادم بنجاح!");
       return { 
         isConnected: true, 
         message: "متصل بالخادم بنجاح" 
       };
     } else {
       const errorMsg = `فشل الاتصال بالخادم برمز الحالة: ${response.status}`;
+      console.error(errorMsg);
       updateConnectionStatus(false, currentIp, new Error(errorMsg));
       return { 
         isConnected: false, 
@@ -326,10 +337,20 @@ export const checkConnection = async (): Promise<{ isConnected: boolean; message
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'خطأ غير معروف في الاتصال';
+    console.error("خطأ أثناء فحص الاتصال:", errorMsg);
     updateConnectionStatus(false, lastConnectionStatus.lastUsedIp, error instanceof Error ? error : new Error(errorMsg));
+    
+    // تخصيص رسائل الخطأ لتسهيل فهمها
+    let userFriendlyMessage = errorMsg;
+    if (errorMsg.includes("Failed to fetch")) {
+      userFriendlyMessage = "تعذر الوصول إلى خادم Render. تأكد من أن الخادم يعمل والاتصال بالإنترنت مستقر.";
+    } else if (errorMsg.includes("aborted")) {
+      userFriendlyMessage = "انتهت مهلة الاتصال. قد تكون سرعة الاتصال بالإنترنت بطيئة أو الخادم غير مستجيب.";
+    }
+    
     return { 
       isConnected: false, 
-      message: errorMsg 
+      message: userFriendlyMessage
     };
   }
 };

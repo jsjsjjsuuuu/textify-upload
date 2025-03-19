@@ -23,6 +23,13 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
     setIsTesting(true);
     
     try {
+      // إظهار رسالة أثناء الاختبار
+      const toastId = toast({
+        title: "جاري اختبار الاتصال",
+        description: "يتم التحقق من الاتصال بخادم Render...",
+        duration: 5000,
+      });
+      
       const result = await checkConnection();
       
       if (result.isConnected) {
@@ -34,17 +41,25 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
       } else {
         toast({
           title: "فشل الاتصال",
-          description: result.message || "تعذر الاتصال بخادم Render",
+          description: result.message || "تعذر الاتصال بخادم Render. تأكد من أن الخادم يعمل وأن عنوان URL صحيح.",
           variant: "destructive",
+          duration: 8000,
         });
       }
       
       onConnectionResult?.(result.isConnected);
     } catch (error) {
+      // تحسين رسالة الخطأ لتوفير المزيد من المعلومات
+      const errorMessage = error instanceof Error ? error.message : "حدث خطأ أثناء الاتصال بخادم Render";
+      const detailedError = errorMessage.includes("Failed to fetch") 
+        ? "تعذر الوصول إلى الخادم. تأكد من أن خادم Render يعمل وإمكانية الوصول إليه من الإنترنت."
+        : errorMessage;
+      
       toast({
-        title: "خطأ",
-        description: error instanceof Error ? error.message : "حدث خطأ أثناء الاتصال بخادم Render",
+        title: "خطأ في الاتصال",
+        description: detailedError,
         variant: "destructive",
+        duration: 10000,
       });
       
       onConnectionResult?.(false);

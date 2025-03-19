@@ -1,14 +1,17 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, AlertTriangle } from 'lucide-react';
 import { useTheme } from '@/components/ui/theme-provider';
 import ConnectionStatusIndicator from '@/components/ui/connection-status-indicator';
 import { Button } from './ui/button';
+import { toast } from 'sonner';
+import { isConnected } from '@/utils/automationServerUrl';
 
 const AppHeader = () => {
   const { setTheme, theme } = useTheme();
   const location = useLocation();
+  const [serverConnected, setServerConnected] = useState<boolean | null>(null);
   
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -17,6 +20,37 @@ const AppHeader = () => {
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
+
+  // التحقق من حالة الاتصال بالخادم عند تحميل الصفحة
+  useEffect(() => {
+    const checkServerConnection = async () => {
+      try {
+        const connected = await isConnected();
+        setServerConnected(connected);
+        
+        // عرض إشعار للمستخدم إذا كان الخادم غير متصل
+        if (!connected) {
+          toast.warning(
+            "خادم Render غير متصل",
+            {
+              description: "تعذر الاتصال بخادم الأتمتة. قد تكون بعض الميزات غير متاحة.",
+              duration: 7000,
+              action: {
+                label: "الإعدادات",
+                onClick: () => {
+                  window.location.href = '/server-settings';
+                }
+              }
+            }
+          );
+        }
+      } catch (error) {
+        console.error("خطأ في التحقق من حالة الخادم:", error);
+      }
+    };
+    
+    checkServerConnection();
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -43,7 +77,11 @@ const AppHeader = () => {
           </div>
           <div className="flex items-center justify-end gap-4">
             <div className="flex items-center space-x-2">
-              <ConnectionStatusIndicator showText={true} />
+              <ConnectionStatusIndicator 
+                showText={true} 
+                className="bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-md"
+                onStatusChange={setServerConnected}
+              />
             </div>
             <Button
               variant="ghost"
