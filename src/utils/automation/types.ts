@@ -30,7 +30,10 @@ export interface AutomationAction {
 export interface ServerStatusResponse {
   status: string;
   message: string;
-  time: string;
+  time?: string;
+  version?: string;
+  uptime?: number;
+  environment?: string;
   clientIp?: string; // عنوان IP الذي تم اكتشافه بواسطة الخادم
   systemInfo?: {
     nodeVersion: string;

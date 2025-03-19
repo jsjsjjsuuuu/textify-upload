@@ -1,4 +1,3 @@
-
 /**
  * إدارة الاتصال بخادم الأتمتة
  */
@@ -8,7 +7,8 @@ import {
   getLastConnectionStatus, 
   RENDER_ALLOWED_IPS, 
   getNextIp, 
-  createBaseHeaders 
+  createBaseHeaders,
+  isPreviewEnvironment
 } from "../automationServerUrl";
 import { toast } from "sonner";
 import { ServerStatusResponse } from "./types";
@@ -24,10 +24,7 @@ export class ConnectionManager {
    * التحقق مما إذا كنا في بيئة معاينة (Lovable)
    */
   private static isPreviewEnvironment(): boolean {
-    return typeof window !== 'undefined' && (
-      window.location.hostname.includes('lovableproject.com') ||
-      window.location.hostname.includes('lovable.app')
-    );
+    return isPreviewEnvironment();
   }
   
   /**
@@ -60,7 +57,7 @@ export class ConnectionManager {
         return {
           status: "ok",
           message: "محاكاة اتصال ناجح في بيئة المعاينة",
-          version: "1.0.0",
+          time: new Date().toISOString(),
           uptime: 1000,
           environment: "preview"
         };
@@ -124,7 +121,7 @@ export class ConnectionManager {
         return {
           status: "ok",
           message: "محاكاة اتصال ناجح في بيئة المعاينة",
-          version: "1.0.0",
+          time: new Date().toISOString(),
           uptime: 1000,
           environment: "preview"
         };
