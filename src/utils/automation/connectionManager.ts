@@ -21,6 +21,16 @@ export class ConnectionManager {
   private static lastError: Error | null = null;
   
   /**
+   * التحقق مما إذا كنا في بيئة معاينة (Lovable)
+   */
+  private static isPreviewEnvironment(): boolean {
+    return typeof window !== 'undefined' && (
+      window.location.hostname.includes('lovableproject.com') ||
+      window.location.hostname.includes('lovable.app')
+    );
+  }
+  
+  /**
    * التحقق من حالة خادم الأتمتة
    */
   static async checkServerStatus(showToasts = true): Promise<ServerStatusResponse> {
@@ -34,6 +44,27 @@ export class ConnectionManager {
     
     try {
       console.log("التحقق من حالة الخادم:", serverUrl);
+      
+      // التحقق من بيئة المعاينة وتوفير محاكاة للاتصال
+      if (this.isPreviewEnvironment()) {
+        console.log("بيئة المعاينة: محاكاة اتصال ناجح بالخادم");
+        
+        // تحديث حالة الاتصال (مع محاكاة النجاح)
+        updateConnectionStatus(true);
+        this.lastError = null;
+        
+        // إيقاف إعادة المحاولة إذا كانت نشطة
+        this.stopReconnect();
+        
+        // إرجاع بيانات مُحاكاة
+        return {
+          status: "ok",
+          message: "محاكاة اتصال ناجح في بيئة المعاينة",
+          version: "1.0.0",
+          uptime: 1000,
+          environment: "preview"
+        };
+      }
       
       // استخدام عنوان IP متناوب في كل محاولة
       const currentIp = getNextIp();
@@ -82,6 +113,22 @@ export class ConnectionManager {
       return result;
     } catch (error) {
       console.error("خطأ في التحقق من حالة الخادم:", error);
+      
+      // التحقق مما إذا كنا في بيئة معاينة وتجنب إظهار رسائل الخطأ
+      if (this.isPreviewEnvironment()) {
+        console.log("بيئة المعاينة: تجاهل خطأ الاتصال وإرجاع حالة ناجحة");
+        // تحديث حالة الاتصال كما لو كانت ناجحة
+        updateConnectionStatus(true);
+        
+        // إرجاع بيانات مُحاكاة
+        return {
+          status: "ok",
+          message: "محاكاة اتصال ناجح في بيئة المعاينة",
+          version: "1.0.0",
+          uptime: 1000,
+          environment: "preview"
+        };
+      }
       
       // تحديث حالة الاتصال وتخزين الخطأ الأخير
       const currentIp = getLastConnectionStatus().lastUsedIp;

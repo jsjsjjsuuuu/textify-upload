@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Wifi, WifiOff, RefreshCw, Clock, ExternalLink, Server, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { checkConnection, getLastConnectionStatus, RENDER_ALLOWED_IPS } from "@/utils/automationServerUrl";
+import { checkConnection, getLastConnectionStatus, RENDER_ALLOWED_IPS, isPreviewEnvironment } from "@/utils/automationServerUrl";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -24,6 +23,12 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   const [statusDetail, setStatusDetail] = useState("");
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [selectedIp, setSelectedIp] = useState<string | null>(null);
+  const [isPreview, setIsPreview] = useState(false);
+  
+  // تحقق مما إذا كنا في بيئة معاينة
+  useEffect(() => {
+    setIsPreview(isPreviewEnvironment());
+  }, []);
   
   const checkServerStatus = async (specificIp?: string) => {
     if (isChecking) return; // تجنب تكرار الفحص إذا كان هناك فحص قيد التقدم
@@ -32,6 +37,16 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
     setStatus('checking');
     
     try {
+      // في بيئة المعاينة، محاكاة الاتصال الناجح
+      if (isPreview) {
+        setStatus('connected');
+        setStatusDetail("محاكاة الاتصال الناجح في بيئة المعاينة");
+        setRetryAttempt(0);
+        onStatusChange?.(true);
+        setIsChecking(false);
+        return;
+      }
+      
       const connectionResult = await checkConnection();
       
       if (connectionResult.isConnected) {
@@ -106,6 +121,14 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
     // نحصل أولاً على الحالة المخزنة
     const storedStatus = getLastConnectionStatus();
     
+    // في بيئة المعاينة، تعيين حالة متصل افتراضيًا
+    if (isPreview) {
+      setStatus('connected');
+      setStatusDetail("متصل بخادم Render (محاكاة)");
+      onStatusChange?.(true);
+      return;
+    }
+    
     if (storedStatus.isConnected) {
       setStatus('connected');
       setStatusDetail("متصل بخادم Render");
@@ -116,16 +139,18 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       onStatusChange?.(false);
     }
     
-    // ثم نقوم بالفحص لتحديث الحالة
-    checkServerStatus();
-    
-    // فحص دوري كل 30 ثانية
-    const intervalId = setInterval(() => checkServerStatus(), 30000);
-    
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, []);
+    // ثم نقوم بالفحص لتحديث الحالة (تجنب الفحص المتكرر في بيئة المعاينة)
+    if (!isPreview) {
+      checkServerStatus();
+      
+      // فحص دوري كل 30 ثانية
+      const intervalId = setInterval(() => checkServerStatus(), 30000);
+      
+      return () => {
+        clearInterval(intervalId);
+      };
+    }
+  }, [isPreview]);
   
   const formatElapsedTime = (timestamp: number): string => {
     if (!timestamp) return '';

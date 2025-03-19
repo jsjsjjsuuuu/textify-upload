@@ -1,4 +1,3 @@
-
 // قائمة بعناوين IP المسموح بها لخادم Render
 export const RENDER_ALLOWED_IPS = [
   "34.106.88.0",
@@ -33,6 +32,14 @@ export function setConnectionTimeout(timeout: number): void {
 // دالة للحصول على وقت مهلة الاتصال الحالي
 export function getConnectionTimeout(): number {
   return connectionTimeout;
+}
+
+// دالة للتحقق مما إذا كنا في بيئة معاينة (Lovable)
+export function isPreviewEnvironment(): boolean {
+  return typeof window !== 'undefined' && (
+    window.location.hostname.includes('lovableproject.com') ||
+    window.location.hostname.includes('lovable.app')
+  );
 }
 
 // دالة للتحقق من صحة عنوان URL
@@ -110,8 +117,8 @@ export function getAutomationServerUrl(): string {
       return savedUrl;
     }
     
-    // 4. في بيئة المعاينة (Lovable)، استخدم عنوان لمحاكاة الاتصال للاختبار 
-    if (window.location.hostname.includes('lovableproject.com')) {
+    // 4. في بيئة المعاينة (Lovable)، استخدم عنوان Render الافتراضي
+    if (isPreviewEnvironment()) {
       return 'https://textify-upload.onrender.com';
     }
     
@@ -161,7 +168,7 @@ export async function isConnected(showToasts: boolean = false): Promise<boolean>
   const url = getAutomationServerUrl();
   
   // في بيئة المعاينة (Lovable)، محاكاة الاتصال للاختبار
-  if (typeof window !== 'undefined' && window.location.hostname.includes('lovableproject.com')) {
+  if (isPreviewEnvironment()) {
     console.log("بيئة المعاينة: محاكاة اتصال ناجح بالخادم");
     return true;
   }
@@ -224,7 +231,7 @@ export async function checkConnection(): Promise<{ isConnected: boolean; message
   const url = getAutomationServerUrl();
   
   // في بيئة المعاينة (Lovable)، محاكاة الاتصال للاختبار
-  if (typeof window !== 'undefined' && window.location.hostname.includes('lovableproject.com')) {
+  if (isPreviewEnvironment()) {
     console.log("بيئة المعاينة: محاكاة اتصال ناجح بالخادم");
     return {
       isConnected: true,

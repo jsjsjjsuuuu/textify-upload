@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, RefreshCw, Settings, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { checkConnection, RENDER_ALLOWED_IPS, getLastConnectionStatus } from "@/utils/automationServerUrl";
+import { checkConnection, RENDER_ALLOWED_IPS, getLastConnectionStatus, isPreviewEnvironment } from "@/utils/automationServerUrl";
 import { 
   Popover,
   PopoverContent,
@@ -33,6 +34,18 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
     setErrorDetails(null);
     
     try {
+      // في بيئة المعاينة، محاكاة نجاح الاتصال
+      if (isPreviewEnvironment()) {
+        toast.success("متصل بخادم Render في بيئة المعاينة", {
+          description: "تم محاكاة الاتصال بنجاح. (ملاحظة: هذه محاكاة في بيئة المعاينة)",
+          duration: 5000
+        });
+        
+        onConnectionResult?.(true);
+        setIsTesting(false);
+        return;
+      }
+      
       // إظهار رسالة أثناء الاختبار
       toast("جاري اختبار الاتصال", {
         description: "يتم التحقق من الاتصال بخادم Render...",
@@ -105,6 +118,11 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
   useEffect(() => {
     // التحقق من الاتصال تلقائيًا عند تحميل المكون
     testConnection();
+    
+    // لا نحتاج إلى فحص الاتصال بشكل متكرر في بيئة المعاينة
+    if (isPreviewEnvironment()) {
+      return;
+    }
     
     // فحص الاتصال كل 30 ثانية
     const intervalId = setInterval(() => {
