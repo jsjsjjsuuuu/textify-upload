@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   // استخدام خادم محلي للتطوير وخادم Render للإنتاج
   const isProduction = mode === 'production';
   const automationServerUrl = isProduction 
-    ? process.env.AUTOMATION_SERVER_URL || 'https://textify-upload.onrender.com' 
+    ? process.env.VITE_AUTOMATION_SERVER_URL || process.env.AUTOMATION_SERVER_URL || 'https://textify-upload.onrender.com' 
     : 'http://localhost:10000';
   
   console.log(`⚡️ الاتصال بخادم الأتمتة على: ${automationServerUrl}, isProduction: ${isProduction}`);
@@ -34,7 +34,8 @@ export default defineConfig(({ mode }) => {
     define: {
       // تعريف متغيرات البيئة بالطريقة الصحيحة
       'import.meta.env.VITE_AUTOMATION_SERVER_URL': JSON.stringify(automationServerUrl),
-      'process.env.AUTOMATION_SERVER_URL': JSON.stringify(automationServerUrl)
+      'process.env.AUTOMATION_SERVER_URL': JSON.stringify(automationServerUrl),
+      'process.env.VITE_AUTOMATION_SERVER_URL': JSON.stringify(automationServerUrl)
     },
     server: {
       host: "::",

@@ -4,7 +4,7 @@
   "deploy": {
     "numReplicas": 1,
     "buildCommand": {
-      "command": "npm install && npx vite build"
+      "command": "npm install && VITE_AUTOMATION_SERVER_URL=$AUTOMATION_SERVER_URL npx vite build"
     },
     "startCommand": "PORT=10000 node src/server/server.js",
     "restartPolicyType": "ON_FAILURE",

@@ -1,4 +1,3 @@
-
 // src/utils/automationServerUrl.ts
 
 // قائمة بعناوين IP المسموح بها لخادم Render
@@ -54,24 +53,44 @@ export function setAutomationServerUrl(url: string): void {
 
 // دالة لاسترجاع عنوان URL لخادم الأتمتة من التخزين المحلي
 export function getAutomationServerUrl(): string {
-  // تحقق من متغير البيئة في Vite
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_AUTOMATION_SERVER_URL) {
-    return import.meta.env.VITE_AUTOMATION_SERVER_URL;
+  // تحقق أولاً من متغير البيئة في المتصفح
+  if (typeof window !== 'undefined') {
+    // إذا كان لدينا import.meta.env متاح (بيئة Vite)
+    if (typeof import.meta !== 'undefined' && 
+        import.meta.env && 
+        import.meta.env.VITE_AUTOMATION_SERVER_URL) {
+      console.log("استخدام VITE_AUTOMATION_SERVER_URL من import.meta.env:", import.meta.env.VITE_AUTOMATION_SERVER_URL);
+      return import.meta.env.VITE_AUTOMATION_SERVER_URL;
+    }
+    
+    // إذا كان متغير process.env متاح
+    if (typeof process !== 'undefined' && 
+        process.env && 
+        (process.env.VITE_AUTOMATION_SERVER_URL || process.env.AUTOMATION_SERVER_URL)) {
+      const url = process.env.VITE_AUTOMATION_SERVER_URL || process.env.AUTOMATION_SERVER_URL;
+      console.log("استخدام متغير البيئة من process.env:", url);
+      return url;
+    }
+    
+    // محاولة استرجاع القيمة المخزنة محليًا
+    const savedUrl = localStorage.getItem('automationServerUrl');
+    if (savedUrl) {
+      console.log("استخدام عنوان URL المخزن محليًا:", savedUrl);
+      return savedUrl;
+    }
+    
+    // عودة إلى أصل الموقع الحالي كخيار أخير
+    console.log("استخدام أصل الموقع الحالي:", window.location.origin);
+    return window.location.origin;
   }
   
-  // تحقق من متغير البيئة التقليدي
+  // الخيار الافتراضي في بيئة Node.js
   if (typeof process !== 'undefined' && process.env && process.env.AUTOMATION_SERVER_URL) {
     return process.env.AUTOMATION_SERVER_URL;
   }
   
-  // استخدام التخزين المحلي كخيار احتياطي
-  const savedUrl = localStorage.getItem('automationServerUrl');
-  if (savedUrl) {
-    return savedUrl;
-  }
-  
-  // استخدام القيمة الافتراضية
-  return window.location.origin;
+  // القيمة الافتراضية
+  return 'https://textify-upload.onrender.com';
 }
 
 // دالة لإعادة تعيين عنوان URL لخادم الأتمتة إلى القيمة الافتراضية

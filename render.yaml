@@ -4,7 +4,7 @@ services:
   - type: web
     name: textify-upload
     env: node
-    buildCommand: npm install && npx vite build
+    buildCommand: npm install && VITE_AUTOMATION_SERVER_URL=$AUTOMATION_SERVER_URL npx vite build
     startCommand: PORT=10000 node src/server/server.js
     envVars:
       - key: NODE_ENV
