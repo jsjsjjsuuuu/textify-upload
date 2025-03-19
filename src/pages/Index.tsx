@@ -1,181 +1,109 @@
 
-import BackgroundPattern from "@/components/BackgroundPattern";
-import ImageUploader from "@/components/ImageUploader";
-import AppHeader from "@/components/AppHeader";
-import ImagePreviewContainer from "@/components/ImageViewer/ImagePreviewContainer";
-import LearningStats from "@/components/LearningStats";
-import ElementFinderSection from "@/components/BookmarkletGenerator/ElementFinderSection";
-import { useImageProcessing } from "@/hooks/useImageProcessing";
-import { formatDate } from "@/utils/dateFormatter";
-import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Server, Wifi, WifiOff, AlertCircle } from "lucide-react";
-import { AutomationService } from "@/utils/automationService";
-import { isConnected, getLastConnectionStatus } from "@/utils/automationServerUrl";
+import React, { useState, useEffect } from 'react';
+import ImageUploader from '../components/ImageUploader';
+import ImageList from '../components/ImageList';
+import ExtractedData from '../components/ExtractedData';
+import { useImageState } from '../hooks/useImageState';
+import { useDataExtraction } from '../hooks/useDataExtraction';
+import DataExport from '../components/DataExport/DirectExportTools';
+import LearningStats from '../components/LearningStats';
+import BackgroundPattern from '../components/BackgroundPattern';
+import AppHeader from '../components/AppHeader';
+import { toast } from 'sonner';
+import { getAutomationServerUrl, isPreviewEnvironment, checkConnection } from '@/utils/automationServerUrl';
+import ConnectionStatusIndicator from '@/components/ui/connection-status-indicator';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
-  const {
-    images,
-    isProcessing,
-    processingProgress,
-    isSubmitting,
-    useGemini,
-    bookmarkletStats,
-    handleFileChange,
-    handleTextChange,
-    handleDelete,
-    handleSubmitToApi
-  } = useImageProcessing();
-  
-  const { toast } = useToast();
+  const { loading, image, imageData, updateImageData, clearImage, addImage } = useImageState();
+  const { extractedData, extractionLoading, updateExtractedData, updateRawText } = useDataExtraction();
+  const [serverConnected, setServerConnected] = useState<boolean>(false);
   const navigate = useNavigate();
-  const [serverConnected, setServerConnected] = useState<boolean | null>(null);
-  const [isCheckingConnection, setIsCheckingConnection] = useState(false);
-  
-  // وظيفة wrapper لمعالجة توقيع الدالة للحفاظ على التوافق مع واجهة ImagePreviewContainer
-  const handleDeleteImage = (id: string) => {
-    handleDelete(id);
-  };
 
-  // تعديل وظيفة wrapper للإرسال لتتوافق مع واجهة ImagePreviewContainer
-  const handleSubmit = (id: string) => {
-    // البحث عن الصورة المطلوبة باستخدام المعرف
-    const image = images.find(img => img.id === id);
-    if (image) {
-      handleSubmitToApi(id, image);
-    }
-  };
-
-  // التحقق من حالة الاتصال بالخادم عند تحميل الصفحة
   useEffect(() => {
+    // التحقق من حالة الاتصال بخادم Render عند تحميل الصفحة
     checkServerConnection();
   }, []);
 
-  // التحقق من حالة الاتصال بالخادم
   const checkServerConnection = async () => {
-    setIsCheckingConnection(true);
     try {
-      // التحقق من الحالة المحفوظة أولاً
-      const status = getLastConnectionStatus();
-      setServerConnected(status.isConnected);
-      
-      // ثم التحقق من الحالة الفعلية
-      const connected = await isConnected(false);
-      setServerConnected(connected);
-      
-      if (connected) {
-        toast({
-          title: "تم الاتصال بالخادم",
-          description: "تم الاتصال بخادم الأتمتة بنجاح",
-        });
-      } else {
-        toast({
-          title: "تعذر الاتصال بالخادم",
-          description: "يرجى التحقق من إعدادات الخادم",
-          variant: "destructive",
-        });
+      // في بيئة المعاينة، اعتبر الخادم متصلاً دائمًا
+      if (isPreviewEnvironment()) {
+        setServerConnected(true);
+        return;
       }
+
+      // التحقق من الاتصال بالخادم
+      const result = await checkConnection();
+      setServerConnected(result.isConnected);
     } catch (error) {
-      console.error("خطأ في التحقق من حالة الخادم:", error);
+      console.error("خطأ في التحقق من حالة الاتصال:", error);
       setServerConnected(false);
-      
-      toast({
-        title: "خطأ في الاتصال",
-        description: error instanceof Error ? error.message : "حدث خطأ غير معروف",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCheckingConnection(false);
     }
   };
 
-  // الانتقال إلى صفحة إعدادات الخادم
-  const goToServerSettings = () => {
-    navigate("/server-settings");
+  // عند تحميل صورة
+  const handleUploadSuccess = (file: File, imageUrl: string) => {
+    addImage(file, imageUrl);
+  };
+
+  // إدارة الخطأ في التحميل
+  const handleUploadError = (error: Error) => {
+    toast.error(`خطأ في تحميل الصورة: ${error.message}`);
   };
 
   return (
     <div className="relative min-h-screen pb-20">
       <BackgroundPattern />
-
-      <div className="container px-4 sm:px-6 py-4 sm:py-6 mx-auto max-w-5xl">
+      
+      <div className="container px-4 sm:px-6 py-4 sm:py-6 mx-auto">
         <AppHeader />
-
-        <div className="flex flex-col items-center justify-center pt-4">
-          <div className="w-full flex justify-center mx-auto">
-            <ImageUploader 
-              isProcessing={isProcessing}
-              processingProgress={processingProgress}
-              useGemini={useGemini}
-              onFileChange={handleFileChange}
-            />
-          </div>
-
-          {/* شريط حالة الاتصال - جديد */}
-          <div className="w-full mt-4 mb-2">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                {serverConnected === true ? (
-                  <Wifi className="h-5 w-5 text-green-500" />
-                ) : serverConnected === false ? (
-                  <WifiOff className="h-5 w-5 text-red-500" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-yellow-500" />
-                )}
-                
-                <span className="text-sm font-medium">
-                  {serverConnected === true
-                    ? "متصل بخادم الأتمتة"
-                    : serverConnected === false
-                    ? "غير متصل بخادم الأتمتة"
-                    : "جاري التحقق من حالة الاتصال..."}
-                </span>
+        
+        <div className="mt-6 flex flex-col md:flex-row gap-6">
+          <div className="w-full md:w-1/2 lg:w-2/5 space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">تحميل الصور</h2>
+                <ConnectionStatusIndicator />
               </div>
               
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  disabled={isCheckingConnection}
-                  onClick={checkServerConnection}
-                >
-                  فحص الاتصال
-                </Button>
-                
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  onClick={goToServerSettings}
-                >
-                  <Server className="h-4 w-4 mr-1" />
-                  إعدادات الخادم
-                </Button>
-              </div>
+              <ImageUploader 
+                onUploadSuccess={handleUploadSuccess}
+                onError={handleUploadError}
+              />
+              
+              {image && (
+                <div className="mt-4">
+                  <ImageList 
+                    image={image}
+                    imageData={imageData}
+                    updateImageData={updateImageData}
+                    clearImage={clearImage}
+                  />
+                </div>
+              )}
+              
+              <LearningStats className="mt-4" />
             </div>
           </div>
-
-          <div className="w-full mt-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <div className="lg:col-span-3">
-                <LearningStats />
-              </div>
-            </div>
-
-            {/* قسم مكتشف العناصر الجديد */}
-            <div className="mb-8">
-              <ElementFinderSection />
-            </div>
-
-            <ImagePreviewContainer 
-              images={images}
-              isSubmitting={isSubmitting}
-              onTextChange={handleTextChange}
-              onDelete={handleDeleteImage}
-              onSubmit={handleSubmit}
-              formatDate={formatDate}
+          
+          <div className="w-full md:w-1/2 lg:w-3/5 space-y-6">
+            <ExtractedData 
+              image={image}
+              imageData={imageData}
+              extractedData={extractedData}
+              extractionLoading={extractionLoading}
+              updateExtractedData={updateExtractedData}
+              updateRawText={updateRawText}
             />
+            
+            {extractedData && Object.keys(extractedData).length > 0 && (
+              <DataExport 
+                extractedData={extractedData} 
+                imageData={imageData} 
+              />
+            )}
           </div>
         </div>
       </div>
