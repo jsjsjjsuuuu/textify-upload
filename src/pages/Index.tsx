@@ -41,7 +41,7 @@ const Index = () => {
     handleCopyText,
     handleAutoExtract,
     handleTempChange,
-  } = useDataExtraction(images?.[0], onTextChange, false, setEditMode);
+  } = useDataExtraction(images?.[0], onTextChange, editMode, setEditMode);
 
   useEffect(() => {
     // التحقق من حالة الاتصال بخادم Render عند تحميل الصفحة
