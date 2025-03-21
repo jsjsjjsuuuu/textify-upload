@@ -22,7 +22,7 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
     if (!isRunning) {
       toast({
         title: "بدء تنفيذ الأتمتة",
-        description: "قد يستغرق هذا بضع ثوانٍ. سيتم تنفيذ الإجراءات على الموقع المستهدف من خلال خادم الأتمتة."
+        description: "قد يستغرق هذا بضع ثوانٍ. سيتم تنفيذ الإجراءات على الموقع المستهدف من خلال خادم الأتمتة الحقيقي."
       });
     }
     
@@ -33,7 +33,7 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
     <Button
       onClick={handleRun}
       disabled={isRunning}
-      className="bg-purple-600 hover:bg-purple-700 min-w-32"
+      className="bg-green-600 hover:bg-green-700 min-w-32"
     >
       {isRunning ? (
         <>

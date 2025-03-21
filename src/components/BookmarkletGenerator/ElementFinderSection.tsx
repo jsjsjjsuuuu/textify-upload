@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { toast } from "sonner";
@@ -20,11 +20,11 @@ interface ElementFinderProps {
 
 const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGenerated }) => {
   const [actions, setActions] = useState<{ name: string; finder: string; value: string; delay: string }[]>([
-    { name: "click", finder: "", value: "", delay: "300" },
+    { name: "click", finder: "", value: "", delay: "500" },
   ]);
   const [projectUrl, setProjectUrl] = useState("");
   const [isRunning, setIsRunning] = useState(false);
-  const [useRealBrowser, setUseRealBrowser] = useState(false);
+  const [useRealBrowser, setUseRealBrowser] = useState(true); // تغيير القيمة الافتراضية إلى true
   const [actionType, setActionType] = useState("click");
   const [customName, setCustomName] = useState("");
   const [automationProgress, setAutomationProgress] = useState(0);
@@ -32,9 +32,45 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
   const [serverError, setServerError] = useState<string | null>(null);
   
   const { toast: hookToast } = useToast();
+
+  // التحقق من صحة المحددات CSS قبل التنفيذ
+  const validateSelectors = (): boolean => {
+    let isValid = true;
+    const invalidSelectors: string[] = [];
+    
+    actions.forEach((action, index) => {
+      // التحقق من وجود المحدد
+      if (!action.finder.trim()) {
+        invalidSelectors.push(`الإجراء #${index+1}: محدد CSS فارغ`);
+        isValid = false;
+        return;
+      }
+      
+      // محاولة التحقق من صحة بناء محدد CSS
+      try {
+        // تجاهل أخطاء تنسيق CSS إذا كان المحدد يحتوي على عدة محددات
+        if (action.finder.includes(',')) return;
+        
+        // التحقق من صحة المحدد عن طريق محاولة تحديد عنصر (حتى لو كانت النتيجة فارغة)
+        document.querySelector(action.finder);
+      } catch (error) {
+        invalidSelectors.push(`الإجراء #${index+1}: محدد CSS غير صالح (${action.finder})`);
+        isValid = false;
+      }
+    });
+    
+    if (!isValid) {
+      toast.error("يوجد أخطاء في محددات CSS", {
+        description: invalidSelectors.join('، '),
+        duration: 6000,
+      });
+    }
+    
+    return isValid;
+  };
   
   const handleAddAction = () => {
-    setActions([...actions, { name: actionType, finder: "", value: "", delay: "300" }]);
+    setActions([...actions, { name: actionType, finder: "", value: "", delay: "500" }]);
   };
   
   const handleRemoveAction = (index: number) => {
@@ -60,32 +96,92 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
       return;
     }
     
+    // التحقق من صحة URL
+    if (!projectUrl.startsWith('http://') && !projectUrl.startsWith('https://')) {
+      toast.error("يجب أن يبدأ رابط المشروع بـ http:// أو https://");
+      return;
+    }
+    
+    // التحقق من صحة المحددات
+    if (!validateSelectors()) {
+      return;
+    }
+    
     setIsRunning(true);
-    setAutomationProgress(10);
+    setAutomationProgress(5);
     setAutomationStatus("جاري بدء الأتمتة...");
     setServerError(null);
     
     try {
-      // إعداد كائن الأتمتة
+      // تأكيد إلى المستخدم أن العملية بدأت
+      toast.info("جاري بدء عملية الأتمتة", {
+        description: "سيتم تنفيذ الأتمتة على الخادم باستخدام متصفح حقيقي. قد يستغرق هذا بضع ثوانٍ."
+      });
+      
+      // تحسين كائن الأتمتة
       const config: AutomationConfig = {
         projectName: customName || "محدد العناصر",
         projectUrl: projectUrl,
-        actions: actions.map(action => ({
-          name: action.name,
-          finder: action.finder,
-          value: action.value,
-          delay: action.delay ? parseInt(action.delay, 10) : 0 // تحويل delay إلى رقم
-        })) as AutomationAction[],
+        actions: actions.map(action => {
+          // تحويل الإجراءات إلى الشكل المطلوب للخادم وإضافة وصف للتسهيل
+          const serverAction: AutomationAction = {
+            name: action.name === "click" ? "انقر" : 
+                 action.name === "type" ? "أدخل نص" : 
+                 action.name === "select" ? "اختر من قائمة" : action.name,
+            finder: action.finder,
+            value: action.value || (action.name === "click" ? "click" : ""),
+            delay: action.delay ? parseInt(action.delay, 10) : 500, // زيادة التأخير الافتراضي
+            description: `${action.name} - ${action.finder}`
+          };
+          return serverAction;
+        }),
         automationType: 'server' as 'server' | 'client',
         useBrowserData: true,
-        forceRealExecution: true // إضافة خاصية forceRealExecution
+        forceRealExecution: true, // تأكيد أن التنفيذ يجب أن يكون حقيقياً
+        timeout: 60000, // زيادة مهلة التنفيذ إلى 60 ثانية
+        retries: 2, // إضافة محاولات إعادة المحاولة
       };
       
-      setAutomationProgress(30);
+      console.log("بدء تنفيذ الأتمتة بالإعدادات:", config);
+      
+      setAutomationProgress(15);
       setAutomationStatus("جاري الاتصال بالخادم...");
+      
+      // تحديث حالة التقدم خلال التنفيذ
+      const progressInterval = setInterval(() => {
+        setAutomationProgress(prev => {
+          // زيادة النسبة تدريجياً حتى 90% كحد أقصى
+          if (prev < 90) {
+            return prev + (prev < 30 ? 1 : prev < 60 ? 2 : 1);
+          }
+          return prev;
+        });
+      }, 1000);
+      
+      // تحديث رسائل الحالة تلقائياً
+      setTimeout(() => {
+        if (isRunning) {
+          setAutomationStatus("جاري تهيئة المتصفح على الخادم...");
+        }
+      }, 3000);
+      
+      setTimeout(() => {
+        if (isRunning) {
+          setAutomationStatus("جاري فتح الموقع المستهدف...");
+        }
+      }, 8000);
+      
+      setTimeout(() => {
+        if (isRunning) {
+          setAutomationStatus("جاري تنفيذ الإجراءات...");
+        }
+      }, 15000);
       
       // تنفيذ الأتمتة
       const result = await AutomationService.validateAndRunAutomation(config);
+      
+      // إيقاف التحديث التلقائي
+      clearInterval(progressInterval);
       
       setAutomationProgress(100);
       
@@ -100,7 +196,7 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
             <div className="mt-2 space-y-2">
               <p>تم تنفيذ {result.results?.filter(r => r.success).length || 0} إجراء بنجاح من أصل {result.results?.length || 0}</p>
               {result.results && result.results.some(r => !r.success) && (
-                <p className="text-red-500">فشل تنفيذ {result.results.filter(r => !r.success).length} إجراء</p>
+                <p className="text-amber-500">فشل تنفيذ {result.results.filter(r => !r.success).length} إجراء</p>
               )}
               <p>وقت التنفيذ: {(result.executionTime || 0) / 1000} ثانية</p>
             </div>
@@ -117,6 +213,7 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
       const errorMessage = error instanceof Error ? error.message : "حدث خطأ غير معروف";
       setServerError(errorMessage);
       toast.error(`حدث خطأ أثناء تنفيذ الأتمتة: ${errorMessage}`);
+      console.error("خطأ مفصل أثناء تنفيذ الأتمتة:", error);
     } finally {
       setIsRunning(false);
     }
