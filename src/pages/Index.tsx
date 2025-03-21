@@ -3,8 +3,6 @@ import BackgroundPattern from "@/components/BackgroundPattern";
 import ImageUploader from "@/components/ImageUploader";
 import AppHeader from "@/components/AppHeader";
 import ImagePreviewContainer from "@/components/ImageViewer/ImagePreviewContainer";
-import LearningStats from "@/components/LearningStats";
-import ElementFinderSection from "@/components/BookmarkletGenerator/ElementFinderSection";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { formatDate } from "@/utils/dateFormatter";
 import { useState, useEffect } from "react";
@@ -113,7 +111,7 @@ const Index = () => {
             />
           </div>
 
-          {/* شريط حالة الاتصال - جديد */}
+          {/* شريط حالة الاتصال */}
           <div className="w-full mt-4 mb-2">
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-2">
@@ -157,17 +155,6 @@ const Index = () => {
           </div>
 
           <div className="w-full mt-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <div className="lg:col-span-3">
-                <LearningStats />
-              </div>
-            </div>
-
-            {/* قسم مكتشف العناصر الجديد */}
-            <div className="mb-8">
-              <ElementFinderSection />
-            </div>
-
             <ImagePreviewContainer 
               images={images}
               isSubmitting={isSubmitting}

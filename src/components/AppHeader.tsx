@@ -112,17 +112,11 @@ const AppHeader = () => {
                 <Link to="/" className={`transition-colors hover:text-foreground/80 ${isActive('/') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
                   الرئيسية
                 </Link>
-                <Link to="/bookmarklet" className={`transition-colors hover:text-foreground/80 ${isActive('/bookmarklet') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
-                  أدوات سطر العناوين
-                </Link>
                 <Link to="/server-automation" className={`transition-colors hover:text-foreground/80 ${isActive('/server-automation') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
                   الأتمتة عبر الخادم
                 </Link>
                 <Link to="/records" className={`transition-colors hover:text-foreground/80 ${isActive('/records') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
                   السجلات
-                </Link>
-                <Link to="/api-settings" className={`transition-colors hover:text-foreground/80 ${isActive('/api-settings') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
-                  إعدادات API
                 </Link>
                 <Link to="/server-settings" className={`transition-colors hover:text-foreground/80 ${isActive('/server-settings') ? 'text-foreground font-medium' : 'text-foreground/60'}`}>
                   إعدادات الخادم
