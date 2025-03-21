@@ -1,3 +1,4 @@
+
 /**
  * إدارة الاتصال بخادم الأتمتة
  */
@@ -33,9 +34,10 @@ export class ConnectionManager {
   
   /**
    * التحقق مما إذا كنا في بيئة معاينة (Lovable)
+   * دائمًا يرجع false لتفعيل التنفيذ الفعلي
    */
   private static isPreviewEnvironment(): boolean {
-    return isPreviewEnvironment();
+    return false;
   }
   
   /**
@@ -58,33 +60,6 @@ export class ConnectionManager {
     
     try {
       console.log("التحقق من حالة الخادم:", serverUrl);
-      
-      // التحقق من بيئة المعاينة وتوفير محاكاة للاتصال
-      if (this.isPreviewEnvironment()) {
-        console.log("بيئة المعاينة: محاكاة اتصال ناجح بالخادم");
-        
-        // تحديث حالة الاتصال (مع محاكاة النجاح بشكل دائم في بيئة المعاينة)
-        updateConnectionStatus(true);
-        this.lastError = null;
-        this.lastSuccessfulConnection = new Date();
-        
-        // إيقاف إعادة المحاولة إذا كانت نشطة
-        this.stopReconnect();
-        
-        // إظهار إشعار نجاح الاتصال عند الطلب
-        if (showToasts) {
-          toast.success("تم الاتصال بخادم الأتمتة بنجاح (بيئة معاينة)");
-        }
-        
-        // إرجاع بيانات مُحاكاة
-        return {
-          status: "ok",
-          message: "محاكاة اتصال ناجح في بيئة المعاينة",
-          time: new Date().toISOString(),
-          uptime: 1000,
-          environment: "preview"
-        };
-      }
       
       // استخدام عنوان IP متناوب في كل محاولة
       const currentIp = getNextIp();
@@ -175,23 +150,6 @@ export class ConnectionManager {
       throw new Error("فشلت جميع محاولات الاتصال");
     } catch (error) {
       console.error("خطأ في التحقق من حالة الخادم:", error);
-      
-      // التحقق مما إذا كنا في بيئة معاينة وتجاهل إظهار رسائل الخطأ
-      if (this.isPreviewEnvironment()) {
-        console.log("بيئة المعاينة: تجاهل خطأ الاتصال وإرجاع حالة ناجحة");
-        // تحديث حالة الاتصال كما لو كانت ناجحة دائماً في بيئة المعاينة
-        updateConnectionStatus(true);
-        this.lastSuccessfulConnection = new Date();
-        
-        // إرجاع بيانات مُحاكاة
-        return {
-          status: "ok",
-          message: "محاكاة اتصال ناجح في بيئة المعاينة",
-          time: new Date().toISOString(),
-          uptime: 1000,
-          environment: "preview"
-        };
-      }
       
       // تحديث حالة الاتصال وتخزين الخطأ الأخير
       updateConnectionStatus(false);

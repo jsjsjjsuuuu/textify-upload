@@ -248,7 +248,11 @@ export function createBaseHeaders(ipAddress?: string): HeadersInit {
     'X-Render-Client-IP': ip,
     'X-Client-Info': 'Textify Automation Client',
     'Origin': typeof window !== 'undefined' ? window.location.origin : '',
-    'Referer': typeof window !== 'undefined' ? window.location.href : ''
+    'Referer': typeof window !== 'undefined' ? window.location.href : '',
+    // إضافة رؤوس CORS إضافية
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
   };
 }
 
