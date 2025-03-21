@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, PlayCircle, PlusCircle, Trash2, Edit, Save, AlertTriangle } from 'lucide-react';
+import { Loader2, PlayCircle, PlusCircle, Trash2, Edit, Save, AlertTriangle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import ActionEditor from './ActionEditor';
 import { getAutomationServerUrl, isPreviewEnvironment } from '@/utils/automationServerUrl';
@@ -17,6 +17,18 @@ interface AutomationControllerProps {
   defaultUrl?: string;
 }
 
+interface ExtractedDataType {
+  code?: string;
+  senderName?: string;
+  phoneNumber?: string;
+  province?: string;
+  price?: string;
+  companyName?: string;
+  address?: string;
+  notes?: string;
+  sourceId?: string;
+}
+
 const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl = '' }) => {
   const [projectUrl, setProjectUrl] = useState(defaultUrl);
   const [projectName, setProjectName] = useState('مشروع أتمتة جديد');
@@ -25,6 +37,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
   const [editingActionIndex, setEditingActionIndex] = useState<number | null>(null);
   const [serverConnected, setServerConnected] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [extractedData, setExtractedData] = useState<ExtractedDataType | null>(null);
 
   // التحقق من حالة اتصال الخادم عند تحميل المكون
   useEffect(() => {
@@ -38,6 +51,20 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
       toast.warning("أنت في بيئة المعاينة. ستعمل الأتمتة في وضع المحاكاة فقط.", {
         duration: 5000,
       });
+    }
+    
+    // التحقق من وجود بيانات مستخرجة
+    const savedData = localStorage.getItem('automationData');
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        setExtractedData(parsedData);
+        if (parsedData.companyName) {
+          setProjectName(`أتمتة بيانات ${parsedData.companyName}`);
+        }
+      } catch (error) {
+        console.error("خطأ في قراءة البيانات المستخرجة:", error);
+      }
     }
   }, []);
 
@@ -104,6 +131,12 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
       
       if (result.success) {
         toast.success('تم تنفيذ الأتمتة بنجاح!');
+        
+        // إذا كان المصدر من بيانات مستخرجة، نحذف البيانات المؤقتة
+        if (extractedData && extractedData.sourceId) {
+          localStorage.removeItem('automationData');
+          setExtractedData(null);
+        }
       } else {
         toast.error(`فشل تنفيذ الأتمتة: ${result.message}`);
       }
@@ -133,6 +166,76 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
       toast.error('حدث خطأ أثناء حفظ التكوين');
     }
   };
+  
+  const handleClearExtractedData = () => {
+    localStorage.removeItem('automationData');
+    setExtractedData(null);
+    toast.info('تم مسح البيانات المستخرجة');
+  };
+  
+  // إنشاء إجراءات تلقائية بناءً على البيانات المستخرجة
+  const generateActionsFromExtractedData = () => {
+    if (!extractedData) return;
+    
+    const newActions: AutomationAction[] = [];
+    
+    // إضافة إجراءات لكل حقل من البيانات المستخرجة
+    if (extractedData.code) {
+      newActions.push({
+        name: 'إدخال الكود',
+        finder: '#code', // محدد افتراضي، يجب تغييره حسب الموقع المستهدف
+        value: extractedData.code,
+        delay: 500
+      });
+    }
+    
+    if (extractedData.senderName) {
+      newActions.push({
+        name: 'إدخال اسم المرسل',
+        finder: '#sender_name',
+        value: extractedData.senderName,
+        delay: 500
+      });
+    }
+    
+    if (extractedData.phoneNumber) {
+      newActions.push({
+        name: 'إدخال رقم الهاتف',
+        finder: '#phone',
+        value: extractedData.phoneNumber,
+        delay: 500
+      });
+    }
+    
+    if (extractedData.province) {
+      newActions.push({
+        name: 'اختيار المحافظة',
+        finder: '#province',
+        value: extractedData.province,
+        delay: 500
+      });
+    }
+    
+    if (extractedData.price) {
+      newActions.push({
+        name: 'إدخال السعر',
+        finder: '#price',
+        value: extractedData.price,
+        delay: 500
+      });
+    }
+    
+    // إضافة إجراء للنقر على زر الإرسال
+    newActions.push({
+      name: 'إرسال النموذج',
+      finder: 'button[type="submit"]',
+      value: 'click',
+      delay: 1000
+    });
+    
+    setActions(newActions);
+    toast.success('تم إنشاء إجراءات تلقائية من البيانات المستخرجة');
+  };
 
   return (
     <div className="space-y-6">
@@ -150,6 +253,40 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-700">
                 أنت في بيئة المعاينة (لوفابل). ستعمل الأتمتة في وضع المحاكاة فقط ولن تتصل بالمواقع الخارجية.
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+        
+        {extractedData && (
+          <div className="px-6 mb-4">
+            <Alert className="border-green-200 bg-green-50">
+              <AlertDescription className="text-green-700 flex justify-between items-center">
+                <div>
+                  <span className="font-semibold">تم استيراد البيانات المستخرجة: </span>
+                  {extractedData.code && <span className="ml-2">الكود: {extractedData.code}</span>}
+                  {extractedData.senderName && <span className="ml-2">المرسل: {extractedData.senderName}</span>}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={generateActionsFromExtractedData}
+                    className="border-green-300 bg-white"
+                  >
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    إنشاء إجراءات تلقائية
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearExtractedData}
+                    className="border-red-300 bg-white"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    مسح البيانات
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           </div>

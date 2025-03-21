@@ -6,6 +6,7 @@ import ExtractedDataActions from "./ExtractedDataActions";
 import RawTextViewer from "./RawTextViewer";
 import LearningNotifications from "./LearningNotifications";
 import ExtractedDataFields from "./ExtractedDataFields";
+import AutomationButton from "./AutomationButton";
 import { useDataExtraction } from "@/hooks/useDataExtraction";
 import { motion } from "framer-motion";
 
@@ -50,14 +51,18 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
     >
       <Card className="bg-white/95 dark:bg-gray-800/95 shadow-sm border-brand-beige dark:border-gray-700 hover:shadow-md transition-shadow">
         <CardContent className="p-4">
-          <ExtractedDataActions 
-            editMode={editMode}
-            onEditToggle={handleEditToggle}
-            onCancel={handleCancel}
-            onCopyText={handleCopyText}
-            onAutoExtract={handleAutoExtract}
-            hasExtractedText={!!image.extractedText}
-          />
+          <div className="flex justify-between items-center mb-4">
+            <ExtractedDataActions 
+              editMode={editMode}
+              onEditToggle={handleEditToggle}
+              onCancel={handleCancel}
+              onCopyText={handleCopyText}
+              onAutoExtract={handleAutoExtract}
+              hasExtractedText={!!image.extractedText}
+            />
+            
+            <AutomationButton image={image} />
+          </div>
 
           <LearningNotifications 
             correctionsMade={correctionsMade} 
