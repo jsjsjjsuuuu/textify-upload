@@ -1,3 +1,4 @@
+
 /**
  * أنواع البيانات المستخدمة في نظام الأتمتة
  */
@@ -54,6 +55,7 @@ export interface AutomationResponse {
   error?: string;
   clientIp?: string; // عنوان IP المستخدم
   automationType?: 'server' | 'client'; // نوع الأتمتة المستخدم
+  details?: string[];  // إضافة خاصية details لتخزين تفاصيل إضافية عن الأتمتة
 }
 
 /**
