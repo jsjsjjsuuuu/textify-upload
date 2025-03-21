@@ -132,7 +132,7 @@ export const useGeminiProcessing = () => {
             variant: "default"
           });
           
-          // إعادة الصورة مع حالة انتظار
+          // إعادة الصورة مع حالة انتظار ونص مستخرج إذا كان متوفرًا
           updatedImage = {
             ...image,
             status: "pending",

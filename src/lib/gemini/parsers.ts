@@ -132,9 +132,10 @@ export function parseGeminiResponse(extractedText: string): {
       }
       
       // استخراج السعر
-      const priceMatches = extractedText.match(/السعر[:\s]+([0-9\s\-]+)/i) ||
-                          extractedText.match(/المبلغ[:\s]+([0-9\s\-]+)/i) ||
-                          extractedText.match(/سعر[:\s]+([0-9\s\-]+)/i);
+      const priceMatches = extractedText.match(/السعر[:\s]+([0-9\s\-,\.]+)/i) ||
+                          extractedText.match(/المبلغ[:\s]+([0-9\s\-,\.]+)/i) ||
+                          extractedText.match(/سعر[:\s]+([0-9\s\-,\.]+)/i) ||
+                          extractedText.match(/قيمة[:\s]+([0-9\s\-,\.]+)/i);
       
       if (priceMatches && priceMatches[1]) {
         parsedData.price = priceMatches[1].trim();

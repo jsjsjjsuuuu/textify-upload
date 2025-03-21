@@ -17,10 +17,10 @@ export async function extractDataWithGemini({
   imageBase64,
   extractionPrompt,
   temperature = 0.2,
-  modelVersion = 'gemini-2.0-flash',
+  modelVersion = 'gemini-1.5-flash',  // تحديث إلى الإصدار الأحدث
   enhancedExtraction = true,
-  maxRetries = 12,  // زيادة عدد المحاولات بشكل كبير
-  retryDelayMs = 3000  // زيادة مدة الانتظار بين المحاولات
+  maxRetries = 12,
+  retryDelayMs = 3000
 }: GeminiExtractParams): Promise<ApiResult> {
   if (!apiKey) {
     console.error("Gemini API Key is missing");
@@ -125,8 +125,17 @@ export async function extractDataWithGemini({
       };
     }
 
-    const extractedText = data.candidates[0].content.parts[0].text;
+    const extractedText = data.candidates[0].content.parts[0].text || '';
     console.log("Extracted text from Gemini:", extractedText);
+    
+    // التحقق من وجود نص مستخرج
+    if (!extractedText) {
+      console.error("Gemini returned empty text");
+      return {
+        success: false,
+        message: "لم يتم استخراج أي نص من الصورة"
+      };
+    }
     
     // تحليل الاستجابة واستخراج البيانات المنظمة
     try {
@@ -150,7 +159,8 @@ export async function extractDataWithGemini({
         message: "تم استخراج النص ولكن فشل تحليل البيانات المنظمة",
         data: {
           extractedText,
-          rawText: extractedText
+          rawText: extractedText,
+          parsedData: {} // إضافة كائن فارغ على الأقل
         }
       };
     }
@@ -188,7 +198,7 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
   }
 
   try {
-    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
     
     // إنشاء خيارات الطلب مع رؤوس مخصصة ومهلة زمنية أطول
     const fetchOptions = createFetchOptions(
