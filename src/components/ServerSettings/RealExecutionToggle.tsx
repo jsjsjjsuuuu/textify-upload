@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Switch } from "@/components/ui/switch";
 import { ExternalLink, AlertTriangle, Server, RefreshCw, Globe, Link2, Database, Check, Wifi } from "lucide-react";
@@ -11,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { shouldUseBrowserData, setUseBrowserData } from "@/utils/automation";
 
 const RealExecutionToggle: React.FC = () => {
   const [isEnabled, setIsEnabled] = React.useState(true);
@@ -19,6 +21,7 @@ const RealExecutionToggle: React.FC = () => {
   const [connectionError, setConnectionError] = React.useState<string | null>(null);
   const [currentServerUrl, setCurrentServerUrl] = React.useState(() => getAutomationServerUrl());
   const [connectionSuccess, setConnectionSuccess] = React.useState(false);
+  const [useBrowserData, setUseBrowserDataState] = React.useState(() => shouldUseBrowserData());
   
   React.useEffect(() => {
     // ضمان أن وضع التنفيذ الفعلي دائمًا مفعل
@@ -44,6 +47,22 @@ const RealExecutionToggle: React.FC = () => {
     
     // محاولة الاتصال بالخادم الحقيقي
     checkServerConnection();
+  };
+  
+  // معالج تبديل إعداد استخدام بيانات المتصفح
+  const handleBrowserDataToggle = (checked: boolean) => {
+    setUseBrowserDataState(checked);
+    setUseBrowserData(checked);
+    
+    if (checked) {
+      toast.success("تم تفعيل استخدام بيانات المتصفح", {
+        description: "سيتم الآن استخدام بيانات المتصفح (الكوكيز وبيانات الجلسة) أثناء تنفيذ الأتمتة."
+      });
+    } else {
+      toast.info("تم تعطيل استخدام بيانات المتصفح", {
+        description: "لن يتم استخدام بيانات المتصفح (الكوكيز وبيانات الجلسة) أثناء تنفيذ الأتمتة."
+      });
+    }
   };
   
   const checkServerConnection = async () => {
@@ -98,6 +117,24 @@ const RealExecutionToggle: React.FC = () => {
           onCheckedChange={handleToggle}
           aria-label="تفعيل وضع التنفيذ الفعلي"
           disabled={true} // تعطيل التبديل
+        />
+      </div>
+      
+      {/* إضافة خيار استخدام بيانات المتصفح */}
+      <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 p-4 rounded-md border border-blue-200">
+        <div className="space-y-1">
+          <h3 className="font-medium flex items-center gap-2">
+            <Database className="h-4 w-4 text-blue-600" />
+            استخدام بيانات المتصفح
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            تفعيل هذا الخيار يسمح للأتمتة باستخدام بيانات المتصفح (الكوكيز وبيانات الجلسة) للمواقع التي تتطلب تسجيل الدخول.
+          </p>
+        </div>
+        <Switch
+          checked={useBrowserData}
+          onCheckedChange={handleBrowserDataToggle}
+          aria-label="استخدام بيانات المتصفح"
         />
       </div>
       
@@ -208,3 +245,4 @@ const RealExecutionToggle: React.FC = () => {
 };
 
 export default RealExecutionToggle;
+

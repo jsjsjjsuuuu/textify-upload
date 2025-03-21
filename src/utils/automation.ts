@@ -55,3 +55,35 @@ export const getPuppeteerConfig = () => {
     defaultViewport: { width: 1366, height: 768 }
   };
 };
+
+/**
+ * التحقق مما إذا كان يجب استخدام بيانات المتصفح (الكوكيز وبيانات الجلسة)
+ * @returns {boolean} يجب استخدام بيانات المتصفح أم لا
+ */
+export const shouldUseBrowserData = (): boolean => {
+  // التحقق من وجود إعداد في التخزين المحلي
+  const storedSetting = localStorage.getItem('use_browser_data');
+  // إذا لم يكن هناك إعداد مخزن، نعيد true كقيمة افتراضية
+  return storedSetting === null ? true : storedSetting === 'true';
+};
+
+/**
+ * ضبط إعداد استخدام بيانات المتصفح
+ * @param {boolean} value القيمة المراد ضبطها (true لاستخدام بيانات المتصفح، false لعدم استخدامها)
+ */
+export const setUseBrowserData = (value: boolean): void => {
+  localStorage.setItem('use_browser_data', value.toString());
+};
+
+/**
+ * الحصول على الإعدادات الافتراضية للتطبيق
+ * @returns {object} الإعدادات الافتراضية
+ */
+export const getDefaultSettings = () => {
+  return {
+    useBrowserData: shouldUseBrowserData(),
+    forceRealExecution: true,
+    automationType: 'server' as 'server' | 'client'
+  };
+};
+
