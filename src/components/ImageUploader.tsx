@@ -1,8 +1,9 @@
 
-import { useState, useCallback } from "react";
-import { UploadCloud } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Upload, FileImage, LoaderCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ImageUploaderProps {
   isProcessing: boolean;
@@ -11,101 +12,131 @@ interface ImageUploaderProps {
   onFileChange: (files: FileList | null) => void;
 }
 
-const ImageUploader = ({ 
-  isProcessing, 
-  processingProgress, 
-  useGemini, 
-  onFileChange 
+const ImageUploader = ({
+  isProcessing,
+  processingProgress,
+  useGemini,
+  onFileChange,
 }: ImageUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
-  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle drag events
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    onFileChange(e.dataTransfer.files);
-  }, [onFileChange]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
-  }, []);
+  };
 
-  const handleDragLeave = useCallback(() => {
+  const handleDragLeave = () => {
     setIsDragging(false);
-  }, []);
+  };
 
-  // Handle file input changes
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      onFileChange(e.dataTransfer.files);
+    }
+  };
+
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("File input change detected", e.target.files);
     onFileChange(e.target.files);
   };
 
-  // Handle container click to trigger file input
-  const handleContainerClick = () => {
-    const fileInput = document.getElementById("image-upload") as HTMLInputElement;
-    if (fileInput) {
-      fileInput.click();
-    } else {
-      toast({
-        title: "خطأ",
-        description: "لم يتم العثور على عنصر إدخال الملف",
-        variant: "destructive"
-      });
+  const handleButtonClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
   return (
-    <section className="animate-slide-up flex justify-center items-center w-full" style={{ animationDelay: "0.1s" }}>
-      <div 
-        onDrop={handleDrop} 
-        onDragOver={handleDragOver} 
+    <div className="w-full max-w-3xl mx-auto">
+      <div
+        className={`border-2 border-dashed rounded-xl p-6 sm:p-10 text-center transition-colors cursor-pointer ${
+          isDragging
+            ? "border-primary bg-primary/10"
+            : "border-gray-300 dark:border-gray-700 hover:border-primary/50"
+        }`}
+        onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onClick={handleContainerClick}
-        className={`
-          elegant-upload max-w-full w-full mx-auto h-11
-          ${isDragging 
-            ? 'scale-[1.02] border-2 border-brand-coral' 
-            : 'border border-brand-coral/30 hover:border-brand-coral/60'
-          }
-          p-4 my-6 cursor-pointer relative overflow-hidden
-        `}
+        onDrop={handleDrop}
+        onClick={handleButtonClick}
       >
-        <input 
-          type="file" 
-          id="image-upload" 
-          className="hidden" 
-          accept="image/*" 
-          multiple 
-          onChange={handleFileInputChange} 
-          disabled={isProcessing} 
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          accept="image/*"
+          multiple
+          onChange={handleFileInputChange}
+          disabled={isProcessing}
         />
-        
-        <div className="flex items-center justify-center w-full h-full">
-          {!isProcessing ? (
-            <div className="flex items-center justify-center space-x-3 space-x-reverse">
-              <p className="text-xs font-medium text-brand-brown dark:text-brand-beige/90 upload-text">ارفع الصور</p>
-              <UploadCloud 
-                size={18} 
-                className="text-brand-coral hover:text-brand-green dark:text-brand-beige upload-icon-animate" 
-              />
-            </div>
-          ) : (
-            <div className="flex items-center w-full">
-              <div className="h-5 w-5 mr-2 rounded-full border-2 border-brand-coral/40 border-t-brand-coral animate-spin"></div>
-              <div className="flex-1">
-                <Progress value={processingProgress} className="h-1 bg-brand-beige/30" />
-                <p className="text-xs text-muted-foreground mt-0.5">جاري معالجة الصور... {processingProgress}%</p>
+
+        <div className="flex flex-col items-center justify-center space-y-4">
+          {isProcessing ? (
+            <>
+              <div className="relative w-16 h-16 mb-2">
+                <AnimatePresence>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <LoaderCircle className="w-14 h-14 text-primary animate-spin" />
+                  </motion.div>
+                </AnimatePresence>
               </div>
-            </div>
+              <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300">
+                جاري معالجة الصور...
+              </h3>
+              <div className="w-full max-w-md">
+                <Progress value={processingProgress} className="h-2" />
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  {processingProgress}% مكتمل
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="relative w-16 h-16 mb-2">
+                <AnimatePresence>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    {isDragging ? (
+                      <FileImage className="w-14 h-14 text-primary" />
+                    ) : (
+                      <Upload className="w-14 h-14 text-gray-400 dark:text-gray-600" />
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300">
+                اسحب الصور هنا أو انقر للتحميل
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                يمكنك تحميل صور الإيصالات أو الفواتير وسيتم استخراج البيانات منها تلقائيًا.
+                يُفضل صور واضحة وبحجم معقول (أقل من 5MB) للحصول على أفضل النتائج.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                <Button className="px-6" disabled={isProcessing}>
+                  <Upload className="w-4 h-4 mr-2" /> اختر الصور
+                </Button>
+              </div>
+              {useGemini && (
+                <p className="text-xs text-primary mt-2">
+                  يستخدم Gemini AI لاستخراج البيانات - قد تستغرق المعالجة وقتًا أطول للصور الكبيرة
+                </p>
+              )}
+            </>
           )}
         </div>
-        
-        {/* Animated background effect */}
-        <div className="absolute inset-0 -z-10 bg-shimmer"></div>
       </div>
-    </section>
+    </div>
   );
 };
 

@@ -1,22 +1,29 @@
+import { toast } from "@/hooks/use-toast";
 
-import { isPreview } from "./automation";
-
-const SERVER_URL_KEY = "automationServerUrl";
-const CONNECTION_STATUS_KEY = "lastConnectionStatus";
+export const SERVER_URL_KEY = "automationServerUrl";
+export const CONNECTION_STATUS_KEY = "connectionStatus";
 
 /**
- * الحصول على عنوان URL لخادم التشغيل الآلي من التخزين المحلي
+ * الحصول على مهلة الاتصال
  */
-export const getAutomationServerUrl = (): string => {
-  if (typeof localStorage === 'undefined') {
-    console.warn('localStorage is not available.');
-    return "";
-  }
-  return localStorage.getItem(SERVER_URL_KEY) || "";
+export const getConnectionTimeout = () => {
+  // زيادة المهلة الزمنية بشكل كبير لتجنب أخطاء المهلة المنتهية
+  return isPreviewEnvironment() ? 60000 : 120000; // 1-2 دقائق بدلاً من ثواني
 };
 
 /**
- * تعيين عنوان URL لخادم التشغيل الآلي في التخزين المحلي
+ * الحصول على عنوان خادم التشغيل الآلي من الذاكرة المحلية
+ */
+export const getAutomationServerUrl = () => {
+  if (typeof localStorage === 'undefined') {
+    console.warn('localStorage is not available.');
+    return '';
+  }
+  return localStorage.getItem(SERVER_URL_KEY) || '';
+};
+
+/**
+ * تعيين عنوان خادم التشغيل الآلي في الذاكرة المحلية
  */
 export const setAutomationServerUrl = (url: string) => {
   if (typeof localStorage === 'undefined') {
@@ -27,131 +34,33 @@ export const setAutomationServerUrl = (url: string) => {
 };
 
 /**
- * إعادة تعيين عنوان URL لخادم التشغيل الآلي إلى القيمة الافتراضية
+ * تحديد ما إذا كنا في بيئة المعاينة (Lovable)
  */
-export const resetAutomationServerUrl = () => {
-  const defaultUrl = "https://automation-server.onrender.com";
-  setAutomationServerUrl(defaultUrl);
-  return defaultUrl;
-};
-
-/**
- * التحقق من صحة URL الخادم
- */
-export const isValidServerUrl = (url: string): boolean => {
-  if (!url) return false;
-  try {
-    const urlObj = new URL(url);
-    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
-  } catch (e) {
-    return false;
+export const isPreviewEnvironment = () => {
+  // فحص عنوان URL الحالي
+  if (typeof window !== 'undefined') {
+    return window.location.hostname.includes("lovable.ai");
   }
-};
-
-/**
- * فحص ما إذا كنا في بيئة المعاينة (Lovable)
- */
-export const isPreviewEnvironment = (): boolean => {
-  return isPreview();
-};
-
-/**
- * الحصول على مهلة الاتصال
- * تم زيادة المهلة لتجنب مشكلة signal timed out
- */
-export const getConnectionTimeout = (): number => {
-  // مهلة أطول لتجنب انتهاء المهلة الزمنية
-  return isPreviewEnvironment() ? 15000 : 30000;
-};
-
-/**
- * تحديث حالة الاتصال
- */
-export const updateConnectionStatus = (isConnected: boolean, lastUsedIp?: string) => {
-  saveConnectionStatus(isConnected, isConnected ? undefined : "حدث خطأ في الاتصال", lastUsedIp);
-};
-
-/**
- * التحقق من حالة الاتصال الحالية
- */
-export const isConnected = async (silent: boolean = false): Promise<boolean> => {
-  // في بيئة المعاينة، دائماً نعتبر الاتصال ناجح
-  if (isPreviewEnvironment()) {
-    return true;
-  }
-  
-  // التحقق من آخر حالة معروفة
-  const lastStatus = getLastConnectionStatus();
-  
-  // إذا كان الاتصال ناجح في آخر 5 دقائق، نعتبره لا يزال متصل
-  if (lastStatus.isConnected && lastStatus.timestamp) {
-    const lastTimestamp = new Date(lastStatus.timestamp).getTime();
-    const now = new Date().getTime();
-    const fiveMinutes = 5 * 60 * 1000;
-    
-    if (now - lastTimestamp < fiveMinutes) {
-      return true;
-    }
-  }
-  
-  // محاولة التحقق من الاتصال مباشرة
-  try {
-    const result = await checkConnection();
-    return result.isConnected;
-  } catch (error) {
-    if (!silent) {
-      console.error("خطأ في التحقق من الاتصال:", error);
-    }
-    return false;
-  }
-};
-
-/**
- * إنشاء رؤوس طلب HTTP أساسية
- */
-export const createBaseHeaders = (ipAddress?: string): Record<string, string> => {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-    "X-Client-Version": "1.0.0"
-  };
-  
-  if (ipAddress) {
-    headers["X-Forwarded-For"] = ipAddress;
-    headers["X-Real-IP"] = ipAddress;
-  }
-  
-  return headers;
-};
-
-/**
- * الحصول على عنوان IP التالي من قائمة العناوين المسموح بها
- */
-export const getNextIp = (): string => {
-  const lastStatus = getLastConnectionStatus();
-  const retryCount = lastStatus.retryCount || 0;
-  const index = retryCount % RENDER_ALLOWED_IPS.length;
-  return RENDER_ALLOWED_IPS[index];
+  return false;
 };
 
 /**
  * فحص الاتصال بخادم التشغيل الآلي
  */
-export const checkConnection = async (): Promise<{ isConnected: boolean; message?: string }> => {
+export const checkConnection = async () => {
   const serverUrl = getAutomationServerUrl();
   if (!serverUrl) {
     console.warn("Automation server URL is not set.");
-    return { isConnected: false, message: "لم يتم تعيين عنوان URL للخادم." };
+    return { isConnected: false, message: "لم يتم تعيين عنوان الخادم" };
   }
 
   try {
     const url = `${serverUrl}/api/health`;
     console.log("Checking connection to:", url);
-
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
       mode: 'cors',
       credentials: 'include',
@@ -159,140 +68,139 @@ export const checkConnection = async (): Promise<{ isConnected: boolean; message
     });
 
     if (!response.ok) {
-      const message = `فشل الاتصال: ${response.status} - ${response.statusText}`;
-      console.error(message);
-      saveConnectionStatus(false, message);
-      return { isConnected: false, message };
+      console.error("Connection failed with status:", response.status);
+      return { isConnected: false, message: `فشل الاتصال: ${response.statusText}` };
     }
 
     const data = await response.json();
     console.log("Connection successful:", data);
     saveConnectionStatus(true);
-    return { isConnected: true };
+    return { isConnected: true, message: "تم الاتصال بنجاح" };
   } catch (error: any) {
-    const message = `حدث خطأ أثناء الاتصال: ${error.message || error}`;
-    console.error(message);
-    saveConnectionStatus(false, message);
-    return { isConnected: false, message };
+    console.error("Connection error:", error);
+    let errorMessage = error.message || 'خطأ غير معروف';
+    
+    if (errorMessage.includes('Failed to fetch')) {
+      errorMessage = 'فشل الاتصال بالخادم. تأكد من عنوان الخادم أو اتصال الإنترنت.';
+    } else if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
+      errorMessage = 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى لاحقًا.';
+    }
+    
+    saveConnectionStatus(false);
+    return { isConnected: false, message: `خطأ في الاتصال: ${errorMessage}` };
   }
 };
 
 /**
- * حفظ حالة الاتصال في التخزين المحلي
+ * حفظ حالة الاتصال في الذاكرة المحلية
  */
-const saveConnectionStatus = (isConnected: boolean, message?: string, lastUsedIp?: string) => {
+export const saveConnectionStatus = (isConnected: boolean) => {
   if (typeof localStorage === 'undefined') {
     console.warn('localStorage is not available.');
     return;
   }
   const status = {
     isConnected,
-    message,
-    lastUsedIp,
-    timestamp: new Date().toISOString(),
-    retryCount: getLastConnectionStatus().retryCount + 1
+    timestamp: new Date().toISOString()
   };
   localStorage.setItem(CONNECTION_STATUS_KEY, JSON.stringify(status));
 };
 
 /**
- * استرجاع آخر حالة اتصال
+ * استرجاع آخر حالة اتصال من الذاكرة المحلية
  */
-export const getLastConnectionStatus = (): { isConnected: boolean; message?: string; timestamp?: string; retryCount: number; lastUsedIp?: string } => {
+export const getLastConnectionStatus = () => {
   if (typeof localStorage === 'undefined') {
     console.warn('localStorage is not available.');
-    return { isConnected: false, retryCount: 0 };
+    return { isConnected: false, timestamp: null };
   }
-  const storedStatus = localStorage.getItem(CONNECTION_STATUS_KEY);
-  if (storedStatus) {
+  const status = localStorage.getItem(CONNECTION_STATUS_KEY);
+  if (status) {
     try {
-      return JSON.parse(storedStatus);
-    } catch (error) {
-      console.error("Failed to parse connection status from localStorage:", error);
-      return { isConnected: false, retryCount: 0 };
+      return JSON.parse(status);
+    } catch (e) {
+      console.error("Error parsing connection status:", e);
+      return { isConnected: false, timestamp: null };
     }
   }
-  return { isConnected: false, retryCount: 0 };
+  return { isConnected: false, timestamp: null };
 };
 
-/**
- * عناوين IP المسموح بها لخادم Render
- */
 export const RENDER_ALLOWED_IPS = [
-  "34.239.24.185",
-  "3.210.61.107",
-  "3.214.130.234",
-  "52.20.186.181",
-  "3.225.209.53",
-  "54.88.118.94",
-  "54.146.141.145",
-  "34.230.120.140"
+  "34.173.249.155",
+  "34.173.4.241",
+  "34.175.83.23",
+  "23.22.240.140",
+  "23.22.240.141",
+  "23.22.240.142",
+  "23.22.240.143",
+  "23.22.240.144",
+  "23.22.240.145",
+  "23.22.240.146",
+  "23.22.240.147",
+  "23.22.240.148",
+  "23.22.240.149",
+  "23.22.240.150",
+  "23.22.240.151"
 ];
 
 /**
- * وظيفة fetch مع إعادة المحاولة وزيادة المهلة الزمنية
+ * وظيفة fetch مع إعادة المحاولة
  */
-export async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 5, retryDelayMs = 1000): Promise<Response> {
+export async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 8, retryDelayMs = 2000): Promise<Response> {
   let retries = 0;
+  let currentTimeout = (options.signal as AbortSignal)?.timeout || getConnectionTimeout();
   let lastError: Error = new Error("Unknown error");
-
-  while (retries < maxRetries) {
+  
+  while(retries < maxRetries) {
     try {
       console.log(`Attempt ${retries + 1}/${maxRetries} for URL: ${url}`);
       
-      // نسخة من خيارات الطلب مع إمكانية تعديلها
-      const optionsWithSignal = { ...options };
-      
-      // إذا لم يتم تحديد مهلة زمنية للطلب، قم بتعيينها
-      if (!optionsWithSignal.signal) {
-        // زيادة المهلة مع كل محاولة
-        const timeout = getConnectionTimeout() * (retries + 1);
-        optionsWithSignal.signal = AbortSignal.timeout(timeout);
-        console.log(`Set timeout to ${timeout}ms for attempt ${retries + 1}`);
+      // تعديل timeout لكل محاولة جديدة
+      if (options.signal && options.signal instanceof AbortSignal) {
+        // إنشاء signal جديد مع مهلة أطول
+        options = {
+          ...options,
+          signal: AbortSignal.timeout(currentTimeout)
+        };
       }
       
-      const response = await fetch(url, optionsWithSignal);
+      const response = await fetch(url, options);
       
       if (!response.ok) {
-        // التعامل مع الاستجابة غير الناجحة، وإعادة المحاولة للأخطاء التي يمكن إصلاحها
-        if (response.status >= 500 || response.status === 429) {
-          // الأخطاء من جانب الخادم أو تجاوز عدد الطلبات، حاول مرة أخرى
-          const error = new Error(`HTTP error! status: ${response.status}`);
-          console.warn(`Request failed with status ${response.status}, retrying...`, error);
-          retries++;
-          await new Promise(resolve => setTimeout(resolve, retryDelayMs * retries));
-          continue;
+        console.error(`Attempt ${retries + 1}/${maxRetries} failed with status: ${response.status}`);
+        if (response.status === 404) {
+          console.warn('Resource not found, no retries needed.');
+          throw new Error(`Resource not found (404) at ${url}`);
         }
-        
-        // أنواع أخرى من الأخطاء، لا تحاول مرة أخرى
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       return response;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Attempt ${retries + 1}/${maxRetries} failed:`, error);
       lastError = error instanceof Error ? error : new Error(String(error));
       
-      // التحقق من نوع الخطأ
-      const errorMsg = lastError.message || '';
-      
-      // تعامل خاص مع أخطاء المهلة الزمنية
-      if (errorMsg.includes('timed out') || errorMsg.includes('TimeoutError') || errorMsg.includes('AbortError')) {
-        console.warn('Request timed out, increasing timeout for next attempt');
-        // سنحاول مرة أخرى مع زيادة المهلة في المحاولة التالية
-      }
       // تخطي إعادة المحاولة لبعض الأخطاء
-      else if (errorMsg.includes('CORS') || errorMsg.includes('blocked by extension')) {
+      if (lastError.message.includes('CORS') || lastError.message.includes('blocked by extension')) {
         console.error('CORS or extension blockage detected, retrying might not help:', lastError.message);
-        // سنحاول على أي حال، ولكن مع تأخير أطول
+        throw lastError;
       }
       
       retries++;
       if (retries < maxRetries) {
-        // زيادة فترة الانتظار مع كل محاولة فاشلة (backoff strategy) - مع زيادة تصاعدية
+        // زيادة فترة الانتظار مع كل محاولة فاشلة (backoff strategy)
         const delay = retryDelayMs * Math.pow(2, retries - 1);
+        
+        // زيادة المهلة الزمنية مع كل محاولة
+        if (lastError.message.includes('timed out')) {
+          // مضاعفة مهلة الانتظار في حالة انتهاء المهلة
+          currentTimeout *= 1.5;
+          console.warn('Request timed out, increasing timeout for next attempt');
+        }
+        
         console.log(`Waiting ${delay}ms before retry ${retries}/${maxRetries}...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
@@ -305,16 +213,16 @@ export async function fetchWithRetry(url: string, options: RequestInit, maxRetri
 /**
  * وظيفة لإنشاء خيارات الطلب
  */
-export function createFetchOptions(method: string, body?: any, headers?: HeadersInit): RequestInit {
+export function createFetchOptions(method: string, body: any, headers: Record<string, string>): RequestInit {
   const options: RequestInit = {
     method,
     headers: {
       "Accept": "application/json",
-      ...(headers || {})
+      ...headers || {}
     },
     credentials: "include",
     mode: "cors",
-    // تعيين مهلة أطول للطلبات لتجنب مشكلة signal timed out
+    // تعيين مهلة أطول للطلبات
     signal: AbortSignal.timeout(getConnectionTimeout())
   };
   
@@ -324,3 +232,25 @@ export function createFetchOptions(method: string, body?: any, headers?: Headers
   
   return options;
 }
+
+/**
+ * التحقق من الاتصال بخادم التشغيل الآلي
+ */
+export const isConnected = async (forceCheck = false) => {
+  // التحقق من آخر حالة اتصال إذا كانت حديثة (خلال الـ 5 دقائق الماضية)
+  const status = getLastConnectionStatus();
+  
+  if (!forceCheck && status.timestamp) {
+    const lastCheck = new Date(status.timestamp);
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    
+    if (lastCheck > fiveMinutesAgo) {
+      console.log("Using cached connection status:", status.isConnected);
+      return status.isConnected;
+    }
+  }
+  
+  // إجراء فحص جديد
+  const result = await checkConnection();
+  return result.isConnected;
+};

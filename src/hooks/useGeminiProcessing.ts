@@ -34,23 +34,40 @@ export const useGeminiProcessing = () => {
       console.log("Running in preview environment (Lovable). Attempting to use Gemini but may face CORS restrictions.");
       toast({
         title: "تنبيه",
-        description: "استخدام Gemini في بيئة المعاينة قد يواجه قيود CORS",
+        description: "استخدام Gemini في بيئة المعاينة قد يواجه قيود CORS، يرجى التحلي بالصبر في حالة بطء المعالجة",
         variant: "default"
       });
     }
 
     try {
+      // الكشف عن حجم الملف وتقديم تحذير إذا كان كبيرًا جدًا
+      const fileSizeMB = file.size / (1024 * 1024);
+      if (fileSizeMB > 5) {
+        toast({
+          title: "تنبيه",
+          description: `حجم الصورة كبير (${fileSizeMB.toFixed(1)}MB)، قد تستغرق المعالجة وقتًا أطول`,
+          variant: "default"
+        });
+      }
+      
       console.log("Converting file to base64");
       const imageBase64 = await fileToBase64(file);
       console.log("File converted to base64, length:", imageBase64.length);
+      
+      // تحديث الصورة لتظهر أنها قيد المعالجة
+      let updatedImage = { 
+        ...image, 
+        status: "processing",
+        extractedText: "جاري معالجة الصورة واستخراج البيانات..."
+      };
       
       console.log("Calling extractDataWithGemini");
       const extractionResult = await extractDataWithGemini({
         apiKey: geminiApiKey,
         imageBase64,
         enhancedExtraction: true,
-        maxRetries: 8,  // زيادة عدد المحاولات بشكل كبير للتغلب على مشكلة انتهاء المهلة
-        retryDelayMs: 2000  // زيادة مدة الانتظار بين المحاولات
+        maxRetries: 12,  // زيادة عدد المحاولات بشكل كبير
+        retryDelayMs: 3000  // زيادة مدة الانتظار بين المحاولات
       });
       console.log("Gemini extraction result:", extractionResult);
       
@@ -77,7 +94,7 @@ export const useGeminiProcessing = () => {
           });
 
           // تحسين: التأكد من تحديث جميع الحقول في الصورة
-          const updatedImage = updateImageWithExtractedData(
+          updatedImage = updateImageWithExtractedData(
             image,
             extractedText || "",
             parsedData || {},
@@ -101,18 +118,16 @@ export const useGeminiProcessing = () => {
           } else {
             updatedImage.status = "pending";
           }
-          
-          return updatedImage;
         } else {
           console.log("Gemini returned empty data");
           toast({
             title: "تنبيه",
-            description: "لم يتمكن Gemini من استخراج بيانات من الصورة",
+            description: "لم يتمكن Gemini من استخراج بيانات من الصورة، يرجى محاولة تحميل صورة أوضح",
             variant: "default"
           });
           
           // إعادة الصورة مع حالة انتظار
-          return {
+          updatedImage = {
             ...image,
             status: "pending",
             extractedText: extractedText || "لم يتم استخراج نص"
@@ -128,12 +143,14 @@ export const useGeminiProcessing = () => {
         });
         
         // إعادة الصورة مع حالة خطأ
-        return {
+        updatedImage = {
           ...image,
           status: "error",
           extractedText: "فشل استخراج النص: " + extractionResult.message
         };
       }
+      
+      return updatedImage;
     } catch (geminiError: any) {
       console.error("Error in Gemini processing:", geminiError);
       
@@ -143,7 +160,7 @@ export const useGeminiProcessing = () => {
       if (errorMessage.includes('Failed to fetch')) {
         errorMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك والمحاولة مرة أخرى.';
       } else if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
-        errorMessage = 'انتهت مهلة الاتصال بخادم Gemini. الرجاء المحاولة مرة أخرى لاحقًا.';
+        errorMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى تحميل صورة أصغر حجمًا أو المحاولة مرة أخرى لاحقًا.';
       }
       
       toast({

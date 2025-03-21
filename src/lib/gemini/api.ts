@@ -19,8 +19,8 @@ export async function extractDataWithGemini({
   temperature = 0.2,
   modelVersion = 'gemini-2.0-flash',
   enhancedExtraction = true,
-  maxRetries = 5,
-  retryDelayMs = 2000
+  maxRetries = 12,  // زيادة عدد المحاولات بشكل كبير
+  retryDelayMs = 3000  // زيادة مدة الانتظار بين المحاولات
 }: GeminiExtractParams): Promise<ApiResult> {
   if (!apiKey) {
     console.error("Gemini API Key is missing");
@@ -162,7 +162,7 @@ export async function extractDataWithGemini({
     let userFriendlyMessage = `حدث خطأ أثناء معالجة الطلب: ${errorMessage}`;
     
     if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError') || errorMessage.includes('AbortError')) {
-      userFriendlyMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى التحقق من اتصال الإنترنت الخاص بك والمحاولة مرة أخرى لاحقًا.';
+      userFriendlyMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى إعادة المحاولة مرة أخرى لاحقًا أو تحميل صورة بحجم أصغر.';
     } else if (errorMessage.includes('Failed to fetch')) {
       userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN إذا كنت تواجه قيود جغرافية.';
     } else if (errorMessage.includes('CORS')) {
