@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { AutomationConfig, AutomationResponse } from "./automation/types";
 import { ConnectionManager } from "./automation/connectionManager";
@@ -27,6 +28,32 @@ export class AutomationService {
   }
 
   /**
+   * التحقق من وجود خادم الأتمتة
+   */
+  static async checkServerExistence(showToasts = true): Promise<boolean> {
+    try {
+      const result = await this.checkServerStatus(showToasts);
+      return result && result.status === 'ok';
+    } catch (error) {
+      console.error("خطأ في التحقق من وجود خادم الأتمتة:", error);
+      return false;
+    }
+  }
+
+  /**
+   * إجبار إعادة الاتصال بالخادم
+   */
+  static async forceReconnect(): Promise<boolean> {
+    try {
+      const result = await this.checkServerStatus(false);
+      return result && result.status === 'ok';
+    } catch (error) {
+      console.error("فشل في إعادة الاتصال بالخادم:", error);
+      return false;
+    }
+  }
+
+  /**
    * بدء محاولات إعادة الاتصال التلقائية
    */
   static startAutoReconnect(callback?: (isConnected: boolean) => void): void {
@@ -38,6 +65,14 @@ export class AutomationService {
    */
   static stopReconnect(): void {
     ConnectionManager.stopReconnect();
+  }
+
+  /**
+   * تبديل وضع التنفيذ الفعلي
+   */
+  static toggleRealExecution(enable: boolean): void {
+    console.log(`تبديل وضع التنفيذ الفعلي: ${enable ? 'مفعل' : 'غير مفعل'}`);
+    // دائمًا نستخدم وضع التنفيذ الفعلي
   }
 
   /**
@@ -98,6 +133,9 @@ export class AutomationService {
    * التحقق من الإعدادات وتنفيذ الأتمتة
    */
   static async validateAndRunAutomation(config: AutomationConfig): Promise<AutomationResponse> {
+    // التأكد من تمكين وضع التنفيذ الفعلي دائمًا
+    config.forceRealExecution = true;
+    
     // التحقق من الإعدادات قبل التنفيذ
     const validationErrors = this.validateAutomationConfig(config);
     if (validationErrors.length > 0) {
@@ -113,9 +151,7 @@ export class AutomationService {
       };
     }
 
-    // تعديل: إجبار التنفيذ الفعلي دائمًا حتى في وضع المعاينة
-    // إذا كنا في وضع المعاينة، قم بتنفيذ الأتمتة الفعلية بدلاً من المحاكاة
-    config.forceRealExecution = true;
+    console.log("تكوين الأتمتة قبل التنفيذ:", JSON.stringify(config, null, 2));
 
     try {
       // تنفيذ الأتمتة
@@ -167,6 +203,38 @@ export class AutomationService {
       };
     }
 
+    // التأكد دائمًا من تمكين وضع التنفيذ الفعلي
+    config.forceRealExecution = true;
+
+    // إذا كانت الإجراءات من نوع AutomationAction، فسنقوم بتحويلها إلى نوع Action المتوافق مع واجهة خادم الأتمتة
+    if (config.actions.length > 0 && 'name' in config.actions[0]) {
+      const actions = config.actions as any[];
+      const mappedActions = actions.map(action => {
+        let type = 'click';
+        
+        // تحديد نوع الإجراء من الاسم أو القيمة
+        if (action.name === 'انقر' || action.value === 'click') {
+          type = 'click';
+        } else if (action.name === 'أدخل نص') {
+          type = 'type';
+        } else if (action.name === 'اختر قيمة') {
+          type = 'select';
+        } else if (action.name === 'انتظر' || action.value === 'wait') {
+          type = 'wait';
+        }
+        
+        return {
+          type,
+          selector: action.finder,
+          value: action.value,
+          delay: action.delay
+        };
+      });
+      
+      console.log("تم تحويل الإجراءات:", mappedActions);
+      config.actions = mappedActions;
+    }
+
     // التحقق من اتصال الخادم قبل تنفيذ الأتمتة
     const connectionStatus = getLastConnectionStatus();
     if (!connectionStatus.isConnected && config.automationType === 'server') {
@@ -206,7 +274,7 @@ export class AutomationService {
       const endpoint = `${serverUrl}/api/automation/run`;
       console.log(`إرسال طلب الأتمتة إلى ${endpoint}`, config);
       
-      // إضافة forceRealExecution للتأكد من تنفيذ الأتمتة الفعلية دائمًا
+      // التأكد دائمًا من تمكين وضع التنفيذ الفعلي
       config.forceRealExecution = true;
       
       // تنفيذ الأتمتة مع إعادة المحاولة تلقائيًا
@@ -265,6 +333,9 @@ export class AutomationService {
       } else if (errorMessage.includes("CORS") || errorMessage.includes("cross-origin")) {
         userFriendlyMessage = "حدث خطأ في اتصال CORS. قد يكون هناك مشكلة في إعدادات الخادم.";
         errorType = "CORSError";
+      } else if (errorMessage.includes("selector") || errorMessage.includes("element not found")) {
+        userFriendlyMessage = "تعذر العثور على العنصر المحدد في الصفحة. يرجى التحقق من صحة المحدد.";
+        errorType = "SelectorError";
       }
       
       return {
@@ -322,16 +393,5 @@ export class AutomationService {
     
     console.error(`فشلت جميع محاولات إعادة الاتصال (${maxRetries} محاولات)`);
     return false;
-  }
-
-  /**
-   * محاكاة استجابة الأتمتة في بيئة المعاينة
-   */
-  private static simulateAutomationResponse(config: AutomationConfig): AutomationResponse {
-    // تعديل: عدم استخدام المحاكاة حتى في بيئة المعاينة
-    console.log("التخطي لمحاكاة الأتمتة - تنفيذ فعلي دائمًا");
-    
-    // سنقوم بإرجاع خطأ ليتم تنفيذ الأتمتة الفعلية بدلاً من المحاكاة
-    throw new Error("تم طلب التنفيذ الفعلي");
   }
 }

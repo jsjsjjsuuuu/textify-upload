@@ -5,7 +5,7 @@ export interface AutomationConfig {
   actions: Action[] | AutomationAction[];
   useBrowserData: boolean;
   automationType: 'server' | 'client';
-  forceRealExecution?: boolean; // إضافة حقل جديد لإجبار التنفيذ الفعلي
+  forceRealExecution: boolean; // تعديل ليكون مطلوباً دائماً بدلاً من اختياري
 }
 
 export interface Action {

@@ -25,18 +25,13 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'success' | 'error'>('unknown');
-  // دائمًا نستخدم وضع التنفيذ الفعلي
-  const [isRealExecutionEnabled, setIsRealExecutionEnabled] = useState(true);
   const navigate = useNavigate();
   
   // التحقق مما إذا كانت البيانات مكتملة بما يكفي لإرسالها إلى الأتمتة
   const hasRequiredData = !!image.code && !!image.senderName && !!image.phoneNumber;
 
-  // تفعيل وضع التنفيذ الفعلي تلقائيًا وفحص الاتصال بالخادم
+  // فحص الاتصال بالخادم
   useEffect(() => {
-    // تفعيل وضع التنفيذ الفعلي دائمًا
-    AutomationService.toggleRealExecution(true);
-    
     // التحقق من وجود الاتصال بالخادم
     checkConnectionStatus();
   }, []);
@@ -45,7 +40,7 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     setIsTestingConnection(true);
     try {
       // محاولة التحقق من الاتصال بالخادم
-      const result = await AutomationService.checkServerExistence(false);
+      const result = await AutomationService.checkServerExistence();
       setConnectionStatus(result ? 'success' : 'error');
       
       if (result) {
@@ -70,13 +65,10 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
       return;
     }
     
-    // التنفيذ الفعلي مفعل دائمًا
-    AutomationService.toggleRealExecution(true);
-    
     // التحقق من حالة الاتصال بالخادم أولاً
     setIsTestingConnection(true);
     try {
-      const isConnected = await AutomationService.checkServerExistence(false);
+      const isConnected = await AutomationService.checkServerExistence();
       setConnectionStatus(isConnected ? 'success' : 'error');
       
       if (!isConnected) {
@@ -154,8 +146,6 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     navigate("/server-settings");
     setShowConnectionDialog(false);
   };
-  
-  // تم تعطيل تبديل وضع التنفيذ الفعلي لأنه دائمًا مفعل
   
   return (
     <>

@@ -32,7 +32,7 @@ const AutomationController: React.FC = () => {
   const defaultAction: AutomationAction = {
     name: 'انقر',
     finder: '',
-    value: '',
+    value: 'click',
     delay: 300
   };
   
@@ -41,11 +41,7 @@ const AutomationController: React.FC = () => {
     const previewMode = isPreviewEnvironment();
     setIsPreviewMode(previewMode);
     
-    if (previewMode) {
-      toast.warning("أنت في بيئة المعاينة. ستعمل الأتمتة في وضع المحاكاة فقط ولن تتصل بالمواقع الخارجية.", {
-        duration: 5000,
-      });
-    }
+    // دائمًا نستخدم التنفيذ الفعلي بغض النظر عن بيئة المعاينة
     
     // التحقق من حالة اتصال الخادم
     const connectionStatus = getLastConnectionStatus();
@@ -54,6 +50,72 @@ const AutomationController: React.FC = () => {
     // إضافة إجراء افتراضي إذا لم تكن هناك إجراءات
     if (actions.length === 0) {
       setActions([{ ...defaultAction }]);
+    }
+    
+    // الحصول على البيانات من التخزين المحلي إذا كانت موجودة
+    const storedData = localStorage.getItem('automationData');
+    if (storedData) {
+      try {
+        const data = JSON.parse(storedData);
+        
+        // إذا كان هناك بيانات مخزنة، نقوم بتعبئة الحقول تلقائيًا
+        if (data.code) {
+          // إنشاء إجراءات افتراضية بناءً على البيانات المستخرجة
+          const defaultActions: AutomationAction[] = [
+            {
+              name: 'أدخل نص',
+              finder: 'input[name*="code"], input[id*="code"], input[placeholder*="كود"]',
+              value: data.code,
+              delay: 300
+            },
+          ];
+          
+          // إضافة إجراء لإدخال رقم الهاتف إذا كان موجودًا
+          if (data.phoneNumber) {
+            defaultActions.push({
+              name: 'أدخل نص',
+              finder: 'input[name*="phone"], input[id*="phone"], input[name*="mobile"], input[id*="mobile"], input[type="tel"]',
+              value: data.phoneNumber,
+              delay: 300
+            });
+          }
+          
+          // إضافة إجراء لإدخال اسم المرسل إذا كان موجودًا
+          if (data.senderName) {
+            defaultActions.push({
+              name: 'أدخل نص',
+              finder: 'input[name*="name"], input[id*="name"], input[placeholder*="اسم"]',
+              value: data.senderName,
+              delay: 300
+            });
+          }
+          
+          // إضافة إجراء للنقر على زر التحقق أو الإرسال في النهاية
+          defaultActions.push({
+            name: 'انقر',
+            finder: 'button[type="submit"], input[type="submit"], button:contains("تحقق"), button:contains("إرسال")',
+            value: 'click',
+            delay: 500
+          });
+          
+          setActions(defaultActions);
+          
+          // تعيين اسم المشروع بناءً على البيانات المستخرجة
+          setProjectName(`تحقق من الكود ${data.code}`);
+          
+          // تعيين عنوان URL افتراضي للمشروع
+          setProjectUrl('https://asmcourier.com/track-shipment');
+          
+          // إزالة البيانات من التخزين المحلي بعد استخدامها
+          localStorage.removeItem('automationData');
+          
+          toast.success('تم تحميل البيانات المستخرجة بنجاح', {
+            description: 'تم إنشاء سيناريو أتمتة بناءً على البيانات المستخرجة'
+          });
+        }
+      } catch (error) {
+        console.error('خطأ في تحميل البيانات من التخزين المحلي:', error);
+      }
     }
   }, []);
   
@@ -109,9 +171,12 @@ const AutomationController: React.FC = () => {
         projectName,
         projectUrl,
         actions,
-        automationType: 'server',
-        useBrowserData: true
+        automationType: 'server' as const,
+        useBrowserData: true,
+        forceRealExecution: true // تأكيد تمكين التنفيذ الفعلي دائمًا
       };
+
+      console.log("إعدادات الأتمتة:", config);
 
       const result = await AutomationService.validateAndRunAutomation(config);
       setAutomationResponse(result);
@@ -252,6 +317,19 @@ const AutomationController: React.FC = () => {
           '//input[contains(@placeholder, "عنوان")]',
           '//textarea[contains(@placeholder, "عنوان")]'
         ].join('\n')
+      },
+      // محددات كود التتبع
+      {
+        name: 'حقل كود التتبع',
+        finder: [
+          // محددات CSS
+          'input[name*="trackingCode"], input[id*="trackingCode"], input[name*="tracking"], input[id*="tracking"], input[name*="track"], input[id*="track"], input[name*="code"], input[id*="code"], input[placeholder*="كود"], input[placeholder*="رقم الشحنة"], input[placeholder*="رقم التتبع"]',
+          // محددات XPath
+          '//input[contains(@name, "tracking") or contains(@id, "tracking")]',
+          '//input[contains(@name, "track") or contains(@id, "track")]',
+          '//input[contains(@name, "code") or contains(@id, "code")]',
+          '//input[contains(@placeholder, "كود") or contains(@placeholder, "رقم الشحنة") or contains(@placeholder, "رقم التتبع")]'
+        ].join('\n')
       }
     ],
     // أزرار
@@ -302,13 +380,28 @@ const AutomationController: React.FC = () => {
           '//button[@type="submit"]',
           '//input[@type="submit"]'
         ].join('\n')
+      },
+      // زر التتبع أو التحقق
+      {
+        name: 'زر التتبع أو التحقق',
+        finder: [
+          // محددات CSS
+          'button:contains("تتبع"), button:contains("track"), button:contains("تحقق"), button:contains("check"), button:contains("بحث"), button:contains("search"), button:contains("استعلام"), button:contains("inquiry"), input[type="submit"], button[type="submit"]',
+          // محددات XPath
+          '//button[contains(text(), "تتبع") or contains(text(), "track")]',
+          '//button[contains(text(), "تحقق") or contains(text(), "check")]',
+          '//button[contains(text(), "بحث") or contains(text(), "search")]',
+          '//button[contains(text(), "استعلام") or contains(text(), "inquiry")]',
+          '//button[@type="submit"]',
+          '//input[@type="submit"]'
+        ].join('\n')
       }
     ]
   };
   
   return (
     <div className="space-y-6">
-      {!serverConnected && !isPreviewMode && (
+      {!serverConnected && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription className="flex justify-between items-center">
@@ -322,15 +415,6 @@ const AutomationController: React.FC = () => {
               <Wifi className="h-4 w-4 mr-2" />
               إعدادات الخادم
             </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {isPreviewMode && (
-        <Alert className="bg-amber-50 border-amber-200">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800">
-            أنت في بيئة المعاينة. ستعمل الأتمتة في وضع المحاكاة فقط ولن تتصل بالمواقع الخارجية.
           </AlertDescription>
         </Alert>
       )}

@@ -43,6 +43,9 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
     });
   }, [image.id, setTempData]);
 
+  // التحقق من وجود البيانات المطلوبة للأتمتة
+  const hasRequiredData = !!image.code && !!image.senderName && !!image.phoneNumber;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -84,6 +87,12 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
           <div className="mt-6 flex justify-center">
             <AutomationButton image={image} />
           </div>
+
+          {!hasRequiredData && (
+            <div className="text-center mt-2 text-sm text-amber-600">
+              <p>يرجى استخراج البيانات الأساسية (الكود، اسم المرسل، رقم الهاتف) قبل بدء الأتمتة</p>
+            </div>
+          )}
 
           <RawTextViewer text={image.extractedText} />
         </CardContent>
