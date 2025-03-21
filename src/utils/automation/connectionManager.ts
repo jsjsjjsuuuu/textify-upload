@@ -1,4 +1,3 @@
-
 /**
  * إدارة الاتصال بخادم الأتمتة
  */
@@ -9,7 +8,6 @@ import {
   RENDER_ALLOWED_IPS, 
   getNextIp, 
   createBaseHeaders,
-  isPreviewEnvironment,
   createTimeoutSignal,
   resetAutomationServerUrl
 } from "../automationServerUrl";

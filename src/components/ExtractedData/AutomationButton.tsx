@@ -26,7 +26,7 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'success' | 'error'>('unknown');
   // دائمًا نستخدم وضع التنفيذ الفعلي
-  const [isRealExecutionEnabled, setIsRealExecutionEnabled] = useState(true);
+  const [isRealExecutionEnabled] = useState(true);
   const navigate = useNavigate();
   
   // التحقق مما إذا كانت البيانات مكتملة بما يكفي لإرسالها إلى الأتمتة
@@ -44,7 +44,7 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
   const checkConnectionStatus = async () => {
     setIsTestingConnection(true);
     try {
-      // محاولة التحقق من الاتصال بالخادم - تصحيح: إزالة القيمة المنطقية
+      // محاولة التحقق من الاتصال بالخادم
       const result = await AutomationService.checkServerExistence();
       setConnectionStatus(result ? 'success' : 'error');
       
@@ -76,7 +76,7 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     // التحقق من حالة الاتصال بالخادم أولاً
     setIsTestingConnection(true);
     try {
-      // تصحيح: إزالة القيمة المنطقية
+      // التحقق من الاتصال بالخادم
       const isConnected = await AutomationService.checkServerExistence();
       setConnectionStatus(isConnected ? 'success' : 'error');
       

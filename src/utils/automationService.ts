@@ -1,4 +1,3 @@
-
 import { AutomationConfig, AutomationResponse } from './automation/types';
 import { AutomationRunner } from './automation/automationRunner';
 import { ConnectionManager } from './automation/connectionManager';
@@ -13,7 +12,7 @@ export class AutomationService {
       config.automationType = config.automationType as "server" | "client";
     }
     
-    // تأكد من إجبار التنفيذ الفعلي
+    // تأكد من إجبار التنفيذ الفعلي دائمًا
     config.forceRealExecution = true;
     
     return await AutomationRunner.validateAndRunAutomation(config);
@@ -60,10 +59,11 @@ export class AutomationService {
   
   /**
    * تبديل وضع التنفيذ الفعلي
+   * تم تعديله لإجبار التنفيذ الفعلي دائمًا
    */
   static toggleRealExecution(force?: boolean): boolean {
-    const currentValue = localStorage.getItem('force_real_execution') === 'true';
-    const newValue = force !== undefined ? force : !currentValue;
+    // إجبار التنفيذ الفعلي دائمًا بغض النظر عن المدخلات
+    const newValue = true;
     
     localStorage.setItem('force_real_execution', newValue.toString());
     console.log(`تم تعيين وضع التنفيذ الفعلي إلى: ${newValue}`);
@@ -73,9 +73,12 @@ export class AutomationService {
   
   /**
    * التحقق من حالة وضع التنفيذ الفعلي
+   * تم تعديله ليرجع true دائمًا
    */
   static isRealExecutionEnabled(): boolean {
-    return localStorage.getItem('force_real_execution') === 'true';
+    // تحديث localStorage للتأكد من أن القيمة محفوظة
+    localStorage.setItem('force_real_execution', 'true');
+    return true;
   }
   
   /**
