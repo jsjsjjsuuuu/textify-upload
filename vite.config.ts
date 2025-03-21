@@ -14,18 +14,32 @@ export default defineConfig(({ mode }) => {
   
   // النطاقات المسموح بها للاتصال بالخادم بشكل دقيق - توسيع القائمة
   const ALLOWED_ORIGINS = [
+    // نطاقات Lovable
     'https://d6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovableproject.com',
     'https://d6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovable.app',
+    'https://lovable.app',
+    'https://lovableproject.com',
+    // جميع النطاقات الفرعية لـ lovable
+    '*.lovable.app',
+    '*.lovableproject.com',
+    // خوادم التطوير
     'https://textify-upload.onrender.com',
+    'https://textify-web.onrender.com',
+    'https://render.com',
+    '*.render.com',
     'http://localhost:8080',
     'http://localhost:3000',
     'http://localhost:5173',
-    // إضافة نطاقات أخرى قد تكون مطلوبة
-    'https://lovable.app',
-    'https://lovableproject.com',
-    // السماح بالاتصال من أي نطاق فرعي لـ lovable.app و lovableproject.com
-    '*.lovable.app',
-    '*.lovableproject.com'
+    // السماح بنطاقات localhost المتنوعة
+    'localhost:*',
+    '127.0.0.1:*',
+    // نطاقات أخرى
+    'https://gemini.google.com',
+    '*.google.com',
+    '*.googleapis.com',
+    '*.cloudflare.com',
+    // إضافة نطاقات إضافية لتجنب مشاكل CORS من المستخدمين
+    '*'  // السماح بالوصول من أي نطاق
   ];
   
   // تدوير عناوين IP الثابتة لـ Render
@@ -35,65 +49,53 @@ export default defineConfig(({ mode }) => {
     '34.213.214.55',
     '35.164.95.156',
     '44.230.95.183',
-    '44.229.200.200'
+    '44.229.200.200',
+    // إضافة المزيد من عناوين IP للتناوب
+    '44.242.143.234',
+    '54.244.142.219',
+    '44.241.75.25',
+    '44.236.246.209',
+    '52.27.36.56'
   ];
   
   // دالة محسنة للتحقق من النطاق
   const isAllowedOrigin = (origin: string | undefined): boolean => {
-    if (!origin) return false;
-    
-    console.log(`فحص صحة الأصل في vite.config.ts: ${origin}`);
+    // في حالة عدم وجود origin
+    if (!origin) return true; // السماح بالطلبات بدون أصل
+
     try {
+      console.log(`فحص صحة الأصل في vite.config.ts: ${origin}`);
+      
       // استخراج الاسم الفعلي للنطاق
       const url = new URL(origin);
       const hostname = url.hostname;
       
-      // استخراج النطاقات من العناوين الكاملة
-      const allowedDomains = ALLOWED_ORIGINS.map(url => {
-        if (url.startsWith('*.')) {
-          // معالجة خاصة للنطاقات الفرعية المتعددة
-          return url.substring(2); // إزالة *. من البداية
-        }
-        
-        try {
-          return new URL(url).hostname;
-        } catch {
-          return url;
-        }
-      });
-      
-      // إضافة النطاقات الأساسية
-      const baseDomains = ['lovable.app', 'lovableproject.com', 'textify-upload.onrender.com', 'localhost', '127.0.0.1'];
-      baseDomains.forEach(domain => {
-        if (!allowedDomains.includes(domain)) {
-          allowedDomains.push(domain);
-        }
-      });
-      
-      // فحص مطابقة دقيقة للنطاق
-      const exactMatch = allowedDomains.includes(hostname);
-      
-      // فحص النطاقات الفرعية للنطاقات المسموح بها
-      const subdomainMatch = allowedDomains.some(domain => {
-        if (domain === 'localhost' || domain === '127.0.0.1') {
-          return hostname === domain;
-        }
-        return hostname.endsWith(`.${domain}`);
-      });
-      
-      // تسجيل نتيجة الفحص للتشخيص
-      console.log(`vite.config.ts - ${hostname}: مطابقة دقيقة: ${exactMatch}, نطاق فرعي: ${subdomainMatch}`);
-      
-      // قبول أي نطاق في بيئة التطوير
+      // في بيئة التطوير، السماح بجميع الأصول
       if (mode === 'development') {
         console.log('في بيئة التطوير - السماح بالنطاق: ', hostname);
         return true;
       }
       
-      return exactMatch || subdomainMatch;
+      // معالجة النطاقات الخاصة
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        console.log('السماح بنطاق محلي: ', hostname);
+        return true;
+      }
+      
+      // فحص القائمة السوداء بدلاً من القائمة البيضاء - لنكون أكثر تساهلاً
+      const blockedDomains = ['evil.com']; // يمكن ترك هذه القائمة فارغة
+      
+      if (blockedDomains.some(domain => hostname.includes(domain))) {
+        console.log(`النطاق محظور: ${hostname}`);
+        return false;
+      }
+      
+      // السماح بكل النطاقات الأخرى - نهج أكثر تساهلاً بدلاً من الحظر
+      console.log(`السماح بالنطاق: ${hostname}`);
+      return true;
     } catch (error) {
       console.error('خطأ في تحليل الأصل:', error);
-      return false;
+      return true; // السماح في حالة وجود خطأ لتجنب مشاكل CORS
     }
   };
   
@@ -112,16 +114,25 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_ALLOWED_ORIGINS': JSON.stringify(ALLOWED_ORIGINS),
       // إضافة معلومات جديدة - تفعيل وضع الإنتاج دائمًا
       'import.meta.env.VITE_FORCE_PRODUCTION': JSON.stringify(true),
-      'process.env.FORCE_PRODUCTION': JSON.stringify(true)
+      'process.env.FORCE_PRODUCTION': JSON.stringify(true),
+      // إضافة متغيرات بيئة جديدة لمعالجة CORS
+      'import.meta.env.VITE_DISABLE_CORS': JSON.stringify(true),
+      'process.env.DISABLE_CORS': JSON.stringify(true)
     },
     server: {
       host: "::",
       port: 8080,
       cors: {
         origin: '*', // السماح بالاتصال من أي نطاق في بيئة التطوير
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with', 'x-content-type-options', 'x-forwarded-for', 'x-client-id', 'cache-control', 'pragma', 'x-request-time', 'origin', 'referer'],
-        credentials: true
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Content-Type-Options', 
+                         'X-Forwarded-For', 'X-Client-ID', 'Cache-Control', 'Pragma', 'X-Request-Time', 
+                         'Origin', 'Referer', 'User-Agent', 'Access-Control-Request-Method', 
+                         'Access-Control-Request-Headers', 'X-Debug-Mode', 'X-Retry-Count', 'X-Client-Timestamp'],
+        exposedHeaders: ['Content-Type', 'Authorization', 'Content-Length', 'X-Debug-Mode'],
+        credentials: true,
+        maxAge: 86400, // زيادة وقت تخزين استجابات preflight لمدة يوم كامل
+        preflightContinue: true // السماح بمتابعة طلبات preflight
       },
       proxy: {
         '/api': {
@@ -129,10 +140,12 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
           ws: true,
+          rewrite: (path) => path,
           configure: (proxy, _options) => {
             proxy.on('error', (err, _req, _res) => {
               console.log('وقع خطأ في البروكسي:', err);
             });
+            
             proxy.on('proxyReq', (proxyReq, req, _res) => {
               console.log('طلب البروكسي:', req.method, req.url);
               
@@ -143,21 +156,28 @@ export default defineConfig(({ mode }) => {
               const origin = req.headers.origin || '';
               console.log(`الأصل (Origin) المرسل: ${origin}`);
               
+              // إضافة هويات الطلب
+              const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+              
               // أضف رؤوس CORS المخصصة - دائما إضافة الرؤوس المهمة
               proxyReq.setHeader('X-Forwarded-For', selectedIp);
               proxyReq.setHeader('X-Render-Client-IP', selectedIp);
               proxyReq.setHeader('Origin', origin || automationServerUrl);
               proxyReq.setHeader('Referer', req.headers.referer || origin || automationServerUrl);
+              proxyReq.setHeader('X-Request-ID', requestId);
+              proxyReq.setHeader('X-Debug-Mode', 'true');
               
               // إضافة رؤوس دعم CORS دائمًا
-              proxyReq.setHeader('Accept', 'application/json');
+              proxyReq.setHeader('Accept', '*/*');
               proxyReq.setHeader('Content-Type', 'application/json');
               proxyReq.setHeader('Access-Control-Allow-Origin', '*');
-              proxyReq.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-              proxyReq.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time, Origin, Referer');
+              proxyReq.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH');
+              proxyReq.setHeader('Access-Control-Allow-Headers', '*');
               proxyReq.setHeader('Access-Control-Max-Age', '86400');
               proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
+              proxyReq.setHeader('Access-Control-Expose-Headers', 'Content-Type, Authorization, Content-Length, X-Debug-Mode');
             });
+            
             proxy.on('proxyRes', (proxyRes, req, _res) => {
               console.log('استجابة البروكسي:', proxyRes.statusCode, req.url);
               
@@ -165,10 +185,12 @@ export default defineConfig(({ mode }) => {
               const origin = req.headers.origin || '';
               
               // تعديل رؤوس الاستجابة لتسهيل الاتصال - دائمًا إضافة الرؤوس المهمة
-              proxyRes.headers['access-control-allow-origin'] = origin || '*';
-              proxyRes.headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-              proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time, Origin, Referer';
+              proxyRes.headers['access-control-allow-origin'] = '*';
+              proxyRes.headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH';
+              proxyRes.headers['access-control-allow-headers'] = '*';
               proxyRes.headers['access-control-allow-credentials'] = 'true';
+              proxyRes.headers['access-control-max-age'] = '86400';
+              proxyRes.headers['access-control-expose-headers'] = 'Content-Type, Authorization, Content-Length, X-Debug-Mode';
               
               // إضافة رؤوس أمان إضافية
               proxyRes.headers['x-content-type-options'] = 'nosniff';
@@ -177,6 +199,10 @@ export default defineConfig(({ mode }) => {
               // ضمان عدم وجود قيود على الاتصال
               delete proxyRes.headers['content-security-policy'];
               delete proxyRes.headers['x-frame-options'];
+              
+              // إضافة توقيت الاستجابة للمساعدة في التصحيح
+              proxyRes.headers['x-response-time'] = Date.now().toString();
+              proxyRes.headers['x-proxy-status'] = 'success';
             });
           }
         }

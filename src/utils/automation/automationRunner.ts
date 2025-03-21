@@ -4,8 +4,9 @@
  */
 import { getAutomationServerUrl, updateConnectionStatus, createBaseHeaders, getNextIp, isPreviewEnvironment, createTimeoutSignal } from "../automationServerUrl";
 import { toast } from "sonner";
-import { AutomationConfig, AutomationResponse } from "./types";
+import { AutomationConfig, AutomationResponse, ActionResult } from "./types";
 import { ConnectionManager } from "./connectionManager";
+import { logActionExecution } from "../automation";
 
 export class AutomationRunner {
   /**
@@ -20,6 +21,12 @@ export class AutomationRunner {
         duration: 3000,
       });
       
+      console.log("بدء تنفيذ الأتمتة مع التكوين:", {
+        projectUrl: config.projectUrl,
+        actionsCount: config.actions.length,
+        useBrowserData: config.useBrowserData
+      });
+      
       // إذا كنا في بيئة المعاينة، نتحقق ما إذا كان المستخدم يريد التنفيذ الفعلي
       if (isPreviewEnvironment()) {
         // التحقق من وجود علامة التنفيذ الفعلي في التخزين المحلي
@@ -30,8 +37,26 @@ export class AutomationRunner {
             duration: 5000,
           });
           
+          console.log("تشغيل الأتمتة في وضع المحاكاة (بيئة المعاينة)");
+          
           // محاكاة تأخير لتجربة أكثر واقعية
           await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // محاكاة تنفيذ الإجراءات وتسجيلها
+          const mockResults: ActionResult[] = config.actions.map((action, index) => {
+            const success = Math.random() > 0.2; // 80% نسبة نجاح
+            return {
+              index,
+              action: action.type,
+              selector: action.selector || '',
+              value: action.value || '',
+              success,
+              error: success ? null : 'خطأ محاكاة: لم يتم العثور على العنصر',
+              timestamp: new Date().toISOString(),
+              duration: Math.floor(Math.random() * 500) + 100,
+              screenshots: []
+            };
+          });
           
           // إرجاع استجابة مزيفة للمحاكاة مع إضافة خاصية details
           return {
@@ -42,7 +67,10 @@ export class AutomationRunner {
               `عدد الإجراءات: ${config.actions.length}`,
               `الرابط: ${config.projectUrl}`,
               `استخدام بيانات المتصفح: ${config.useBrowserData ? 'نعم' : 'لا'}`
-            ]
+            ],
+            results: mockResults,
+            executionTime: 2000,
+            timestamp: new Date().toISOString()
           };
         } else {
           // إظهار رسالة أن المستخدم يستخدم التنفيذ الفعلي في بيئة المعاينة
@@ -65,14 +93,28 @@ export class AutomationRunner {
         useBrowserData: config.useBrowserData
       });
       
-      // إضافة عنوان IP إلى التكوين للاستخدام في الخادم
-      const configWithIp = {
+      // إضافة معلومات إضافية للتشخيص في التكوين
+      const enhancedConfig = {
         ...config,
-        ipAddress: currentIp
+        ipAddress: currentIp,
+        clientInfo: {
+          userAgent: navigator.userAgent,
+          language: navigator.language,
+          platform: navigator.platform,
+          timestamp: new Date().toISOString(),
+          screenResolution: `${window.screen.width}x${window.screen.height}`
+        },
+        debugging: {
+          verboseLogging: true,
+          captureScreenshots: true,
+          logElementDetails: true,
+          logNetworkRequests: true,
+          logErrors: true
+        }
       };
       
       // إعداد معالجة المهلة
-      const timeoutSignal = createTimeoutSignal(90000);
+      const timeoutSignal = createTimeoutSignal(120000); // زيادة المهلة إلى دقيقتين
       
       // إعداد الرؤوس
       const headers = createBaseHeaders(currentIp);
@@ -87,20 +129,27 @@ export class AutomationRunner {
           // إضافة رقم المحاولة إلى الرؤوس
           const headersWithRetry = {
             ...headers,
-            'X-Retry-Count': retries.toString()
+            'X-Retry-Count': retries.toString(),
+            'X-Debug-Mode': 'true',
+            'X-Client-Timestamp': new Date().toISOString()
           };
+          
+          console.log(`محاولة الاتصال #${retries + 1} بخادم الأتمتة...`);
           
           const response = await fetch(`${serverUrl}/api/automate`, {
             method: 'POST',
             headers: headersWithRetry,
             mode: 'cors',
             credentials: 'omit',
-            body: JSON.stringify(configWithIp),
+            body: JSON.stringify(enhancedConfig),
             signal: timeoutSignal
           });
           
+          console.log(`استجابة الخادم: ${response.status} ${response.statusText}`);
+          
           if (!response.ok) {
             const errorText = await response.text();
+            console.error(`فشل في تنفيذ الأتمتة (${response.status}):`, errorText);
             throw new Error(`فشل في تنفيذ الأتمتة: ${response.status} ${response.statusText} - ${errorText}`);
           }
           
@@ -110,11 +159,33 @@ export class AutomationRunner {
           // تحديث حالة الاتصال
           updateConnectionStatus(true);
           
+          // تسجيل نتائج الإجراءات
+          if (result.results && Array.isArray(result.results)) {
+            result.results.forEach((actionResult: ActionResult) => {
+              logActionExecution(
+                actionResult.action,
+                actionResult.selector,
+                actionResult.value,
+                actionResult.success,
+                actionResult.error
+              );
+            });
+          }
+          
           // إظهار رسالة نجاح
           if (result.success) {
             toast.success("تم تنفيذ سيناريو الأتمتة بنجاح!", {
               duration: 5000,
             });
+            
+            // إذا كان هناك إجراءات فاشلة، عرض رسالة تحذير
+            const failedActions = result.results?.filter(r => !r.success) || [];
+            if (failedActions.length > 0) {
+              toast.warning(`نجح السيناريو مع ${failedActions.length} إجراءات فاشلة`, {
+                duration: 8000,
+                description: "انظر إلى التفاصيل لمعرفة المزيد"
+              });
+            }
           } else {
             toast.error(`فشل في تنفيذ الأتمتة: ${result.message}`, {
               duration: 5000,
@@ -146,15 +217,54 @@ export class AutomationRunner {
       // تحديث حالة الاتصال
       updateConnectionStatus(false);
       
+      // إنشاء رسالة خطأ مفصلة
+      let errorMessage = "حدث خطأ أثناء تنفيذ الأتمتة";
+      let errorDetails = "";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        errorDetails = error.stack || "";
+      } else {
+        errorMessage = String(error);
+      }
+      
+      // فحص نوع الخطأ لتقديم رسالة أكثر تفصيلاً
+      if (errorMessage.includes('timeout') || errorMessage.includes('مهلة')) {
+        errorMessage = "انتهت مهلة الاتصال بخادم الأتمتة. قد يكون الخادم مشغولًا أو بطيئًا.";
+      } else if (errorMessage.includes('NetworkError') || errorMessage.includes('fetch')) {
+        errorMessage = "حدث خطأ في الشبكة أثناء الاتصال بالخادم. تأكد من اتصالك بالإنترنت.";
+      } else if (errorMessage.includes('CORS') || errorMessage.includes('cross-origin')) {
+        errorMessage = "تم منع الطلب بسبب سياسة أمان CORS. تحقق من إعدادات الخادم.";
+      }
+      
       // إظهار رسالة خطأ
-      toast.error(`حدث خطأ أثناء تنفيذ الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`, {
-        duration: 5000,
+      toast.error(`خطأ في تنفيذ الأتمتة: ${errorMessage}`, {
+        duration: 8000,
+        description: errorDetails.substring(0, 100)
       });
       
       // بدء إعادة المحاولات التلقائية
       ConnectionManager.startAutoReconnect();
       
-      throw error;
+      // إرجاع كائن استجابة مع معلومات الخطأ
+      return {
+        success: false,
+        message: errorMessage,
+        automationType: config.automationType || 'server',
+        details: [
+          `نوع الخطأ: ${error instanceof Error ? error.name : 'غير معروف'}`,
+          `رسالة الخطأ: ${errorMessage}`,
+          `تفاصيل: ${errorDetails.substring(0, 200)}`
+        ],
+        results: [],
+        executionTime: 0,
+        timestamp: new Date().toISOString(),
+        error: {
+          message: errorMessage,
+          stack: errorDetails,
+          type: error instanceof Error ? error.name : 'Unknown'
+        }
+      };
     }
   }
   
@@ -174,7 +284,26 @@ export class AutomationRunner {
       // بدء إعادة المحاولات التلقائية
       ConnectionManager.startAutoReconnect();
       
-      throw new Error(`تعذر الاتصال بخادم الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+      const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+      
+      // إرجاع كائن استجابة مع معلومات الخطأ
+      return {
+        success: false,
+        message: `تعذر الاتصال بخادم الأتمتة: ${errorMessage}`,
+        automationType: config.automationType || 'server',
+        details: [
+          `نوع الخطأ: التحقق من حالة الخادم`,
+          `رسالة الخطأ: ${errorMessage}`
+        ],
+        results: [],
+        executionTime: 0,
+        timestamp: new Date().toISOString(),
+        error: {
+          message: `تعذر الاتصال بخادم الأتمتة: ${errorMessage}`,
+          type: 'ConnectionError'
+        }
+      };
     }
   }
 }
+
