@@ -37,7 +37,41 @@ export const useGeminiProcessing = () => {
         description: "استخدام OCR التقليدي في بيئة المعاينة بسبب قيود CORS",
         variant: "default"
       });
-      return fallbackProcessor(file, image);
+      
+      try {
+        // استخدام المعالج الاحتياطي ومعالجة البيانات الناتجة
+        const processedImage = await fallbackProcessor(file, image);
+        
+        // تأكد من أن البيانات المستخرجة موجودة ومرئية
+        console.log("تم استخراج البيانات بنجاح:", {
+          code: processedImage.code,
+          senderName: processedImage.senderName,
+          phoneNumber: processedImage.phoneNumber,
+          province: processedImage.province,
+          price: processedImage.price,
+          companyName: processedImage.companyName
+        });
+        
+        // تعيين الحالة استنادًا إلى وجود البيانات الرئيسية
+        if (processedImage.code || processedImage.senderName || processedImage.phoneNumber) {
+          processedImage.status = "completed";
+        }
+        
+        return processedImage;
+      } catch (error) {
+        console.error("خطأ في المعالج الاحتياطي:", error);
+        toast({
+          title: "خطأ في المعالجة",
+          description: "فشل في استخراج البيانات باستخدام OCR التقليدي",
+          variant: "destructive"
+        });
+        
+        // إرجاع الصورة مع حالة خطأ
+        return {
+          ...image,
+          status: "error"
+        };
+      }
     }
 
     try {
@@ -60,19 +94,41 @@ export const useGeminiProcessing = () => {
         if (parsedData && Object.keys(parsedData).length > 0) {
           console.log("Gemini successfully extracted data:", parsedData);
           
+          // التحقق من البيانات المستخرجة وعرضها في السجل
+          console.log("استخراج البيانات المفصلة:", {
+            code: parsedData.code,
+            senderName: parsedData.senderName,
+            phoneNumber: parsedData.phoneNumber,
+            province: parsedData.province,
+            price: parsedData.price,
+            companyName: parsedData.companyName
+          });
+          
           toast({
             title: "تم الاستخراج بنجاح",
             description: "تم استخراج البيانات باستخدام Gemini AI",
           });
 
-          // تحسين: تأكد من أن البيانات المستخرجة تُستخدم بالفعل لتحديث الصورة
-          return updateImageWithExtractedData(
+          // تحسين: التأكد من تحديث جميع الحقول في الصورة
+          const updatedImage = updateImageWithExtractedData(
             image,
             extractedText || "",
             parsedData || {},
-            parsedData.confidence ? parseInt(parsedData.confidence.toString()) : 95,
+            parsedData.confidence ? parseInt(String(parsedData.confidence)) : 95,
             "gemini"
           );
+          
+          // تحقق من تحديث الصورة بشكل صحيح
+          console.log("الصورة المحدثة بعد الاستخراج:", {
+            code: updatedImage.code,
+            senderName: updatedImage.senderName,
+            phoneNumber: updatedImage.phoneNumber,
+            province: updatedImage.province,
+            price: updatedImage.price,
+            companyName: updatedImage.companyName
+          });
+          
+          return updatedImage;
         } else {
           console.log("Gemini returned empty data, falling back to OCR");
           
@@ -82,7 +138,18 @@ export const useGeminiProcessing = () => {
             variant: "default"
           });
           
-          return fallbackProcessor(file, image);
+          // استخدام المعالج الاحتياطي مع تسجيل البيانات المستخرجة
+          const processedImage = await fallbackProcessor(file, image);
+          console.log("بيانات المعالج الاحتياطي:", {
+            code: processedImage.code,
+            senderName: processedImage.senderName,
+            phoneNumber: processedImage.phoneNumber,
+            province: processedImage.province,
+            price: processedImage.price,
+            companyName: processedImage.companyName
+          });
+          
+          return processedImage;
         }
       } else {
         console.log("Gemini extraction failed, falling back to OCR:", extractionResult.message);
@@ -93,7 +160,18 @@ export const useGeminiProcessing = () => {
           variant: "default"
         });
         
-        return fallbackProcessor(file, image);
+        // استخدام المعالج الاحتياطي مع تسجيل البيانات المستخرجة
+        const processedImage = await fallbackProcessor(file, image);
+        console.log("بيانات المعالج الاحتياطي بعد فشل Gemini:", {
+          code: processedImage.code,
+          senderName: processedImage.senderName,
+          phoneNumber: processedImage.phoneNumber,
+          province: processedImage.province,
+          price: processedImage.price,
+          companyName: processedImage.companyName
+        });
+        
+        return processedImage;
       }
     } catch (geminiError) {
       console.error("Error in Gemini processing:", geminiError);
@@ -104,7 +182,18 @@ export const useGeminiProcessing = () => {
         variant: "default"
       });
       
-      return fallbackProcessor(file, image);
+      // استخدام المعالج الاحتياطي مع تسجيل البيانات المستخرجة
+      const processedImage = await fallbackProcessor(file, image);
+      console.log("بيانات المعالج الاحتياطي بعد خطأ Gemini:", {
+        code: processedImage.code,
+        senderName: processedImage.senderName,
+        phoneNumber: processedImage.phoneNumber,
+        province: processedImage.province,
+        price: processedImage.price,
+        companyName: processedImage.companyName
+      });
+      
+      return processedImage;
     }
   };
 

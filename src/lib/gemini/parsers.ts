@@ -65,64 +65,107 @@ export function parseGeminiResponse(extractedText: string): {
           }
         }
       }
-    } else {
-      console.log("No JSON format found in response, trying to extract data from text");
+    }
+    
+    // إذا لم يتم العثور على JSON أو كان فارغًا، فنبحث في النص عن أنماط محددة
+    if (Object.keys(parsedData).length === 0) {
+      console.log("No JSON format found in response or JSON was empty. Extracting data from text directly.");
       
-      // تحسين: البحث عن أنماط أكثر دقة في النص
-      const companyMatch = extractedText.match(/الشركة[:\s]+([^\n]+)/i) || 
-                         extractedText.match(/شركة[:\s]+([^\n]+)/i);
+      // استخراج رقم الكود
+      const codeMatches = extractedText.match(/رقم الوصل[:\s]+([0-9]+)/i) ||
+                          extractedText.match(/كود[:\s]+([0-9]+)/i) ||
+                          extractedText.match(/الكود[:\s]+([0-9]+)/i) ||
+                          extractedText.match(/code[:\s]+([0-9]+)/i) ||
+                          extractedText.match(/رقم[:\s]+([0-9]+)/i);
       
-      if (companyMatch && companyMatch[1]) {
-        parsedData.companyName = companyMatch[1].trim();
+      if (codeMatches && codeMatches[1]) {
+        parsedData.code = codeMatches[1].trim();
+        console.log("Extracted code:", parsedData.code);
       }
       
-      const codeMatch = extractedText.match(/الكود[:\s]+([0-9]+)/i) ||
-                       extractedText.match(/كود[:\s]+([0-9]+)/i) ||
-                       extractedText.match(/رقم الشحنة[:\s]+([0-9]+)/i) ||
-                       extractedText.match(/رقم[:\s]+([0-9]+)/i);
+      // استخراج اسم المرسل
+      const senderNameMatches = extractedText.match(/اسم المرسل[:\s]+([^\n]+)/i) ||
+                               extractedText.match(/المرسل[:\s]+([^\n]+)/i) ||
+                               extractedText.match(/اسم الزبون[:\s]+([^\n]+)/i) ||
+                               extractedText.match(/الزبون[:\s]+([^\n]+)/i);
       
-      if (codeMatch && codeMatch[1]) {
-        parsedData.code = codeMatch[1].trim();
+      if (senderNameMatches && senderNameMatches[1]) {
+        parsedData.senderName = senderNameMatches[1].trim();
+        console.log("Extracted sender name:", parsedData.senderName);
       }
       
-      const senderMatch = extractedText.match(/اسم المرسل[:\s]+([^\n]+)/i) ||
-                         extractedText.match(/المرسل[:\s]+([^\n]+)/i);
+      // استخراج رقم الهاتف
+      const phoneNumberMatches = extractedText.match(/هاتف[:\s]+([0-9\s\-]+)/i) ||
+                                extractedText.match(/رقم الهاتف[:\s]+([0-9\s\-]+)/i) ||
+                                // البحث عن رقم هاتف عراقي نموذجي (يبدأ بـ 07)
+                                extractedText.match(/\b(07\d{2}[0-9\s\-]{7,8})\b/);
       
-      if (senderMatch && senderMatch[1]) {
-        parsedData.senderName = senderMatch[1].trim();
+      if (phoneNumberMatches && phoneNumberMatches[1]) {
+        // تنظيف رقم الهاتف (إزالة المسافات والشرطات)
+        parsedData.phoneNumber = phoneNumberMatches[1].replace(/\D/g, '');
+        console.log("Extracted phone number:", parsedData.phoneNumber);
       }
       
-      const phoneMatch = extractedText.match(/الهاتف[:\s]+([0-9\s\-]+)/i) ||
-                        extractedText.match(/هاتف[:\s]+([0-9\s\-]+)/i) ||
-                        extractedText.match(/رقم الهاتف[:\s]+([0-9\s\-]+)/i) ||
-                        extractedText.match(/\b(07[0-9]{2}[0-9\s\-]{7,8})\b/);
+      // استخراج المحافظة
+      const provinceMatches = extractedText.match(/المحافظة[:\s]+([^\n]+)/i) ||
+                             extractedText.match(/محافظة[:\s]+([^\n]+)/i) ||
+                             extractedText.match(/عنوان الزبون[^:\n]*[:\s]+([^\n]+)/i);
       
-      if (phoneMatch && phoneMatch[1]) {
-        parsedData.phoneNumber = phoneMatch[1].replace(/\D/g, '');
+      if (provinceMatches && provinceMatches[1]) {
+        // استخراج اسم المحافظة من النص وتصحيحه
+        const provinceText = provinceMatches[1].trim();
+        
+        // البحث عن اسم محافظة في النص
+        for (const province of IRAQ_PROVINCES) {
+          if (provinceText.includes(province)) {
+            parsedData.province = province;
+            break;
+          }
+        }
+        
+        // إذا لم يتم العثور على اسم محافظة، استخدم النص كما هو
+        if (!parsedData.province) {
+          parsedData.province = correctProvinceName(provinceText);
+        }
+        
+        console.log("Extracted province:", parsedData.province);
       }
       
-      const provinceMatch = extractedText.match(/المحافظة[:\s]+([^\n]+)/i) ||
-                           extractedText.match(/محافظة[:\s]+([^\n]+)/i);
+      // استخراج السعر
+      const priceMatches = extractedText.match(/السعر[:\s]+([0-9\s\-]+)/i) ||
+                          extractedText.match(/المبلغ[:\s]+([0-9\s\-]+)/i) ||
+                          extractedText.match(/سعر[:\s]+([0-9\s\-]+)/i);
       
-      if (provinceMatch && provinceMatch[1]) {
-        parsedData.province = provinceMatch[1].trim();
+      if (priceMatches && priceMatches[1]) {
+        parsedData.price = priceMatches[1].trim();
+        console.log("Extracted price:", parsedData.price);
       }
       
-      const priceMatch = extractedText.match(/السعر[:\s]+([0-9\s\-]+)/i) ||
-                        extractedText.match(/سعر[:\s]+([0-9\s\-]+)/i) ||
-                        extractedText.match(/المبلغ[:\s]+([0-9\s\-]+)/i);
+      // استخراج اسم الشركة
+      const companyNameMatches = extractedText.match(/شركة\s+([^\n]+)/i) ||
+                                extractedText.match(/مؤسسة\s+([^\n]+)/i) ||
+                                extractedText.match(/اسم الشركة[:\s]+([^\n]+)/i);
       
-      if (priceMatch && priceMatch[1]) {
-        parsedData.price = priceMatch[1].trim();
+      if (companyNameMatches && companyNameMatches[1]) {
+        parsedData.companyName = companyNameMatches[1].trim();
+        console.log("Extracted company name:", parsedData.companyName);
+      } else {
+        // إذا لم يتم العثور على اسم الشركة، فحاول استخدام السطر الأول من النص
+        const firstLine = extractedText.split('\n')[0].trim();
+        if (firstLine && firstLine.length > 3 && firstLine.length < 50) {
+          parsedData.companyName = firstLine;
+          console.log("Using first line as company name:", parsedData.companyName);
+        }
       }
     }
     
-    // محاولة البحث عن رقم هاتف عراقي في النص بشكل مباشر
+    // البحث عن رقم هاتف عراقي في النص بشكل مباشر إذا لم يتم العثور عليه سابقًا
     if (!parsedData.phoneNumber) {
       const iraqiPhoneRegex = /\b(07[0-9]{2}[0-9\s\-]{7,8})\b/;
       const phoneMatchDirect = extractedText.match(iraqiPhoneRegex);
       if (phoneMatchDirect && phoneMatchDirect[1]) {
         parsedData.phoneNumber = phoneMatchDirect[1].replace(/\D/g, '');
+        console.log("Found Iraqi phone number directly:", parsedData.phoneNumber);
       }
     }
     
@@ -132,6 +175,7 @@ export function parseGeminiResponse(extractedText: string): {
       if (possibleCodes && possibleCodes.length > 0) {
         // استخدام أول رقم طويل (5-10 أرقام) كرمز محتمل
         parsedData.code = possibleCodes[0];
+        console.log("Using first numeric sequence as code:", parsedData.code);
       }
     }
     
@@ -142,11 +186,13 @@ export function parseGeminiResponse(extractedText: string): {
     // تصحيح اسم المحافظة إذا وجد
     if (enhancedData.province) {
       enhancedData.province = correctProvinceName(enhancedData.province);
+      console.log("Corrected province name:", enhancedData.province);
     } else {
       // البحث في النص كاملاً عن أي اسم محافظة عراقية
       for (const province of IRAQ_PROVINCES) {
         if (extractedText.includes(province)) {
           enhancedData.province = province;
+          console.log("Found province name in text:", enhancedData.province);
           break;
         }
       }
@@ -155,6 +201,7 @@ export function parseGeminiResponse(extractedText: string): {
     // تنسيق السعر وفقًا لقواعد العمل
     if (enhancedData.price) {
       enhancedData.price = formatPrice(enhancedData.price);
+      console.log("Formatted price:", enhancedData.price);
     }
     
     // تقييم جودة البيانات المستخرجة
