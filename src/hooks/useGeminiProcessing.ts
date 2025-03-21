@@ -57,7 +57,7 @@ export const useGeminiProcessing = () => {
       // تحديث الصورة لتظهر أنها قيد المعالجة
       let updatedImage = { 
         ...image, 
-        status: "processing",
+        status: "processing" as const,
         extractedText: "جاري معالجة الصورة واستخراج البيانات..."
       };
       

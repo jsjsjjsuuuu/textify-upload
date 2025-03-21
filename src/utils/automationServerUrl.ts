@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 
 export const SERVER_URL_KEY = "automationServerUrl";
@@ -34,6 +35,28 @@ export const setAutomationServerUrl = (url: string) => {
 };
 
 /**
+ * إعادة تعيين عنوان خادم التشغيل الآلي إلى القيمة الافتراضية
+ */
+export const resetAutomationServerUrl = () => {
+  const defaultUrl = "https://textify-upload.onrender.com";
+  setAutomationServerUrl(defaultUrl);
+  return defaultUrl;
+};
+
+/**
+ * التحقق من صحة عنوان URL
+ */
+export const isValidServerUrl = (url: string): boolean => {
+  if (!url) return false;
+  try {
+    const urlObj = new URL(url);
+    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+  } catch (e) {
+    return false;
+  }
+};
+
+/**
  * تحديد ما إذا كنا في بيئة المعاينة (Lovable)
  */
 export const isPreviewEnvironment = () => {
@@ -64,7 +87,8 @@ export const checkConnection = async () => {
       },
       mode: 'cors',
       credentials: 'include',
-      signal: AbortSignal.timeout(getConnectionTimeout())
+      // استخدام الإشارة بطريقة متوافقة مع الإصدارات القديمة
+      signal: createTimeoutSignal(getConnectionTimeout())
     });
 
     if (!response.ok) {
@@ -106,6 +130,9 @@ export const saveConnectionStatus = (isConnected: boolean) => {
   localStorage.setItem(CONNECTION_STATUS_KEY, JSON.stringify(status));
 };
 
+// إعادة تسمية هذه الدالة لتكون متوافقة مع الملفات الأخرى
+export const updateConnectionStatus = saveConnectionStatus;
+
 /**
  * استرجاع آخر حالة اتصال من الذاكرة المحلية
  */
@@ -145,24 +172,48 @@ export const RENDER_ALLOWED_IPS = [
 ];
 
 /**
+ * الحصول على عنوان IP التالي من القائمة للاستخدام في الطلبات
+ */
+export const getNextIp = (): string => {
+  const currentIndex = Math.floor(Math.random() * RENDER_ALLOWED_IPS.length);
+  return RENDER_ALLOWED_IPS[currentIndex];
+};
+
+/**
+ * إنشاء الرؤوس الأساسية للطلبات
+ */
+export const createBaseHeaders = (ip?: string): Record<string, string> => {
+  return {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "X-Forwarded-For": ip || getNextIp(),
+    "X-Client-ID": "web-client"
+  };
+};
+
+/**
+ * إنشاء إشارة مهلة متوافقة مع مختلف المتصفحات
+ */
+export const createTimeoutSignal = (ms: number): AbortSignal => {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+};
+
+/**
  * وظيفة fetch مع إعادة المحاولة
  */
 export async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 8, retryDelayMs = 2000): Promise<Response> {
   let retries = 0;
-  let currentTimeout = (options.signal as AbortSignal)?.timeout || getConnectionTimeout();
   let lastError: Error = new Error("Unknown error");
   
   while(retries < maxRetries) {
     try {
       console.log(`Attempt ${retries + 1}/${maxRetries} for URL: ${url}`);
       
-      // تعديل timeout لكل محاولة جديدة
-      if (options.signal && options.signal instanceof AbortSignal) {
-        // إنشاء signal جديد مع مهلة أطول
-        options = {
-          ...options,
-          signal: AbortSignal.timeout(currentTimeout)
-        };
+      // إضافة مهلة باستخدام الدالة المتوافقة
+      if (!options.signal) {
+        options.signal = createTimeoutSignal(getConnectionTimeout());
       }
       
       const response = await fetch(url, options);
@@ -192,13 +243,6 @@ export async function fetchWithRetry(url: string, options: RequestInit, maxRetri
         // زيادة فترة الانتظار مع كل محاولة فاشلة (backoff strategy)
         const delay = retryDelayMs * Math.pow(2, retries - 1);
         
-        // زيادة المهلة الزمنية مع كل محاولة
-        if (lastError.message.includes('timed out')) {
-          // مضاعفة مهلة الانتظار في حالة انتهاء المهلة
-          currentTimeout *= 1.5;
-          console.warn('Request timed out, increasing timeout for next attempt');
-        }
-        
         console.log(`Waiting ${delay}ms before retry ${retries}/${maxRetries}...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
@@ -223,7 +267,7 @@ export function createFetchOptions(method: string, body: any, headers: Record<st
     credentials: "include",
     mode: "cors",
     // تعيين مهلة أطول للطلبات
-    signal: AbortSignal.timeout(getConnectionTimeout())
+    signal: createTimeoutSignal(getConnectionTimeout())
   };
   
   if (body) {

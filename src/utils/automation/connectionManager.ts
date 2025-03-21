@@ -9,7 +9,8 @@ import {
   RENDER_ALLOWED_IPS, 
   getNextIp, 
   createBaseHeaders,
-  isPreviewEnvironment
+  isPreviewEnvironment,
+  createTimeoutSignal
 } from "../automationServerUrl";
 import { toast } from "sonner";
 import { ServerStatusResponse } from "./types";
@@ -74,8 +75,7 @@ export class ConnectionManager {
       console.log("استخدام عنوان IP:", currentIp);
       
       // إنشاء طلب مع رؤوس مخصصة
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutSignal = createTimeoutSignal(15000);
       
       const headers = createBaseHeaders(currentIp);
       console.log("الرؤوس المستخدمة:", headers);
@@ -86,14 +86,12 @@ export class ConnectionManager {
         mode: 'cors',
         cache: 'no-cache',
         credentials: 'omit',
-        signal: controller.signal
+        signal: timeoutSignal
       });
-      
-      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorMessage = `فشل الاتصال: ${response.status} ${response.statusText}`;
-        updateConnectionStatus(false, currentIp);
+        updateConnectionStatus(false);
         throw new Error(errorMessage);
       }
       
@@ -101,12 +99,12 @@ export class ConnectionManager {
       console.log("نتيجة التحقق من حالة الخادم:", result);
       
       // تحديث حالة الاتصال
-      updateConnectionStatus(true, currentIp);
+      updateConnectionStatus(true);
       this.lastError = null;
       
       // إظهار رسالة نجاح (فقط إذا كان الاتصال غير ناجح في السابق)
       const connectionStatus = getLastConnectionStatus();
-      if (showToasts && (!connectionStatus.isConnected || connectionStatus.retryCount > 0)) {
+      if (showToasts && (!connectionStatus.isConnected)) {
         toast.success("تم الاتصال بخادم الأتمتة بنجاح");
       }
       
@@ -134,8 +132,7 @@ export class ConnectionManager {
       }
       
       // تحديث حالة الاتصال وتخزين الخطأ الأخير
-      const currentIp = getLastConnectionStatus().lastUsedIp;
-      updateConnectionStatus(false, currentIp);
+      updateConnectionStatus(false);
       this.lastError = error instanceof Error ? error : new Error(String(error));
       
       if (showToasts) {
@@ -160,21 +157,10 @@ export class ConnectionManager {
       try {
         const connectionStatus = getLastConnectionStatus();
         
-        // إذا كان هناك الكثير من المحاولات، زيادة وقت الانتظار
-        if (connectionStatus.retryCount > this.maxRetries) {
-          console.log(`تم الوصول إلى الحد الأقصى من المحاولات (${this.maxRetries}). زيادة الفاصل الزمني.`);
-          this.stopReconnect();
-          this.retryDelay = Math.min(this.retryDelay * 2, 60000); // زيادة التأخير، ولكن ليس أكثر من دقيقة واحدة
-          this.startAutoReconnect(callback);
-          return;
-        }
-        
-        console.log(`محاولة إعادة الاتصال #${connectionStatus.retryCount + 1}...`);
-        
         // استخدام IP مختلف في كل محاولة إعادة اتصال
-        const rotatingIpIndex = connectionStatus.retryCount % RENDER_ALLOWED_IPS.length;
+        const rotatingIpIndex = Math.floor(Math.random() * RENDER_ALLOWED_IPS.length);
         const currentIp = RENDER_ALLOWED_IPS[rotatingIpIndex];
-        console.log(`استخدام عنوان IP: ${currentIp} للمحاولة رقم ${connectionStatus.retryCount + 1}`);
+        console.log(`استخدام عنوان IP: ${currentIp} للمحاولة`);
         
         const result = await this.checkServerStatus(false);
         

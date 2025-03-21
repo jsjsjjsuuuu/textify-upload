@@ -2,7 +2,7 @@
 /**
  * تشغيل سيناريوهات الأتمتة
  */
-import { getAutomationServerUrl, updateConnectionStatus, createBaseHeaders, getNextIp, isPreviewEnvironment } from "../automationServerUrl";
+import { getAutomationServerUrl, updateConnectionStatus, createBaseHeaders, getNextIp, isPreviewEnvironment, createTimeoutSignal } from "../automationServerUrl";
 import { toast } from "sonner";
 import { AutomationConfig, AutomationResponse } from "./types";
 import { ConnectionManager } from "./connectionManager";
@@ -55,8 +55,7 @@ export class AutomationRunner {
       };
       
       // إعداد معالجة المهلة
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000);
+      const timeoutSignal = createTimeoutSignal(90000);
       
       // إعداد الرؤوس
       const headers = createBaseHeaders(currentIp);
@@ -80,7 +79,7 @@ export class AutomationRunner {
             mode: 'cors',
             credentials: 'omit',
             body: JSON.stringify(configWithIp),
-            signal: controller.signal
+            signal: timeoutSignal
           });
           
           if (!response.ok) {
@@ -92,7 +91,7 @@ export class AutomationRunner {
           console.log("نتيجة تنفيذ الأتمتة:", result);
           
           // تحديث حالة الاتصال
-          updateConnectionStatus(true, currentIp);
+          updateConnectionStatus(true);
           
           // إظهار رسالة نجاح
           if (result.success) {
@@ -105,7 +104,6 @@ export class AutomationRunner {
             });
           }
           
-          clearTimeout(timeoutId);
           return result;
         } catch (error) {
           lastError = error instanceof Error ? error : new Error(String(error));
@@ -124,7 +122,6 @@ export class AutomationRunner {
       }
       
       // إذا وصلنا إلى هنا، فقد فشلت جميع المحاولات
-      clearTimeout(timeoutId);
       throw lastError || new Error("فشلت جميع محاولات الاتصال");
     } catch (error) {
       console.error("خطأ في تنفيذ الأتمتة:", error);

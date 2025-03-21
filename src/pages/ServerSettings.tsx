@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   getAutomationServerUrl, 
-  setAutomationServerUrl, 
-  resetAutomationServerUrl,
+  setAutomationServerUrl,
   isValidServerUrl,
   getLastConnectionStatus,
   isConnected,
@@ -12,6 +11,13 @@ import {
 import { AutomationService } from '../utils/automationService';
 import { toast } from 'sonner';
 import ServerSettingsComponent from '@/components/ServerSettings';
+
+// دالة مساعدة لإعادة تعيين عنوان الخادم إلى القيمة الافتراضية
+const resetAutomationServerUrl = () => {
+  const defaultUrl = "https://textify-upload.onrender.com";
+  setAutomationServerUrl(defaultUrl);
+  return defaultUrl;
+};
 
 const ServerSettings = () => {
   const [serverUrl, setServerUrl] = useState('');
@@ -73,7 +79,7 @@ const ServerSettings = () => {
       setReconnectStatus({
         active: true,
         lastAttempt: Date.now(),
-        attempts: getLastConnectionStatus().retryCount
+        attempts: 0
       });
       
       AutomationService.startAutoReconnect((isConnected) => {
@@ -87,7 +93,7 @@ const ServerSettings = () => {
         setReconnectStatus({
           active: !isConnected,
           lastAttempt: Date.now(),
-          attempts: getLastConnectionStatus().retryCount
+          attempts: 0
         });
       });
     }
@@ -125,8 +131,7 @@ const ServerSettings = () => {
   };
   
   const handleResetUrl = () => {
-    resetAutomationServerUrl();
-    const defaultUrl = getAutomationServerUrl();
+    const defaultUrl = resetAutomationServerUrl();
     setServerUrl(defaultUrl);
     toast.success('تم إعادة تعيين عنوان الخادم إلى القيمة الافتراضية');
     console.log("تم إعادة تعيين العنوان إلى:", defaultUrl);
