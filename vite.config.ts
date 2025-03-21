@@ -57,15 +57,15 @@ export default defineConfig(({ mode }) => {
               // إضافة الرؤوس اللازمة للتجاوز مشاكل CORS
               proxyReq.setHeader('X-Forwarded-For', selectedIp);
               proxyReq.setHeader('X-Render-Client-IP', selectedIp);
-              proxyReq.setHeader('Origin', automationServerUrl);
-              proxyReq.setHeader('Referer', automationServerUrl);
+              proxyReq.setHeader('Origin', req.headers.origin || automationServerUrl);
+              proxyReq.setHeader('Referer', req.headers.referer || automationServerUrl);
               
               // إضافة رؤوس دعم CORS أخرى
               proxyReq.setHeader('Accept', 'application/json');
               proxyReq.setHeader('Content-Type', 'application/json');
-              proxyReq.setHeader('Access-Control-Allow-Origin', '*');
+              proxyReq.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
               proxyReq.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-              proxyReq.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time');
+              proxyReq.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time, Origin, Referer');
               proxyReq.setHeader('Access-Control-Max-Age', '86400');
               proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
             });
@@ -73,10 +73,10 @@ export default defineConfig(({ mode }) => {
               console.log('استجابة البروكسي:', proxyRes.statusCode, req.url);
               
               // تعديل رؤوس الاستجابة لتسهيل الاتصال
-              proxyRes.headers['Access-Control-Allow-Origin'] = '*';
-              proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-              proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time';
-              proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+              proxyRes.headers['access-control-allow-origin'] = req.headers.origin || '*';
+              proxyRes.headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+              proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time, Origin, Referer';
+              proxyRes.headers['access-control-allow-credentials'] = 'true';
             });
           }
         }

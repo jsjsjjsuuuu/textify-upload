@@ -1,3 +1,4 @@
+
 import express from 'express';
 import puppeteer from 'puppeteer';
 import cors from 'cors';
@@ -30,19 +31,25 @@ console.log(`RENDER_EXTERNAL_URL: ${process.env.RENDER_EXTERNAL_URL || 'not set'
 
 const app = express();
 
+// تحديد قائمة النطاقات المسموح بها
+const ALLOWED_DOMAINS = [
+  'lovable.app',
+  'lovableproject.com',
+  'd6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovableproject.com', // إضافة النطاق المحدد
+  'localhost',
+  '127.0.0.1'
+];
+
 // إضافة middleware
 app.use(cors({
   origin: function(origin, callback) {
     // السماح بالطلبات بدون أصل (مثل تطبيقات الجوال أو curl أو Postman)
     if (!origin) return callback(null, true);
     
-    // السماح بأصول محددة - تمت إضافة lovableproject.com للسماح بالاتصال من lovable
-    if (
-      origin.includes('lovable.app') || 
-      origin.includes('lovableproject.com') || 
-      origin.includes('localhost') || 
-      origin.includes('127.0.0.1')
-    ) {
+    // التحقق من النطاق
+    const isAllowed = ALLOWED_DOMAINS.some(domain => origin.includes(domain));
+    
+    if (isAllowed) {
       console.log('CORS: قبول الطلب من الأصل:', origin);
       return callback(null, true);
     }
@@ -70,6 +77,38 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 
+// دالة مساعدة للتعامل مع رؤوس CORS
+const setCorsHeaders = (req, res) => {
+  const origin = req.get('origin');
+  if (origin) {
+    const isAllowed = ALLOWED_DOMAINS.some(domain => origin.includes(domain));
+    if (isAllowed) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time, Origin, Referer');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+};
+
+// إضافة معالج خاص لطلبات OPTIONS لضمان استجابات CORS الصحيحة
+app.options('*', (req, res) => {
+  console.log('OPTIONS request received:', {
+    path: req.path,
+    headers: req.headers,
+    origin: req.get('origin')
+  });
+  
+  setCorsHeaders(req, res);
+  res.status(200).end();
+});
+
 // إضافة نقطة نهاية بسيطة للتحقق السريع من الاتصال
 app.get('/api/ping', (req, res) => {
   // تسجيل معلومات الطلب للتشخيص
@@ -79,10 +118,8 @@ app.get('/api/ping', (req, res) => {
     origin: req.get('origin')
   });
   
-  // تعيين الرؤوس يدويًا للتأكد من تجاوز CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // تعيين الرؤوس
+  setCorsHeaders(req, res);
   
   res.json({ 
     status: 'ok', 
@@ -101,10 +138,8 @@ app.get('/api/health', (req, res) => {
     origin: req.get('origin')
   });
   
-  // تعيين الرؤوس يدويًا للتأكد من تجاوز CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // تعيين الرؤوس
+  setCorsHeaders(req, res);
   
   res.json({ 
     status: 'ok', 
@@ -219,10 +254,8 @@ app.get('/api/status', (req, res) => {
     origin: req.get('origin')
   });
   
-  // تعيين الرؤوس يدويًا للتأكد من تجاوز CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // تعيين الرؤوس
+  setCorsHeaders(req, res);
   
   // إضافة معلومات النظام للمساعدة في التشخيص
   const systemInfo = {
@@ -277,10 +310,8 @@ const checkPuppeteer = async () => {
 
 // مسار لتنفيذ السيناريو باستخدام Puppeteer
 app.post('/api/automate', async (req, res) => {
-  // تعيين الرؤوس يدويًا للتأكد من تجاوز CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // تعيين الرؤوس
+  setCorsHeaders(req, res);
   
   const { projectUrl, actions } = req.body;
   
@@ -517,39 +548,6 @@ app.post('/api/automate', async (req, res) => {
       message: `حدث خطأ أثناء الأتمتة: ${error.message}`
     });
   }
-});
-
-// التعامل مع طلبات OPTIONS مباشرة للتأكد من استجابة CORS الصحيحة
-app.options('*', (req, res) => {
-  console.log('OPTIONS request received:', {
-    path: req.path,
-    headers: req.headers,
-    origin: req.get('origin')
-  });
-  
-  // تمت إضافة ضبط إضافي لضمان قبول الاستجابات من lovableproject.com
-  const origin = req.get('origin');
-  if (origin) {
-    if (
-      origin.includes('lovable.app') || 
-      origin.includes('lovableproject.com') || 
-      origin.includes('localhost') || 
-      origin.includes('127.0.0.1')
-    ) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    } else {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-    }
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-  
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time, Origin, Referer');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
-  res.status(200).end();
 });
 
 // إضافة '*' كمسار لتوجيه أي طلب آخر إلى index.html (SPA)

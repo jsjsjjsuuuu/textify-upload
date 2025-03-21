@@ -72,7 +72,6 @@ export const isValidServerUrl = (url: string): boolean => {
  * تم تعديله ليعود دائمًا بالقيمة false (للعمل دائمًا في البيئة الفعلية)
  */
 export const isPreviewEnvironment = () => {
-  // تم تعطيل التحقق وإرجاع false دائمًا لإلغاء سلوك بيئة المعاينة
   return false;
 };
 
@@ -86,10 +85,11 @@ export const checkConnection = async () => {
     return { isConnected: false, message: "لم يتم تعيين عنوان الخادم" };
   }
 
+  console.log("استخدام طريقة مباشرة للتحقق من الاتصال...");
   try {
-    // أولاً، نجرب استخدام /api/ping كنقطة نهاية خفيفة للفحص
+    // تجربة الاتصال عن طريق نقطة نهاية ping
     const pingUrl = `${serverUrl}/api/ping`;
-    console.log("Checking connection via ping endpoint:", pingUrl);
+    console.log("محاولة اتصال سريع:", pingUrl);
     
     try {
       const pingResponse = await fetch(pingUrl, {
@@ -101,25 +101,27 @@ export const checkConnection = async () => {
           "Pragma": "no-cache",
           "X-Request-Time": Date.now().toString(),
           "X-Forwarded-For": getNextIp(),
-          "X-Client-ID": "web-client"
+          "X-Client-ID": "web-client",
+          "Origin": window.location.origin, // استخدام أصل النافذة الحالية
+          "Referer": window.location.href // استخدام مرجع النافذة الحالية
         },
         mode: 'cors',
         credentials: 'omit',
-        signal: createTimeoutSignal(15000) // 15 ثانية فقط للفحص السريع
+        signal: createTimeoutSignal(30000) // 30 ثانية
       });
       
       if (pingResponse.ok) {
-        // إذا نجح فحص ping، نعتبر الاتصال ناجحًا
+        console.log("Ping response successful:", await pingResponse.json());
         saveConnectionStatus(true);
         return { isConnected: true, message: "تم الاتصال بنجاح" };
       }
     } catch (pingError) {
-      console.warn("فشل الاتصال عبر نقطة نهاية ping, سنحاول المسار الرئيسي:", pingError);
+      console.warn("فشل الاتصال عبر نقطة نهاية ping:", pingError);
     }
     
-    // إذا فشل ping، نستخدم /api/health
-    const healthUrl = `${serverUrl}/api/health`;
-    console.log("Checking connection via health endpoint:", healthUrl);
+    // إذا فشل ping، نحاول مسار /api/status
+    console.log("محاولة الاتصال عبر /api/status...");
+    const healthUrl = `${serverUrl}/api/status`;
     
     const response = await fetchWithRetry(healthUrl, {
       method: "GET",
@@ -130,24 +132,26 @@ export const checkConnection = async () => {
         "X-Client-ID": "web-client",
         "Cache-Control": "no-cache, no-store",
         "Pragma": "no-cache",
-        "X-Request-Time": Date.now().toString()
+        "X-Request-Time": Date.now().toString(),
+        "Origin": window.location.origin,
+        "Referer": window.location.href
       },
       mode: 'cors',
       credentials: 'omit',
       signal: createTimeoutSignal(getConnectionTimeout())
-    }, 3, 1000); // 3 محاولات فقط مع تأخير 1 ثانية
+    }, 2, 5000); // محاولتان فقط مع تأخير 5 ثوانٍ
 
-    if (!response.ok) {
-      console.error("Connection failed with status:", response.status);
+    if (response.ok) {
+      console.log("تم الاتصال بنجاح عبر /api/status");
+      saveConnectionStatus(true);
+      return { isConnected: true, message: "تم الاتصال بنجاح" };
+    } else {
+      console.error("فشل الاتصال بحالة:", response.status);
+      saveConnectionStatus(false);
       return { isConnected: false, message: `فشل الاتصال: ${response.statusText}` };
     }
-
-    const data = await response.json();
-    console.log("Connection successful:", data);
-    saveConnectionStatus(true);
-    return { isConnected: true, message: "تم الاتصال بنجاح" };
   } catch (error: any) {
-    console.error("Connection error:", error);
+    console.error("خطأ الاتصال:", error);
     let errorMessage = error.message || 'خطأ غير معروف';
     
     if (errorMessage.includes('Failed to fetch')) {
@@ -159,45 +163,6 @@ export const checkConnection = async () => {
     saveConnectionStatus(false);
     return { isConnected: false, message: `خطأ في الاتصال: ${errorMessage}` };
   }
-};
-
-/**
- * حفظ حالة الاتصال في الذاكرة المحلية
- */
-export const saveConnectionStatus = (isConnected: boolean) => {
-  if (typeof localStorage === 'undefined') {
-    console.warn('localStorage is not available.');
-    return;
-  }
-  const status = {
-    isConnected,
-    timestamp: new Date().toISOString(),
-    retryCount: isConnected ? 0 : (getLastConnectionStatus().retryCount || 0) + 1
-  };
-  localStorage.setItem(CONNECTION_STATUS_KEY, JSON.stringify(status));
-};
-
-// إعادة تسمية هذه الدالة لتكون متوافقة مع الملفات الأخرى
-export const updateConnectionStatus = saveConnectionStatus;
-
-/**
- * استرجاع آخر حالة اتصال من الذاكرة المحلية
- */
-export const getLastConnectionStatus = () => {
-  if (typeof localStorage === 'undefined') {
-    console.warn('localStorage is not available.');
-    return { isConnected: false, timestamp: null, retryCount: 0 };
-  }
-  const status = localStorage.getItem(CONNECTION_STATUS_KEY);
-  if (status) {
-    try {
-      return JSON.parse(status);
-    } catch (e) {
-      console.error("Error parsing connection status:", e);
-      return { isConnected: false, timestamp: null, retryCount: 0 };
-    }
-  }
-  return { isConnected: false, timestamp: null, retryCount: 0 };
 };
 
 export const RENDER_ALLOWED_IPS = [
@@ -221,13 +186,16 @@ export const getNextIp = (): string => {
  * إنشاء الرؤوس الأساسية للطلبات
  */
 export const createBaseHeaders = (ip?: string): Record<string, string> => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : getAutomationServerUrl();
+  const referer = typeof window !== 'undefined' ? window.location.href : getAutomationServerUrl();
+
   return {
     "Content-Type": "application/json",
     "Accept": "application/json",
     "X-Forwarded-For": ip || getNextIp(),
     "X-Render-Client-IP": ip || getNextIp(),
-    "Origin": getAutomationServerUrl(),
-    "Referer": getAutomationServerUrl(),
+    "Origin": origin,
+    "Referer": referer,
     "X-Client-ID": "web-client",
     "Cache-Control": "no-cache, no-store",
     "Pragma": "no-cache"
@@ -260,6 +228,10 @@ export async function fetchWithRetry(url: string, options: RequestInit, maxRetri
         (options.headers as Record<string, string>)['X-Forwarded-For'] = ip;
         (options.headers as Record<string, string>)['X-Render-Client-IP'] = ip;
         (options.headers as Record<string, string>)['X-Request-Time'] = Date.now().toString();
+        
+        // إضافة Origin و Referer للمساعدة في تجاوز قيود CORS
+        (options.headers as Record<string, string>)['Origin'] = typeof window !== 'undefined' ? window.location.origin : getAutomationServerUrl();
+        (options.headers as Record<string, string>)['Referer'] = typeof window !== 'undefined' ? window.location.href : getAutomationServerUrl();
       }
       
       // إضافة مهلة باستخدام الدالة المتوافقة
@@ -304,6 +276,10 @@ export async function fetchWithRetry(url: string, options: RequestInit, maxRetri
  */
 export function createFetchOptions(method: string, body: any, additionalHeaders: Record<string, string> = {}): RequestInit {
   const baseHeaders = createBaseHeaders();
+  
+  // إضافة الرؤوس الخاصة بالأصل والمرجع
+  baseHeaders['Origin'] = typeof window !== 'undefined' ? window.location.origin : getAutomationServerUrl();
+  baseHeaders['Referer'] = typeof window !== 'undefined' ? window.location.href : getAutomationServerUrl();
   
   const options: RequestInit = {
     method,
@@ -351,4 +327,43 @@ export const isConnected = async (forceCheck = false) => {
     console.error("Error checking connection:", error);
     return false;
   }
+};
+
+/**
+ * حفظ حالة الاتصال في الذاكرة المحلية
+ */
+export const saveConnectionStatus = (isConnected: boolean) => {
+  if (typeof localStorage === 'undefined') {
+    console.warn('localStorage is not available.');
+    return;
+  }
+  const status = {
+    isConnected,
+    timestamp: new Date().toISOString(),
+    retryCount: isConnected ? 0 : (getLastConnectionStatus().retryCount || 0) + 1
+  };
+  localStorage.setItem(CONNECTION_STATUS_KEY, JSON.stringify(status));
+};
+
+// إعادة تسمية هذه الدالة لتكون متوافقة مع الملفات الأخرى
+export const updateConnectionStatus = saveConnectionStatus;
+
+/**
+ * استرجاع آخر حالة اتصال من الذاكرة المحلية
+ */
+export const getLastConnectionStatus = () => {
+  if (typeof localStorage === 'undefined') {
+    console.warn('localStorage is not available.');
+    return { isConnected: false, timestamp: null, retryCount: 0 };
+  }
+  const status = localStorage.getItem(CONNECTION_STATUS_KEY);
+  if (status) {
+    try {
+      return JSON.parse(status);
+    } catch (e) {
+      console.error("Error parsing connection status:", e);
+      return { isConnected: false, timestamp: null, retryCount: 0 };
+    }
+  }
+  return { isConnected: false, timestamp: null, retryCount: 0 };
 };
