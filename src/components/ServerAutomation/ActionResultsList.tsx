@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { ActionResult, AutomationResponse } from '@/utils/automation/types';
+import { ActionResult, AutomationResponse, ErrorType } from '@/utils/automation/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, CheckCircle2, Clock, FileText, Layers, Search, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, FileText, Layers, Search, X, Globe, Server } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -23,13 +23,31 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
   
   const { success, message, results, executionTime, error } = automationResponse;
   
+  // إضافة وظيفة للتعامل مع أخطاء URL
+  const handleURLError = (errorMessage: string) => {
+    if (errorMessage.includes("404") || errorMessage.includes("نقطة النهاية API غير موجودة")) {
+      return (
+        <div className="mt-2 text-sm">
+          <p className="font-semibold">حلول مقترحة لمشكلة 404:</p>
+          <ul className="list-disc list-inside mt-1 space-y-1">
+            <li>تأكد من أن عنوان URL للمشروع المستهدف صحيح وتم كتابته بشكل كامل مع البروتوكول (https://)</li>
+            <li>قد تكون نقطة نهاية API غير صحيحة، تحقق من إعدادات خادم الأتمتة</li>
+            <li>تأكد من أن خادم الأتمتة يعمل ولديه نقطة نهاية /api/automation/run</li>
+            <li>حاول إضافة www. إلى عنوان URL إذا كان ينقصه</li>
+          </ul>
+        </div>
+      );
+    }
+    return null;
+  };
+  
   // إضافة تفاصيل إضافية للمشكلة إذا كانت هناك مشكلة CORS
   const getDetailedErrorInfo = () => {
     if (!error) return null;
     
     let detailedInfo = null;
     
-    if (error.type === 'CORSError') {
+    if (error.type === ErrorType.CORSError) {
       detailedInfo = (
         <div className="mt-2 text-sm">
           <p className="font-semibold">حلول مقترحة لمشاكل CORS:</p>
@@ -41,7 +59,7 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
           </ul>
         </div>
       );
-    } else if (error.type === 'NetworkError') {
+    } else if (error.type === ErrorType.NetworkError) {
       detailedInfo = (
         <div className="mt-2 text-sm">
           <p className="font-semibold">حلول مقترحة لمشاكل الشبكة:</p>
@@ -53,7 +71,7 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
           </ul>
         </div>
       );
-    } else if (error.type === 'TimeoutError') {
+    } else if (error.type === ErrorType.TimeoutError) {
       detailedInfo = (
         <div className="mt-2 text-sm">
           <p className="font-semibold">حلول مقترحة لمشاكل انتهاء المهلة:</p>
@@ -64,7 +82,7 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
           </ul>
         </div>
       );
-    } else if (error.type === 'StreamReadError') {
+    } else if (error.type === ErrorType.StreamReadError) {
       detailedInfo = (
         <div className="mt-2 text-sm">
           <p className="font-semibold">حلول مقترحة لمشاكل قراءة الاستجابة:</p>
@@ -75,9 +93,71 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
           </ul>
         </div>
       );
+    } else if (error.type === ErrorType.EndpointNotFoundError) {
+      detailedInfo = (
+        <div className="mt-2 text-sm">
+          <p className="font-semibold">حلول مقترحة لمشكلة نقطة النهاية غير موجودة (404):</p>
+          <ul className="list-disc list-inside mt-1 space-y-1">
+            <li>تأكد من أن عنوان URL للخادم صحيح ويحتوي على /api/automation/run</li>
+            <li>تحقق من تكوين خادم الأتمتة وتأكد من تنصيب جميع المكونات</li>
+            <li>حاول استخدام https:// بدلاً من http:// أو العكس</li>
+            <li>تأكد من عدم وجود أحرف زائدة أو ناقصة في العنوان</li>
+          </ul>
+        </div>
+      );
+    } else if (error.type === ErrorType.URLError) {
+      detailedInfo = (
+        <div className="mt-2 text-sm">
+          <p className="font-semibold">حلول مقترحة لمشاكل URL:</p>
+          <ul className="list-disc list-inside mt-1 space-y-1">
+            <li>تأكد من إدخال URL كامل مع البروتوكول (https:// أو http://)</li>
+            <li>تحقق من عدم وجود أخطاء إملائية في العنوان</li>
+            <li>تأكد من أن الموقع المستهدف متاح ويمكن الوصول إليه</li>
+          </ul>
+        </div>
+      );
     }
     
     return detailedInfo;
+  };
+  
+  // الحصول على المعلومات الإضافية الخاصة بعناوين URL المستهدفة
+  const getTargetURLInfo = () => {
+    try {
+      if (message && (message.includes("404") || message.includes("نقطة النهاية"))) {
+        return (
+          <Alert variant="destructive" className="mt-4 bg-amber-50 border-amber-200">
+            <Server className="h-4 w-4 text-amber-600" />
+            <AlertTitle>معلومات إضافية عن الخطأ</AlertTitle>
+            <AlertDescription className="mt-2">
+              <div className="flex flex-col gap-2">
+                <div>
+                  <p className="font-semibold">رمز الخطأ: 404 (Not Found)</p>
+                  <p className="text-sm">هذا يعني أن الخادم لم يتمكن من العثور على نقطة النهاية المطلوبة (api/automation/run).
+                   تأكد من أن عنوان URL صحيح وأن الخادم يدعم هذه النقطة.</p>
+                </div>
+                <div className="mt-2">
+                  <p className="font-semibold">إجراءات مقترحة:</p>
+                  <ul className="list-disc list-inside text-sm space-y-1 mt-1">
+                    <li>تحقق من عنوان URL للموقع المستهدف وتأكد من كتابته بشكل صحيح</li>
+                    <li>أضف https:// في بداية عنوان URL إذا لم يكن موجوداً</li>
+                    <li>تأكد من أن خادم الأتمتة متاح ويعمل بشكل صحيح</li>
+                    <li>اختبر الاتصال بالخادم من خلال صفحة إعدادات الخادم</li>
+                  </ul>
+                </div>
+                <div className="mt-2 flex items-center text-sm">
+                  <Globe className="h-4 w-4 mr-2 text-amber-600" />
+                  <span>تلميح: جرب فتح الموقع المستهدف في متصفح منفصل للتأكد من إمكانية الوصول إليه.</span>
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )
+      }
+    } catch (err) {
+      console.error("خطأ في معالجة معلومات URL:", err);
+    }
+    return null;
   };
   
   return (
@@ -120,6 +200,7 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
               <AlertDescription className="mt-2 rtl">
                 <p>رسالة الخطأ: {error.message}</p>
                 {getDetailedErrorInfo()}
+                {handleURLError(error.message)}
                 {error.stack && (
                   <div className="mt-2">
                     <details>
@@ -131,6 +212,9 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
               </AlertDescription>
             </Alert>
           )}
+          
+          {/* إضافة معلومات URL المستهدف إذا كانت هناك مشكلة 404 */}
+          {getTargetURLInfo()}
           
           {/* إضافة إرشادات خاصة لأخطاء "body stream already read" */}
           {message && message.includes("body stream already read") && (

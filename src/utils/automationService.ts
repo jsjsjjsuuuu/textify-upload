@@ -1,5 +1,5 @@
 
-import { AutomationAction, AutomationConfig, AutomationResponse, ActionResult } from './automation/types';
+import { AutomationAction, AutomationConfig, AutomationResponse, ActionResult, ErrorType } from './automation/types';
 import { getAutomationServerUrl, isPreviewEnvironment, checkConnection } from './automationServerUrl';
 
 /**
@@ -42,6 +42,12 @@ export class AutomationService {
         message: "يجب إضافة إجراء واحد على الأقل",
         automationType: 'server'
       };
+    }
+    
+    // تأكد من أن عنوان URL يحتوي على بروتوكول
+    if (!config.projectUrl.startsWith('http://') && !config.projectUrl.startsWith('https://')) {
+      config.projectUrl = 'https://' + config.projectUrl;
+      console.log("تم تصحيح عنوان URL تلقائيًا:", config.projectUrl);
     }
     
     // 2. تحسين الإعدادات قبل الإرسال
@@ -103,8 +109,16 @@ export class AutomationService {
       const serverUrl = getAutomationServerUrl();
       console.log("URL خادم الأتمتة:", serverUrl);
       
+      // التحقق من سلامة الـ URL قبل الاستدعاء
+      if (!serverUrl) {
+        throw new Error("لم يتم تكوين عنوان URL لخادم الأتمتة بشكل صحيح");
+      }
+      
+      const apiEndpoint = `${serverUrl}/api/automation/run`;
+      console.log("نقطة نهاية API الكاملة:", apiEndpoint);
+      
       // إنشاء طلب الأتمتة
-      const response = await fetch(`${serverUrl}/api/automation/run`, {
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -121,24 +135,42 @@ export class AutomationService {
       // التحقق من نجاح الاستجابة
       if (!response.ok) {
         // محاولة استخراج رسالة الخطأ من الاستجابة
-        let errorMessage = "فشل الاتصال بخادم الأتمتة";
+        let errorMessage = `فشل الاتصال بخادم الأتمتة (${response.status})`;
+        let errorType = ErrorType.ExecutionError;
+        
+        if (response.status === 404) {
+          errorMessage = "نقطة النهاية API غير موجودة. تأكد من تكوين خادم الأتمتة بشكل صحيح.";
+          errorType = ErrorType.EndpointNotFoundError;
+        } else if (response.status === 403 || response.status === 401) {
+          errorMessage = "غير مصرح بالوصول إلى خادم الأتمتة. تحقق من بيانات الاعتماد.";
+          errorType = ErrorType.AuthorizationError;
+        } else if (response.status === 500) {
+          errorMessage = "حدث خطأ داخلي في خادم الأتمتة. يرجى المحاولة مرة أخرى لاحقاً.";
+          errorType = ErrorType.ServerError;
+        }
+        
         try {
           // نسخ الاستجابة لتفادي مشكلة "body stream already read"
           const responseClone = response.clone();
           const errorData = await responseClone.json();
-          errorMessage = errorData.message || errorMessage;
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
         } catch (e) {
           // إذا تعذر تحليل JSON، استخدام نص الخطأ
           try {
             // نسخ الاستجابة مرة أخرى لتجنب المشكلة
             const responseClone = response.clone();
-            errorMessage = await responseClone.text() || errorMessage;
+            const textResponse = await responseClone.text();
+            if (textResponse) {
+              errorMessage = `${errorMessage}: ${textResponse.substring(0, 100)}...`;
+            }
           } catch (textError) {
             console.error("تعذر قراءة نص الاستجابة:", textError);
           }
         }
         
-        throw new Error(`خطأ في طلب الأتمتة (${response.status}): ${errorMessage}`);
+        throw new Error(errorMessage);
       }
       
       // نسخ الاستجابة قبل قراءتها لتفادي مشكلة "body stream already read"
@@ -165,7 +197,7 @@ export class AutomationService {
             automationType: 'server',
             error: {
               message: "استجابة غير صالحة من الخادم",
-              type: 'ResponseFormatError'
+              type: ErrorType.ResponseFormatError
             }
           };
         } catch (textError) {
@@ -178,30 +210,30 @@ export class AutomationService {
       
       // تحسين رسائل الخطأ الشائعة للمستخدم
       let errorMessage = error instanceof Error ? error.message : "خطأ غير معروف";
-      let errorType = 'ExecutionError';
+      let errorType = ErrorType.ExecutionError;
       
       // التعامل مع أخطاء الاتصال
       if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
         errorMessage = "فشل الاتصال بخادم الأتمتة. تأكد من اتصالك بالإنترنت وأن الخادم متاح.";
-        errorType = 'NetworkError';
+        errorType = ErrorType.NetworkError;
       }
       
       // التعامل مع أخطاء انتهاء المهلة
       if (errorMessage.includes("timeout") || errorMessage.includes("timed out")) {
         errorMessage = "انتهت مهلة الاتصال بخادم الأتمتة. قد يكون الخادم مشغولاً، حاول مرة أخرى لاحقاً.";
-        errorType = 'TimeoutError';
+        errorType = ErrorType.TimeoutError;
       }
       
       // التعامل مع أخطاء CORS
       if (errorMessage.includes("CORS") || errorMessage.includes("cross-origin")) {
         errorMessage = "خطأ في سياسة مشاركة الموارد عبر الأصول (CORS). تأكد من إعدادات الخادم.";
-        errorType = 'CORSError';
+        errorType = ErrorType.CORSError;
       }
       
       // التعامل مع أخطاء "body stream already read"
       if (errorMessage.includes("body stream already read")) {
         errorMessage = "حدث خطأ أثناء قراءة استجابة الخادم. حاول مرة أخرى.";
-        errorType = 'StreamReadError';
+        errorType = ErrorType.StreamReadError;
       }
       
       // إرجاع استجابة خطأ منسقة

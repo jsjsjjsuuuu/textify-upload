@@ -71,5 +71,16 @@ export enum ErrorType {
   CORSError = 'CORSError',
   StreamReadError = 'StreamReadError',
   ExecutionError = 'ExecutionError',
-  ResponseFormatError = 'ResponseFormatError'
+  ResponseFormatError = 'ResponseFormatError',
+  EndpointNotFoundError = 'EndpointNotFoundError',
+  AuthorizationError = 'AuthorizationError',
+  ServerError = 'ServerError',
+  URLError = 'URLError'
+}
+
+// إضافة واجهة للتعامل مع أخطاء عنوان URL
+export interface URLValidationResult {
+  isValid: boolean;
+  correctedUrl?: string;
+  error?: string;
 }
