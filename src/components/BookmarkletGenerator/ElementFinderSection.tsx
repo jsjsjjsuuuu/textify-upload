@@ -1,19 +1,18 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Trash, Plus, PenLine, PlayCircle, Check, AlertTriangle, Copy, FileDown, File, Loader2 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { toast } from "sonner";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Textarea } from "@/components/ui/textarea";
 import { AutomationConfig, AutomationAction } from "@/utils/automation/types";
 import { AutomationService } from "@/utils/automationService";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
+
+// استيراد المكونات الفرعية
+import ProjectForm from "./ElementFinder/ProjectForm";
+import ActionsList from "./ElementFinder/ActionsList";
+import ExecutionStatus from "./ElementFinder/ExecutionStatus";
+import BrowserToggle from "./ElementFinder/BrowserToggle";
+import ExportTools from "./ElementFinder/ExportTools";
+import RunButton from "./ElementFinder/RunButton";
 
 interface ElementFinderProps {
   onBookmarkletGenerated?: (code: string) => void;
@@ -213,12 +212,6 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
     }
   };
   
-  const handleActionTypeChange = (value: string) => {
-    if (value) {
-      setActionType(value);
-    }
-  };
-  
   return (
     <Card>
       <CardHeader>
@@ -228,177 +221,49 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="projectUrl">رابط المشروع</Label>
-          <Input
-            id="projectUrl"
-            placeholder="https://example.com"
-            value={projectUrl}
-            onChange={(e) => setProjectUrl(e.target.value)}
-          />
-        </div>
+        {/* نموذج المشروع */}
+        <ProjectForm
+          projectUrl={projectUrl}
+          customName={customName}
+          isRunning={isRunning}
+          onProjectUrlChange={setProjectUrl}
+          onCustomNameChange={setCustomName}
+        />
         
-        <div className="space-y-2">
-          <Label htmlFor="customName">اسم مخصص (اختياري)</Label>
-          <Input
-            id="customName"
-            placeholder="اسم المشروع المخصص"
-            value={customName}
-            onChange={(e) => setCustomName(e.target.value)}
-          />
-        </div>
+        {/* قائمة الإجراءات */}
+        <ActionsList
+          actions={actions}
+          isRunning={isRunning}
+          onAddAction={handleAddAction}
+          onRemoveAction={handleRemoveAction}
+          onActionChange={handleActionChange}
+        />
         
-        <div className="border-t pt-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-medium">الإجراءات</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddAction}
-              disabled={isRunning}
-            >
-              <Plus className="h-4 w-4 mr-1" /> إضافة إجراء
-            </Button>
-          </div>
-          
-          <div className="space-y-4">
-            {actions.map((action, index) => (
-              <div key={index} className="border rounded-md p-4 space-y-3">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-sm font-medium">الإجراء #{index + 1}</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveAction(index)}
-                    disabled={isRunning || actions.length === 1}
-                  >
-                    <Trash className="h-4 w-4 text-red-500" />
-                  </Button>
-                </div>
-                
-                <div className="space-y-3">
-                  <div>
-                    <Label>نوع الإجراء</Label>
-                    <ToggleGroup
-                      type="single"
-                      value={action.name}
-                      onValueChange={(value) => handleActionChange(index, "name", value || "click")}
-                      className="justify-start"
-                    >
-                      <ToggleGroupItem value="click">نقر</ToggleGroupItem>
-                      <ToggleGroupItem value="type">كتابة</ToggleGroupItem>
-                      <ToggleGroupItem value="select">اختيار</ToggleGroupItem>
-                    </ToggleGroup>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor={`finder-${index}`}>محدد العنصر (CSS Selector)</Label>
-                    <Textarea
-                      id={`finder-${index}`}
-                      placeholder="مثال: #username, .submit-button, button[type='submit']"
-                      value={action.finder}
-                      onChange={(e) => handleActionChange(index, "finder", e.target.value)}
-                      className="font-mono text-sm"
-                      disabled={isRunning}
-                    />
-                  </div>
-                  
-                  {(action.name === "type" || action.name === "select") && (
-                    <div>
-                      <Label htmlFor={`value-${index}`}>القيمة</Label>
-                      <Input
-                        id={`value-${index}`}
-                        placeholder="القيمة المراد إدخالها"
-                        value={action.value}
-                        onChange={(e) => handleActionChange(index, "value", e.target.value)}
-                        disabled={isRunning}
-                      />
-                    </div>
-                  )}
-                  
-                  <div>
-                    <Label htmlFor={`delay-${index}`}>التأخير (مللي ثانية)</Label>
-                    <Input
-                      id={`delay-${index}`}
-                      type="number"
-                      min="0"
-                      step="100"
-                      placeholder="300"
-                      value={action.delay}
-                      onChange={(e) => handleActionChange(index, "delay", e.target.value)}
-                      disabled={isRunning}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* حالة التنفيذ */}
+        <ExecutionStatus
+          isRunning={isRunning}
+          automationProgress={automationProgress}
+          automationStatus={automationStatus}
+          serverError={serverError}
+        />
         
-        {isRunning && (
-          <div className="space-y-2 mt-4">
-            <div className="flex justify-between text-sm">
-              <span>{automationStatus}</span>
-              <span>{automationProgress}%</span>
-            </div>
-            <Progress value={automationProgress} className="h-2" />
-          </div>
-        )}
-        
-        {serverError && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>فشل تنفيذ الأتمتة</AlertTitle>
-            <AlertDescription>{serverError}</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="flex items-center space-x-2 space-x-reverse">
-          <Switch
-            id="use-real-browser"
-            checked={useRealBrowser}
-            onCheckedChange={setUseRealBrowser}
-            disabled={isRunning}
-          />
-          <Label htmlFor="use-real-browser">استخدام متصفح حقيقي للتنفيذ</Label>
-        </div>
+        {/* تبديل المتصفح */}
+        <BrowserToggle
+          useRealBrowser={useRealBrowser}
+          isRunning={isRunning}
+          onToggle={setUseRealBrowser}
+        />
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4">
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleCopyBookmarklet}
-            disabled={isRunning}
-          >
-            <Copy className="h-4 w-4 mr-1" />
-            نسخ Bookmarklet
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleExportJson}
-            disabled={isRunning}
-          >
-            <FileDown className="h-4 w-4 mr-1" />
-            تصدير JSON
-          </Button>
-        </div>
-        <Button
-          onClick={handleRunAutomation}
-          disabled={isRunning}
-          className="bg-purple-600 hover:bg-purple-700"
-        >
-          {isRunning ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              جاري التنفيذ...
-            </>
-          ) : (
-            <>
-              <PlayCircle className="h-4 w-4 mr-1" />
-              تنفيذ الأتمتة
-            </>
-          )}
-        </Button>
+        {/* أدوات التصدير */}
+        <ExportTools
+          isRunning={isRunning}
+          onCopyBookmarklet={handleCopyBookmarklet}
+          onExportJson={handleExportJson}
+        />
+        
+        {/* زر التشغيل */}
+        <RunButton isRunning={isRunning} onRun={handleRunAutomation} />
       </CardFooter>
     </Card>
   );
