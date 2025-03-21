@@ -60,8 +60,6 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
               onAutoExtract={handleAutoExtract}
               hasExtractedText={!!image.extractedText}
             />
-            
-            <AutomationButton image={image} />
           </div>
 
           <LearningNotifications 
@@ -81,6 +79,11 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
               onTempChange={handleTempChange}
             />
           </motion.div>
+
+          {/* إضافة قسم منفصل لزر الأتمتة ليكون أكثر بروزًا */}
+          <div className="mt-6 flex justify-center">
+            <AutomationButton image={image} />
+          </div>
 
           <RawTextViewer text={image.extractedText} />
         </CardContent>

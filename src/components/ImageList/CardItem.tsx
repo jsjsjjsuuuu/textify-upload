@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import DraggableImage from "./DraggableImage";
 import ImageDataForm from "./ImageDataForm";
 import ActionButtons from "./ActionButtons";
+import { AutomationButton } from "@/components/ExtractedData";
 
 interface CardItemProps {
   image: ImageData;
@@ -57,15 +58,20 @@ const CardItem = ({
           </div>
           
           <div className="px-4 pb-4 border-t border-border/30 dark:border-gray-700/30 mt-2">
-            <ActionButtons 
-              imageId={image.id}
-              isSubmitting={isSubmitting}
-              isCompleted={image.status === "completed"}
-              isSubmitted={!!image.submitted}
-              isPhoneNumberValid={isPhoneNumberValid}
-              onDelete={onDelete}
-              onSubmit={onSubmit}
-            />
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="w-full sm:w-auto">
+                <AutomationButton image={image} />
+              </div>
+              <ActionButtons 
+                imageId={image.id}
+                isSubmitting={isSubmitting}
+                isCompleted={image.status === "completed"}
+                isSubmitted={!!image.submitted}
+                isPhoneNumberValid={isPhoneNumberValid}
+                onDelete={onDelete}
+                onSubmit={onSubmit}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

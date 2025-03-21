@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { PlayCircle, Loader2 } from "lucide-react";
+import { PlayCircle, Loader2, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ImageData } from "@/types/ImageData";
 import { AutomationService } from "@/utils/automationService";
@@ -72,21 +72,23 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     <motion.div 
       whileHover={{ scale: 1.05 }} 
       whileTap={{ scale: 0.95 }}
+      className="inline-block" // إضافة هذه الخاصية لضمان العرض الصحيح
     >
       <Button
         onClick={handleAutomation}
         disabled={isLoading || !hasRequiredData}
-        className="bg-purple-600 hover:bg-purple-700 text-white"
+        className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+        size="lg" // تغيير حجم الزر ليكون أكبر وأكثر بروزًا
       >
         {isLoading ? (
           <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            جاري الإعداد...
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>جاري الإعداد...</span>
           </>
         ) : (
           <>
-            <PlayCircle className="w-4 h-4 mr-2" />
-            تعبئة البيانات تلقائيًا
+            <Send className="w-5 h-5" />
+            <span>تعبئة البيانات تلقائيًا</span>
           </>
         )}
       </Button>
