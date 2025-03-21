@@ -10,7 +10,8 @@ import {
   getNextIp, 
   createBaseHeaders,
   isPreviewEnvironment,
-  createTimeoutSignal
+  createTimeoutSignal,
+  resetAutomationServerUrl
 } from "../automationServerUrl";
 import { toast } from "sonner";
 import { ServerStatusResponse } from "./types";
@@ -21,6 +22,7 @@ export class ConnectionManager {
   private static maxRetries = 15;
   private static retryDelay = 10000;
   private static lastError: Error | null = null;
+  private static reconnectAttempts = 0;
   
   /**
    * الحصول على رابط خادم الأتمتة
@@ -40,7 +42,13 @@ export class ConnectionManager {
    * التحقق من حالة خادم الأتمتة
    */
   static async checkServerStatus(showToasts = true): Promise<ServerStatusResponse> {
-    const serverUrl = getAutomationServerUrl();
+    const serverUrl = this.getServerUrl();
+    
+    // إذا لم يكن هناك رابط محدد، قم بإعادة تعيين الرابط إلى القيمة الافتراضية
+    if (!serverUrl) {
+      console.warn("لم يتم العثور على رابط الخادم، جاري إعادة تعيينه إلى القيمة الافتراضية");
+      resetAutomationServerUrl();
+    }
     
     if (this.isCheckingStatus) {
       return Promise.reject(new Error("جاري بالفعل التحقق من حالة الخادم"));
@@ -81,44 +89,74 @@ export class ConnectionManager {
       const currentIp = getNextIp();
       console.log("استخدام عنوان IP:", currentIp);
       
-      // إنشاء طلب مع رؤوس مخصصة
-      const timeoutSignal = createTimeoutSignal(15000);
+      // إنشاء طلب مع رؤوس مخصصة وزيادة مهلة الانتظار لتجنب أخطاء المهلة
+      const timeoutSignal = createTimeoutSignal(30000); // زيادة المهلة إلى 30 ثانية
       
       const headers = createBaseHeaders(currentIp);
       console.log("الرؤوس المستخدمة:", headers);
       
-      const response = await fetch(`${serverUrl}/api/status`, {
-        method: 'GET',
-        headers,
-        mode: 'cors',
-        cache: 'no-cache',
-        credentials: 'omit',
-        signal: timeoutSignal
-      });
+      // إضافة محاولات إعادة المحاولة المدمجة
+      let internalRetries = 0;
+      const maxInternalRetries = 3;
       
-      if (!response.ok) {
-        const errorMessage = `فشل الاتصال: ${response.status} ${response.statusText}`;
-        updateConnectionStatus(false);
-        throw new Error(errorMessage);
+      while (internalRetries < maxInternalRetries) {
+        try {
+          const response = await fetch(`${serverUrl}/api/status`, {
+            method: 'GET',
+            headers,
+            mode: 'cors',
+            cache: 'no-cache',
+            credentials: 'omit',
+            signal: timeoutSignal
+          });
+          
+          if (!response.ok) {
+            console.error(`فشل الاتصال بالمحاولة ${internalRetries + 1}/${maxInternalRetries}: ${response.status}`);
+            internalRetries++;
+            if (internalRetries < maxInternalRetries) {
+              // انتظار قبل إعادة المحاولة
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              continue;
+            }
+            
+            const errorMessage = `فشل الاتصال: ${response.status} ${response.statusText}`;
+            updateConnectionStatus(false);
+            throw new Error(errorMessage);
+          }
+          
+          const result = await response.json();
+          console.log("نتيجة التحقق من حالة الخادم:", result);
+          
+          // تحديث حالة الاتصال
+          updateConnectionStatus(true);
+          this.lastError = null;
+          this.reconnectAttempts = 0;
+          
+          // إظهار رسالة نجاح (فقط إذا كان الاتصال غير ناجح في السابق)
+          const connectionStatus = getLastConnectionStatus();
+          if (showToasts && (!connectionStatus.isConnected)) {
+            toast.success("تم الاتصال بخادم الأتمتة بنجاح");
+          }
+          
+          // تأكد من إيقاف إعادة المحاولة إذا كانت نشطة
+          this.stopReconnect();
+          
+          return result;
+        } catch (error) {
+          if (internalRetries < maxInternalRetries - 1) {
+            console.warn(`إعادة محاولة الاتصال ${internalRetries + 1}/${maxInternalRetries}...`);
+            internalRetries++;
+            // انتظار قبل إعادة المحاولة
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } else {
+            // إذا فشلت جميع المحاولات، رمي الخطأ
+            throw error;
+          }
+        }
       }
       
-      const result = await response.json();
-      console.log("نتيجة التحقق من حالة الخادم:", result);
-      
-      // تحديث حالة الاتصال
-      updateConnectionStatus(true);
-      this.lastError = null;
-      
-      // إظهار رسالة نجاح (فقط إذا كان الاتصال غير ناجح في السابق)
-      const connectionStatus = getLastConnectionStatus();
-      if (showToasts && (!connectionStatus.isConnected)) {
-        toast.success("تم الاتصال بخادم الأتمتة بنجاح");
-      }
-      
-      // تأكد من إيقاف إعادة المحاولة إذا كانت نشطة
-      this.stopReconnect();
-      
-      return result;
+      // هذا لن يتم الوصول إليه بسبب رمي الخطأ في الحلقة، ولكن TypeScript يتطلبه
+      throw new Error("فشلت جميع محاولات الاتصال");
     } catch (error) {
       console.error("خطأ في التحقق من حالة الخادم:", error);
       
@@ -142,8 +180,16 @@ export class ConnectionManager {
       updateConnectionStatus(false);
       this.lastError = error instanceof Error ? error : new Error(String(error));
       
+      // رسالة خطأ أفضل للمستخدم
       if (showToasts) {
-        toast.error(`تعذر الاتصال بالخادم: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+        if (error instanceof Error && error.message.includes("Failed to fetch")) {
+          toast.error("تعذر الاتصال بخادم Render", {
+            description: "يبدو أن خادم Render غير متاح حالياً أو قد يكون في وضع السكون. يرجى الانتظار قليلاً وسيتم إعادة المحاولة تلقائياً.",
+            duration: 5000,
+          });
+        } else {
+          toast.error(`تعذر الاتصال بالخادم: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+        }
       }
       
       throw error;
@@ -159,6 +205,24 @@ export class ConnectionManager {
     // إيقاف أي محاولات سابقة
     this.stopReconnect();
     
+    // زيادة عداد المحاولات
+    this.reconnectAttempts++;
+    
+    // تحديد فاصل زمني متغير بناءً على عدد المحاولات
+    let currentDelay = this.retryDelay;
+    
+    // إذا زادت المحاولات عن 3، زيادة الفاصل الزمني
+    if (this.reconnectAttempts > 3) {
+      currentDelay = this.retryDelay * 2;
+    }
+    
+    // إذا زادت المحاولات عن 10، زيادة الفاصل الزمني أكثر
+    if (this.reconnectAttempts > 10) {
+      currentDelay = this.retryDelay * 4;
+    }
+    
+    console.log(`بدء محاولة إعادة الاتصال ${this.reconnectAttempts} بعد ${currentDelay/1000} ثوانٍ`);
+    
     // بدء فاصل زمني جديد
     this.reconnectInterval = window.setInterval(async () => {
       try {
@@ -167,7 +231,7 @@ export class ConnectionManager {
         // استخدام IP مختلف في كل محاولة إعادة اتصال
         const rotatingIpIndex = Math.floor(Math.random() * RENDER_ALLOWED_IPS.length);
         const currentIp = RENDER_ALLOWED_IPS[rotatingIpIndex];
-        console.log(`استخدام عنوان IP: ${currentIp} للمحاولة`);
+        console.log(`استخدام عنوان IP: ${currentIp} للمحاولة ${this.reconnectAttempts}`);
         
         const result = await this.checkServerStatus(false);
         
@@ -175,16 +239,58 @@ export class ConnectionManager {
           callback(true);
         }
         
+        // إظهار رسالة نجاح إعادة الاتصال
+        toast.success("تم إعادة الاتصال بخادم Render بنجاح", {
+          description: "يمكنك الآن استخدام ميزات الأتمتة",
+          duration: 3000,
+        });
+        
         console.log("تم إعادة الاتصال بنجاح:", result);
+        
+        // إيقاف إعادة المحاولة بعد النجاح
+        this.stopReconnect();
       } catch (error) {
         if (callback) {
           callback(false);
         }
-        console.error("فشلت محاولة إعادة الاتصال:", error);
+        console.error(`فشلت محاولة إعادة الاتصال ${this.reconnectAttempts}:`, error);
+        
+        // زيادة عداد المحاولات
+        this.reconnectAttempts++;
+        
+        // إذا تجاوزت المحاولات الحد الأقصى، قم بتغيير الفاصل الزمني
+        if (this.reconnectAttempts > 10 && this.reconnectInterval !== null) {
+          clearInterval(this.reconnectInterval);
+          
+          // إعادة تعيين الفاصل الزمني لمحاولات أقل تكراراً
+          const longerDelay = 60000; // دقيقة واحدة
+          console.log(`تغيير فاصل إعادة المحاولة إلى ${longerDelay/1000} ثانية بعد ${this.reconnectAttempts} محاولة`);
+          
+          this.reconnectInterval = window.setInterval(async () => {
+            try {
+              const result = await this.checkServerStatus(false);
+              
+              if (callback) {
+                callback(true);
+              }
+              
+              toast.success("تم إعادة الاتصال بخادم Render بنجاح", {
+                duration: 3000,
+              });
+              
+              this.stopReconnect();
+            } catch (error) {
+              if (callback) {
+                callback(false);
+              }
+              console.error(`استمرار فشل إعادة الاتصال (محاولة طويلة المدى):`, error);
+            }
+          }, longerDelay);
+        }
       }
-    }, this.retryDelay);
+    }, currentDelay);
     
-    console.log(`بدء محاولات إعادة الاتصال التلقائية كل ${this.retryDelay / 1000} ثوانٍ`);
+    console.log(`بدء محاولات إعادة الاتصال التلقائية كل ${currentDelay / 1000} ثوانٍ`);
   }
   
   /**
@@ -195,6 +301,7 @@ export class ConnectionManager {
       clearInterval(this.reconnectInterval);
       this.reconnectInterval = null;
       this.retryDelay = 10000; // إعادة التعيين إلى القيمة الافتراضية
+      console.log("تم إيقاف محاولات إعادة الاتصال التلقائية");
     }
   }
   
@@ -211,6 +318,14 @@ export class ConnectionManager {
   static resetConnectionState(): void {
     this.stopReconnect();
     this.lastError = null;
+    this.reconnectAttempts = 0;
     updateConnectionStatus(false);
+  }
+  
+  /**
+   * الحصول على عدد محاولات إعادة الاتصال
+   */
+  static getReconnectAttempts(): number {
+    return this.reconnectAttempts;
   }
 }

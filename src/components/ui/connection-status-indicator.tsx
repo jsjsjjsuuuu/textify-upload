@@ -1,11 +1,14 @@
 
 import React, { useState, useEffect } from "react";
-import { Wifi, WifiOff, RefreshCw } from "lucide-react";
+import { Wifi, WifiOff, RefreshCw, Clock, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConnectionManager } from "@/utils/automation/connectionManager";
-import { getLastConnectionStatus, isPreviewEnvironment } from "@/utils/automationServerUrl";
+import { getLastConnectionStatus, isPreviewEnvironment, resetAutomationServerUrl } from "@/utils/automationServerUrl";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ServerStatusResponse } from "@/utils/automation/types";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface ConnectionStatusIndicatorProps {
   className?: string;
@@ -21,6 +24,8 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [serverInfo, setServerInfo] = useState<ServerStatusResponse | null>(null);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const navigate = useNavigate();
   
   const checkConnectionStatus = async () => {
     setIsChecking(true);
@@ -33,6 +38,10 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
         return;
       }
       
+      // عدد محاولات إعادة الاتصال الحالية
+      const attempts = ConnectionManager.getReconnectAttempts();
+      setReconnectAttempts(attempts);
+      
       // التحقق من الاتصال الفعلي
       const status = await ConnectionManager.checkServerStatus(false);
       setServerInfo(status);
@@ -42,6 +51,20 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       console.error("فشل التحقق من حالة الاتصال:", error);
       setIsConnected(false);
       onStatusChange?.(false);
+      
+      // إذا كانت هناك محاولات متكررة فاشلة، فتح مربع حوار للمساعدة
+      if (reconnectAttempts > 5) {
+        toast.error("استمرار مشكلة اتصال خادم Render", {
+          description: "هل ترغب في الانتقال إلى صفحة إعدادات الخادم لحل المشكلة؟",
+          duration: 10000,
+          action: {
+            label: "إعدادات الخادم",
+            onClick: () => {
+              navigate("/server-settings");
+            }
+          }
+        });
+      }
     } finally {
       setIsChecking(false);
     }
@@ -52,6 +75,13 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
     // التحقق أولاً من الحالة المخزنة
     const savedStatus = getLastConnectionStatus();
     setIsConnected(savedStatus.isConnected);
+    
+    // التأكد من وجود عنوان URL للخادم
+    const serverUrl = ConnectionManager.getServerUrl();
+    if (!serverUrl) {
+      console.warn("لم يتم العثور على عنوان URL للخادم، جاري إعادة تعيينه");
+      resetAutomationServerUrl();
+    }
     
     // ثم التحقق الفعلي من الاتصال
     checkConnectionStatus();
@@ -66,7 +96,15 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   
   const handleManualCheck = (e: React.MouseEvent) => {
     e.stopPropagation();
+    toast.info("جاري التحقق من اتصال خادم Render...", {
+      duration: 3000,
+    });
     checkConnectionStatus();
+  };
+  
+  const handleGoToSettings = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate("/server-settings");
   };
   
   const getStatusText = () => {
@@ -121,7 +159,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
           </div>
         </TooltipTrigger>
         <TooltipContent className="p-4 max-w-80 bg-white/95 backdrop-blur-sm">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="font-medium">حالة اتصال خادم الأتمتة</div>
             
             {isPreviewEnvironment() ? (
@@ -140,6 +178,22 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
                   </span>
                 </div>
                 
+                {!isConnected && (
+                  <div className="text-xs bg-red-50 text-red-800 p-2 rounded flex items-start gap-2 mt-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">تعذر الاتصال بخادم Render</p>
+                      <p className="mt-1">قد يكون الخادم في وضع السكون أو غير متاح حالياً. جاري إعادة المحاولة تلقائياً.</p>
+                      {reconnectAttempts > 0 && (
+                        <p className="mt-1 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>محاولات إعادة الاتصال: {reconnectAttempts}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 {serverInfo && (
                   <div className="text-xs text-muted-foreground mt-2 space-y-1">
                     <div>الوقت: {new Date(serverInfo.time).toLocaleTimeString()}</div>
@@ -147,12 +201,18 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
                     <div>البيئة: {serverInfo.environment}</div>
                   </div>
                 )}
+                
+                <div className="flex gap-2 mt-2">
+                  <Button variant="secondary" size="sm" onClick={handleManualCheck} className="w-full text-xs">
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    إعادة الاتصال
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleGoToSettings} className="w-full text-xs">
+                    الإعدادات
+                  </Button>
+                </div>
               </>
             )}
-            
-            <div className="text-xs text-muted-foreground pt-2 border-t border-gray-100">
-              انقر للتحقق مرة أخرى
-            </div>
           </div>
         </TooltipContent>
       </Tooltip>
