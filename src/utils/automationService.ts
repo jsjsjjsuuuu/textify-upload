@@ -5,7 +5,7 @@
 import { ConnectionManager } from './automation/connectionManager';
 import { AutomationRunner } from './automation/automationRunner';
 import { AutomationConfig } from './automation/types';
-import { isPreviewEnvironment, createFetchOptions, fetchWithRetry } from './automationServerUrl';
+import { isPreviewEnvironment, createFetchOptions, fetchWithRetry, getAllowedOrigins } from './automationServerUrl';
 import { toast } from "sonner";
 
 export class AutomationService {
@@ -42,13 +42,19 @@ export class AutomationService {
         '/api/ping'
       ];
       
+      // الحصول على أصل (origin) النافذة الحالية
+      const windowOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+      console.log(`استخدام أصل النافذة الحالية: ${windowOrigin}`);
+      
       // محاولة الاتصال عبر جميع النقاط النهائية المتاحة
       for (const endpoint of endpoints) {
         try {
           const options = createFetchOptions('GET', null, {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-cache, no-store',
-            'Pragma': 'no-cache'
+            'Pragma': 'no-cache',
+            'Origin': windowOrigin,
+            'Referer': typeof window !== 'undefined' ? window.location.href : ''
           });
           
           console.log(`محاولة الاتصال عبر ${endpoint}...`);

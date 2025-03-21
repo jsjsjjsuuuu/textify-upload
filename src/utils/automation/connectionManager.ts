@@ -94,7 +94,15 @@ export class ConnectionManager {
       // إنشاء طلب مع رؤوس مخصصة وزيادة مهلة الانتظار لتجنب أخطاء المهلة
       const timeoutSignal = createTimeoutSignal(30000); // زيادة المهلة إلى 30 ثانية
       
+      // الحصول على أصل (origin) النافذة الحالية
+      const windowOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+      console.log(`استخدام أصل النافذة الحالية: ${windowOrigin}`);
+      
       const headers = createBaseHeaders(currentIp);
+      
+      // تحديث الرؤوس بأصل النافذة الحالية
+      headers['Origin'] = windowOrigin;
+      headers['Referer'] = typeof window !== 'undefined' ? window.location.href : '';
       
       // إضافة رؤوس إضافية قد تساعد في تجاوز مشكلات CORS
       headers['Cache-Control'] = 'no-cache, no-store';

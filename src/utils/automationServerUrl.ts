@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 
 export const SERVER_URL_KEY = "automationServerUrl";
@@ -76,6 +77,31 @@ export const isPreviewEnvironment = () => {
 };
 
 /**
+ * الحصول على النطاقات المسموح بها للاتصال بالخادم
+ */
+export const getAllowedOrigins = () => {
+  const defaultAllowedOrigins = [
+    'https://d6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovableproject.com',
+    'https://d6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovable.app',
+    'https://textify-upload.onrender.com',
+    'http://localhost:8080',
+    'http://localhost:3000',
+    'http://localhost:5173'
+  ];
+  
+  // استخدام القيمة من متغيرات البيئة إذا كانت متاحة
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ALLOWED_ORIGINS) {
+    try {
+      return JSON.parse(import.meta.env.VITE_ALLOWED_ORIGINS);
+    } catch (e) {
+      console.warn('Failed to parse VITE_ALLOWED_ORIGINS:', e);
+    }
+  }
+  
+  return defaultAllowedOrigins;
+};
+
+/**
  * فحص الاتصال بخادم التشغيل الآلي
  */
 export const checkConnection = async () => {
@@ -92,6 +118,10 @@ export const checkConnection = async () => {
     console.log("محاولة اتصال سريع:", pingUrl);
     
     try {
+      // الحصول على أصل (origin) النافذة الحالية
+      const windowOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+      console.log(`استخدام أصل النافذة الحالية: ${windowOrigin}`);
+      
       const pingResponse = await fetch(pingUrl, {
         method: "GET",
         headers: {
@@ -102,8 +132,8 @@ export const checkConnection = async () => {
           "X-Request-Time": Date.now().toString(),
           "X-Forwarded-For": getNextIp(),
           "X-Client-ID": "web-client",
-          "Origin": window.location.origin, // استخدام أصل النافذة الحالية
-          "Referer": window.location.href // استخدام مرجع النافذة الحالية
+          "Origin": windowOrigin,
+          "Referer": typeof window !== 'undefined' ? window.location.href : ''
         },
         mode: 'cors',
         credentials: 'omit',
@@ -123,6 +153,9 @@ export const checkConnection = async () => {
     console.log("محاولة الاتصال عبر /api/status...");
     const healthUrl = `${serverUrl}/api/status`;
     
+    // الحصول على أصل (origin) النافذة الحالية
+    const windowOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    
     const response = await fetchWithRetry(healthUrl, {
       method: "GET",
       headers: {
@@ -133,8 +166,8 @@ export const checkConnection = async () => {
         "Cache-Control": "no-cache, no-store",
         "Pragma": "no-cache",
         "X-Request-Time": Date.now().toString(),
-        "Origin": window.location.origin,
-        "Referer": window.location.href
+        "Origin": windowOrigin,
+        "Referer": typeof window !== 'undefined' ? window.location.href : ''
       },
       mode: 'cors',
       credentials: 'omit',
