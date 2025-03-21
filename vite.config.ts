@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
   ];
   
   // دالة محسنة للتحقق من النطاق
-  const isAllowedOrigin = (origin) => {
+  const isAllowedOrigin = (origin: string | undefined): boolean => {
     if (!origin) return false;
     
     console.log(`فحص صحة الأصل في vite.config.ts: ${origin}`);
