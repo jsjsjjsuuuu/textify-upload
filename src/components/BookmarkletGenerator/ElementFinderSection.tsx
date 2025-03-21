@@ -127,7 +127,7 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
       console.log("محدد العناصر: بدء التشغيل");
       const actions = ${JSON.stringify(actions)};
       const executeActions = async (actions) => {
-        for (let i = 0; i < actions.length; i++) {
+        for (let i = 0 < actions.length; i++) {
           const action = actions[i];
           console.log(\`تنفيذ الإجراء \${i+1}: \${action.name}\`);
           
@@ -345,11 +345,11 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
         )}
         
         {serverError && (
-          <AlertComponent variant="destructive">
+          <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>فشل تنفيذ الأتمتة</AlertTitle>
             <AlertDescription>{serverError}</AlertDescription>
-          </AlertComponent>
+          </Alert>
         )}
         
         <div className="flex items-center space-x-2 space-x-reverse">
