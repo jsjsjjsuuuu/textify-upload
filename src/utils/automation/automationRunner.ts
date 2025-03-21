@@ -1,4 +1,3 @@
-
 /**
  * تشغيل سيناريوهات الأتمتة
  */
@@ -29,11 +28,16 @@ export class AutomationRunner {
         // محاكاة تأخير لتجربة أكثر واقعية
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // إرجاع استجابة مزيفة للمحاكاة
+        // إرجاع استجابة مزيفة للمحاكاة مع إضافة خاصية details
         return {
           success: true,
           message: "تمت محاكاة تنفيذ الأتمتة بنجاح (بيئة المعاينة)",
-          automationType: 'client'
+          automationType: 'client',
+          details: [
+            `عدد الإجراءات: ${config.actions.length}`,
+            `الرابط: ${config.projectUrl}`,
+            `استخدام بيانات المتصفح: ${config.useBrowserData ? 'نعم' : 'لا'}`
+          ]
         };
       }
       

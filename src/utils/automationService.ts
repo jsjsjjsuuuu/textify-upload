@@ -1,4 +1,3 @@
-
 /**
  * خدمة للتفاعل مع خادم الأتمتة
  */
@@ -178,11 +177,16 @@ export class AutomationService {
         // محاكاة تأخير للتجربة الواقعية
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // إرجاع استجابة مزيفة
+        // إرجاع استجابة مزيفة مع إضافة خاصية details
         return {
           success: true,
           message: "تمت محاكاة تنفيذ الأتمتة بنجاح (بيئة المعاينة)",
-          automationType: 'client'
+          automationType: 'client',
+          details: [
+            `عدد الإجراءات: ${config.actions.length}`,
+            `الرابط: ${config.projectUrl}`,
+            `استخدام بيانات المتصفح: ${config.useBrowserData ? 'نعم' : 'لا'}`
+          ]
         };
       }
       
@@ -347,4 +351,3 @@ export class AutomationService {
     }
   }
 }
-
