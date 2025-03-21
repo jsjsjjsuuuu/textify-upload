@@ -106,7 +106,7 @@ export const useGeminiProcessing = () => {
           toast({
             title: "تنبيه",
             description: "لم يتمكن Gemini من استخراج بيانات من الصورة",
-            variant: "warning"
+            variant: "default"  // تم تغيير "warning" إلى "default" لتصحيح الخطأ
           });
           
           // إعادة الصورة مع حالة انتظار
