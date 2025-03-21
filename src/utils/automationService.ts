@@ -123,36 +123,85 @@ export class AutomationService {
         // محاولة استخراج رسالة الخطأ من الاستجابة
         let errorMessage = "فشل الاتصال بخادم الأتمتة";
         try {
-          const errorData = await response.json();
+          // نسخ الاستجابة لتفادي مشكلة "body stream already read"
+          const responseClone = response.clone();
+          const errorData = await responseClone.json();
           errorMessage = errorData.message || errorMessage;
         } catch (e) {
           // إذا تعذر تحليل JSON، استخدام نص الخطأ
-          errorMessage = await response.text() || errorMessage;
+          try {
+            // نسخ الاستجابة مرة أخرى لتجنب المشكلة
+            const responseClone = response.clone();
+            errorMessage = await responseClone.text() || errorMessage;
+          } catch (textError) {
+            console.error("تعذر قراءة نص الاستجابة:", textError);
+          }
         }
         
         throw new Error(`خطأ في طلب الأتمتة (${response.status}): ${errorMessage}`);
       }
       
-      // تحليل الاستجابة
-      const data = await response.json();
-      console.log("استجابة الأتمتة:", data);
+      // نسخ الاستجابة قبل قراءتها لتفادي مشكلة "body stream already read"
+      const responseClone = response.clone();
       
-      // إعادة استجابة الخادم
-      return data;
+      try {
+        // تحليل الاستجابة
+        const data = await responseClone.json();
+        console.log("استجابة الأتمتة:", data);
+        
+        // إعادة استجابة الخادم
+        return data;
+      } catch (jsonError) {
+        console.error("خطأ في تحليل استجابة JSON:", jsonError);
+        
+        // محاولة قراءة الاستجابة كنص
+        try {
+          const textResponse = await response.text();
+          console.log("استجابة نصية:", textResponse);
+          
+          return {
+            success: false,
+            message: `تعذر تحليل استجابة الخادم: ${textResponse.substring(0, 100)}...`,
+            automationType: 'server',
+            error: {
+              message: "استجابة غير صالحة من الخادم",
+              type: 'ResponseFormatError'
+            }
+          };
+        } catch (textError) {
+          console.error("تعذر قراءة نص الاستجابة:", textError);
+          throw new Error("تعذر قراءة استجابة الخادم");
+        }
+      }
     } catch (error) {
       console.error("خطأ أثناء تنفيذ الأتمتة:", error);
       
       // تحسين رسائل الخطأ الشائعة للمستخدم
       let errorMessage = error instanceof Error ? error.message : "خطأ غير معروف";
+      let errorType = 'ExecutionError';
       
       // التعامل مع أخطاء الاتصال
       if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
         errorMessage = "فشل الاتصال بخادم الأتمتة. تأكد من اتصالك بالإنترنت وأن الخادم متاح.";
+        errorType = 'NetworkError';
       }
       
       // التعامل مع أخطاء انتهاء المهلة
       if (errorMessage.includes("timeout") || errorMessage.includes("timed out")) {
         errorMessage = "انتهت مهلة الاتصال بخادم الأتمتة. قد يكون الخادم مشغولاً، حاول مرة أخرى لاحقاً.";
+        errorType = 'TimeoutError';
+      }
+      
+      // التعامل مع أخطاء CORS
+      if (errorMessage.includes("CORS") || errorMessage.includes("cross-origin")) {
+        errorMessage = "خطأ في سياسة مشاركة الموارد عبر الأصول (CORS). تأكد من إعدادات الخادم.";
+        errorType = 'CORSError';
+      }
+      
+      // التعامل مع أخطاء "body stream already read"
+      if (errorMessage.includes("body stream already read")) {
+        errorMessage = "حدث خطأ أثناء قراءة استجابة الخادم. حاول مرة أخرى.";
+        errorType = 'StreamReadError';
       }
       
       // إرجاع استجابة خطأ منسقة
@@ -162,7 +211,8 @@ export class AutomationService {
         automationType: 'server',
         error: {
           message: errorMessage,
-          type: 'ExecutionError'
+          type: errorType,
+          stack: error instanceof Error ? error.stack : undefined
         }
       };
     }

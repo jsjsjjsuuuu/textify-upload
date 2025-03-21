@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ActionResult, AutomationResponse } from '@/utils/automation/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,6 +64,17 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
           </ul>
         </div>
       );
+    } else if (error.type === 'StreamReadError') {
+      detailedInfo = (
+        <div className="mt-2 text-sm">
+          <p className="font-semibold">حلول مقترحة لمشاكل قراءة الاستجابة:</p>
+          <ul className="list-disc list-inside mt-1 space-y-1">
+            <li>حاول تنفيذ الأتمتة مرة أخرى.</li>
+            <li>قد يكون الخادم مشغولاً بطلبات أخرى.</li>
+            <li>تأكد من أن خادم الأتمتة يعمل بشكل صحيح.</li>
+          </ul>
+        </div>
+      );
     }
     
     return detailedInfo;
@@ -116,6 +128,25 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
                     </details>
                   </div>
                 )}
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {/* إضافة إرشادات خاصة لأخطاء "body stream already read" */}
+          {message && message.includes("body stream already read") && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>خطأ في قراءة استجابة الخادم</AlertTitle>
+              <AlertDescription className="mt-2">
+                <p>حدث خطأ أثناء محاولة قراءة استجابة الخادم لأكثر من مرة.</p>
+                <div className="mt-2 text-sm">
+                  <p className="font-semibold">الحلول المقترحة:</p>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>حاول تنفيذ الأتمتة مرة أخرى.</li>
+                    <li>إذا استمرت المشكلة، أعد تحميل الصفحة وحاول مرة أخرى.</li>
+                    <li>تأكد من عدم الضغط على زر التنفيذ عدة مرات متتالية.</li>
+                  </ul>
+                </div>
               </AlertDescription>
             </Alert>
           )}

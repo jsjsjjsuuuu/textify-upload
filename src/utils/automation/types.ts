@@ -60,6 +60,16 @@ export interface AutomationResponse {
   error?: {
     message: string;
     stack?: string;
-    type: string;
+    type: string; // تحديد نوع الخطأ لتوفير معلومات محددة للمستخدم
   };
+}
+
+// إضافة أنواع الأخطاء الشائعة للتعامل معها بشكل أفضل
+export enum ErrorType {
+  NetworkError = 'NetworkError',
+  TimeoutError = 'TimeoutError',
+  CORSError = 'CORSError',
+  StreamReadError = 'StreamReadError',
+  ExecutionError = 'ExecutionError',
+  ResponseFormatError = 'ResponseFormatError'
 }
