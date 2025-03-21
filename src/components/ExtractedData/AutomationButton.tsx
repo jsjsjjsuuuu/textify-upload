@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { PlayCircle, Loader2, Send, AlertTriangle, Server } from "lucide-react";
+import { PlayCircle, Loader2, Send, AlertTriangle, Server, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ImageData } from "@/types/ImageData";
 import { AutomationService } from "@/utils/automationService";
@@ -55,10 +55,8 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
   
   const handleAutomation = async () => {
     if (!hasRequiredData) {
-      toast({
-        title: "بيانات غير مكتملة",
-        description: "يرجى التأكد من استخراج جميع البيانات المطلوبة (الكود، اسم المرسل، رقم الهاتف) قبل بدء الأتمتة",
-        variant: "destructive",
+      toast.error("بيانات غير مكتملة", {
+        description: "يرجى التأكد من استخراج جميع البيانات المطلوبة (الكود، اسم المرسل، رقم الهاتف) قبل بدء الأتمتة"
       });
       return;
     }
@@ -107,16 +105,13 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
       // الانتقال إلى صفحة الأتمتة
       navigate("/server-automation");
       
-      toast({
-        title: "تم إرسال البيانات بنجاح",
-        description: "تم إرسال البيانات المستخرجة إلى صفحة الأتمتة، يمكنك الآن تكوين سيناريو الأتمتة",
+      toast.success("تم إرسال البيانات بنجاح", {
+        description: "تم إرسال البيانات المستخرجة إلى صفحة الأتمتة، يمكنك الآن تكوين سيناريو الأتمتة"
       });
     } catch (error) {
       console.error("خطأ في إعداد الأتمتة:", error);
-      toast({
-        title: "خطأ في الإعداد",
-        description: "حدث خطأ أثناء إعداد الأتمتة. يرجى المحاولة مرة أخرى",
-        variant: "destructive",
+      toast.error("خطأ في الإعداد", {
+        description: "حدث خطأ أثناء إعداد الأتمتة. يرجى المحاولة مرة أخرى"
       });
     } finally {
       setIsLoading(false);
