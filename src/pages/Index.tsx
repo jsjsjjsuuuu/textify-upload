@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -67,13 +68,25 @@ const Index: React.FC = () => {
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {cards.map((card, index) => (
-            <ImageCard
-              key={index}
-              title={card.title}
-              description={card.description}
-              image={card.image}
-              href={card.href}
-            />
+            <div key={index} className="h-full">
+              <Link to={card.href} className="block h-full">
+                <Card className="h-full p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-transparent border-none backdrop-blur-sm">
+                  <div className="flex flex-col gap-4 h-full">
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden bg-transparent">
+                      <img 
+                        src={card.image} 
+                        alt={card.title} 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold mb-2">{card.title}</h3>
+                      <p className="text-sm text-muted-foreground">{card.description}</p>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            </div>
           ))}
         </div>
       </div>
