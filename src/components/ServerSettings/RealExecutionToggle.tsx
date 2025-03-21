@@ -24,21 +24,30 @@ const RealExecutionToggle: React.FC = () => {
   const [useBrowserData, setUseBrowserDataState] = React.useState(() => shouldUseBrowserData());
   
   React.useEffect(() => {
-    // ضمان أن وضع التنفيذ الفعلي دائمًا مفعل
+    // دائمًا تفعيل وضع التنفيذ الفعلي
     AutomationService.toggleRealExecution(true);
+    setIsEnabled(true);
     
     // تحديث عنوان URL الحالي عند تغييره
     setCurrentServerUrl(getAutomationServerUrl());
     
     // التحقق من الاتصال تلقائياً عند تحميل المكون
     checkServerConnection();
+    
+    // وضع فاصل زمني للتحقق من الاتصال كل 5 دقائق
+    const intervalId = setInterval(() => {
+      checkServerConnection(false);
+    }, 5 * 60 * 1000);
+    
+    // تنظيف الفاصل الزمني عند إزالة المكون
+    return () => clearInterval(intervalId);
   }, []);
   
-  // تعطيل تبديل وضع التنفيذ - دائمًا مفعل
+  // تعطيل تبديل وضع التنفيذ الفعلي - دائمًا مفعل
   const handleToggle = (checked: boolean) => {
     // إذا حاول المستخدم تعطيل وضع التنفيذ الفعلي، نظهر له رسالة
     if (!checked) {
-      toast.info("لا يمكن تعطيل وضع التنفيذ الفعلي");
+      toast.info("لا يمكن تعطيل وضع التنفيذ الفعلي، سيبقى مفعلاً لضمان عمل الأتمتة");
       return;
     }
     
@@ -65,11 +74,13 @@ const RealExecutionToggle: React.FC = () => {
     }
   };
   
-  const checkServerConnection = async () => {
+  const checkServerConnection = async (showNotifications = true) => {
     setIsConnecting(true);
     setConnectionError(null);
-    setConnectionSuccess(false);
-    toast.info("جاري التحقق من الاتصال بالخادم الحقيقي...");
+    
+    if (showNotifications) {
+      toast.info("جاري التحقق من الاتصال بالخادم الحقيقي...");
+    }
     
     try {
       const result = await AutomationService.forceReconnect();
@@ -77,10 +88,15 @@ const RealExecutionToggle: React.FC = () => {
       
       if (result) {
         setConnectionSuccess(true);
-        toast.success("تم الاتصال بخادم الأتمتة بنجاح! يمكنك الآن تنفيذ الأتمتة بشكل فعلي.");
+        if (showNotifications) {
+          toast.success("تم الاتصال بخادم الأتمتة بنجاح! يمكنك الآن تنفيذ الأتمتة بشكل فعلي.");
+        }
       } else {
+        setConnectionSuccess(false);
         setConnectionError("تعذر الاتصال بخادم الأتمتة. تأكد من تشغيل الخادم وإمكانية الوصول إليه.");
-        toast.error("تعذر الاتصال بخادم الأتمتة. تأكد من تشغيل الخادم وإمكانية الوصول إليه.");
+        if (showNotifications) {
+          toast.error("تعذر الاتصال بخادم الأتمتة. تأكد من تشغيل الخادم وإمكانية الوصول إليه.");
+        }
       }
     } catch (error) {
       console.error("خطأ في الاتصال بالخادم:", error);
@@ -88,7 +104,9 @@ const RealExecutionToggle: React.FC = () => {
       setConnectionError(errorMessage);
       setConnectionTried(true);
       setConnectionSuccess(false);
-      toast.error(`تعذر الاتصال بخادم الأتمتة: ${errorMessage}`);
+      if (showNotifications) {
+        toast.error(`تعذر الاتصال بخادم الأتمتة: ${errorMessage}`);
+      }
     } finally {
       setIsConnecting(false);
     }
@@ -116,7 +134,7 @@ const RealExecutionToggle: React.FC = () => {
           checked={isEnabled}
           onCheckedChange={handleToggle}
           aria-label="تفعيل وضع التنفيذ الفعلي"
-          disabled={true} // تعطيل التبديل
+          disabled={true} // تعطيل التبديل بشكل دائم
         />
       </div>
       
@@ -219,7 +237,7 @@ const RealExecutionToggle: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={checkServerConnection}
+              onClick={() => checkServerConnection(true)}
               disabled={isConnecting}
               className={connectionSuccess ? "bg-green-50 border-green-200 hover:bg-green-100" : "bg-white hover:bg-amber-50"}
             >
@@ -245,4 +263,3 @@ const RealExecutionToggle: React.FC = () => {
 };
 
 export default RealExecutionToggle;
-

@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 
 export const SERVER_URL_KEY = "automationServerUrl";
@@ -86,7 +87,13 @@ export const getAllowedOrigins = () => {
     'https://textify-upload.onrender.com',
     'http://localhost:8080',
     'http://localhost:3000',
-    'http://localhost:5173'
+    'http://localhost:5173',
+    // إضافة نطاقات أخرى قد تكون مطلوبة
+    'https://lovable.app',
+    'https://lovableproject.com',
+    // السماح بالاتصال من أي نطاق فرعي
+    '*.lovable.app',
+    '*.lovableproject.com'
   ];
   
   // استخدام القيمة من متغيرات البيئة إذا كانت متاحة
@@ -118,6 +125,11 @@ export const isAllowedOrigin = (origin: string): boolean => {
     
     // تحويل عناوين URL إلى أسماء نطاقات فقط
     const allowedDomains = allowedOrigins.map(url => {
+      if (url.startsWith('*.')) {
+        // معالجة خاصة للنطاقات الفرعية المتعددة
+        return url.substring(2); // إزالة *. من البداية
+      }
+      
       try {
         return new URL(url).hostname;
       } catch {
@@ -142,12 +154,18 @@ export const isAllowedOrigin = (origin: string): boolean => {
         return hostname === domain;
       }
       // نتحقق بشكل صحيح من النطاقات الفرعية
-      return hostname.endsWith(`.${domain}`) && hostname !== domain;
+      return hostname.endsWith(`.${domain}`);
     });
     
     // تسجيل نتيجة الفحص للتشخيص
     console.log(`${hostname}: نطاق مطابق بالضبط: ${exactMatch}, نطاق فرعي مسموح به: ${subdomainMatch}`);
     console.log(`النطاقات المسموح بها:`, allowedDomains);
+    
+    // في بيئة التطوير، السماح لجميع النطاقات
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.log('في بيئة التطوير - السماح بالنطاق: ', hostname);
+      return true;
+    }
     
     return exactMatch || subdomainMatch;
   } catch (error) {
@@ -191,7 +209,7 @@ export const checkConnection = async () => {
           "Referer": typeof window !== 'undefined' ? window.location.href : ''
         },
         mode: 'cors',
-        credentials: 'omit',
+        credentials: 'include', // تم تغييره من 'omit' إلى 'include' للسماح بنقل الكوكيز
         signal: createTimeoutSignal(30000) // 30 ثانية
       });
       
@@ -225,9 +243,9 @@ export const checkConnection = async () => {
         "Referer": typeof window !== 'undefined' ? window.location.href : ''
       },
       mode: 'cors',
-      credentials: 'omit',
+      credentials: 'include', // تم تغييره من 'omit' إلى 'include' للسماح بنقل الكوكيز
       signal: createTimeoutSignal(getConnectionTimeout())
-    }, 2, 5000); // محاولتان فقط مع تأخير 5 ثوانٍ
+    }, 3, 5000); // زيادة عدد المحاولات من 2 إلى 3
 
     if (response.ok) {
       console.log("تم الاتصال بنجاح عبر /api/status");
@@ -246,6 +264,8 @@ export const checkConnection = async () => {
       errorMessage = 'فشل الاتصال بالخادم. تأكد من عنوان الخادم أو اتصال الإنترنت.';
     } else if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
       errorMessage = 'انتهت مهلة الاتصال بالخادم. يرجى المحاولة مرة أخرى لاحقًا.';
+    } else if (errorMessage.includes('CORS') || errorMessage.includes('blocked by CORS policy')) {
+      errorMessage = 'تم منع الاتصال بسبب سياسة CORS. تأكد من أن الخادم يسمح بالاتصال من هذا الموقع.';
     }
     
     saveConnectionStatus(false);
@@ -330,6 +350,15 @@ export async function fetchWithRetry(url: string, options: RequestInit, maxRetri
         options.signal = createTimeoutSignal(getConnectionTimeout());
       }
       
+      // إضافة وضع CORS والمصادقة
+      if (!options.mode) {
+        options.mode = 'cors';
+      }
+      
+      if (!options.credentials) {
+        options.credentials = 'include'; // تم تغييره من 'omit' إلى 'include' للسماح بنقل الكوكيز
+      }
+      
       const response = await fetch(url, options);
       
       if (!response.ok) {
@@ -378,7 +407,7 @@ export function createFetchOptions(method: string, body: any, additionalHeaders:
       ...baseHeaders,
       ...additionalHeaders
     },
-    credentials: "omit",  // تغيير إلى "omit" لتجنب مشكلات CORS
+    credentials: "include", // تم تغييره من "omit" إلى "include" للسماح بنقل الكوكيز
     mode: "cors",
     signal: createTimeoutSignal(getConnectionTimeout())
   };

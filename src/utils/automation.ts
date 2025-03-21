@@ -39,7 +39,9 @@ export const getPuppeteerArgs = (): string[] => {
     '--disable-dev-shm-usage',
     '--disable-accelerated-2d-canvas',
     '--disable-gpu',
-    '--window-size=1366,768'
+    '--window-size=1366,768',
+    '--disable-web-security', // إضافة جديدة لتجاوز قيود CORS
+    '--allow-running-insecure-content' // إضافة جديدة للسماح بالمحتوى غير الآمن
   ];
 };
 
@@ -52,7 +54,8 @@ export const getPuppeteerConfig = () => {
     executablePath: getChromePath(),
     headless: 'new',
     args: getPuppeteerArgs(),
-    defaultViewport: { width: 1366, height: 768 }
+    defaultViewport: { width: 1366, height: 768 },
+    ignoreHTTPSErrors: true // إضافة جديدة لتجاهل أخطاء HTTPS
   };
 };
 
@@ -82,8 +85,7 @@ export const setUseBrowserData = (value: boolean): void => {
 export const getDefaultSettings = () => {
   return {
     useBrowserData: shouldUseBrowserData(),
-    forceRealExecution: true,
+    forceRealExecution: true, // تأكيد على تفعيل وضع التنفيذ الفعلي دائمًا
     automationType: 'server' as 'server' | 'client'
   };
 };
-
