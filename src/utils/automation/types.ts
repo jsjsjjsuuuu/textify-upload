@@ -1,36 +1,21 @@
 
-export interface AutomationConfig {
-  projectUrl: string;
-  projectName?: string; // إضافة اسم المشروع كحقل اختياري
-  actions: Action[] | AutomationAction[];
-  useBrowserData: boolean;
-  automationType: 'server' | 'client';
-  forceRealExecution?: boolean; // إضافة حقل جديد لإجبار التنفيذ الفعلي
-}
-
-export interface Action {
-  type: string;
-  selector?: string;
-  value?: string;
-  name?: string;
-  finder?: string;
-  delay?: number;
-}
-
-// إضافة واجهة AutomationAction لدعم المكونات الحالية
 export interface AutomationAction {
   name: string;
-  finder: string;
-  value: string;
-  delay: number;
+  finder?: string;
+  value?: string;
+  delay?: number;
+  type?: string;
+  selector?: string;
+  timeout?: number;
 }
 
-export interface ServerStatusResponse {
-  status: string;
-  message?: string; // إضافة حقل الرسالة
-  time: string;
-  uptime: number;
-  environment: string;
+export interface AutomationConfig {
+  projectName?: string;
+  projectUrl: string;
+  actions: AutomationAction[];
+  automationType: "server" | "client";
+  useBrowserData?: boolean;
+  forceRealExecution?: boolean; // إضافة حقل forceRealExecution
 }
 
 export interface ActionResult {
@@ -42,20 +27,28 @@ export interface ActionResult {
   error: string | null;
   timestamp: string;
   duration: number;
-  screenshots: string[];
+  screenshots?: string[];
 }
 
 export interface AutomationResponse {
   success: boolean;
   message: string;
-  automationType: 'server' | 'client';
+  automationType: string;
   details?: string[];
   results?: ActionResult[];
   executionTime?: number;
   timestamp?: string;
   error?: {
     message: string;
+    type?: string;
     stack?: string;
-    type: string;
   };
+}
+
+export interface ServerStatusResponse {
+  status: string;
+  message: string;
+  time: string;
+  uptime: number;
+  environment?: string;
 }

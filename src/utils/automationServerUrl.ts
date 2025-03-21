@@ -1,7 +1,21 @@
+
 import { toast } from "sonner";
 
 // تعريف متغير لتخزين عنوان URL لخادم الأتمتة
 let automationServerUrl: string | null = null;
+
+// تعريف متغير لتخزين مهلة الاتصال بالخادم (بالمللي ثانية)
+let connectionTimeout: number = 30000; // 30 ثانية افتراضيًا
+
+// تعريف قائمة عناوين IP المسموح بها لخادم Render
+export const RENDER_ALLOWED_IPS: string[] = [
+  "35.209.134.25",
+  "35.233.208.195",
+  "34.0.192.118",
+  "34.106.60.116",
+  "34.145.159.201",
+  "35.236.41.75"
+];
 
 // دالة للحصول على عنوان URL لخادم الأتمتة من الذاكرة المحلية
 export function getAutomationServerUrl(): string {
@@ -31,6 +45,13 @@ export function setAutomationServerUrl(url: string): void {
   console.log("تم تحديث عنوان خادم الأتمتة إلى:", url);
 }
 
+// دالة لإعادة تعيين عنوان URL لخادم الأتمتة إلى القيمة الافتراضية
+export function resetAutomationServerUrl(): string {
+  const defaultUrl = "https://textify-upload.onrender.com";
+  setAutomationServerUrl(defaultUrl);
+  return defaultUrl;
+}
+
 // دالة للتحقق من صحة عنوان URL لخادم الأتمتة
 export function isValidServerUrl(url: string): boolean {
   try {
@@ -42,17 +63,19 @@ export function isValidServerUrl(url: string): boolean {
 }
 
 // تعريف واجهة لحالة الاتصال
-interface ConnectionStatus {
+export interface ConnectionStatus {
   isConnected: boolean;
   lastChecked: number;
   message: string;
+  retryCount?: number; // إضافة خاصية retryCount
 }
 
 // متغير لتخزين آخر حالة اتصال
 let lastConnectionStatus: ConnectionStatus = {
   isConnected: false,
   lastChecked: 0,
-  message: "لم يتم التحقق من الاتصال بعد"
+  message: "لم يتم التحقق من الاتصال بعد",
+  retryCount: 0
 };
 
 // دالة للحصول على آخر حالة اتصال
@@ -60,10 +83,20 @@ export function getLastConnectionStatus(): ConnectionStatus {
   return lastConnectionStatus;
 }
 
+// دالة لتحديث حالة الاتصال
+export function updateConnectionStatus(isConnected: boolean, message?: string): void {
+  lastConnectionStatus = {
+    isConnected,
+    lastChecked: Date.now(),
+    message: message || (isConnected ? "الخادم متصل ويعمل بشكل صحيح" : "فشل الاتصال بالخادم"),
+    retryCount: isConnected ? 0 : (lastConnectionStatus.retryCount || 0) + 1
+  };
+}
+
 // دالة للتحقق من حالة الاتصال بالخادم
 export async function checkConnection(showToast = true): Promise<ConnectionStatus> {
   const serverUrl = getAutomationServerUrl();
-  const timeout = 5000; // مهلة 5 ثوانٍ
+  const timeout = getConnectionTimeout();
 
   try {
     const controller = new AbortController();
@@ -71,9 +104,7 @@ export async function checkConnection(showToast = true): Promise<ConnectionStatu
 
     const response = await fetch(`${serverUrl}/api/health`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: createBaseHeaders(),
       signal: controller.signal
     });
 
@@ -81,11 +112,7 @@ export async function checkConnection(showToast = true): Promise<ConnectionStatu
 
     if (!response.ok) {
       const message = `فشل الاتصال بالخادم: ${response.status} ${response.statusText}`;
-      lastConnectionStatus = {
-        isConnected: false,
-        lastChecked: Date.now(),
-        message: message
-      };
+      updateConnectionStatus(false, message);
       if (showToast) {
         toast.error(message);
       }
@@ -94,22 +121,14 @@ export async function checkConnection(showToast = true): Promise<ConnectionStatu
 
     const data = await response.json();
     if (data.status === 'ok') {
-      lastConnectionStatus = {
-        isConnected: true,
-        lastChecked: Date.now(),
-        message: "الخادم متصل ويعمل بشكل صحيح"
-      };
+      updateConnectionStatus(true);
       if (showToast) {
         toast.success("الخادم متصل ويعمل بشكل صحيح");
       }
       return lastConnectionStatus;
     } else {
       const message = `الخادم غير متصل: ${data.message || 'لا توجد رسالة'}`;
-      lastConnectionStatus = {
-        isConnected: false,
-        lastChecked: Date.now(),
-        message: message
-      };
+      updateConnectionStatus(false, message);
       if (showToast) {
         toast.error(message);
       }
@@ -124,11 +143,7 @@ export async function checkConnection(showToast = true): Promise<ConnectionStatu
       message = `فشل الاتصال بالخادم: ${error.message}`;
     }
     
-    lastConnectionStatus = {
-      isConnected: false,
-      lastChecked: Date.now(),
-      message: message
-    };
+    updateConnectionStatus(false, message);
     if (showToast) {
       toast.error(message);
     }
@@ -201,4 +216,45 @@ export function isPreviewEnvironment(): boolean {
   // إرجاع false دائمًا للتأكد من استخدام البيئة الحقيقية بغض النظر عن اسم النطاق
   console.log("فحص بيئة المعاينة - إرجاع false دائمًا لتفعيل وضع التنفيذ الفعلي.");
   return false;
+}
+
+// دالة للحصول على مهلة الاتصال الحالية
+export function getConnectionTimeout(): number {
+  return connectionTimeout;
+}
+
+// دالة لتعيين مهلة الاتصال
+export function setConnectionTimeout(timeoutMs: number): void {
+  connectionTimeout = timeoutMs;
+  console.log(`تم تعيين مهلة الاتصال إلى ${timeoutMs} مللي ثانية`);
+}
+
+// دالة للحصول على عنوان IP التالي من القائمة بشكل دوري
+let currentIpIndex = 0;
+export function getNextIp(): string {
+  const ip = RENDER_ALLOWED_IPS[currentIpIndex];
+  currentIpIndex = (currentIpIndex + 1) % RENDER_ALLOWED_IPS.length;
+  return ip;
+}
+
+// دالة لإنشاء رؤوس HTTP أساسية للطلبات
+export function createBaseHeaders(ipAddress?: string): HeadersInit {
+  const ip = ipAddress || getNextIp();
+  
+  return {
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+    'X-Forwarded-For': ip,
+    'X-Render-Client-IP': ip,
+    'X-Client-Info': 'Textify Automation Client',
+    'Origin': typeof window !== 'undefined' ? window.location.origin : '',
+    'Referer': typeof window !== 'undefined' ? window.location.href : ''
+  };
+}
+
+// دالة لإنشاء إشارة مهلة زمنية
+export function createTimeoutSignal(timeout: number = connectionTimeout): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeout);
+  return controller.signal;
 }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Badge } from './badge';
 import { Circle, CheckCircle, AlertTriangle, Loader2, Wifi, WifiOff } from 'lucide-react';
@@ -12,9 +13,15 @@ import { AutomationService } from '@/utils/automationService';
 
 interface ConnectionStatusIndicatorProps {
   className?: string;
+  showText?: boolean; // إضافة خاصية showText
+  onStatusChange?: (isConnected: boolean) => void;
 }
 
-const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ className }) => {
+const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ 
+  className, 
+  showText = false, // قيمة افتراضية false
+  onStatusChange 
+}) => {
   const [connectionState, setConnectionState] = useState<'connecting' | 'connected' | 'failed' | 'unknown'>('unknown');
   const [isRetrying, setIsRetrying] = useState(false);
   const [serverUrl, setServerUrl] = useState<string | null>(null);
@@ -40,12 +47,15 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ c
       const connectionResult = await checkConnection();
       if (connectionResult.isConnected) {
         setConnectionState('connected');
+        if (onStatusChange) onStatusChange(true);
       } else {
         setConnectionState('failed');
+        if (onStatusChange) onStatusChange(false);
       }
     } catch (error) {
       console.error('فشل التحقق من حالة الاتصال:', error);
       setConnectionState('failed');
+      if (onStatusChange) onStatusChange(false);
     }
   };
 
@@ -56,14 +66,17 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ c
       const result = await AutomationService.forceReconnect();
       if (result) {
         setConnectionState('connected');
+        if (onStatusChange) onStatusChange(true);
         toast.success('تم إعادة الاتصال بالخادم بنجاح');
       } else {
         setConnectionState('failed');
+        if (onStatusChange) onStatusChange(false);
         toast.error('تعذر الاتصال بالخادم. يرجى التأكد من صحة عنوان الخادم وتوافره.');
       }
     } catch (error) {
       console.error('خطأ في إعادة الاتصال:', error);
       setConnectionState('failed');
+      if (onStatusChange) onStatusChange(false);
       toast.error(`فشل محاولة إعادة الاتصال: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
     } finally {
       setIsRetrying(false);
@@ -89,7 +102,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ c
       <Badge variant={connectionState === 'connected' ? 'success' : 'destructive'}>
         <div className="flex items-center space-x-1 rtl:space-x-reverse">
           {statusIcon}
-          <span>{statusText}</span>
+          {showText && <span>{statusText}</span>}
         </div>
       </Badge>
       {connectionState === 'failed' && (

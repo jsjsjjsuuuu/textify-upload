@@ -9,11 +9,23 @@ import { Check, X } from 'lucide-react';
 
 interface ActionEditorProps {
   action: AutomationAction;
-  onSave: (action: AutomationAction) => void;
-  onCancel: () => void;
+  index?: number; // إضافة خاصية index كاختيارية
+  onSave?: (action: AutomationAction) => void;
+  onUpdate?: (action: AutomationAction) => void;
+  onCancel?: () => void;
+  onRemove?: () => void;
+  commonSelectors?: any;
 }
 
-const ActionEditor: React.FC<ActionEditorProps> = ({ action, onSave, onCancel }) => {
+const ActionEditor: React.FC<ActionEditorProps> = ({ 
+  action, 
+  index, 
+  onSave, 
+  onUpdate, 
+  onCancel, 
+  onRemove,
+  commonSelectors 
+}) => {
   const [editedAction, setEditedAction] = useState<AutomationAction>({ ...action });
 
   const handleInputChange = (field: keyof AutomationAction, value: string | number) => {
@@ -28,6 +40,14 @@ const ActionEditor: React.FC<ActionEditorProps> = ({ action, onSave, onCancel })
       ...editedAction,
       delay: value[0]
     });
+  };
+
+  const handleSaveOrUpdate = () => {
+    if (onSave) {
+      onSave(editedAction);
+    } else if (onUpdate) {
+      onUpdate(editedAction);
+    }
   };
 
   return (
@@ -80,14 +100,22 @@ const ActionEditor: React.FC<ActionEditorProps> = ({ action, onSave, onCancel })
       </div>
 
       <div className="flex justify-end space-x-2 space-x-reverse">
-        <Button variant="outline" size="sm" onClick={onCancel}>
-          <X className="w-4 h-4 mr-2" />
-          إلغاء
-        </Button>
+        {onCancel && (
+          <Button variant="outline" size="sm" onClick={onCancel}>
+            <X className="w-4 h-4 mr-2" />
+            إلغاء
+          </Button>
+        )}
+        {onRemove && (
+          <Button variant="destructive" size="sm" onClick={onRemove}>
+            <X className="w-4 h-4 mr-2" />
+            حذف
+          </Button>
+        )}
         <Button 
           variant="default" 
           size="sm" 
-          onClick={() => onSave(editedAction)}
+          onClick={handleSaveOrUpdate}
           className="bg-purple-600 hover:bg-purple-700"
         >
           <Check className="w-4 h-4 mr-2" />
