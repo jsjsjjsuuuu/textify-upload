@@ -32,11 +32,92 @@ const app = express();
 
 // إضافة middleware
 app.use(cors({
-  origin: '*', // السماح لجميع الأصول بالوصول (يمكن تقييده لبيئة الإنتاج)
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: function(origin, callback) {
+    // السماح بالطلبات بدون أصل (مثل تطبيقات الجوال أو curl أو Postman)
+    if (!origin) return callback(null, true);
+    
+    // السماح بأصول محددة
+    if (
+      origin.includes('lovable.app') || 
+      origin.includes('localhost') || 
+      origin.includes('127.0.0.1')
+    ) {
+      console.log('CORS: قبول الطلب من الأصل:', origin);
+      return callback(null, true);
+    }
+    
+    console.log('CORS: رفض الطلب من الأصل غير المسموح به:', origin);
+    callback(new Error('CORS policy violation: Origin not allowed'));
+  },
+  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'X-Forwarded-For', 
+    'X-Render-Client-IP',
+    'X-Client-ID',
+    'Cache-Control',
+    'Pragma',
+    'X-Request-Time',
+    'Origin',
+    'Referer'
+  ],
+  credentials: true,
+  maxAge: 86400,
+  exposedHeaders: ['Access-Control-Allow-Origin']
 }));
 app.use(express.json({ limit: '50mb' }));
+
+// إضافة نقطة نهاية بسيطة للتحقق السريع من الاتصال
+app.get('/api/ping', (req, res) => {
+  // تسجيل معلومات الطلب للتشخيص
+  console.log('Ping request received:', {
+    ip: req.ip,
+    headers: req.headers,
+    origin: req.get('origin')
+  });
+  
+  // تعيين الرؤوس يدويًا للتأكد من تجاوز CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  res.json({ 
+    status: 'ok', 
+    message: 'خادم الأتمتة يستجيب',
+    time: new Date().toISOString(),
+    requestHeaders: req.headers
+  });
+});
+
+// إضافة نقطة نهاية للفحص الصحي الشامل
+app.get('/api/health', (req, res) => {
+  // تسجيل معلومات الطلب للتشخيص
+  console.log('Health check request received:', {
+    ip: req.ip,
+    headers: req.headers,
+    origin: req.get('origin')
+  });
+  
+  // تعيين الرؤوس يدويًا للتأكد من تجاوز CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  res.json({ 
+    status: 'ok', 
+    message: 'خادم الأتمتة في حالة جيدة',
+    time: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    memory: process.memoryUsage(),
+    hostname: require('os').hostname(),
+    network: {
+      interfaces: Object.keys(require('os').networkInterfaces())
+    }
+  });
+});
 
 // عرض كل المتغيرات البيئية (باستثناء السرية) للتشخيص
 const printableEnvVars = {};
@@ -98,6 +179,8 @@ app.get('/', (req, res) => {
             <h3>نقاط النهاية المتاحة:</h3>
             <ul>
               <li><strong>GET /api/status</strong> - التحقق من حالة الخادم</li>
+              <li><strong>GET /api/ping</strong> - اختبار سريع للاستجابة</li>
+              <li><strong>GET /api/health</strong> - معلومات صحة الخادم</li>
               <li><strong>POST /api/automate</strong> - تنفيذ السيناريو باستخدام Puppeteer</li>
             </ul>
           </div>
@@ -128,6 +211,18 @@ app.get('/', (req, res) => {
 
 // مسار للتأكد من أن الخادم يعمل
 app.get('/api/status', (req, res) => {
+  // تسجيل معلومات الطلب للتشخيص
+  console.log('Status request received:', {
+    ip: req.ip,
+    headers: req.headers,
+    origin: req.get('origin')
+  });
+  
+  // تعيين الرؤوس يدويًا للتأكد من تجاوز CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
   // إضافة معلومات النظام للمساعدة في التشخيص
   const systemInfo = {
     nodeVersion: process.version,
@@ -181,6 +276,11 @@ const checkPuppeteer = async () => {
 
 // مسار لتنفيذ السيناريو باستخدام Puppeteer
 app.post('/api/automate', async (req, res) => {
+  // تعيين الرؤوس يدويًا للتأكد من تجاوز CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
   const { projectUrl, actions } = req.body;
   
   if (!projectUrl || !actions || !Array.isArray(actions)) {
@@ -415,6 +515,24 @@ app.post('/api/automate', async (req, res) => {
       message: `حدث خطأ أثناء الأتمتة: ${error.message}`
     });
   }
+});
+
+// التعامل مع طلبات OPTIONS مباشرة للتأكد من استجابة CORS الصحيحة
+app.options('*', (req, res) => {
+  console.log('OPTIONS request received:', {
+    path: req.path,
+    headers: req.headers,
+    origin: req.get('origin')
+  });
+  
+  // تعيين الرؤوس يدويًا للتأكد من تجاوز CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time, Origin, Referer');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  res.status(200).end();
 });
 
 // إضافة '*' كمسار لتوجيه أي طلب آخر إلى index.html (SPA)

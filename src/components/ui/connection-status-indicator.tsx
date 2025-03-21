@@ -41,6 +41,27 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
         return;
       }
       
+      // التحقق من الوصول السريع باستخدام نقطة نهاية /api/ping أولاً
+      try {
+        const pingResponse = await fetch(`${ConnectionManager.getServerUrl()}/api/ping`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store',
+            'Pragma': 'no-cache',
+            'X-Request-Time': Date.now().toString()
+          }
+        });
+        
+        if (pingResponse.ok) {
+          console.log('Ping response successful:', await pingResponse.json());
+        } else {
+          console.warn('Ping response not OK:', pingResponse.status);
+        }
+      } catch (pingError) {
+        console.warn('خطأ في الوصول لنقطة نهاية ping:', pingError);
+      }
+      
       // قبل محاولة الاتصال الكاملة، تحقق أولاً من وجود الخادم
       const exists = await AutomationService.checkServerExistence();
       if (!exists) {
