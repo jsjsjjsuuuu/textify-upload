@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { AutomationService } from '@/utils/automationService';
-import { Play, Save, Plus, Trash2, Database } from 'lucide-react';
+import { Play, Save, Plus, Trash2, Database, CheckCircle2, AlertCircle, Clock, Timer } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { isPreviewEnvironment } from '@/utils/automationServerUrl';
@@ -37,6 +37,13 @@ interface SavedAutomation {
   useBrowserData: boolean;
 }
 
+interface AutomationResult {
+  success: boolean;
+  message: string;
+  details?: string[];
+  timestamp: string;
+}
+
 const SimpleAutomationSection = () => {
   const [projectUrl, setProjectUrl] = useState('');
   const [projectName, setProjectName] = useState('مشروع أتمتة جديد');
@@ -52,8 +59,13 @@ const SimpleAutomationSection = () => {
   // إضافة حالات للنوافذ المنبثقة
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
+  const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
   const [savedAutomations, setSavedAutomations] = useState<SavedAutomation[]>([]);
   const [selectedAutomation, setSelectedAutomation] = useState<string | null>(null);
+  
+  // إضافة حالة لتخزين نتائج الأتمتة
+  const [automationResults, setAutomationResults] = useState<AutomationResult[]>([]);
+  const [latestResult, setLatestResult] = useState<AutomationResult | null>(null);
 
   // التحقق من حالة الخادم عند تحميل المكون
   useEffect(() => {
@@ -77,6 +89,20 @@ const SimpleAutomationSection = () => {
       }
     }
     
+    // استرجاع نتائج الأتمتة السابقة
+    const savedResults = localStorage.getItem('automation_results');
+    if (savedResults) {
+      try {
+        const results = JSON.parse(savedResults) as AutomationResult[];
+        setAutomationResults(results);
+        if (results.length > 0) {
+          setLatestResult(results[0]);
+        }
+      } catch (error) {
+        console.error('خطأ في استرجاع نتائج الأتمتة:', error);
+      }
+    }
+    
     // تحميل الأتمتة المحفوظة
     loadSavedAutomationsList();
   }, []);
@@ -90,6 +116,13 @@ const SimpleAutomationSection = () => {
       useBrowserData
     }));
   }, [actions, projectName, projectUrl, useBrowserData]);
+
+  // حفظ نتائج الأتمتة عند تغييرها
+  useEffect(() => {
+    if (automationResults.length > 0) {
+      localStorage.setItem('automation_results', JSON.stringify(automationResults));
+    }
+  }, [automationResults]);
 
   const checkServerConnection = async () => {
     try {
@@ -136,6 +169,11 @@ const SimpleAutomationSection = () => {
     }
   };
 
+  // إضافة وظيفة جديدة لإظهار نتائج الأتمتة
+  const showAutomationResults = () => {
+    setIsResultDialogOpen(true);
+  };
+
   const runAutomation = async () => {
     if (!projectUrl) {
       toast({
@@ -147,7 +185,11 @@ const SimpleAutomationSection = () => {
     }
 
     setIsRunning(true);
-    sonnerToast('جاري تنفيذ الأتمتة...');
+    sonnerToast('جاري تنفيذ الأتمتة...', {
+      description: 'يرجى الانتظار حتى اكتمال العملية',
+      icon: <Timer className="h-5 w-5 text-blue-500 animate-spin" />,
+      duration: 10000,
+    });
 
     try {
       // تحويل الإجراءات البسيطة إلى تنسيق الأتمتة المطلوب
@@ -168,14 +210,67 @@ const SimpleAutomationSection = () => {
 
       const result = await AutomationService.validateAndRunAutomation(config);
       
+      // إنشاء كائن نتيجة الأتمتة
+      const automationResult: AutomationResult = {
+        success: !!result.success,
+        message: result.message || (result.success ? 'تم تنفيذ الأتمتة بنجاح' : 'فشل تنفيذ الأتمتة'),
+        details: result.details || [
+          `عدد الإجراءات: ${automationActions.length}`,
+          `الرابط: ${projectUrl}`,
+          `استخدام بيانات المتصفح: ${useBrowserData ? 'نعم' : 'لا'}`
+        ],
+        timestamp: new Date().toISOString()
+      };
+      
+      // تحديث نتائج الأتمتة
+      setLatestResult(automationResult);
+      setAutomationResults([automationResult, ...automationResults.slice(0, 9)]); // الاحتفاظ بآخر 10 نتائج فقط
+      
       if (result.success) {
-        sonnerToast.success('تم تنفيذ الأتمتة بنجاح!');
+        sonnerToast.success('تم تنفيذ الأتمتة بنجاح!', {
+          description: `تم إكمال ${automationActions.length} إجراء بنجاح`,
+          icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+          duration: 8000,
+          action: {
+            label: 'عرض التفاصيل',
+            onClick: () => setIsResultDialogOpen(true)
+          }
+        });
       } else {
-        sonnerToast.error(`فشل تنفيذ الأتمتة: ${result.message}`);
+        sonnerToast.error(`فشل تنفيذ الأتمتة: ${result.message}`, {
+          description: 'انقر لعرض التفاصيل',
+          icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+          duration: 8000,
+          action: {
+            label: 'عرض التفاصيل',
+            onClick: () => setIsResultDialogOpen(true)
+          }
+        });
       }
+      
+      // إظهار نافذة النتائج تلقائياً
+      setIsResultDialogOpen(true);
     } catch (error) {
       console.error('خطأ أثناء تنفيذ الأتمتة:', error);
-      sonnerToast.error(`حدث خطأ أثناء تنفيذ الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+      
+      // إنشاء كائن نتيجة للخطأ
+      const errorResult: AutomationResult = {
+        success: false,
+        message: `حدث خطأ أثناء تنفيذ الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`,
+        details: ['حدث خطأ أثناء الاتصال بالخادم أو تنفيذ الأتمتة'],
+        timestamp: new Date().toISOString()
+      };
+      
+      setLatestResult(errorResult);
+      setAutomationResults([errorResult, ...automationResults.slice(0, 9)]);
+      
+      sonnerToast.error(`حدث خطأ أثناء تنفيذ الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`, {
+        duration: 8000,
+        action: {
+          label: 'عرض التفاصيل',
+          onClick: () => setIsResultDialogOpen(true)
+        }
+      });
     } finally {
       setIsRunning(false);
     }
@@ -202,7 +297,9 @@ const SimpleAutomationSection = () => {
       localStorage.setItem('saved_automations', JSON.stringify(updatedAutomations));
       setSavedAutomations(updatedAutomations);
       
-      sonnerToast.success('تم حفظ الأتمتة بنجاح');
+      sonnerToast.success('تم حفظ الأتمتة بنجاح', {
+        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+      });
       setIsSaveDialogOpen(false);
     } catch (error) {
       sonnerToast.error('حدث خطأ أثناء حفظ الأتمتة');
@@ -226,7 +323,9 @@ const SimpleAutomationSection = () => {
           setUseBrowserData(automationToLoad.useBrowserData);
         }
         
-        sonnerToast.success('تم تحميل الأتمتة بنجاح');
+        sonnerToast.success('تم تحميل الأتمتة بنجاح', {
+          icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        });
         setIsLoadDialogOpen(false);
       }
     } catch (error) {
@@ -250,6 +349,12 @@ const SimpleAutomationSection = () => {
     } catch (error) {
       sonnerToast.error('حدث خطأ أثناء حذف الأتمتة');
     }
+  };
+  
+  // تنسيق التاريخ للعرض
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('ar-IQ');
   };
 
   return (
@@ -298,6 +403,33 @@ const SimpleAutomationSection = () => {
             <AlertDescription>
               خادم الأتمتة غير متصل. يرجى التحقق من إعدادات الخادم أو تشغيل الخادم المحلي.
             </AlertDescription>
+          </Alert>
+        )}
+        
+        {/* عرض آخر نتيجة للأتمتة إذا كانت موجودة */}
+        {latestResult && (
+          <Alert variant={latestResult.success ? "default" : "destructive"}>
+            <div className="flex items-start gap-2">
+              {latestResult.success ? (
+                <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+              )}
+              <div className="flex-1">
+                <div className="font-medium">{latestResult.success ? 'تم تنفيذ الأتمتة بنجاح' : 'فشل تنفيذ الأتمتة'}</div>
+                <AlertDescription className="mt-1">
+                  {latestResult.message}
+                  <div className="text-xs opacity-80 mt-1">{formatDate(latestResult.timestamp)}</div>
+                </AlertDescription>
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto text-xs mt-2" 
+                  onClick={showAutomationResults}
+                >
+                  عرض التفاصيل الكاملة
+                </Button>
+              </div>
+            </div>
           </Alert>
         )}
 
@@ -394,8 +526,17 @@ const SimpleAutomationSection = () => {
           disabled={isRunning || !projectUrl || (!serverConnected && !isPreviewMode)}
           className="bg-purple-600 hover:bg-purple-700"
         >
-          <Play className="h-4 w-4 ml-1" />
-          {isRunning ? 'جاري التنفيذ...' : 'تشغيل الأتمتة'}
+          {isRunning ? (
+            <>
+              <Timer className="h-4 w-4 ml-1 animate-spin" />
+              جاري التنفيذ...
+            </>
+          ) : (
+            <>
+              <Play className="h-4 w-4 ml-1" />
+              تشغيل الأتمتة
+            </>
+          )}
         </Button>
       </CardFooter>
 
@@ -499,6 +640,74 @@ const SimpleAutomationSection = () => {
             >
               <Database className="h-4 w-4 ml-1" />
               تحميل الأتمتة
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة عرض نتائج الأتمتة */}
+      <Dialog open={isResultDialogOpen} onOpenChange={setIsResultDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>نتائج الأتمتة</DialogTitle>
+            <DialogDescription>
+              تقرير مفصل عن نتائج عمليات الأتمتة
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[500px] overflow-y-auto">
+            {automationResults.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">لا توجد نتائج أتمتة سابقة</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {automationResults.map((result, index) => (
+                  <div
+                    key={index}
+                    className={`border rounded-md p-4 ${
+                      result.success
+                        ? "border-green-200 bg-green-50"
+                        : "border-red-200 bg-red-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      {result.success ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-red-600" />
+                      )}
+                      <p className="font-medium">
+                        {result.success ? 'تم تنفيذ الأتمتة بنجاح' : 'فشل تنفيذ الأتمتة'}
+                      </p>
+                    </div>
+                    
+                    <p className="text-sm mb-2">{result.message}</p>
+                    
+                    {result.details && result.details.length > 0 && (
+                      <div className="mt-2 border-t pt-2 text-sm">
+                        <p className="font-medium mb-1">تفاصيل:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          {result.details.map((detail, i) => (
+                            <li key={i} className="text-gray-600">{detail}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-gray-500 mt-2">
+                      {formatDate(result.timestamp)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={() => setIsResultDialogOpen(false)}
+            >
+              إغلاق
             </Button>
           </DialogFooter>
         </DialogContent>
