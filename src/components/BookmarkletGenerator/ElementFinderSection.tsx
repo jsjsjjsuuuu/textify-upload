@@ -127,7 +127,7 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
       console.log("محدد العناصر: بدء التشغيل");
       const actions = ${JSON.stringify(actions)};
       const executeActions = async (actions) => {
-        for (let i = 0 < actions.length; i++) {
+        for (let i = 0; i < actions.length; i++) {
           const action = actions[i];
           console.log(\`تنفيذ الإجراء \${i+1}: \${action.name}\`);
           
