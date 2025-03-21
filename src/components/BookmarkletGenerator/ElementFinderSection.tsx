@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash, Plus, PenLine, PlayCircle, Check, Alert, Copy, FileDown, File, Loader2 } from "lucide-react";
+import { Trash, Plus, PenLine, PlayCircle, Check, AlertCircle, Copy, FileDown, File, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { toast } from "sonner";

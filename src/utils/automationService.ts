@@ -15,6 +15,50 @@ export class AutomationService {
   private static isRunning = false;
 
   /**
+   * تبديل وضع التنفيذ الفعلي
+   * @param enable حالة تمكين التنفيذ الفعلي (true للتمكين، false للتعطيل)
+   */
+  static toggleRealExecution(enable: boolean): void {
+    console.log(`تفعيل وضع التنفيذ الفعلي: ${enable}`);
+    localStorage.setItem('force_real_execution', enable.toString());
+  }
+
+  /**
+   * فحص ما إذا كان التنفيذ الفعلي مفعّل
+   */
+  static isRealExecutionEnabled(): boolean {
+    // هنا نجبر التنفيذ الفعلي دائمًا للتأكد من استخدام البيئة الحقيقية
+    return true; 
+  }
+
+  /**
+   * التحقق من وجود خادم الأتمتة
+   * @param showToasts عرض الإشعارات أم لا
+   */
+  static async checkServerExistence(showToasts = true): Promise<boolean> {
+    try {
+      const result = await this.checkServerStatus(showToasts);
+      return !!result && result.status === 'ok';
+    } catch (error) {
+      console.error("فشل التحقق من وجود خادم الأتمتة:", error);
+      return false;
+    }
+  }
+
+  /**
+   * فرض إعادة الاتصال بخادم الأتمتة
+   */
+  static async forceReconnect(): Promise<boolean> {
+    try {
+      const result = await this.checkServerStatus(false);
+      return !!result && result.status === 'ok';
+    } catch (error) {
+      console.error("فشل إعادة الاتصال بخادم الأتمتة:", error);
+      return false;
+    }
+  }
+
+  /**
    * التحقق من حالة اتصال خادم الأتمتة
    */
   static async checkServerStatus(showToasts = true): Promise<any> {

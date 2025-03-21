@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ActionResult, AutomationResponse } from '@/utils/automation/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -153,7 +152,7 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
                         {result.index + 1}. {result.action}
                       </h5>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" size="sm">
+                        <Badge variant="outline" className="text-xs">
                           {result.duration} مللي ثانية
                         </Badge>
                       </div>

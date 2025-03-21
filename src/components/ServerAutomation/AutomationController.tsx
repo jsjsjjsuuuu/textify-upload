@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AutomationAction, AutomationResponse } from '@/utils/automation/types';
@@ -15,6 +14,15 @@ import { isPreviewEnvironment, getLastConnectionStatus } from '@/utils/automatio
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import ActionResultsList from './ActionResultsList';
+
+// تعديل واجهة ActionEditorProps لتضمين خاصية index
+interface ActionEditorProps {
+  action: AutomationAction;
+  index?: number; // جعله اختياري لتجنب كسر المكونات الحالية
+  onUpdate: (updatedAction: AutomationAction) => void;
+  onRemove: () => void;
+  commonSelectors?: any;
+}
 
 const AutomationController: React.FC = () => {
   const [projectName, setProjectName] = useState('');
@@ -109,7 +117,7 @@ const AutomationController: React.FC = () => {
         projectName,
         projectUrl,
         actions,
-        automationType: 'server',
+        automationType: 'server' as 'server' | 'client', // إضافة تحويل نوع صريح
         useBrowserData: true
       };
 
@@ -404,8 +412,8 @@ const AutomationController: React.FC = () => {
                 {actions.map((action, index) => (
                   <ActionEditor
                     key={index}
-                    index={index}
                     action={action}
+                    index={index} // تمرير index كخاصية جديدة
                     onUpdate={(updatedAction) => handleUpdateAction(index, updatedAction)}
                     onRemove={() => handleRemoveAction(index)}
                     commonSelectors={commonSelectors}
