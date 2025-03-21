@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,246 +33,302 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({ onCodeGener
   const [customToastMessage, setCustomToastMessage] = useState('تم نسخ معلومات العنصر إلى الحافظة!');
   const [customConsoleLogMessage, setCustomConsoleLogMessage] = useState('معلومات العنصر:');
   const [isMinified, setIsMinified] = useState(true);
-  const [isLegacyMode, setIsLegacyMode] = useState(false);
-  const [isLegacyAlert, setIsLegacyAlert] = useState(false);
-  const [isLegacyConsole, setIsLegacyConsole] = useState(false);
-  const [isLegacyToast, setIsLegacyToast] = useState(false);
-  const [isLegacyCopy, setIsLegacyCopy] = useState(false);
-  const [isLegacyDownload, setIsLegacyDownload] = useState(false);
-  const [isLegacySearch, setIsLegacySearch] = useState(false);
-  const [isLegacyExternalLink, setIsLegacyExternalLink] = useState(false);
-  const [isLegacyCheck, setIsLegacyCheck] = useState(false);
-  const [isLegacyCard, setIsLegacyCard] = useState(false);
-  const [isLegacyCardContent, setIsLegacyCardContent] = useState(false);
-  const [isLegacyCardDescription, setIsLegacyCardDescription] = useState(false);
-  const [isLegacyCardFooter, setIsLegacyCardFooter] = useState(false);
-  const [isLegacyCardHeader, setIsLegacyCardHeader] = useState(false);
-  const [isLegacyCardTitle, setIsLegacyCardTitle] = useState(false);
-  const [isLegacyLabel, setIsLegacyLabel] = useState(false);
-  const [isLegacyInput, setIsLegacyInput] = useState(false);
-  const [isLegacyButton, setIsLegacyButton] = useState(false);
-  const [isLegacyTextarea, setIsLegacyTextarea] = useState(false);
-  const [isLegacyScrollArea, setIsLegacyScrollArea] = useState(false);
-  const [isLegacyTabs, setIsLegacyTabs] = useState(false);
-  const [isLegacyTabsContent, setIsLegacyTabsContent] = useState(false);
-  const [isLegacyTabsList, setIsLegacyTabsList] = useState(false);
-  const [isLegacyTabsTrigger, setIsLegacyTabsTrigger] = useState(false);
-  const [isLegacySwitch, setIsLegacySwitch] = useState(false);
-  const [isLegacyAlertDescription, setIsLegacyAlertDescription] = useState(false);
-  const [isLegacyAlertTitle, setIsLegacyAlertTitle] = useState(false);
-  const [isLegacyAlert, setIsLegacyAlert] = useState(false);
-  const [isLegacyCopyIcon, setIsLegacyCopyIcon] = useState(false);
-  const [isLegacyCheckIcon, setIsLegacyCheckIcon] = useState(false);
-  const [isLegacyAlertCircleIcon, setIsLegacyAlertCircleIcon] = useState(false);
-  const [isLegacySearchIcon, setIsLegacySearchIcon] = useState(false);
-  const [isLegacyDownloadIcon, setIsLegacyDownloadIcon] = useState(false);
-  const [isLegacyExternalLinkIcon, setIsLegacyExternalLinkIcon] = useState(false);
-  const [isLegacyCardIcon, setIsLegacyCardIcon] = useState(false);
-  const [isLegacyCardContentIcon, setIsLegacyCardContentIcon] = useState(false);
-  const [isLegacyCardDescriptionIcon, setIsLegacyCardDescriptionIcon] = useState(false);
-  const [isLegacyCardFooterIcon, setIsLegacyCardFooterIcon] = useState(false);
-  const [isLegacyCardHeaderIcon, setIsLegacyCardHeaderIcon] = useState(false);
-  const [isLegacyCardTitleIcon, setIsLegacyCardTitleIcon] = useState(false);
-  const [isLegacyLabelIcon, setIsLegacyLabelIcon] = useState(false);
-  const [isLegacyInputIcon, setIsLegacyInputIcon] = useState(false);
-  const [isLegacyButtonIcon, setIsLegacyButtonIcon] = useState(false);
-  const [isLegacyTextareaIcon, setIsLegacyTextareaIcon] = useState(false);
-  const [isLegacyScrollAreaIcon, setIsLegacyScrollAreaIcon] = useState(false);
-  const [isLegacyTabsIcon, setIsLegacyTabsIcon] = useState(false);
-  const [isLegacyTabsContentIcon, setIsLegacyTabsContentIcon] = useState(false);
-  const [isLegacyTabsListIcon, setIsLegacyTabsListIcon] = useState(false);
-  const [isLegacyTabsTriggerIcon, setIsLegacyTabsTriggerIcon] = useState(false);
-  const [isLegacySwitchIcon, setIsLegacySwitchIcon] = useState(false);
-  const [isLegacyAlertDescriptionIcon, setIsLegacyAlertDescriptionIcon] = useState(false);
-  const [isLegacyAlertTitleIcon, setIsLegacyAlertTitleIcon] = useState(false);
-  const [isLegacyAlertIcon, setIsLegacyAlertIcon] = useState(false);
-  const [isLegacyToastIcon, setIsLegacyToastIcon] = useState(false);
-  const [isLegacyCopyToClipboardIcon, setIsLegacyCopyToClipboardIcon] = useState(false);
-  const [isLegacyConsoleLogIcon, setIsLegacyConsoleLogIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIcon, setIsLegacyCustomFunctionNameIcon] = useState(false);
-  const [isLegacyCustomToastMessageIcon, setIsLegacyCustomToastMessageIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIcon, setIsLegacyCustomConsoleLogMessageIcon] = useState(false);
-  const [isLegacyMinifiedIcon, setIsLegacyMinifiedIcon] = useState(false);
-  const [isLegacyEventListenerIcon, setIsLegacyEventListenerIcon] = useState(false);
-  const [isLegacyEventTypeIcon, setIsLegacyEventTypeIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIcon, setIsLegacyAdvancedOptionsOpenIcon] = useState(false);
-  const [isLegacyGeneratingIcon, setIsLegacyGeneratingIcon] = useState(false);
-  const [isLegacyBookmarkletIcon, setIsLegacyBookmarkletIcon] = useState(false);
-  const [isLegacyIncludeToastIcon, setIsLegacyIncludeToastIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIcon, setIsLegacyIncludeCopyToClipboardIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIcon, setIsLegacyIncludeConsoleLogIcon] = useState(false);
-  const [isLegacyMinifiedIconIcon, setIsLegacyMinifiedIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIcon, setIsLegacyEventListenerIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIcon, setIsLegacyEventTypeIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIcon, setIsLegacyAdvancedOptionsOpenIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIcon, setIsLegacyGeneratingIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIcon, setIsLegacyBookmarkletIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIcon, setIsLegacyIncludeToastIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIcon, setIsLegacyIncludeCopyToClipboardIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIcon, setIsLegacyIncludeConsoleLogIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIcon, setIsLegacyCustomFunctionNameIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIcon, setIsLegacyCustomToastMessageIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIcon, setIsLegacyCustomConsoleLogMessageIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIcon, setIsLegacyMinifiedIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIcon, setIsLegacyEventListenerIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIcon, setIsLegacyEventTypeIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIcon, setIsLegacyGeneratingIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIcon, setIsLegacyBookmarkletIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIcon, setIsLegacyIncludeToastIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIcon, setIsLegacyCustomFunctionNameIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIcon, setIsLegacyCustomToastMessageIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIcon, setIsLegacyMinifiedIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIcon, setIsLegacyEventListenerIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIcon, setIsLegacyEventTypeIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIcon, setIsLegacyGeneratingIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIconIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIconIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIconIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIconIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIconIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIconIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeToastIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeCopyToClipboardIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyIncludeConsoleLogIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomFunctionNameIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomToastMessageIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyCustomConsoleLogMessageIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyMinifiedIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventListenerIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyEventTypeIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyAdvancedOptionsOpenIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyGeneratingIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyBookmarkletIconIconIconIconIconIconIconIconIconIconIconIcon] = useState(false);
-  const [isLegacyIncludeToastIconIconIconIconIconIconIconIconIconIconIconIconIconIconIconIcon, setIsLegacyInclude
+
+  const generateCode = () => {
+    if (!elementSelector) {
+      toast.error('الرجاء إدخال محدد العنصر أولاً');
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      // إنشاء الكود
+      let code = `// وظيفة استخراج معلومات العناصر
+function ${customFunctionName}() {
+  try {
+    const element = document.querySelector('${elementSelector}');
+    if (!element) {
+      console.error('لم يتم العثور على العنصر: ${elementSelector}');
+      return null;
+    }
+    
+    const elementInfo = {
+      tagName: element.tagName.toLowerCase(),
+      id: element.id || '',
+      className: element.className || '',
+      textContent: element.textContent?.trim() || '',
+      ${attributeName ? `${attributeName}: element.getAttribute('${attributeName}') || '',` : ''}
+      selector: '${elementSelector}'
+    };
+    
+    ${includeConsoleLog ? `console.log('${customConsoleLogMessage}', elementInfo);` : ''}
+    ${includeCopyToClipboard ? `
+    // نسخ المعلومات إلى الحافظة
+    const jsonString = JSON.stringify(elementInfo, null, 2);
+    navigator.clipboard.writeText(jsonString)
+      .then(() => {
+        ${includeToast ? `
+        // إظهار إشعار نجاح
+        const toast = document.createElement('div');
+        toast.style.position = 'fixed';
+        toast.style.bottom = '20px';
+        toast.style.right = '20px';
+        toast.style.backgroundColor = '#4CAF50';
+        toast.style.color = 'white';
+        toast.style.padding = '16px';
+        toast.style.borderRadius = '4px';
+        toast.style.zIndex = '9999';
+        toast.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+        toast.style.fontFamily = 'Arial, sans-serif';
+        toast.style.direction = 'rtl';
+        toast.textContent = '${customToastMessage}';
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transition = 'opacity 0.5s';
+          setTimeout(() => document.body.removeChild(toast), 500);
+        }, 3000);` : ''}
+      })
+      .catch(err => console.error('فشل نسخ المعلومات:', err));
+    ` : ''}
+    
+    return elementInfo;
+  } catch (error) {
+    console.error('حدث خطأ:', error);
+    return null;
+  }
+}
+
+${useEventListener ? `
+// إضافة مستمع حدث للعنصر
+document.addEventListener('${eventType}', function(e) {
+  if (e.target.matches('${elementSelector}')) {
+    ${customFunctionName}();
+  }
+});` : `// تنفيذ الوظيفة مباشرة
+${customFunctionName}();`}`;
+
+      // تحويل الكود إلى بوكماركلت إذا كان مطلوباً
+      if (isBookmarklet) {
+        code = `javascript:(function(){${isMinified ? code.replace(/\s+/g, ' ').replace(/\/\/.*?(?=\n|$)/g, '') : code}})();`;
+      }
+
+      setGeneratedCode(code);
+      onCodeGenerated(code);
+      toast.success('تم إنشاء الكود بنجاح!');
+    } catch (error) {
+      console.error('حدث خطأ أثناء إنشاء الكود:', error);
+      toast.error('حدث خطأ أثناء إنشاء الكود');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(generatedCode)
+      .then(() => {
+        setIsCopied(true);
+        toast.success('تم نسخ الكود إلى الحافظة!');
+        setTimeout(() => setIsCopied(false), 3000);
+      })
+      .catch(err => {
+        console.error('فشل نسخ الكود:', err);
+        toast.error('فشل نسخ الكود');
+      });
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>إنشاء أداة استخراج معلومات العناصر</CardTitle>
+          <CardDescription>
+            أنشئ أداة تساعدك في استخراج معلومات عن عناصر HTML المحددة في أي صفحة ويب
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="element-selector">محدد العنصر (CSS Selector)</Label>
+              <Input
+                id="element-selector"
+                placeholder="#myElement, .class-name, div[data-id], etc."
+                value={elementSelector}
+                onChange={(e) => setElementSelector(e.target.value)}
+                dir="ltr"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="attribute-name">اسم السمة المخصصة (اختياري)</Label>
+              <Input
+                id="attribute-name"
+                placeholder="data-id, href, src, etc."
+                value={attributeName}
+                onChange={(e) => setAttributeName(e.target.value)}
+                dir="ltr"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Switch
+                id="use-event-listener"
+                checked={useEventListener}
+                onCheckedChange={setUseEventListener}
+              />
+              <Label htmlFor="use-event-listener">استخدام مستمع الحدث</Label>
+            </div>
+
+            {useEventListener && (
+              <div>
+                <Label htmlFor="event-type">نوع الحدث</Label>
+                <select
+                  id="event-type"
+                  className="w-full p-2 border rounded-md"
+                  value={eventType}
+                  onChange={(e) => setEventType(e.target.value)}
+                >
+                  <option value="click">click</option>
+                  <option value="mouseover">mouseover</option>
+                  <option value="mouseenter">mouseenter</option>
+                  <option value="focus">focus</option>
+                </select>
+              </div>
+            )}
+
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Switch
+                id="is-bookmarklet"
+                checked={isBookmarklet}
+                onCheckedChange={setIsBookmarklet}
+              />
+              <Label htmlFor="is-bookmarklet">تحويل إلى بوكماركلت</Label>
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
+            >
+              {isAdvancedOptionsOpen ? 'إخفاء الخيارات المتقدمة' : 'عرض الخيارات المتقدمة'}
+            </Button>
+
+            {isAdvancedOptionsOpen && (
+              <div className="space-y-4 p-4 border rounded-md">
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Switch
+                    id="include-toast"
+                    checked={includeToast}
+                    onCheckedChange={setIncludeToast}
+                  />
+                  <Label htmlFor="include-toast">إظهار إشعار عند النسخ</Label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Switch
+                    id="include-copy"
+                    checked={includeCopyToClipboard}
+                    onCheckedChange={setIncludeCopyToClipboard}
+                  />
+                  <Label htmlFor="include-copy">نسخ المعلومات إلى الحافظة</Label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Switch
+                    id="include-console"
+                    checked={includeConsoleLog}
+                    onCheckedChange={setIncludeConsoleLog}
+                  />
+                  <Label htmlFor="include-console">عرض المعلومات في وحدة التحكم</Label>
+                </div>
+
+                <div>
+                  <Label htmlFor="function-name">اسم الوظيفة</Label>
+                  <Input
+                    id="function-name"
+                    value={customFunctionName}
+                    onChange={(e) => setCustomFunctionName(e.target.value)}
+                    dir="ltr"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="toast-message">رسالة الإشعار</Label>
+                  <Input
+                    id="toast-message"
+                    value={customToastMessage}
+                    onChange={(e) => setCustomToastMessage(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="console-message">رسالة وحدة التحكم</Label>
+                  <Input
+                    id="console-message"
+                    value={customConsoleLogMessage}
+                    onChange={(e) => setCustomConsoleLogMessage(e.target.value)}
+                  />
+                </div>
+
+                {isBookmarklet && (
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <Switch
+                      id="is-minified"
+                      checked={isMinified}
+                      onCheckedChange={setIsMinified}
+                    />
+                    <Label htmlFor="is-minified">تصغير الكود</Label>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button
+            onClick={generateCode}
+            disabled={isGenerating || !elementSelector}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            {isGenerating ? 'جاري الإنشاء...' : 'إنشاء الكود'}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {generatedCode && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex justify-between items-center">
+              <span>الكود المُنشأ</span>
+              <Button variant="ghost" size="sm" onClick={copyCode}>
+                {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {isCopied ? 'تم النسخ' : 'نسخ'}
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-96 w-full border rounded-md p-4">
+              <pre className="text-xs whitespace-pre-wrap overflow-x-auto" dir="ltr">
+                {generatedCode}
+              </pre>
+            </ScrollArea>
+          </CardContent>
+          {isBookmarklet && (
+            <CardFooter>
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>استخدام البوكماركلت</AlertTitle>
+                <AlertDescription>
+                  اسحب هذا الرابط إلى شريط المفضلة الخاص بك أو انقر بزر الماوس الأيمن وأضفه إلى المفضلة.
+                </AlertDescription>
+              </Alert>
+            </CardFooter>
+          )}
+        </Card>
+      )}
+    </div>
+  );
+};
+
+export default ElementFinderSection;
