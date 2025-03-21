@@ -62,7 +62,7 @@ export class AutomationService {
    */
   static async getBrowserData() {
     try {
-      const serverUrl = await ConnectionManager.getServerUrl();
+      const serverUrl = ConnectionManager.getServerUrl();
       const response = await fetch(`${serverUrl}/api/browser-data`, {
         method: 'GET',
         headers: {

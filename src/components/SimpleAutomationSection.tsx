@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,6 +9,7 @@ import { Play, Save, Plus, Trash2, Database } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { isPreviewEnvironment } from '@/utils/automationServerUrl';
+import { toast as sonnerToast } from 'sonner';
 
 interface SimpleAction {
   id: string;
@@ -107,7 +107,7 @@ const SimpleAutomationSection = () => {
     }
 
     setIsRunning(true);
-    toast.info('جاري تنفيذ الأتمتة...');
+    sonnerToast('جاري تنفيذ الأتمتة...');
 
     try {
       // تحويل الإجراءات البسيطة إلى تنسيق الأتمتة المطلوب
@@ -122,19 +122,19 @@ const SimpleAutomationSection = () => {
         projectName,
         projectUrl,
         actions: automationActions,
-        automationType: 'server',
-        useBrowserData // إضافة خيار استخدام بيانات المتصفح
+        automationType: 'server' as 'server' | 'client',
+        useBrowserData
       };
 
       const result = await AutomationService.validateAndRunAutomation(config);
       
       if (result.success) {
-        toast.success('تم تنفيذ الأتمتة بنجاح!');
+        sonnerToast('تم تنفيذ الأتمتة بنجاح!');
       } else {
-        toast.error(`فشل تنفيذ الأتمتة: ${result.message}`);
+        sonnerToast.error(`فشل تنفيذ الأتمتة: ${result.message}`);
       }
     } catch (error) {
-      toast.error(`حدث خطأ أثناء تنفيذ الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+      sonnerToast.error(`حدث خطأ أثناء تنفيذ الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
     } finally {
       setIsRunning(false);
     }
@@ -155,9 +155,9 @@ const SimpleAutomationSection = () => {
       
       localStorage.setItem('saved_automations', JSON.stringify([...savedAutomations, automationToSave]));
       
-      toast.success('تم حفظ الأتمتة بنجاح');
+      sonnerToast('تم حفظ الأتمتة بنجاح');
     } catch (error) {
-      toast.error('حدث خطأ أثناء حفظ الأتمتة');
+      sonnerToast.error('حدث خطأ أثناء حفظ الأتمتة');
     }
   };
 
@@ -166,7 +166,7 @@ const SimpleAutomationSection = () => {
       const savedAutomations = JSON.parse(localStorage.getItem('saved_automations') || '[]');
       
       if (savedAutomations.length === 0) {
-        toast.info('لا توجد أتمتة محفوظة');
+        sonnerToast('لا توجد أتمتة محفوظة');
         return;
       }
       
@@ -181,9 +181,9 @@ const SimpleAutomationSection = () => {
         setUseBrowserData(latestAutomation.useBrowserData);
       }
       
-      toast.success('تم تحميل الأتمتة بنجاح');
+      sonnerToast('تم تحميل الأتمتة بنجاح');
     } catch (error) {
-      toast.error('حدث خطأ أثناء تحميل الأتمتة');
+      sonnerToast.error('حدث خطأ أثناء تحميل الأتمتة');
     }
   };
 

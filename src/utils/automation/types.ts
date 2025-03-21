@@ -1,4 +1,3 @@
-
 /**
  * أنواع البيانات المستخدمة في نظام الأتمتة
  */
@@ -13,6 +12,7 @@ export interface AutomationConfig {
   ipAddress?: string; // عنوان IP المستخدم للطلب
   retryCount?: number; // عدد محاولات إعادة المحاولة
   automationType?: 'server' | 'client'; // نوع الأتمتة (خادم أو عميل)
+  useBrowserData?: boolean; // استخدام بيانات المتصفح (الكوكيز وبيانات التسجيل)
 }
 
 /**

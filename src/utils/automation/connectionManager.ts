@@ -23,6 +23,13 @@ export class ConnectionManager {
   private static lastError: Error | null = null;
   
   /**
+   * الحصول على رابط خادم الأتمتة
+   */
+  static getServerUrl(): string {
+    return getAutomationServerUrl();
+  }
+  
+  /**
    * التحقق مما إذا كنا في بيئة معاينة (Lovable)
    */
   private static isPreviewEnvironment(): boolean {
