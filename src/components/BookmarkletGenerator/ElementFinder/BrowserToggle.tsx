@@ -1,65 +1,58 @@
 
-import React, { useEffect } from "react";
-import { Label } from "@/components/ui/label";
+import React, { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
-import { Info } from "lucide-react";
-import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
 
 interface BrowserToggleProps {
-  useRealBrowser: boolean;
-  isRunning: boolean;
+  useBrowserData: boolean;
   onToggle: (value: boolean) => void;
 }
 
-const BrowserToggle: React.FC<BrowserToggleProps> = ({
-  useRealBrowser,
-  isRunning,
-  onToggle,
-}) => {
-  // عند تحميل المكون، نجعل الوضع الافتراضي هو استخدام متصفح حقيقي وتفعيله إجبارياً
+const BrowserToggle: React.FC<BrowserToggleProps> = ({ useBrowserData, onToggle }) => {
+  // تأكد من أن الحالة الافتراضية هي true دائمًا
+  const [isRealBrowser, setIsRealBrowser] = useState(true);
+  
   useEffect(() => {
-    if (!useRealBrowser) {
-      console.log("تفعيل وضع المتصفح الحقيقي تلقائياً وإجبارياً");
+    // تحديث الحالة المحلية بناءً على الخاصية
+    setIsRealBrowser(true); // تجاهل قيمة useBrowserData وجعلها true دائمًا
+    // إذا كانت القيمة الحالية false، قم بتغييرها إلى true
+    if (!useBrowserData) {
       onToggle(true);
-      
-      // إعلام المستخدم
-      toast.info("تم تفعيل وضع المتصفح الحقيقي", {
-        description: "هذا ضروري لتنفيذ الأتمتة بشكل صحيح على مواقع الويب الحديثة"
-      });
     }
-  }, []);
-
-  const handleToggle = (value: boolean) => {
-    // دائمًا نبقي على وضع المتصفح الحقيقي مفعل
-    if (!value) {
-      toast.info("وضع المتصفح الحقيقي مطلوب", {
-        description: "لا يمكن تعطيل هذا الوضع لأنه ضروري للأتمتة الناجحة"
-      });
-      return;
-    }
-    
-    console.log(`تم تبديل وضع المتصفح الحقيقي إلى: ${value ? 'مفعل' : 'غير مفعل'}`);
-    onToggle(true); // دائمًا نرسل "true"
+  }, [useBrowserData, onToggle]);
+  
+  const handleToggle = (checked: boolean) => {
+    // لا نسمح بتعيين القيمة إلى false أبدًا
+    const newValue = true;
+    setIsRealBrowser(newValue);
+    onToggle(newValue);
   };
-
+  
   return (
-    <div className="flex items-center space-x-2 space-x-reverse justify-between bg-green-50 p-3 rounded-md border border-green-100">
-      <div className="flex items-center gap-2">
-        <Info className="h-4 w-4 text-green-500" />
-        <Label htmlFor="use-real-browser" className="font-medium text-green-800">
-          وضع المتصفح الحقيقي
-          <span className="text-xs font-normal block text-green-600 mt-1">
-            يتم تنفيذ الأتمتة من خلال متصفح حقيقي على الخادم (مفعل دائماً)
-          </span>
-        </Label>
-      </div>
+    <div className="flex items-center space-x-2 rtl:space-x-reverse">
       <Switch
-        id="use-real-browser"
-        checked={true} // دائمًا مفعل
+        id="browser-toggle"
+        checked={isRealBrowser}
         onCheckedChange={handleToggle}
-        disabled={true} // دائمًا معطل للتأكد من عدم تغييره
-        className="data-[state=checked]:bg-green-600"
+        disabled={true} // تعطيل التبديل تمامًا
       />
+      <Label htmlFor="browser-toggle" className="cursor-pointer">
+        استخدام متصفح حقيقي
+      </Label>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            <p className="text-sm">
+              تم تفعيل وضع المتصفح الحقيقي بشكل دائم للحصول على أفضل النتائج وتجنب مشاكل الأتمتة.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 };

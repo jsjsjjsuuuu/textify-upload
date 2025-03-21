@@ -68,33 +68,10 @@ export class AutomationService {
     console.log("الإعدادات المحسنة للأتمتة:", JSON.stringify(enhancedConfig, null, 2));
     
     // في وضع المعاينة، نقوم بمحاكاة النجاح بدون اتصال فعلي بالخادم
-    if (isPreviewEnvironment()) {
-      console.log("وضع المعاينة: محاكاة تنفيذ الأتمتة بنجاح");
-      
-      // إنشاء تأخير مصطنع لمحاكاة وقت المعالجة
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // إنشاء نتائج محاكاة للإجراءات
-      const mockResults: ActionResult[] = enhancedConfig.actions.map((action, index) => ({
-        index,
-        action: action.name || '',
-        selector: action.finder || '',
-        value: action.value || '',
-        success: true,
-        error: null,
-        timestamp: new Date().toISOString(),
-        duration: Math.floor(Math.random() * 500) + 100,
-        screenshots: []
-      }));
-      
-      // إنشاء استجابة وهمية
-      return {
-        success: true,
-        message: "تم تنفيذ الأتمتة بنجاح (وضع المعاينة)",
-        automationType: 'server',
-        executionTime: 2000,
-        results: mockResults
-      };
+    // تم تعديل هذا الشرط بحيث لا يتم تنفيذه أبدًا لأن isPreviewEnvironment() ترجع دائمًا false
+    if (false) {
+      // لن يتم تنفيذ هذا الكود أبدًا
+      return { success: false, message: "وضع المعاينة غير متاح", automationType: 'server' };
     }
     
     // 3. الاتصال بالخادم وتنفيذ الأتمتة
@@ -103,7 +80,10 @@ export class AutomationService {
       const serverUrl = getAutomationServerUrl();
       console.log("URL خادم الأتمتة:", serverUrl);
       
-      // إنشاء طلب الأتمتة
+      // إنشاء طلب الأتمتة مع تعيين مهلة طويلة
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // مهلة دقيقتين كحد أقصى
+      
       const response = await fetch(`${serverUrl}/api/automation/run`, {
         method: 'POST',
         headers: {
@@ -112,8 +92,12 @@ export class AutomationService {
           'Cache-Control': 'no-cache, no-store',
           'Pragma': 'no-cache'
         },
-        body: JSON.stringify(enhancedConfig)
+        body: JSON.stringify(enhancedConfig),
+        signal: controller.signal
       });
+      
+      // إلغاء مؤقت المهلة بعد الحصول على الاستجابة
+      clearTimeout(timeoutId);
       
       // تسجيل معلومات الاستجابة الأولية للتشخيص
       console.log(`استجابة الخادم - الحالة: ${response.status}, نوع المحتوى: ${response.headers.get('Content-Type')}`);
@@ -123,18 +107,37 @@ export class AutomationService {
         // محاولة استخراج رسالة الخطأ من الاستجابة
         let errorMessage = "فشل الاتصال بخادم الأتمتة";
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
+          const errorText = await response.text();
+          try {
+            // محاولة تحليل النص كـ JSON
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            // إذا تعذر تحليل JSON، استخدام النص كما هو
+            errorMessage = errorText || errorMessage;
+          }
         } catch (e) {
-          // إذا تعذر تحليل JSON، استخدام نص الخطأ
-          errorMessage = await response.text() || errorMessage;
+          // إذا تعذر قراءة النص، استخدام رسالة افتراضية
+          errorMessage = `فشل الاتصال بخادم الأتمتة (${response.status})`;
         }
         
-        throw new Error(`خطأ في طلب الأتمتة (${response.status}): ${errorMessage}`);
+        throw new Error(errorMessage);
       }
       
-      // تحليل الاستجابة
-      const data = await response.json();
+      // عمل نسخة من الاستجابة لتحليلها كـ JSON
+      // هذا يمنع خطأ "body stream already read"
+      const responseClone = response.clone();
+      let data;
+      
+      try {
+        data = await responseClone.json();
+      } catch (e) {
+        console.error("خطأ في تحليل JSON:", e);
+        // محاولة قراءة النص إذا فشل تحليل JSON
+        const text = await response.text();
+        throw new Error(`فشل في تحليل استجابة الخادم: ${text}`);
+      }
+      
       console.log("استجابة الأتمتة:", data);
       
       // إعادة استجابة الخادم
@@ -144,15 +147,39 @@ export class AutomationService {
       
       // تحسين رسائل الخطأ الشائعة للمستخدم
       let errorMessage = error instanceof Error ? error.message : "خطأ غير معروف";
+      let errorType = "ExecutionError";
       
       // التعامل مع أخطاء الاتصال
-      if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
+      if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError") || errorMessage.includes("network")) {
         errorMessage = "فشل الاتصال بخادم الأتمتة. تأكد من اتصالك بالإنترنت وأن الخادم متاح.";
+        errorType = "NetworkError";
       }
       
       // التعامل مع أخطاء انتهاء المهلة
-      if (errorMessage.includes("timeout") || errorMessage.includes("timed out")) {
+      if (errorMessage.includes("timeout") || errorMessage.includes("timed out") || error instanceof DOMException && error.name === 'AbortError') {
         errorMessage = "انتهت مهلة الاتصال بخادم الأتمتة. قد يكون الخادم مشغولاً، حاول مرة أخرى لاحقاً.";
+        errorType = "TimeoutError";
+      }
+      
+      // التعامل مع أخطاء CORS
+      if (errorMessage.includes("CORS") || errorMessage.includes("cross-origin")) {
+        errorMessage = "خطأ في سياسة CORS. تأكد من إعدادات الخادم والمتصفح.";
+        errorType = "CORSError";
+      }
+      
+      // التعامل مع أخطأ "body stream already read"
+      if (errorMessage.includes("body stream already read") || errorMessage.includes("response.text")) {
+        errorMessage = "خطأ في معالجة استجابة الخادم. جاري إعادة المحاولة تلقائياً.";
+        errorType = "ResponseError";
+        
+        // محاولة إعادة الاتصال مباشرة للمستخدم
+        try {
+          await checkConnection();
+          return this.validateAndRunAutomation(config);
+        } catch (e) {
+          // إذا فشلت إعادة المحاولة
+          errorMessage = "فشلت محاولة إعادة الاتصال. حاول مرة أخرى لاحقاً.";
+        }
       }
       
       // إرجاع استجابة خطأ منسقة
@@ -162,7 +189,7 @@ export class AutomationService {
         automationType: 'server',
         error: {
           message: errorMessage,
-          type: 'ExecutionError'
+          type: errorType
         }
       };
     }
