@@ -1,16 +1,34 @@
 
 import React from "react";
 import { Switch } from "@/components/ui/switch";
-import { ExternalLink, AlertTriangle, Server, RefreshCw } from "lucide-react";
+import { ExternalLink, AlertTriangle, Server, RefreshCw, Globe, Link2, Database } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AutomationService } from "@/utils/automationService";
-import { isPreviewEnvironment } from "@/utils/automationServerUrl";
+import { isPreviewEnvironment, getAutomationServerUrl } from "@/utils/automationServerUrl";
 import { toast } from "sonner";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const RealExecutionToggle: React.FC = () => {
   const [isEnabled, setIsEnabled] = React.useState(() => AutomationService.isRealExecutionEnabled());
   const [isConnecting, setIsConnecting] = React.useState(false);
+  const [connectionTried, setConnectionTried] = React.useState(false);
+  const [connectionError, setConnectionError] = React.useState<string | null>(null);
+  const [currentServerUrl, setCurrentServerUrl] = React.useState(() => getAutomationServerUrl());
+  
+  React.useEffect(() => {
+    // تحديث عنوان URL الحالي عند تغييره
+    setCurrentServerUrl(getAutomationServerUrl());
+    
+    // إذا تم تفعيل وضع التنفيذ الفعلي، التحقق من الاتصال تلقائياً
+    if (isEnabled && !connectionTried) {
+      checkServerConnection();
+    }
+  }, [isEnabled]);
   
   const handleToggle = (checked: boolean) => {
     setIsEnabled(checked);
@@ -19,26 +37,42 @@ const RealExecutionToggle: React.FC = () => {
     if (checked) {
       // محاولة الاتصال بالخادم الحقيقي عند تفعيل الخيار
       checkServerConnection();
+    } else {
+      // إعادة تعيين حالة الاتصال عند إلغاء التفعيل
+      setConnectionTried(false);
+      setConnectionError(null);
     }
   };
   
   const checkServerConnection = async () => {
     setIsConnecting(true);
+    setConnectionError(null);
     toast.info("جاري التحقق من الاتصال بالخادم الحقيقي...");
     
     try {
       const result = await AutomationService.forceReconnect();
+      setConnectionTried(true);
+      
       if (result) {
         toast.success("تم الاتصال بخادم الأتمتة بنجاح! يمكنك الآن تنفيذ الأتمتة بشكل فعلي.");
       } else {
+        setConnectionError("تعذر الاتصال بخادم الأتمتة. تأكد من تشغيل الخادم وإمكانية الوصول إليه.");
         toast.error("تعذر الاتصال بخادم الأتمتة. تأكد من تشغيل الخادم وإمكانية الوصول إليه.");
       }
     } catch (error) {
       console.error("خطأ في الاتصال بالخادم:", error);
-      toast.error(`تعذر الاتصال بخادم الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+      const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+      setConnectionError(errorMessage);
+      setConnectionTried(true);
+      toast.error(`تعذر الاتصال بخادم الأتمتة: ${errorMessage}`);
     } finally {
       setIsConnecting(false);
     }
+  };
+  
+  const openServerSettings = () => {
+    // الانتقال إلى صفحة إعدادات الخادم
+    window.location.href = "/server-settings";
   };
   
   // إذا لم نكن في بيئة المعاينة، لا نعرض هذا المكون
@@ -81,7 +115,52 @@ const RealExecutionToggle: React.FC = () => {
               <li>عدم وجود حظر CORS على الخادم</li>
               <li>تكوين المتصفح للسماح بالاتصالات</li>
             </ul>
-            <div className="mt-3">
+            
+            {connectionTried && connectionError && (
+              <div className="mt-3 mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <h4 className="text-red-800 font-medium flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  حدث خطأ أثناء الاتصال بالخادم
+                </h4>
+                <p className="text-sm text-red-700 mb-2">{connectionError}</p>
+                
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="link" size="sm" className="p-0 h-auto text-red-700 hover:text-red-900">
+                      عرض الحلول المحتملة
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-3">
+                      <h5 className="font-medium">حلول محتملة لخطأ الاتصال:</h5>
+                      <ul className="text-sm space-y-2">
+                        <li className="flex items-start gap-2">
+                          <Server className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>تأكد من تشغيل خادم الأتمتة وأنه متاح على الإنترنت</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Link2 className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>تحقق من صحة عنوان URL الخادم في صفحة إعدادات الخادم</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Globe className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>تأكد من أن خادم الأتمتة يسمح بطلبات CORS من هذا الموقع</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Database className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>قد يكون الخادم في وضع السكون (Render)، حاول تنشيطه عن طريق زيارة عنوان URL الخاص به مباشرة</span>
+                        </li>
+                      </ul>
+                      <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
+                        الخادم الحالي: <code className="px-1 py-0.5 bg-slate-100 rounded text-[11px]">{currentServerUrl}</code>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+            
+            <div className="mt-3 flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -92,6 +171,16 @@ const RealExecutionToggle: React.FC = () => {
                 <Server className={`h-4 w-4 mr-2 ${isConnecting ? 'hidden' : 'inline'}`} />
                 <RefreshCw className={`h-4 w-4 mr-2 ${isConnecting ? 'animate-spin inline' : 'hidden'}`} />
                 {isConnecting ? 'جاري التحقق من الاتصال...' : 'التحقق من اتصال الخادم الحقيقي'}
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openServerSettings}
+                className="bg-white hover:bg-amber-50"
+              >
+                <Database className="h-4 w-4 mr-2" />
+                تكوين إعدادات الخادم
               </Button>
             </div>
           </AlertDescription>
