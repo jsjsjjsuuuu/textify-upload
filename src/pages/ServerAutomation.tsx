@@ -25,13 +25,10 @@ const ServerAutomation = () => {
   
   const checkServerConnection = async () => {
     try {
-      // إذا كنا في بيئة المعاينة، تخطي فحص الاتصال الفعلي
+      // حتى إذا كنا في بيئة المعاينة، نستخدم وضع التنفيذ الفعلي
       if (isPreviewEnvironment()) {
-        toast.info("أنت في بيئة المعاينة. سيتم محاكاة الأتمتة فقط.", {
-          duration: 5000,
-        });
-        setServerConnected(true);
-        return;
+        // تم تعديل هذا الجزء لعدم عرض رسالة المعاينة
+        // لأن isPreviewEnvironment() ترجع الآن دائمًا false
       }
       
       // التحقق من الاتصال بالخادم
@@ -84,7 +81,7 @@ const ServerAutomation = () => {
           </p>
         </div>
         
-        {!serverConnected && !isPreviewEnvironment() && (
+        {!serverConnected && (
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>تعذر الاتصال بخادم الأتمتة</AlertTitle>

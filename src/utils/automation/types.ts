@@ -1,7 +1,7 @@
 
 export interface AutomationConfig {
   projectUrl: string;
-  projectName?: string; // إضافة اسم المشروع كحقل اختياري
+  projectName?: string;
   actions: Action[] | AutomationAction[];
   useBrowserData: boolean;
   automationType: 'server' | 'client';

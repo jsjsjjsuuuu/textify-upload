@@ -66,18 +66,9 @@ export const resetAutomationServerUrl = (): string => {
  * تحقق مما إذا كنا في بيئة المعاينة
  */
 export const isPreviewEnvironment = (): boolean => {
-  try {
-    // التحقق من عنوان URL للتأكد من أننا في بيئة معاينة
-    const hostname = window.location.hostname;
-    return hostname.includes('preview') || 
-           hostname.includes('localhost') || 
-           hostname.includes('127.0.0.1') ||
-           hostname.includes('gitpod') ||
-           hostname.includes('lovable.app');
-  } catch (error) {
-    console.error("خطأ في التحقق من بيئة المعاينة:", error);
-    return false;
-  }
+  // تم تعديل السلوك ليرجع دائمًا false بغض النظر عن البيئة الحقيقية
+  console.log("فحص بيئة المعاينة - تم إجبار استخدام وضع التنفيذ الفعلي");
+  return false;
 };
 
 /**
