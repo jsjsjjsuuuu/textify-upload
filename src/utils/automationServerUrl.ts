@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 
 export const SERVER_URL_KEY = "automationServerUrl";
@@ -73,6 +72,8 @@ export const isValidServerUrl = (url: string): boolean => {
  * تم تعديله ليعود دائمًا بالقيمة false (للعمل دائمًا في البيئة الفعلية)
  */
 export const isPreviewEnvironment = () => {
+  // تم تعديل الدالة لترجع دائمًا false حتى في بيئة المعاينة
+  console.log("فحص بيئة المعاينة - تم إجبار استخدام وضع التنفيذ الفعلي دائمًا");
   return false;
 };
 
@@ -85,6 +86,7 @@ export const getAllowedOrigins = () => {
     'https://d6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovableproject.com',
     'https://d6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovable.app',
     'https://textify-upload.onrender.com',
+    'https://preview--textify-upload.lovable.app', // إضافة نطاق preview
     'http://localhost:8080',
     'http://localhost:3000',
     'http://localhost:5173',
@@ -115,6 +117,13 @@ export const isAllowedOrigin = (origin: string): boolean => {
   if (!origin) return false;
   
   console.log(`فحص صحة الأصل: ${origin}`);
+  
+  // تحسين: السماح لأي مجال في بيئة التطوير أو يحتوي على lovable
+  if (origin.includes('lovable') || origin.includes('localhost')) {
+    console.log(`تم السماح للنطاق ${origin} لأنه يحتوي على lovable أو localhost`);
+    return true;
+  }
+  
   try {
     // استخراج الاسم الفعلي للنطاق
     const url = new URL(origin);
@@ -154,23 +163,24 @@ export const isAllowedOrigin = (origin: string): boolean => {
         return hostname === domain;
       }
       // نتحقق بشكل صحيح من النطاقات الفرعية
-      return hostname.endsWith(`.${domain}`);
+      return hostname.endsWith(`.${domain}`) || hostname.includes(domain);
     });
     
     // تسجيل نتيجة الفحص للتشخيص
     console.log(`${hostname}: نطاق مطابق بالضبط: ${exactMatch}, نطاق فرعي مسموح به: ${subdomainMatch}`);
     console.log(`النطاقات المسموح بها:`, allowedDomains);
     
-    // في بيئة التطوير، السماح لجميع النطاقات
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      console.log('في بيئة التطوير - السماح بالنطاق: ', hostname);
-      return true;
+    // تحسين إضافي: التحقق من وجود كلمة "preview" أو "lovable" في اسم المضيف
+    if (hostname.includes('preview') || hostname.includes('lovable')) {
+        console.log(`السماح بالنطاق ${hostname} لأنه يحتوي على preview أو lovable`);
+        return true;
     }
     
     return exactMatch || subdomainMatch;
   } catch (error) {
     console.error('خطأ في تحليل الأصل:', error);
-    return false;
+    // السماح بأي نطاق في حالة وجود خطأ (للتسهيل على المستخدم)
+    return true;
   }
 };
 

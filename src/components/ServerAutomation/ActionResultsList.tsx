@@ -23,6 +23,52 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
   
   const { success, message, results, executionTime, error } = automationResponse;
   
+  // إضافة تفاصيل إضافية للمشكلة إذا كانت هناك مشكلة CORS
+  const getDetailedErrorInfo = () => {
+    if (!error) return null;
+    
+    let detailedInfo = null;
+    
+    if (error.type === 'CORSError') {
+      detailedInfo = (
+        <div className="mt-2 text-sm">
+          <p className="font-semibold">حلول مقترحة لمشاكل CORS:</p>
+          <ul className="list-disc list-inside mt-1 space-y-1">
+            <li>تأكد من أن خادم الأتمتة يسمح بالاتصال من نطاقك.</li>
+            <li>تحقق من إعدادات متصفحك وتأكد من عدم حظر الطلبات عبر النطاقات.</li>
+            <li>جرب استخدام متصفح مختلف.</li>
+            <li>تأكد من أن عنوان خادم الأتمتة صحيح.</li>
+          </ul>
+        </div>
+      );
+    } else if (error.type === 'NetworkError') {
+      detailedInfo = (
+        <div className="mt-2 text-sm">
+          <p className="font-semibold">حلول مقترحة لمشاكل الشبكة:</p>
+          <ul className="list-disc list-inside mt-1 space-y-1">
+            <li>تأكد من اتصالك بالإنترنت.</li>
+            <li>تأكد من أن خادم الأتمتة يعمل.</li>
+            <li>تحقق من عنوان خادم الأتمتة.</li>
+            <li>قد تكون هناك مشكلة في جدار الحماية أو الشبكة.</li>
+          </ul>
+        </div>
+      );
+    } else if (error.type === 'TimeoutError') {
+      detailedInfo = (
+        <div className="mt-2 text-sm">
+          <p className="font-semibold">حلول مقترحة لمشاكل انتهاء المهلة:</p>
+          <ul className="list-disc list-inside mt-1 space-y-1">
+            <li>قد يكون الخادم بطيئًا، حاول مرة أخرى لاحقًا.</li>
+            <li>التأكد من أن العمليات المطلوبة ليست معقدة للغاية.</li>
+            <li>قد تكون هناك مشكلة في سرعة الإنترنت لديك.</li>
+          </ul>
+        </div>
+      );
+    }
+    
+    return detailedInfo;
+  };
+  
   return (
     <div className="space-y-4 mt-4">
       <Card className={success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
@@ -62,6 +108,7 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
               <AlertTitle>نوع الخطأ: {error.type || "خطأ غير معروف"}</AlertTitle>
               <AlertDescription className="mt-2 rtl">
                 <p>رسالة الخطأ: {error.message}</p>
+                {getDetailedErrorInfo()}
                 {error.stack && (
                   <div className="mt-2">
                     <details>

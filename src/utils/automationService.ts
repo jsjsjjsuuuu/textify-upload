@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { AutomationConfig, AutomationResponse } from "./automation/types";
 import { ConnectionManager } from "./automation/connectionManager";
@@ -114,10 +113,9 @@ export class AutomationService {
       };
     }
 
-    // إذا كنا في وضع المعاينة، قم بمحاكاة الاستجابة بدلاً من تنفيذ الأتمتة الفعلية
-    if (isPreviewEnvironment()) {
-      return this.simulateAutomationResponse(config);
-    }
+    // تعديل: إجبار التنفيذ الفعلي دائمًا حتى في وضع المعاينة
+    // إذا كنا في وضع المعاينة، قم بتنفيذ الأتمتة الفعلية بدلاً من المحاكاة
+    config.forceRealExecution = true;
 
     try {
       // تنفيذ الأتمتة
@@ -207,6 +205,9 @@ export class AutomationService {
       // إعداد طلب الأتمتة
       const endpoint = `${serverUrl}/api/automation/run`;
       console.log(`إرسال طلب الأتمتة إلى ${endpoint}`, config);
+      
+      // إضافة forceRealExecution للتأكد من تنفيذ الأتمتة الفعلية دائمًا
+      config.forceRealExecution = true;
       
       // تنفيذ الأتمتة مع إعادة المحاولة تلقائيًا
       const response = await fetchWithRetry(
@@ -327,43 +328,10 @@ export class AutomationService {
    * محاكاة استجابة الأتمتة في بيئة المعاينة
    */
   private static simulateAutomationResponse(config: AutomationConfig): AutomationResponse {
-    console.log("محاكاة استجابة الأتمتة في بيئة المعاينة:", config);
+    // تعديل: عدم استخدام المحاكاة حتى في بيئة المعاينة
+    console.log("التخطي لمحاكاة الأتمتة - تنفيذ فعلي دائمًا");
     
-    // تأخير مصطنع لمحاكاة وقت التنفيذ
-    const executionTime = Math.floor(Math.random() * 2000) + 1000;
-    
-    // محاكاة نتائج الإجراءات
-    const results: any[] = [];
-    
-    for (let i = 0; i < config.actions.length; i++) {
-      const action = config.actions[i];
-      const isSuccess = Math.random() > 0.2; // 80% احتمال النجاح
-      
-      // استخراج البيانات المناسبة حسب نوع الإجراء
-      const actionName = 'name' in action ? action.name : (`type` in action ? action.type : 'إجراء');
-      const selector = 'selector' in action ? action.selector : ('finder' in action ? action.finder : '');
-      const value = 'value' in action ? action.value : '';
-      
-      results.push({
-        index: i,
-        action: actionName,
-        selector: selector,
-        value: value,
-        success: isSuccess,
-        error: isSuccess ? null : "خطأ محاكى: لم يتم العثور على العنصر",
-        timestamp: new Date().toISOString(),
-        duration: Math.floor(Math.random() * 500) + 100,
-        screenshots: []
-      });
-    }
-    
-    return {
-      success: true,
-      message: "تم تنفيذ الأتمتة بنجاح (محاكاة)",
-      automationType: config.automationType,
-      results: results,
-      executionTime: executionTime,
-      timestamp: new Date().toISOString()
-    };
+    // سنقوم بإرجاع خطأ ليتم تنفيذ الأتمتة الفعلية بدلاً من المحاكاة
+    throw new Error("تم طلب التنفيذ الفعلي");
   }
 }

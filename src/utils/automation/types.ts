@@ -1,11 +1,11 @@
 
-
 export interface AutomationConfig {
   projectUrl: string;
   projectName?: string; // إضافة اسم المشروع كحقل اختياري
   actions: Action[] | AutomationAction[];
   useBrowserData: boolean;
   automationType: 'server' | 'client';
+  forceRealExecution?: boolean; // إضافة حقل جديد لإجبار التنفيذ الفعلي
 }
 
 export interface Action {
@@ -59,4 +59,3 @@ export interface AutomationResponse {
     type: string;
   };
 }
-
