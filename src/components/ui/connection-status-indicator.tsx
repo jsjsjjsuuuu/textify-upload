@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Wifi, WifiOff, RefreshCw, Clock, AlertTriangle, Activity } from "lucide-react";
+import { Wifi, WifiOff, RefreshCw, Clock, AlertTriangle, Activity, ServerCrash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConnectionManager } from "@/utils/automation/connectionManager";
 import { getLastConnectionStatus, isPreviewEnvironment, resetAutomationServerUrl } from "@/utils/automationServerUrl";
@@ -26,6 +26,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   const [isChecking, setIsChecking] = useState(false);
   const [serverInfo, setServerInfo] = useState<ServerStatusResponse | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [lastCheckTime, setLastCheckTime] = useState<Date | null>(null);
   const navigate = useNavigate();
   
   const checkConnectionStatus = async () => {
@@ -36,6 +37,18 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
         setIsConnected(true);
         onStatusChange?.(true);
         setIsChecking(false);
+        setLastCheckTime(new Date());
+        return;
+      }
+      
+      // قبل محاولة الاتصال الكاملة، تحقق أولاً من وجود الخادم
+      const exists = await AutomationService.checkServerExistence();
+      if (!exists) {
+        console.warn("خطأ: الخادم غير موجود في العنوان المحدد");
+        setIsConnected(false);
+        onStatusChange?.(false);
+        setIsChecking(false);
+        setLastCheckTime(new Date());
         return;
       }
       
@@ -50,6 +63,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       setServerInfo(status);
       setIsConnected(true);
       onStatusChange?.(true);
+      setLastCheckTime(new Date());
       
       // عرض إشعار بنجاح الاتصال (فقط إذا كان هناك محاولات إعادة اتصال سابقة)
       if (reconnectAttempts > 0) {
@@ -60,6 +74,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       console.error("فشل التحقق من حالة الاتصال:", error);
       setIsConnected(false);
       onStatusChange?.(false);
+      setLastCheckTime(new Date());
       
       // إذا كانت هناك محاولات متكررة فاشلة، فتح مربع حوار للمساعدة
       if (reconnectAttempts > 5) {
@@ -97,8 +112,8 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       checkConnectionStatus();
     }, 1000);
     
-    // إعداد فاصل زمني للتحقق الدوري (كل دقيقة)
-    const intervalId = setInterval(checkConnectionStatus, 60000);
+    // إعداد فاصل زمني للتحقق الدوري (كل 30 ثانية)
+    const intervalId = setInterval(checkConnectionStatus, 30000);
     
     return () => {
       clearTimeout(timer);
@@ -198,11 +213,16 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
                   <span className="text-sm">
                     {isConnected ? "متصل" : "غير متصل"}
                   </span>
+                  {lastCheckTime && (
+                    <span className="text-xs text-muted-foreground mr-auto">
+                      آخر تحديث: {lastCheckTime.toLocaleTimeString()}
+                    </span>
+                  )}
                 </div>
                 
                 {!isConnected && (
                   <div className="text-xs bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-200 p-2 rounded flex items-start gap-2 mt-2">
-                    <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
+                    <ServerCrash className="h-4 w-4 text-red-500 mt-0.5" />
                     <div>
                       <p className="font-medium">تعذر الاتصال بخادم Render</p>
                       <p className="mt-1">قد يكون الخادم في وضع السكون أو غير متاح حالياً. جاري إعادة المحاولة تلقائياً.</p>

@@ -23,6 +23,7 @@ export class ConnectionManager {
   private static retryDelay = 10000;
   private static lastError: Error | null = null;
   private static reconnectAttempts = 0;
+  private static lastSuccessfulConnection: Date | null = null;
   
   /**
    * الحصول على رابط خادم الأتمتة
@@ -66,6 +67,7 @@ export class ConnectionManager {
         // تحديث حالة الاتصال (مع محاكاة النجاح بشكل دائم في بيئة المعاينة)
         updateConnectionStatus(true);
         this.lastError = null;
+        this.lastSuccessfulConnection = new Date();
         
         // إيقاف إعادة المحاولة إذا كانت نشطة
         this.stopReconnect();
@@ -93,6 +95,12 @@ export class ConnectionManager {
       const timeoutSignal = createTimeoutSignal(30000); // زيادة المهلة إلى 30 ثانية
       
       const headers = createBaseHeaders(currentIp);
+      
+      // إضافة رؤوس إضافية قد تساعد في تجاوز مشكلات CORS
+      headers['Cache-Control'] = 'no-cache, no-store';
+      headers['Pragma'] = 'no-cache';
+      headers['X-Request-Time'] = Date.now().toString();
+      
       console.log("الرؤوس المستخدمة:", headers);
       
       // إضافة محاولات إعادة المحاولة المدمجة
@@ -131,6 +139,7 @@ export class ConnectionManager {
           updateConnectionStatus(true);
           this.lastError = null;
           this.reconnectAttempts = 0;
+          this.lastSuccessfulConnection = new Date();
           
           // إظهار رسالة نجاح (فقط إذا كان الاتصال غير ناجح في السابق)
           const connectionStatus = getLastConnectionStatus();
@@ -165,6 +174,7 @@ export class ConnectionManager {
         console.log("بيئة المعاينة: تجاهل خطأ الاتصال وإرجاع حالة ناجحة");
         // تحديث حالة الاتصال كما لو كانت ناجحة دائماً في بيئة المعاينة
         updateConnectionStatus(true);
+        this.lastSuccessfulConnection = new Date();
         
         // إرجاع بيانات مُحاكاة
         return {
@@ -327,5 +337,21 @@ export class ConnectionManager {
    */
   static getReconnectAttempts(): number {
     return this.reconnectAttempts;
+  }
+  
+  /**
+   * تحديث آخر اتصال ناجح
+   */
+  static updateLastSuccessfulConnection(): void {
+    this.lastSuccessfulConnection = new Date();
+    updateConnectionStatus(true);
+    this.reconnectAttempts = 0;
+  }
+  
+  /**
+   * الحصول على تاريخ آخر اتصال ناجح
+   */
+  static getLastSuccessfulConnection(): Date | null {
+    return this.lastSuccessfulConnection;
   }
 }
