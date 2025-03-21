@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash, Plus, PenLine, PlayCircle, Check, Alert, Copy, FileDown, File, Loader2 } from "lucide-react";
+import { Trash, Plus, PenLine, PlayCircle, Check, AlertTriangle, Copy, FileDown, File, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { toast } from "sonner";
@@ -12,7 +11,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Textarea } from "@/components/ui/textarea";
 import { AutomationConfig, AutomationAction } from "@/utils/automation/types";
 import { AutomationService } from "@/utils/automationService";
-import { Alert as AlertComponent, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 
 interface ElementFinderProps {
@@ -78,7 +77,8 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
           delay: action.delay ? parseInt(action.delay, 10) : 0 // تحويل delay إلى رقم
         })) as AutomationAction[],
         automationType: 'server' as 'server' | 'client',
-        useBrowserData: true
+        useBrowserData: true,
+        forceRealExecution: true // إضافة خاصية forceRealExecution
       };
       
       setAutomationProgress(30);
@@ -346,7 +346,7 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
         
         {serverError && (
           <AlertComponent variant="destructive">
-            <Alert className="h-4 w-4" />
+            <AlertTriangle className="h-4 w-4" />
             <AlertTitle>فشل تنفيذ الأتمتة</AlertTitle>
             <AlertDescription>{serverError}</AlertDescription>
           </AlertComponent>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -72,7 +71,8 @@ const SavedAutomations: React.FC = () => {
         projectUrl: automation.url,
         actions: automation.actions,
         automationType: 'server',
-        useBrowserData: true
+        useBrowserData: true,
+        forceRealExecution: true // إضافة خاصية forceRealExecution
       };
       
       const result = await AutomationService.validateAndRunAutomation(config);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -205,7 +204,8 @@ const SimpleAutomationSection = () => {
         projectUrl,
         actions: automationActions,
         automationType: 'server' as 'server' | 'client',
-        useBrowserData
+        useBrowserData,
+        forceRealExecution: true
       };
 
       const result = await AutomationService.validateAndRunAutomation(config);
