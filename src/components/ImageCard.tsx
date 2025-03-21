@@ -4,8 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, X, Edit, Trash, Send, ZoomIn, AlertCircle } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
-// تصحيح الاستيراد
-import ExtractedDataEditor from "@/components/ExtractedData/ExtractedDataEditor";
+import { ExtractedDataEditor } from "@/components/ExtractedData";
 
 interface ImageCardProps {
   image: ImageData;
