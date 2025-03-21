@@ -7,6 +7,7 @@ import { ImageData } from "@/types/ImageData";
 import { AutomationService } from "@/utils/automationService";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { checkConnection } from "@/utils/automationServerUrl";
 import { 
   Dialog,
   DialogContent,
@@ -40,10 +41,10 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     setIsTestingConnection(true);
     try {
       // محاولة التحقق من الاتصال بالخادم
-      const result = await AutomationService.checkServerExistence();
-      setConnectionStatus(result ? 'success' : 'error');
+      const result = await checkConnection();
+      setConnectionStatus(result.isConnected ? 'success' : 'error');
       
-      if (result) {
+      if (result.isConnected) {
         toast.success("تم الاتصال بخادم الأتمتة بنجاح", {
           id: "connection-success",
           duration: 3000
@@ -68,10 +69,10 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     // التحقق من حالة الاتصال بالخادم أولاً
     setIsTestingConnection(true);
     try {
-      const isConnected = await AutomationService.checkServerExistence();
-      setConnectionStatus(isConnected ? 'success' : 'error');
+      const result = await checkConnection();
+      setConnectionStatus(result.isConnected ? 'success' : 'error');
       
-      if (!isConnected) {
+      if (!result.isConnected) {
         // إظهار نافذة الاتصال إذا كان غير متصل
         setShowConnectionDialog(true);
         setIsTestingConnection(false);

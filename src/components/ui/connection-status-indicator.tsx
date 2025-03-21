@@ -2,19 +2,19 @@
 import React, { useState, useEffect } from "react";
 import { Wifi, WifiOff, RefreshCw, Clock, AlertTriangle, Activity, ServerCrash } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ConnectionManager } from "@/utils/automation/connectionManager";
+import { AutomationService } from "@/utils/automationService";
 import { 
   getLastConnectionStatus, 
   resetAutomationServerUrl,
   checkConnection,
-  getAutomationServerUrl
+  getAutomationServerUrl,
+  RENDER_ALLOWED_IPS
 } from "@/utils/automationServerUrl";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ServerStatusResponse } from "@/utils/automation/types";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { AutomationService } from "@/utils/automationService";
 
 interface ConnectionStatusIndicatorProps {
   className?: string;

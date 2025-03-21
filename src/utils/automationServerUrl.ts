@@ -10,6 +10,15 @@ const DEFAULT_AUTOMATION_SERVER_URL = 'https://textify-upload.onrender.com';
 const SERVER_URL_STORAGE_KEY = 'automation_server_url';
 const CONNECTION_STATUS_KEY = 'automation_server_connection_status';
 
+// عناوين IP المسموح بها لخادم Render (استخدم للاتصال المتناوب)
+export const RENDER_ALLOWED_IPS = [
+  '34.213.214.55',
+  '44.226.145.213',
+  '44.230.95.183',
+  '44.229.200.200',
+  '44.239.220.33'
+];
+
 /**
  * الحصول على عنوان خادم الأتمتة
  */
@@ -46,6 +55,14 @@ export const setAutomationServerUrl = (url: string): void => {
 };
 
 /**
+ * إعادة تعيين عنوان الخادم إلى القيمة الافتراضية
+ */
+export const resetAutomationServerUrl = (): string => {
+  setAutomationServerUrl(DEFAULT_AUTOMATION_SERVER_URL);
+  return DEFAULT_AUTOMATION_SERVER_URL;
+};
+
+/**
  * تحقق مما إذا كنا في بيئة المعاينة
  */
 export const isPreviewEnvironment = (): boolean => {
@@ -59,6 +76,18 @@ export const isPreviewEnvironment = (): boolean => {
            hostname.includes('lovable.app');
   } catch (error) {
     console.error("خطأ في التحقق من بيئة المعاينة:", error);
+    return false;
+  }
+};
+
+/**
+ * تحقق من صحة عنوان URL للخادم
+ */
+export const isValidServerUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+  } catch (e) {
     return false;
   }
 };
@@ -91,7 +120,7 @@ export const checkConnection = async (): Promise<{ isConnected: boolean; message
       console.log("Ping response successful:", data);
       
       // تحديث حالة الاتصال في التخزين المحلي
-      setConnectionStatus(true, "اتصال ناجح");
+      updateConnectionStatus(true, "اتصال ناجح");
       
       return {
         isConnected: true,
@@ -102,7 +131,7 @@ export const checkConnection = async (): Promise<{ isConnected: boolean; message
       console.error("Ping response failed:", response.status, errorText);
       
       // تحديث حالة الاتصال في التخزين المحلي
-      setConnectionStatus(false, `فشل الاتصال: ${response.status} ${errorText}`);
+      updateConnectionStatus(false, `فشل الاتصال: ${response.status} ${errorText}`);
       
       return {
         isConnected: false,
@@ -113,7 +142,7 @@ export const checkConnection = async (): Promise<{ isConnected: boolean; message
     console.error("Error during connection check:", error);
     
     // تحديث حالة الاتصال في التخزين المحلي
-    setConnectionStatus(false, `خطأ: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+    updateConnectionStatus(false, `خطأ: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
     
     return {
       isConnected: false,
@@ -125,12 +154,13 @@ export const checkConnection = async (): Promise<{ isConnected: boolean; message
 /**
  * تخزين حالة اتصال الخادم
  */
-const setConnectionStatus = (isConnected: boolean, message: string): void => {
+export const updateConnectionStatus = (isConnected: boolean, message: string = "", retryCount: number = 0): void => {
   try {
     const status = {
       isConnected,
       message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      retryCount
     };
     
     localStorage.setItem(CONNECTION_STATUS_KEY, JSON.stringify(status));
@@ -142,7 +172,7 @@ const setConnectionStatus = (isConnected: boolean, message: string): void => {
 /**
  * الحصول على آخر حالة اتصال مخزنة
  */
-export const getLastConnectionStatus = (): { isConnected: boolean; message: string; timestamp: string } => {
+export const getLastConnectionStatus = (): { isConnected: boolean; message: string; timestamp: string; retryCount: number } => {
   try {
     const storedStatus = localStorage.getItem(CONNECTION_STATUS_KEY);
     
@@ -154,7 +184,8 @@ export const getLastConnectionStatus = (): { isConnected: boolean; message: stri
     return {
       isConnected: true, // نفترض أنه متصل افتراضياً لتفادي رسائل الخطأ غير الضرورية
       message: "لم يتم التحقق من الاتصال بعد",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      retryCount: 0
     };
   } catch (error) {
     console.error("خطأ في الحصول على آخر حالة اتصال:", error);
@@ -163,17 +194,10 @@ export const getLastConnectionStatus = (): { isConnected: boolean; message: stri
     return {
       isConnected: false,
       message: "خطأ في استرداد حالة الاتصال",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      retryCount: 0
     };
   }
-};
-
-/**
- * إعادة تعيين عنوان الخادم إلى القيمة الافتراضية
- */
-export const resetServerUrlToDefault = (): string => {
-  setAutomationServerUrl(DEFAULT_AUTOMATION_SERVER_URL);
-  return DEFAULT_AUTOMATION_SERVER_URL;
 };
 
 /**
@@ -203,4 +227,99 @@ export const ensureConnection = async (retries = 2): Promise<boolean> => {
   
   console.log("فشلت جميع محاولات الاتصال");
   return false;
+};
+
+/**
+ * التحقق من حالة الاتصال
+ */
+export const isConnected = async (skipCache = false): Promise<boolean> => {
+  if (!skipCache) {
+    const status = getLastConnectionStatus();
+    // التحقق مما إذا كان الاتصال قد تم التحقق منه في الدقائق الخمس الماضية
+    const fiveMinutesAgo = new Date();
+    fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+    
+    if (status.timestamp && new Date(status.timestamp) > fiveMinutesAgo) {
+      return status.isConnected;
+    }
+  }
+  
+  // إذا كانت آخر حالة قديمة، تحقق مرة أخرى
+  const result = await checkConnection();
+  return result.isConnected;
+};
+
+/**
+ * الحصول على عنوان IP التالي من القائمة المسموح بها
+ */
+export const getNextIp = (): string => {
+  const lastIndex = parseInt(localStorage.getItem('last_ip_index') || '0');
+  const newIndex = (lastIndex + 1) % RENDER_ALLOWED_IPS.length;
+  localStorage.setItem('last_ip_index', newIndex.toString());
+  return RENDER_ALLOWED_IPS[newIndex];
+};
+
+/**
+ * إنشاء رؤوس أساسية للطلبات
+ */
+export const createBaseHeaders = (ipAddress?: string): Record<string, string> => {
+  return {
+    'Content-Type': 'application/json',
+    'X-Client-Id': 'web-client',
+    'Origin': window.location.origin,
+    'Cache-Control': 'no-cache, no-store',
+    'Pragma': 'no-cache',
+    ...(ipAddress ? { 'X-Forwarded-For': ipAddress } : {})
+  };
+};
+
+/**
+ * إنشاء إشارة مهلة
+ */
+export const createTimeoutSignal = (timeout: number): AbortSignal => {
+  return AbortSignal.timeout(timeout);
+};
+
+/**
+ * إنشاء خيارات الجلب
+ */
+export const createFetchOptions = (method: string, body?: any, timeout: number = 30000, headers: Record<string, string> = {}): RequestInit => {
+  return {
+    method,
+    headers: {
+      ...createBaseHeaders(),
+      ...headers
+    },
+    body: body ? JSON.stringify(body) : undefined,
+    signal: createTimeoutSignal(timeout),
+    mode: 'cors',
+    credentials: 'omit'
+  };
+};
+
+/**
+ * الحصول على مهلة الاتصال
+ */
+export const getConnectionTimeout = (): number => {
+  return 30000; // 30 ثانية افتراضياً
+};
+
+/**
+ * جلب مع إعادة المحاولة
+ */
+export const fetchWithRetry = async (url: string, options: RequestInit, retries: number = 3, delay: number = 1000): Promise<Response> => {
+  let lastError: Error | null = null;
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError || new Error('فشلت جميع محاولات الاتصال');
 };

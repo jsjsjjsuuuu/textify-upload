@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Sun, Moon, AlertTriangle, Wifi, Server } from 'lucide-react';
@@ -5,7 +6,7 @@ import { useTheme } from '@/components/ui/theme-provider';
 import ConnectionStatusIndicator from '@/components/ui/connection-status-indicator';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
-import { isConnected, getLastConnectionStatus } from '@/utils/automationServerUrl';
+import { checkConnection, getLastConnectionStatus } from '@/utils/automationServerUrl';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const AppHeader = () => {
@@ -31,11 +32,11 @@ const AppHeader = () => {
         setServerConnected(status.isConnected);
         
         // ثم التحقق من الحالة الفعلية
-        const connected = await isConnected(true);
-        setServerConnected(connected);
+        const result = await checkConnection();
+        setServerConnected(result.isConnected);
         
         // عرض إشعار للمستخدم إذا كان الخادم غير متصل
-        if (!connected && status.retryCount > 5) {
+        if (!result.isConnected && status.retryCount > 5) {
           // إظهار شريط الإشعار فقط إذا كانت هناك عدة محاولات فاشلة
           setShowConnectionBanner(true);
           

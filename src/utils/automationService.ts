@@ -1,6 +1,6 @@
 
-import { AutomationAction, AutomationConfig, AutomationResponse } from './automation/types';
-import { getAutomationServerUrl, isPreviewEnvironment } from './automationServerUrl';
+import { AutomationAction, AutomationConfig, AutomationResponse, ActionResult } from './automation/types';
+import { getAutomationServerUrl, isPreviewEnvironment, checkConnection } from './automationServerUrl';
 
 /**
  * خدمة الأتمتة - تتعامل مع تنفيذ سيناريوهات الأتمتة عبر الخادم
@@ -74,19 +74,26 @@ export class AutomationService {
       // إنشاء تأخير مصطنع لمحاكاة وقت المعالجة
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      // إنشاء نتائج محاكاة للإجراءات
+      const mockResults: ActionResult[] = enhancedConfig.actions.map((action, index) => ({
+        index,
+        action: action.name || '',
+        selector: action.finder || '',
+        value: action.value || '',
+        success: true,
+        error: null,
+        timestamp: new Date().toISOString(),
+        duration: Math.floor(Math.random() * 500) + 100,
+        screenshots: []
+      }));
+      
       // إنشاء استجابة وهمية
       return {
         success: true,
         message: "تم تنفيذ الأتمتة بنجاح (وضع المعاينة)",
         automationType: 'server',
         executionTime: 2000,
-        results: enhancedConfig.actions.map(action => ({
-          success: true,
-          action: action.name,
-          message: "تم تنفيذ الإجراء بنجاح (وضع المعاينة)",
-          selector: action.finder,
-          delay: action.delay
-        }))
+        results: mockResults
       };
     }
     
@@ -160,5 +167,88 @@ export class AutomationService {
       };
     }
   }
-}
 
+  /**
+   * التحقق من وجود الاتصال بالخادم
+   */
+  static async checkServerExistence(): Promise<boolean> {
+    try {
+      const result = await checkConnection();
+      return result.isConnected;
+    } catch (error) {
+      console.error("خطأ في التحقق من وجود الخادم:", error);
+      return false;
+    }
+  }
+
+  /**
+   * التحقق من حالة الخادم
+   */
+  static async checkServerStatus(showToasts = true): Promise<any> {
+    try {
+      const serverUrl = getAutomationServerUrl();
+      const response = await fetch(`${serverUrl}/api/status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Client-Id': 'web-client',
+          'Cache-Control': 'no-cache, no-store',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`فشل التحقق من حالة الخادم: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("خطأ في التحقق من حالة الخادم:", error);
+      return null;
+    }
+  }
+
+  /**
+   * إجبار إعادة الاتصال بالخادم
+   */
+  static async forceReconnect(): Promise<boolean> {
+    try {
+      const result = await checkConnection();
+      return result.isConnected;
+    } catch (error) {
+      console.error("خطأ في إعادة الاتصال بالخادم:", error);
+      return false;
+    }
+  }
+
+  /**
+   * تبديل وضع التنفيذ الفعلي
+   */
+  static toggleRealExecution(enabled: boolean): void {
+    try {
+      localStorage.setItem('force_real_execution', enabled.toString());
+      console.log(`تم ${enabled ? 'تفعيل' : 'تعطيل'} وضع التنفيذ الفعلي`);
+    } catch (error) {
+      console.error("خطأ في تبديل وضع التنفيذ الفعلي:", error);
+    }
+  }
+
+  /**
+   * بدء إعادة الاتصال التلقائي
+   */
+  static startAutoReconnect(callback?: (isConnected: boolean) => void): void {
+    console.log("بدء إعادة الاتصال التلقائي");
+    // هنا سيتم تنفيذ منطق إعادة الاتصال التلقائي
+    // يمكن تنفيذ هذا في الإصدارات المستقبلية
+  }
+
+  /**
+   * إيقاف إعادة الاتصال التلقائي
+   */
+  static stopReconnect(): void {
+    console.log("إيقاف إعادة الاتصال التلقائي");
+    // هنا سيتم إيقاف إعادة الاتصال التلقائي
+    // يمكن تنفيذ هذا في الإصدارات المستقبلية
+  }
+}

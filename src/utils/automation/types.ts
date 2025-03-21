@@ -5,7 +5,9 @@ export interface AutomationConfig {
   actions: Action[] | AutomationAction[];
   useBrowserData: boolean;
   automationType: 'server' | 'client';
-  forceRealExecution: boolean; // تعديل ليكون مطلوباً دائماً بدلاً من اختياري
+  forceRealExecution: boolean;
+  timeout?: number; // إضافة حقل مهلة اختياري
+  retries?: number; // إضافة حقل محاولات اختياري
 }
 
 export interface Action {
@@ -15,6 +17,7 @@ export interface Action {
   name?: string;
   finder?: string;
   delay?: number;
+  description?: string; // إضافة حقل الوصف
 }
 
 // إضافة واجهة AutomationAction لدعم المكونات الحالية
@@ -23,6 +26,7 @@ export interface AutomationAction {
   finder: string;
   value: string;
   delay: number;
+  description?: string; // إضافة حقل الوصف
 }
 
 export interface ServerStatusResponse {
