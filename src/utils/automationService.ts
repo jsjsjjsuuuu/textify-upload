@@ -114,7 +114,8 @@ export class AutomationService {
         throw new Error("لم يتم تكوين عنوان URL لخادم الأتمتة بشكل صحيح");
       }
       
-      const apiEndpoint = `${serverUrl}/api/automation/run`;
+      // تعديل نقطة النهاية API لتتوافق مع الخادم الفعلي
+      const apiEndpoint = `${serverUrl}/api/automation/execute`;
       console.log("نقطة نهاية API الكاملة:", apiEndpoint);
       
       // إنشاء طلب الأتمتة
@@ -139,7 +140,7 @@ export class AutomationService {
         let errorType = ErrorType.ExecutionError;
         
         if (response.status === 404) {
-          errorMessage = "نقطة النهاية API غير موجودة. تأكد من تكوين خادم الأتمتة بشكل صحيح.";
+          errorMessage = "نقطة النهاية API غير موجودة. تأكد من تكوين خادم الأتمتة بشكل صحيح. جرب استخدام نقطة نهاية API أخرى مثل /api/automation/execute.";
           errorType = ErrorType.EndpointNotFoundError;
         } else if (response.status === 403 || response.status === 401) {
           errorMessage = "غير مصرح بالوصول إلى خادم الأتمتة. تحقق من بيانات الاعتماد.";
