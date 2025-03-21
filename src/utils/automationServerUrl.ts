@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 
 export const SERVER_URL_KEY = "automationServerUrl";
@@ -78,6 +77,7 @@ export const isPreviewEnvironment = () => {
 
 /**
  * الحصول على النطاقات المسموح بها للاتصال بالخادم
+ * تحديث قائمة النطاقات المسموح بها بشكل دقيق
  */
 export const getAllowedOrigins = () => {
   const defaultAllowedOrigins = [
@@ -99,6 +99,61 @@ export const getAllowedOrigins = () => {
   }
   
   return defaultAllowedOrigins;
+};
+
+/**
+ * دالة محسنة للتحقق من النطاق
+ */
+export const isAllowedOrigin = (origin: string): boolean => {
+  if (!origin) return false;
+  
+  console.log(`فحص صحة الأصل: ${origin}`);
+  try {
+    // استخراج الاسم الفعلي للنطاق
+    const url = new URL(origin);
+    const hostname = url.hostname;
+    
+    // الحصول على قائمة النطاقات المسموح بها
+    const allowedOrigins = getAllowedOrigins();
+    
+    // تحويل عناوين URL إلى أسماء نطاقات فقط
+    const allowedDomains = allowedOrigins.map(url => {
+      try {
+        return new URL(url).hostname;
+      } catch {
+        return url; // إذا كان ليس URL كامل، استخدمه كما هو
+      }
+    });
+    
+    // أضف النطاقات الأساسية
+    const baseDomains = ['lovable.app', 'lovableproject.com', 'textify-upload.onrender.com', 'localhost', '127.0.0.1'];
+    baseDomains.forEach(domain => {
+      if (!allowedDomains.includes(domain)) {
+        allowedDomains.push(domain);
+      }
+    });
+    
+    // فحص مطابقة دقيقة للنطاق
+    const exactMatch = allowedDomains.includes(hostname);
+    
+    // فحص النطاقات الفرعية للنطاقات المسموح بها
+    const subdomainMatch = allowedDomains.some(domain => {
+      if (domain === 'localhost' || domain === '127.0.0.1') {
+        return hostname === domain;
+      }
+      // نتحقق بشكل صحيح من النطاقات الفرعية
+      return hostname.endsWith(`.${domain}`) && hostname !== domain;
+    });
+    
+    // تسجيل نتيجة الفحص للتشخيص
+    console.log(`${hostname}: نطاق مطابق بالضبط: ${exactMatch}, نطاق فرعي مسموح به: ${subdomainMatch}`);
+    console.log(`النطاقات المسموح بها:`, allowedDomains);
+    
+    return exactMatch || subdomainMatch;
+  } catch (error) {
+    console.error('خطأ في تحليل الأصل:', error);
+    return false;
+  }
 };
 
 /**
@@ -216,11 +271,14 @@ export const getNextIp = (): string => {
 };
 
 /**
- * إنشاء الرؤوس الأساسية للطلبات
+ * إنشاء الرؤوس الأساسية للطلبات مع تحسين التحقق من الأصل
  */
 export const createBaseHeaders = (ip?: string): Record<string, string> => {
   const origin = typeof window !== 'undefined' ? window.location.origin : getAutomationServerUrl();
   const referer = typeof window !== 'undefined' ? window.location.href : getAutomationServerUrl();
+  
+  // تسجيل معلومات الرؤوس للتشخيص
+  console.log(`إنشاء رؤوس الطلب: Origin=${origin}, Referer=${referer}`);
 
   return {
     "Content-Type": "application/json",

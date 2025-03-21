@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
   console.log(`⚡️ الاتصال بخادم الأتمتة على: ${automationServerUrl}, isProduction: ${mode === 'production'}`);
   console.log(`⚡️ تم تعيين استخدام خادم Render الرسمي فقط`);
   
-  // النطاقات المسموح بها للاتصال بالخادم
+  // النطاقات المسموح بها للاتصال بالخادم بشكل دقيق
   const ALLOWED_ORIGINS = [
     'https://d6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovableproject.com',
     'https://d6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovable.app',
@@ -31,6 +31,54 @@ export default defineConfig(({ mode }) => {
     '44.230.95.183',
     '44.229.200.200'
   ];
+  
+  // دالة محسنة للتحقق من النطاق
+  const isAllowedOrigin = (origin) => {
+    if (!origin) return false;
+    
+    console.log(`فحص صحة الأصل في vite.config.ts: ${origin}`);
+    try {
+      // استخراج الاسم الفعلي للنطاق
+      const url = new URL(origin);
+      const hostname = url.hostname;
+      
+      // استخراج النطاقات من العناوين الكاملة
+      const allowedDomains = ALLOWED_ORIGINS.map(url => {
+        try {
+          return new URL(url).hostname;
+        } catch {
+          return url;
+        }
+      });
+      
+      // إضافة النطاقات الأساسية
+      const baseDomains = ['lovable.app', 'lovableproject.com', 'textify-upload.onrender.com', 'localhost', '127.0.0.1'];
+      baseDomains.forEach(domain => {
+        if (!allowedDomains.includes(domain)) {
+          allowedDomains.push(domain);
+        }
+      });
+      
+      // فحص مطابقة دقيقة للنطاق
+      const exactMatch = allowedDomains.includes(hostname);
+      
+      // فحص النطاقات الفرعية للنطاقات المسموح بها
+      const subdomainMatch = allowedDomains.some(domain => {
+        if (domain === 'localhost' || domain === '127.0.0.1') {
+          return hostname === domain;
+        }
+        return hostname.endsWith(`.${domain}`);
+      });
+      
+      // تسجيل نتيجة الفحص للتشخيص
+      console.log(`vite.config.ts - ${hostname}: مطابقة دقيقة: ${exactMatch}, نطاق فرعي: ${subdomainMatch}`);
+      
+      return exactMatch || subdomainMatch;
+    } catch (error) {
+      console.error('خطأ في تحليل الأصل:', error);
+      return false;
+    }
+  };
   
   // اختيار عنوان IP عشوائي من القائمة
   const getRandomIp = () => {
@@ -69,8 +117,11 @@ export default defineConfig(({ mode }) => {
               const origin = req.headers.origin || '';
               console.log(`الأصل (Origin) المرسل: ${origin}`);
               
+              // استخدام الدالة المحسنة للتحقق من النطاق
+              const isAllowed = isAllowedOrigin(origin);
+              
               // أضف رؤوس CORS المخصصة
-              if (ALLOWED_ORIGINS.includes(origin) || origin.includes('lovableproject.com') || origin.includes('lovable.app')) {
+              if (isAllowed) {
                 console.log(`النطاق مسموح به: ${origin}`);
                 // إضافة الرؤوس اللازمة للتجاوز مشاكل CORS
                 proxyReq.setHeader('X-Forwarded-For', selectedIp);
@@ -88,6 +139,7 @@ export default defineConfig(({ mode }) => {
                 proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
               } else {
                 console.log(`النطاق غير مسموح به: ${origin}`);
+                // في حالة النطاقات غير المسموح بها، لا نقوم بإضافة رؤوس CORS
               }
             });
             proxy.on('proxyRes', (proxyRes, req, _res) => {
@@ -96,12 +148,21 @@ export default defineConfig(({ mode }) => {
               // الحصول على الأصل (origin) الفعلي من الطلب
               const origin = req.headers.origin || '';
               
-              if (ALLOWED_ORIGINS.includes(origin) || origin.includes('lovableproject.com') || origin.includes('lovable.app')) {
+              // استخدام الدالة المحسنة للتحقق من النطاق
+              const isAllowed = isAllowedOrigin(origin);
+              
+              if (isAllowed) {
                 // تعديل رؤوس الاستجابة لتسهيل الاتصال
                 proxyRes.headers['access-control-allow-origin'] = origin;
                 proxyRes.headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
                 proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time, Origin, Referer';
                 proxyRes.headers['access-control-allow-credentials'] = 'true';
+              } else {
+                // إزالة أي رؤوس CORS موجودة للأصول غير المسموح بها
+                delete proxyRes.headers['access-control-allow-origin'];
+                delete proxyRes.headers['access-control-allow-methods'];
+                delete proxyRes.headers['access-control-allow-headers'];
+                delete proxyRes.headers['access-control-allow-credentials'];
               }
             });
           }

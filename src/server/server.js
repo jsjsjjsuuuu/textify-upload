@@ -1,4 +1,3 @@
-
 import express from 'express';
 import puppeteer from 'puppeteer';
 import cors from 'cors';
@@ -31,14 +30,47 @@ console.log(`RENDER_EXTERNAL_URL: ${process.env.RENDER_EXTERNAL_URL || 'not set'
 
 const app = express();
 
-// تحديد قائمة النطاقات المسموح بها
+// تحديد قائمة النطاقات المسموح بها بشكل دقيق
 const ALLOWED_DOMAINS = [
   'lovable.app',
   'lovableproject.com',
-  'd6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovableproject.com', // إضافة النطاق المحدد
+  'd6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovableproject.com',
+  'd6dc1e9d-71ba-4f8b-ac87-df9860167fcf.lovable.app',
+  'textify-upload.onrender.com',
   'localhost',
   '127.0.0.1'
 ];
+
+// دالة محسنة للتحقق من النطاق
+const isAllowedOrigin = (origin) => {
+  if (!origin) return false;
+  
+  // نطبع دائمًا الأصل للتشخيص
+  console.log(`فحص الأصل: ${origin}`);
+  
+  try {
+    // استخراج الاسم الفعلي للنطاق
+    const url = new URL(origin);
+    const hostname = url.hostname;
+    
+    // فحص مطابقة دقيقة للنطاق
+    const exactMatch = ALLOWED_DOMAINS.includes(hostname);
+    
+    // فحص النطاقات الفرعية للنطاقات المسموح بها
+    const subdomainMatch = ALLOWED_DOMAINS.some(domain => {
+      // لا نقبل المقارنات الجزئية، بل التحقق من أن النطاق الفرعي ينتهي بالنطاق الرئيسي
+      return hostname.endsWith(`.${domain}`) || hostname === domain;
+    });
+    
+    // تسجيل نتيجة الفحص للتشخيص
+    console.log(`${hostname}: نطاق مطابق بالضبط: ${exactMatch}, نطاق فرعي: ${subdomainMatch}`);
+    
+    return exactMatch || subdomainMatch;
+  } catch (error) {
+    console.error('خطأ في تحليل الأصل:', error);
+    return false;
+  }
+};
 
 // إضافة middleware
 app.use(cors({
@@ -46,8 +78,8 @@ app.use(cors({
     // السماح بالطلبات بدون أصل (مثل تطبيقات الجوال أو curl أو Postman)
     if (!origin) return callback(null, true);
     
-    // التحقق من النطاق
-    const isAllowed = ALLOWED_DOMAINS.some(domain => origin.includes(domain));
+    // التحقق من النطاق باستخدام الدالة المحسنة
+    const isAllowed = isAllowedOrigin(origin);
     
     if (isAllowed) {
       console.log('CORS: قبول الطلب من الأصل:', origin);
@@ -77,24 +109,31 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 
-// دالة مساعدة للتعامل مع رؤوس CORS
+// دالة مساعدة محسنة للتعامل مع رؤوس CORS
 const setCorsHeaders = (req, res) => {
   const origin = req.get('origin');
   if (origin) {
-    const isAllowed = ALLOWED_DOMAINS.some(domain => origin.includes(domain));
+    // استخدام نفس دالة التحقق من النطاق
+    const isAllowed = isAllowedOrigin(origin);
     if (isAllowed) {
       res.setHeader('Access-Control-Allow-Origin', origin);
+      console.log(`تعيين رأس Access-Control-Allow-Origin إلى: ${origin}`);
     } else {
-      res.setHeader('Access-Control-Allow-Origin', '*');
+      // عدم تعيين رأس CORS للأصول غير المسموح بها
+      console.log(`رفض تعيين رأس CORS للأصل غير المسموح به: ${origin}`);
+      return false;
     }
   } else {
+    // يمكننا استخدام * لطلبات بدون أصل، أو تحديد نطاق محدد
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
   
+  // تعيين الرؤوس الأخرى
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time, Origin, Referer');
   res.setHeader('Access-Control-Max-Age', '86400');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  return true;
 };
 
 // إضافة معالج خاص لطلبات OPTIONS لضمان استجابات CORS الصحيحة
@@ -105,8 +144,13 @@ app.options('*', (req, res) => {
     origin: req.get('origin')
   });
   
-  setCorsHeaders(req, res);
-  res.status(200).end();
+  // التحقق من النطاق المسموح به قبل تعيين الرؤوس
+  if (setCorsHeaders(req, res)) {
+    res.status(200).end();
+  } else {
+    // رفض الطلب إذا كان الأصل غير مسموح به
+    res.status(403).json({ error: 'CORS policy violation: Origin not allowed' });
+  }
 });
 
 // إضافة نقطة نهاية بسيطة للتحقق السريع من الاتصال
@@ -254,8 +298,10 @@ app.get('/api/status', (req, res) => {
     origin: req.get('origin')
   });
   
-  // تعيين الرؤوس
-  setCorsHeaders(req, res);
+  // تعيين الرؤوس مع التحقق من صحة الأصل
+  if (!setCorsHeaders(req, res)) {
+    return res.status(403).json({ error: 'CORS policy violation: Origin not allowed' });
+  }
   
   // إضافة معلومات النظام للمساعدة في التشخيص
   const systemInfo = {
@@ -273,7 +319,8 @@ app.get('/api/status', (req, res) => {
     staticDir: staticDir,
     publicDir: publicDir,
     indexExists: fs.existsSync(path.join(staticDir, 'index.html')),
-    allEnvVars: printableEnvVars
+    allEnvVars: printableEnvVars,
+    allowedDomains: ALLOWED_DOMAINS
   };
   
   res.json({ 
@@ -289,6 +336,29 @@ app.get('/api/status', (req, res) => {
       public: fs.existsSync(path.join(__dirname, '../../public')),
       indexHtml: fs.existsSync(path.join(staticDir, 'index.html'))
     }
+  });
+});
+
+// إضافة نقطة نهاية بسيطة للتحقق السريع من الاتصال
+app.get('/api/ping', (req, res) => {
+  // تسجيل معلومات الطلب للتشخيص
+  console.log('Ping request received:', {
+    ip: req.ip,
+    headers: req.headers,
+    origin: req.get('origin')
+  });
+  
+  // تعيين الرؤوس مع التحقق من صحة الأصل
+  if (!setCorsHeaders(req, res)) {
+    return res.status(403).json({ error: 'CORS policy violation: Origin not allowed' });
+  }
+  
+  res.json({ 
+    status: 'ok', 
+    message: 'خادم الأتمتة يستجيب',
+    time: new Date().toISOString(),
+    requestHeaders: req.headers,
+    allowedOrigins: ALLOWED_DOMAINS
   });
 });
 
@@ -310,8 +380,10 @@ const checkPuppeteer = async () => {
 
 // مسار لتنفيذ السيناريو باستخدام Puppeteer
 app.post('/api/automate', async (req, res) => {
-  // تعيين الرؤوس
-  setCorsHeaders(req, res);
+  // تعيين الرؤوس مع التحقق من صحة الأصل
+  if (!setCorsHeaders(req, res)) {
+    return res.status(403).json({ error: 'CORS policy violation: Origin not allowed' });
+  }
   
   const { projectUrl, actions } = req.body;
   
