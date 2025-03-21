@@ -76,4 +76,25 @@ export class AutomationService {
   static isRealExecutionEnabled(): boolean {
     return localStorage.getItem('force_real_execution') === 'true';
   }
+  
+  /**
+   * التحقق من حالة خادم الأتمتة
+   */
+  static async checkServerStatus(showToasts = true): Promise<any> {
+    return await ConnectionManager.checkServerStatus(showToasts);
+  }
+  
+  /**
+   * بدء محاولات إعادة الاتصال التلقائية
+   */
+  static startAutoReconnect(callback?: (isConnected: boolean) => void): void {
+    ConnectionManager.startAutoReconnect(callback);
+  }
+  
+  /**
+   * إيقاف محاولات إعادة الاتصال التلقائية
+   */
+  static stopReconnect(): void {
+    ConnectionManager.stopReconnect();
+  }
 }
