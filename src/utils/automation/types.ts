@@ -1,4 +1,5 @@
 
+
 export interface AutomationConfig {
   projectUrl: string;
   projectName?: string; // إضافة اسم المشروع كحقل اختياري
@@ -58,3 +59,4 @@ export interface AutomationResponse {
     type: string;
   };
 }
+

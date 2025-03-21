@@ -1,131 +1,76 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { 
-  Trash, Plus, MoreHorizontal, Repeat, ArrowDownUp, 
-  PlayCircle, Download, Copy, AlertCircle, CheckCircle2
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { Trash, Plus, PenLine, PlayCircle, Check, Alert, Copy, FileDown, File, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Textarea } from "@/components/ui/textarea";
+import { AutomationConfig, AutomationAction } from "@/utils/automation/types";
 import { AutomationService } from "@/utils/automationService";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Alert as AlertComponent, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AutomationAction } from "@/utils/automation/types";
 
-// تحديث واجهة ElementAction لتتوافق مع AutomationAction
-interface ElementAction {
-  id: string;
-  name: string;
-  finder: string;
-  value: string;
-  delay: string; // نبقي على النوع string في واجهة المستخدم لسهولة الإدخال
+interface ElementFinderProps {
+  onBookmarkletGenerated?: (code: string) => void;
 }
 
-interface ElementFinderSectionProps {
-  projectName?: string;
-  projectUrl?: string;
-}
-
-const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({ 
-  projectName = "malhalal-exp.com",
-  projectUrl = "https://malhalal-exp.com/add_newwaslinserter.php?add"
-}) => {
-  
-  const [actions, setActions] = useState<ElementAction[]>([
-    { id: "1", name: "", finder: "//input[@name=\"id_wasl\"][@id=\"id_wasl\"][@value=\"\"]", value: "12421311", delay: "" },
-    { id: "2", name: "", finder: "//input[@name=\"phone_customer\"][@id=\"phone_customer\"]", value: "07710284844", delay: "" },
-    { id: "3", name: "", finder: "//*[@id=\"botdiv\"]/div/span/span[1]/span", value: "صلاح الدين", delay: "" },
-    { id: "4", name: "", finder: "/html/body/div/div/div[1]/div/div/div[4]/form/div[5]/div/select", value: "الصياد", delay: "1" },
-    { id: "5", name: "", finder: "/html/body/div/div/div[1]/div/div/div[4]/form/div[6]/div/select", value: "جاسم دخيل", delay: "" },
-    { id: "6", name: "", finder: "//input[@name=\"total_price\"][@id=\"total_price\"][@value", value: "45000", delay: "" },
+const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGenerated }) => {
+  const [actions, setActions] = useState<{ name: string; finder: string; value: string; delay: string }[]>([
+    { name: "click", finder: "", value: "", delay: "300" },
   ]);
-  
-  const [enabled, setEnabled] = useState(true);
-  const [projectNameInput, setProjectNameInput] = useState(projectName);
-  const [projectUrlInput, setProjectUrlInput] = useState(projectUrl);
-  
-  // إضافة حالات جديدة للأتمتة
-  const [isRunningAutomation, setIsRunningAutomation] = useState(false);
-  const [automationResults, setAutomationResults] = useState<any>(null);
-  const [showResultsDialog, setShowResultsDialog] = useState(false);
+  const [projectUrl, setProjectUrl] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [useRealBrowser, setUseRealBrowser] = useState(false);
+  const [actionType, setActionType] = useState("click");
+  const [customName, setCustomName] = useState("");
   const [automationProgress, setAutomationProgress] = useState(0);
-  const [serverStatus, setServerStatus] = useState<{ status: string; message: string } | null>(null);
-  const [offlineMode, setOfflineMode] = useState(false);
-  const { toast } = useToast();
-
-  // التحقق من حالة الخادم عند تحميل المكون
-  useEffect(() => {
-    checkServerStatus();
-  }, []);
-
-  // التحقق من حالة خادم الأتمتة
-  const checkServerStatus = async () => {
-    try {
-      const status = await AutomationService.checkServerStatus();
-      setServerStatus(status);
-      setOfflineMode(false);
-      if (status.status === 'running') {
-        toast({
-          title: "خادم الأتمتة متصل",
-          description: "تم الاتصال بخادم الأتمتة بنجاح",
-        });
-      } else {
-        toast({
-          title: "خادم الأتمتة غير متصل",
-          description: "تعذر الاتصال بخادم الأتمتة. تأكد من تشغيل الخادم المحلي.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      setServerStatus({
-        status: 'error',
-        message: 'فشل الاتصال بخادم الأتمتة'
-      });
-      
-      toast({
-        title: "خطأ في الاتصال",
-        description: "تعذر الاتصال بخادم الأتمتة. تم تفعيل الوضع التجريبي.",
-        variant: "destructive"
-      });
-    }
+  const [automationStatus, setAutomationStatus] = useState("");
+  const [serverError, setServerError] = useState<string | null>(null);
+  
+  const { toast: hookToast } = useToast();
+  
+  const handleAddAction = () => {
+    setActions([...actions, { name: actionType, finder: "", value: "", delay: "300" }]);
+  };
+  
+  const handleRemoveAction = (index: number) => {
+    const newActions = [...actions];
+    newActions.splice(index, 1);
+    setActions(newActions);
+  };
+  
+  const handleActionChange = (index: number, field: keyof (typeof actions)[0], value: string) => {
+    const newActions = [...actions];
+    newActions[index] = { ...newActions[index], [field]: value };
+    setActions(newActions);
   };
 
-  // تشغيل الأتمتة مع Puppeteer أو في الوضع التجريبي
-  const runAutomation = async () => {
-    if (isRunningAutomation) return;
-    
-    // التحقق من وجود URL للمشروع
-    if (!projectUrlInput) {
-      toast({
-        title: "خطأ",
-        description: "الرجاء إدخال عنوان URL للمشروع",
-        variant: "destructive"
-      });
+  const handleRunAutomation = async () => {
+    if (!projectUrl) {
+      toast.error("يجب إدخال رابط المشروع");
       return;
     }
     
-    // التحقق من وجود إجراءات
-    if (actions.length === 0) {
-      toast({
-        title: "خطأ",
-        description: "لا توجد إجراءات للتنفيذ",
-        variant: "destructive"
-      });
+    if (actions.length === 0 || !actions.some(a => a.finder.trim())) {
+      toast.error("يجب إضافة إجراء واحد على الأقل مع محدد");
       return;
     }
     
-    setIsRunningAutomation(true);
+    setIsRunning(true);
     setAutomationProgress(10);
+    setAutomationStatus("جاري بدء الأتمتة...");
+    setServerError(null);
     
     try {
-      // إعداد تكوين الأتمتة - تحويل delay من string إلى number
-      const config = {
-        projectName: projectNameInput,
-        projectUrl: projectUrlInput,
+      // إعداد كائن الأتمتة
+      const config: AutomationConfig = {
+        projectName: customName || "محدد العناصر",
+        projectUrl: projectUrl,
         actions: actions.map(action => ({
           name: action.name,
           finder: action.finder,
@@ -137,581 +82,323 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
       };
       
       setAutomationProgress(30);
+      setAutomationStatus("جاري الاتصال بالخادم...");
       
-      // تنفيذ الأتمتة على الخادم أو محاكاة في وضع غير متصل
-      let result;
-      
-      if ((serverStatus?.status === 'running' && !offlineMode)) {
-        // استخدام خادم الأتمتة
-        result = await AutomationService.runAutomation(config);
-      } else {
-        // محاكاة الأتمتة في وضع غير متصل (التجريبي)
-        setAutomationProgress(50);
-        
-        // محاكاة تأخير لجعل التجربة واقعية
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        setAutomationProgress(70);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // إنشاء نتائج محاكاة
-        result = {
-          success: true,
-          message: "تم تنفيذ المحاكاة بنجاح (وضع غير متصل)",
-          results: actions.map(action => ({
-            name: action.name || "بلا اسم",
-            success: Math.random() > 0.1, // 90% فرصة للنجاح
-            message: Math.random() > 0.1 ? "تم تنفيذ الإجراء بنجاح" : "حدثت مشكلة في تنفيذ الإجراء"
-          })),
-          // صورة مزيفة للعرض في وضع غير متصل - تقصير للمساحة
-          screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
-        };
-        
-        // تحديث حالة الوضع غير المتصل
-        setOfflineMode(true);
-      }
+      // تنفيذ الأتمتة
+      const result = await AutomationService.validateAndRunAutomation(config);
       
       setAutomationProgress(100);
-      setAutomationResults(result);
       
       if (result.success) {
-        toast({
-          title: "نجاح",
-          description: "تم تنفيذ الأتمتة بنجاح",
+        setAutomationStatus("تم تنفيذ الأتمتة بنجاح!");
+        toast.success("تم تنفيذ الأتمتة بنجاح");
+        
+        // عرض النتائج بشكل أفضل
+        hookToast({
+          title: "نتائج الأتمتة",
+          description: (
+            <div className="mt-2 space-y-2">
+              <p>تم تنفيذ {result.results?.filter(r => r.success).length || 0} إجراء بنجاح من أصل {result.results?.length || 0}</p>
+              {result.results && result.results.some(r => !r.success) && (
+                <p className="text-red-500">فشل تنفيذ {result.results.filter(r => !r.success).length} إجراء</p>
+              )}
+              <p>وقت التنفيذ: {(result.executionTime || 0) / 1000} ثانية</p>
+            </div>
+          ),
         });
-        // عرض نتائج الأتمتة
-        setShowResultsDialog(true);
       } else {
-        toast({
-          title: "خطأ",
-          description: result.message || "فشل تنفيذ الأتمتة",
-          variant: "destructive"
-        });
+        setAutomationStatus("فشل تنفيذ الأتمتة");
+        setServerError(result.message || "حدث خطأ غير معروف أثناء تنفيذ الأتمتة");
+        toast.error(`فشل تنفيذ الأتمتة: ${result.message}`);
       }
     } catch (error) {
-      console.error("خطأ في تنفيذ الأتمتة:", error);
-      
-      // الانتقال تلقائيًا إلى وضع المحاكاة عند حدوث خطأ
-      setOfflineMode(true);
-      
-      // إنشاء نتائج محاكاة في حالة الخطأ
-      const simulatedResult = {
-        success: true,
-        message: "تم تنفيذ المحاكاة بنجاح (وضع تجريبي)",
-        results: actions.map(action => ({
-          name: action.name || "بلا اسم",
-          success: true,
-          message: "تم تنفيذ الإجراء بنجاح (محاكاة)"
-        })),
-        // صورة مزيفة للعرض في وضع غير متصل - تقصير للمساحة
-        screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
-      };
-      
       setAutomationProgress(100);
-      setAutomationResults(simulatedResult);
-      
-      toast({
-        title: "تم التشغيل في الوضع التجريبي",
-        description: "تعذر الاتصال بالخادم. تم تنفيذ المحاكاة بنجاح.",
-      });
-      
-      // عرض نتائج المحاكاة
-      setShowResultsDialog(true);
+      setAutomationStatus("فشل تنفيذ الأتمتة");
+      const errorMessage = error instanceof Error ? error.message : "حدث خطأ غير معروف";
+      setServerError(errorMessage);
+      toast.error(`حدث خطأ أثناء تنفيذ الأتمتة: ${errorMessage}`);
     } finally {
-      setIsRunningAutomation(false);
+      setIsRunning(false);
     }
   };
-
   
-  
-  const addNewAction = () => {
-    const newId = (actions.length + 1).toString();
-    setActions([...actions, { id: newId, name: "", finder: "", value: "", delay: "" }]);
-  };
-  
-  const deleteAction = (id: string) => {
-    setActions(actions.filter(action => action.id !== id));
-  };
-  
-  const updateAction = (id: string, field: keyof ElementAction, value: string) => {
-    setActions(actions.map(action => 
-      action.id === id ? { ...action, [field]: value } : action
-    ));
-  };
-  
-  // استرجاع البيانات من التخزين المحلي عند بدء التشغيل
-  useEffect(() => {
-    const savedData = localStorage.getItem('element_finder_data');
-    if (savedData) {
-      try {
-        const data = JSON.parse(savedData);
-        if (data.actions && Array.isArray(data.actions)) {
-          setActions(data.actions);
-        }
-        if (data.projectName) setProjectNameInput(data.projectName);
-        if (data.projectUrl) setProjectUrlInput(data.projectUrl);
-        if (data.enabled !== undefined) setEnabled(data.enabled);
-      } catch (e) {
-        console.error("خطأ في تحليل البيانات المحفوظة:", e);
-      }
-    }
-  }, []);
-  
-  // حفظ البيانات في التخزين المحلي عند التغيير
-  useEffect(() => {
-    const dataToSave = {
-      actions,
-      projectName: projectNameInput,
-      projectUrl: projectUrlInput,
-      enabled
-    };
-    localStorage.setItem('element_finder_data', JSON.stringify(dataToSave));
-  }, [actions, projectNameInput, projectUrlInput, enabled]);
-  
-  const generateScript = () => {
-    
-    
-    const scriptTemplate = `// سكريبت تكوين تلقائي تم إنشاؤه
-const config = {
-  projectName: "${projectNameInput}",
-  projectUrl: "${projectUrlInput}",
-  actions: [
-${actions.map(action => `    {
-      name: "${action.name}",
-      finder: "${action.finder.replace(/"/g, '\\"')}",
-      value: "${action.value.replace(/"/g, '\\"')}",
-      delay: ${action.delay ? parseInt(action.delay, 10) : 0}
-    }`).join(',\n')}
-  ]
-};
-
-// تنفيذ الإجراءات
-async function runActions() {
-  console.log("بدء تنفيذ الإجراءات...");
-  
-  for (const action of config.actions) {
-    try {
-      // تأخير قبل كل إجراء
-      const delay = action.delay || 0;
-      if (delay > 0) {
-        await new Promise(r => setTimeout(r, delay * 1000));
-      }
-      
-      // العثور على العنصر
-      let element;
-      if (action.finder.startsWith("//") || action.finder.startsWith("/html")) {
-        // XPath
-        const elements = document.evaluate(action.finder, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-        if (elements.snapshotLength > 0) {
-          element = elements.snapshotItem(0);
-        }
-      } else if (action.finder.startsWith("#")) {
-        // معرف
-        element = document.querySelector(action.finder);
-      } else if (action.finder.startsWith(".")) {
-        // فئة
-        element = document.querySelector(action.finder);
-      } else if (action.finder.startsWith("Name::")) {
-        // اسم
-        const name = action.finder.replace("Name::", "");
-        element = document.querySelector(\`[name="\${name}"]\`);
-      } else if (action.finder.startsWith("TagName::")) {
-        // اسم العلامة
-        const tag = action.finder.replace("TagName::", "");
-        element = document.querySelector(tag);
-      } else if (action.finder.startsWith("ClassName::")) {
-        // اسم الفئة
-        const className = action.finder.replace("ClassName::", "");
-        const classes = className.split(" ");
-        let selector = "";
-        for (const cls of classes) {
-          selector += "." + cls;
-        }
-        element = document.querySelector(selector);
-      } else if (action.finder.startsWith("Selector::")) {
-        // محدد CSS
-        const selector = action.finder.replace("Selector::", "");
-        element = document.querySelector(selector);
-      } else if (action.finder.startsWith("SelectorAll::")) {
-        // محدد الكل
-        const selector = action.finder.replace("SelectorAll::", "");
-        const elements = document.querySelectorAll(selector);
-        if (elements.length > 0) {
-          element = elements[0];
-        }
-      } else {
-        // افتراضي: محاولة كمحدد css
-        element = document.querySelector(action.finder);
-      }
-      
-      if (!element) {
-        console.error(\`لم يتم العثور على العنصر: \${action.finder}\`);
-        continue;
-      }
-      
-      // تعيين القيمة حسب نوع العنصر
-      if (element.tagName === "SELECT") {
-        // القائمة المنسدلة
-        for (let i = 0; i < element.options.length; i++) {
-          if (element.options[i].text === action.value || element.options[i].value === action.value) {
-            element.selectedIndex = i;
-            element.dispatchEvent(new Event('change', { bubbles: true }));
-            break;
+  const generateBookmarkletCode = () => {
+    const code = `javascript:(function(){
+      console.log("محدد العناصر: بدء التشغيل");
+      const actions = ${JSON.stringify(actions)};
+      const executeActions = async (actions) => {
+        for (let i = 0; i < actions.length; i++) {
+          const action = actions[i];
+          console.log(\`تنفيذ الإجراء \${i+1}: \${action.name}\`);
+          
+          try {
+            // البحث عن العنصر باستخدام المحدد
+            const element = document.querySelector(action.finder);
+            if (!element) {
+              console.error(\`لم يتم العثور على العنصر باستخدام المحدد: \${action.finder}\`);
+              alert(\`فشل الإجراء \${i+1}: لم يتم العثور على العنصر\`);
+              continue;
+            }
+            
+            // تنفيذ الإجراء حسب النوع
+            switch (action.name) {
+              case "click":
+                element.click();
+                break;
+              case "input":
+              case "type":
+                if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+                  element.value = action.value;
+                  // إطلاق حدث تغيير القيمة
+                  element.dispatchEvent(new Event('input', { bubbles: true }));
+                  element.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                break;
+              case "select":
+                if (element instanceof HTMLSelectElement) {
+                  element.value = action.value;
+                  element.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                break;
+              default:
+                console.warn(\`نوع الإجراء غير معروف: \${action.name}\`);
+            }
+            
+            console.log(\`تم تنفيذ الإجراء \${i+1} بنجاح\`);
+            
+            // انتظار قبل تنفيذ الإجراء التالي
+            if (action.delay) {
+              await new Promise(resolve => setTimeout(resolve, parseInt(action.delay, 10)));
+            }
+          } catch (error) {
+            console.error(\`خطأ في تنفيذ الإجراء \${i+1}:\`, error);
+            alert(\`فشل الإجراء \${i+1}: \${error.message}\`);
           }
         }
-      } else if (element.tagName === "INPUT") {
-        // حقول الإدخال
-        element.value = action.value;
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-      } else if (element.tagName === "TEXTAREA") {
-        // مناطق النص
-        element.value = action.value;
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-      } else {
-        // عناصر أخرى (زر، نص)
-        if (element.click) {
-          element.click();
-        } else {
-          // محاولة محاكاة النقر
-          const event = new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-          });
-          element.dispatchEvent(event);
-        }
-      }
+        console.log("محدد العناصر: انتهى التنفيذ");
+      };
       
-      console.log(\`تم تنفيذ الإجراء "\${action.name || 'بلا اسم'}" بنجاح\`);
-    } catch (error) {
-      console.error(\`خطأ في تنفيذ الإجراء "\${action.name || 'بلا اسم'}":\`, error);
+      executeActions(actions);
+    })();`;
+    
+    if (onBookmarkletGenerated) {
+      onBookmarkletGenerated(code);
     }
-  }
+    
+    return code;
+  };
   
-  console.log("انتهت جميع الإجراءات");
-}
-
-// بدء التنفيذ
-if (window.location.href !== config.projectUrl) {
-  console.log(\`الانتقال إلى \${config.projectUrl}\`);
-  window.location.href = config.projectUrl;
-} else {
-  // انتظار تحميل الصفحة بالكامل
-  if (document.readyState === 'complete') {
-    runActions();
-  } else {
-    window.addEventListener('load', runActions);
-  }
-}`;
-
-    return scriptTemplate;
+  const handleCopyBookmarklet = () => {
+    const code = generateBookmarkletCode();
+    navigator.clipboard.writeText(code);
+    toast.success("تم نسخ الكود إلى الحافظة");
+  };
+  
+  const handleExportJson = () => {
+    try {
+      const dataStr = JSON.stringify(actions, null, 2);
+      const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
+      
+      const exportName = `element-finder-${new Date().toISOString().slice(0, 10)}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportName);
+      linkElement.click();
+      
+      toast.success("تم تصدير الإجراءات بنجاح");
+    } catch (error) {
+      toast.error("حدث خطأ أثناء تصدير الإجراءات");
+    }
+  };
+  
+  const handleActionTypeChange = (value: string) => {
+    if (value) {
+      setActionType(value);
+    }
   };
   
   return (
-    <Card className="mt-6">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center">
-            <span>مكتشف العناصر</span>
-            <Badge variant="outline" className="mr-2 bg-amber-100">جديد</Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <Label htmlFor="auto-finder-switch" className="ml-2">تمكين التكوين</Label>
-            <Switch
-              id="auto-finder-switch"
-              checked={enabled}
-              onCheckedChange={setEnabled}
-            />
-            <Button variant="outline" size="icon" onClick={checkServerStatus}>
-              <Repeat className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setActions([])} 
-              title="مسح جميع الإجراءات"
+        <CardTitle>محدد العناصر</CardTitle>
+        <CardDescription>
+          أداة تساعدك في البحث عن العناصر على صفحات الويب وتنفيذ إجراءات عليها
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="projectUrl">رابط المشروع</Label>
+          <Input
+            id="projectUrl"
+            placeholder="https://example.com"
+            value={projectUrl}
+            onChange={(e) => setProjectUrl(e.target.value)}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="customName">اسم مخصص (اختياري)</Label>
+          <Input
+            id="customName"
+            placeholder="اسم المشروع المخصص"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+          />
+        </div>
+        
+        <div className="border-t pt-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-medium">الإجراءات</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddAction}
+              disabled={isRunning}
             >
-              <Trash className="h-4 w-4" />
+              <Plus className="h-4 w-4 mr-1" /> إضافة إجراء
             </Button>
-          </div>
-        </CardTitle>
-        
-        {offlineMode && (
-          <Alert className="mt-4 bg-yellow-50 border-yellow-200">
-            <CheckCircle2 className="h-4 w-4 text-yellow-600" />
-            <AlertDescription className="text-yellow-700">
-              الوضع التجريبي نشط - سيتم محاكاة العمليات بدون الحاجة للاتصال بالخادم
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {serverStatus && serverStatus.status !== 'running' && !offlineMode && (
-          <Alert variant="destructive" className="mt-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              خادم الأتمتة غير متصل. يُرجى تشغيل الخادم المحلي باستخدام الأمر: <code>node src/server/server.js</code>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2 ml-auto mr-2 block bg-white"
-                onClick={() => setOfflineMode(true)}
-              >
-                استخدام الوضع التجريبي
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          <div>
-            <Label htmlFor="project-name">اسم التكوين</Label>
-            <Input
-              id="project-name"
-              value={projectNameInput}
-              onChange={(e) => setProjectNameInput(e.target.value)}
-              className="mt-1"
-            />
           </div>
           
-          <div>
-            <Label htmlFor="project-url">رابط المشروع <span className="text-red-500">*</span></Label>
-            <Input
-              id="project-url"
-              value={projectUrlInput}
-              onChange={(e) => setProjectUrlInput(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-medium text-lg">الإجراءات</h3>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={runAutomation}
-              disabled={isRunningAutomation}
-            >
-              <PlayCircle className="h-4 w-4 ml-1" />
-              {offlineMode ? "تشغيل المحاكاة" : "تشغيل الأتمتة"}
-            </Button>
-            <Button variant="outline" size="sm" onClick={addNewAction}>
-              <Plus className="h-4 w-4 ml-1" />
-              إضافة إجراء
-            </Button>
+          <div className="space-y-4">
+            {actions.map((action, index) => (
+              <div key={index} className="border rounded-md p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-medium">الإجراء #{index + 1}</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveAction(index)}
+                    disabled={isRunning || actions.length === 1}
+                  >
+                    <Trash className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <Label>نوع الإجراء</Label>
+                    <ToggleGroup
+                      type="single"
+                      value={action.name}
+                      onValueChange={(value) => handleActionChange(index, "name", value || "click")}
+                      className="justify-start"
+                    >
+                      <ToggleGroupItem value="click">نقر</ToggleGroupItem>
+                      <ToggleGroupItem value="type">كتابة</ToggleGroupItem>
+                      <ToggleGroupItem value="select">اختيار</ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor={`finder-${index}`}>محدد العنصر (CSS Selector)</Label>
+                    <Textarea
+                      id={`finder-${index}`}
+                      placeholder="مثال: #username, .submit-button, button[type='submit']"
+                      value={action.finder}
+                      onChange={(e) => handleActionChange(index, "finder", e.target.value)}
+                      className="font-mono text-sm"
+                      disabled={isRunning}
+                    />
+                  </div>
+                  
+                  {(action.name === "type" || action.name === "select") && (
+                    <div>
+                      <Label htmlFor={`value-${index}`}>القيمة</Label>
+                      <Input
+                        id={`value-${index}`}
+                        placeholder="القيمة المراد إدخالها"
+                        value={action.value}
+                        onChange={(e) => handleActionChange(index, "value", e.target.value)}
+                        disabled={isRunning}
+                      />
+                    </div>
+                  )}
+                  
+                  <div>
+                    <Label htmlFor={`delay-${index}`}>التأخير (مللي ثانية)</Label>
+                    <Input
+                      id={`delay-${index}`}
+                      type="number"
+                      min="0"
+                      step="100"
+                      placeholder="300"
+                      value={action.delay}
+                      onChange={(e) => handleActionChange(index, "delay", e.target.value)}
+                      disabled={isRunning}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
         
-        {isRunningAutomation && (
-          <div className="mb-4">
+        {isRunning && (
+          <div className="space-y-2 mt-4">
+            <div className="flex justify-between text-sm">
+              <span>{automationStatus}</span>
+              <span>{automationProgress}%</span>
+            </div>
             <Progress value={automationProgress} className="h-2" />
-            <p className="text-center text-sm mt-1">جاري تنفيذ الأتمتة... {automationProgress}%</p>
           </div>
         )}
         
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="text-right">
-                <th className="pb-2 font-medium text-sm">#</th>
-                <th className="pb-2 font-medium text-sm">الاسم</th>
-                <th className="pb-2 font-medium text-sm">
-                  مكتشف العناصر <span className="text-red-500">*</span>
-                </th>
-                <th className="pb-2 font-medium text-sm">قيمة</th>
-                <th className="pb-2 font-medium text-sm">
-                  الفاصل الزمني
-                </th>
-                <th className="pb-2 font-medium text-sm" colSpan={2}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {actions.map((action) => (
-                <tr key={action.id} className="border-t border-gray-200">
-                  <td className="py-2 pr-2">{action.id}</td>
-                  <td className="py-2 pr-2">
-                    <Input 
-                      value={action.name}
-                      onChange={(e) => updateAction(action.id, 'name', e.target.value)}
-                      className="w-full"
-                      placeholder="اسم الإجراء"
-                    />
-                  </td>
-                  <td className="py-2 pr-2">
-                    <Input 
-                      value={action.finder}
-                      onChange={(e) => updateAction(action.id, 'finder', e.target.value)}
-                      className="w-full"
-                      placeholder="//xpath | #id | .class | Name::name"
-                    />
-                  </td>
-                  <td className="py-2 pr-2">
-                    <Input 
-                      value={action.value}
-                      onChange={(e) => updateAction(action.id, 'value', e.target.value)}
-                      className="w-full"
-                      placeholder="القيمة المُدخلة"
-                    />
-                  </td>
-                  <td className="py-2 pr-2">
-                    <Input 
-                      value={action.delay}
-                      onChange={(e) => updateAction(action.id, 'delay', e.target.value)}
-                      className="w-full"
-                      placeholder="بالثواني"
-                      type="number"
-                      min="0"
-                      step="1"
-                    />
-                  </td>
-                  <td className="py-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => deleteAction(action.id)}
-                    >
-                      <Trash className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </td>
-                  <td className="py-2">
-                    <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {serverError && (
+          <AlertComponent variant="destructive">
+            <Alert className="h-4 w-4" />
+            <AlertTitle>فشل تنفيذ الأتمتة</AlertTitle>
+            <AlertDescription>{serverError}</AlertDescription>
+          </AlertComponent>
+        )}
+        
+        <div className="flex items-center space-x-2 space-x-reverse">
+          <Switch
+            id="use-real-browser"
+            checked={useRealBrowser}
+            onCheckedChange={setUseRealBrowser}
+            disabled={isRunning}
+          />
+          <Label htmlFor="use-real-browser">استخدام متصفح حقيقي للتنفيذ</Label>
         </div>
       </CardContent>
-      
-      <CardFooter className="flex flex-wrap justify-between gap-2 border-t pt-6">
-        <div className="text-sm text-slate-500">
-          {actions.length > 0
-            ? `${actions.length} عنصر قابل للتنفيذ`
-            : 'لا توجد إجراءات محددة بعد'}
-        </div>
-        
+      <CardFooter className="flex justify-between border-t pt-4">
         <div className="flex gap-2">
           <Button
             variant="outline"
-            size="sm"
-            onClick={() => {
-              // نسخ السكريبت إلى الحافظة
-              const script = generateScript();
-              navigator.clipboard.writeText(script);
-              toast({
-                title: "تم النسخ",
-                description: "تم نسخ السكريبت إلى الحافظة",
-              });
-            }}
+            onClick={handleCopyBookmarklet}
+            disabled={isRunning}
           >
-            <Copy className="h-4 w-4 ml-1" />
-            نسخ السكريبت
+            <Copy className="h-4 w-4 mr-1" />
+            نسخ Bookmarklet
           </Button>
-          
           <Button
-            variant="default"
-            size="sm"
-            onClick={() => {
-              const script = generateScript();
-              const blob = new Blob([script], {type: 'text/javascript'});
-              const href = URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = href;
-              link.download = `${projectNameInput || 'config'}.js`;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              URL.revokeObjectURL(href);
-              toast({
-                title: "تم التصدير",
-                description: "تم تصدير السكريبت بنجاح",
-              });
-            }}
+            variant="outline"
+            onClick={handleExportJson}
+            disabled={isRunning}
           >
-            <Download className="h-4 w-4 ml-1" />
-            تصدير
+            <FileDown className="h-4 w-4 mr-1" />
+            تصدير JSON
           </Button>
         </div>
-      </CardFooter>
-      
-      {/* مربع حوار لعرض نتائج الأتمتة */}
-      <Dialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>نتائج التشغيل الآلي {offlineMode ? "(الوضع التجريبي)" : ""}</DialogTitle>
-          </DialogHeader>
-          
-          {automationResults && (
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <Badge variant={automationResults.success ? "success" : "destructive"} className="ml-2">
-                  {automationResults.success ? "ناجح" : "فشل"}
-                </Badge>
-                <span>{automationResults.message}</span>
-              </div>
-              
-              {automationResults.results && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">تفاصيل الإجراءات</h4>
-                  <div className="border rounded-md overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50">
-                        <tr className="text-right border-b">
-                          <th className="px-4 py-2 font-medium">الإجراء</th>
-                          <th className="px-4 py-2 font-medium">الحالة</th>
-                          <th className="px-4 py-2 font-medium">الرسالة</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {automationResults.results.map((result: any, index: number) => (
-                          <tr key={index} className="border-b last:border-b-0">
-                            <td className="px-4 py-2 font-medium">{result.name}</td>
-                            <td className="px-4 py-2">
-                              <Badge variant={result.success ? "success" : "destructive"} className="ml-2">
-                                {result.success ? "نجاح" : "فشل"}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-2">{result.message}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-              
-              {automationResults.screenshot && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">لقطة شاشة</h4>
-                  <div className="border rounded-md p-2 bg-slate-50">
-                    <img 
-                      src={automationResults.screenshot} 
-                      alt="لقطة شاشة نتيجة التنفيذ" 
-                      className="max-w-full"
-                    />
-                  </div>
-                </div>
-              )}
-              
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowResultsDialog(false)}
-                >
-                  إغلاق
-                </Button>
-              </DialogFooter>
-            </div>
+        <Button
+          onClick={handleRunAutomation}
+          disabled={isRunning}
+          className="bg-purple-600 hover:bg-purple-700"
+        >
+          {isRunning ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              جاري التنفيذ...
+            </>
+          ) : (
+            <>
+              <PlayCircle className="h-4 w-4 mr-1" />
+              تنفيذ الأتمتة
+            </>
           )}
-        </DialogContent>
-      </Dialog>
+        </Button>
+      </CardFooter>
     </Card>
   );
 };

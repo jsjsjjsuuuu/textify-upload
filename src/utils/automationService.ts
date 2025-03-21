@@ -1,402 +1,369 @@
 
-/**
- * خدمة للتفاعل مع خادم الأتمتة
- */
-import { ConnectionManager } from './automation/connectionManager';
-import { AutomationRunner } from './automation/automationRunner';
-import { AutomationConfig } from './automation/types';
-import { isPreviewEnvironment, createFetchOptions, fetchWithRetry, getAllowedOrigins } from './automationServerUrl';
 import { toast } from "sonner";
+import { AutomationConfig, AutomationResponse } from "./automation/types";
+import { ConnectionManager } from "./automation/connectionManager";
+import { 
+  isPreviewEnvironment,
+  getAutomationServerUrl,
+  getLastConnectionStatus, 
+  createFetchOptions,
+  fetchWithRetry 
+} from "./automationServerUrl";
 
 export class AutomationService {
+  private static readonly maxRetries = 3;
+  private static readonly retryDelay = 2000;
+  private static isRunning = false;
+
   /**
-   * التحقق من حالة خادم الأتمتة
+   * التحقق من حالة اتصال خادم الأتمتة
    */
   static async checkServerStatus(showToasts = true): Promise<any> {
     try {
-      // في بيئة المعاينة، التحقق من وجود علامة التنفيذ الفعلي
-      const forceRealExecution = localStorage.getItem('force_real_execution') === 'true';
-      
-      // في بيئة المعاينة العادية، قم بمحاكاة نجاح الاتصال دائماً
-      if (isPreviewEnvironment() && !forceRealExecution) {
-        if (showToasts) {
-          toast.success("متصل بخادم Render (محاكاة بيئة المعاينة)");
-        }
-        return {
-          status: "ok",
-          message: "محاكاة اتصال ناجح في بيئة المعاينة",
-          time: new Date().toISOString(),
-          uptime: 1000,
-          environment: "preview"
-        };
-      }
-      
-      // استخدام طريقة مباشرة للوصول إلى نقطة نهاية API
-      console.log("استخدام طريقة مباشرة للتحقق من الاتصال...");
-      const serverUrl = ConnectionManager.getServerUrl();
-      
-      // تجريب نقاط نهاية متعددة للتحقق من الاتصال
-      const endpoints = [
-        '/api/status',
-        '/api/health',
-        '/api/ping'
-      ];
-      
-      // الحصول على أصل (origin) النافذة الحالية
-      const windowOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-      console.log(`استخدام أصل النافذة الحالية: ${windowOrigin}`);
-      
-      // محاولة الاتصال عبر جميع النقاط النهائية المتاحة
-      for (const endpoint of endpoints) {
-        try {
-          const options = createFetchOptions('GET', null, {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache, no-store',
-            'Pragma': 'no-cache',
-            'Origin': windowOrigin,
-            'Referer': typeof window !== 'undefined' ? window.location.href : ''
-          });
-          
-          console.log(`محاولة الاتصال عبر ${endpoint}...`);
-          const response = await fetchWithRetry(`${serverUrl}${endpoint}`, options, 2, 1000);
-          
-          if (response.ok) {
-            console.log(`تم الاتصال بنجاح عبر ${endpoint}`);
-            const result = await response.json();
-            
-            // إيقاف محاولات إعادة الاتصال التلقائية إذا كان الاتصال ناجحاً
-            this.stopReconnect();
-            
-            if (showToasts) {
-              toast.success("تم الاتصال بخادم Render بنجاح");
-            }
-            
-            return result;
-          }
-        } catch (endpointError) {
-          console.warn(`فشل الاتصال عبر ${endpoint}:`, endpointError);
-          // استمر في الحلقة لتجربة النقطة النهائية التالية
-        }
-      }
-      
-      // إذا وصلنا إلى هنا، فشلت جميع محاولات الاتصال المباشر
-      console.warn("فشلت جميع محاولات الاتصال المباشر، محاولة استخدام ConnectionManager...");
-      
-      // محاولة الاتصال الفعلي بالخادم مع زيادة المحاولات
-      const maxRetries = 3;
-      let lastError;
-      
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          console.log(`محاولة فحص حالة الخادم ${attempt}/${maxRetries}`);
-          const result = await ConnectionManager.checkServerStatus(showToasts && attempt === maxRetries);
-          console.log("نتيجة فحص الخادم:", result);
-          
-          // إيقاف محاولات إعادة الاتصال التلقائية إذا كان الاتصال ناجحاً
-          this.stopReconnect();
-          
-          return result;
-        } catch (error) {
-          console.error(`فشل المحاولة ${attempt}/${maxRetries}:`, error);
-          lastError = error;
-          
-          // إذا لم تكن المحاولة الأخيرة، انتظر قبل إعادة المحاولة
-          if (attempt < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      }
-      
-      // إذا وصلنا إلى هنا، فقد فشلت جميع المحاولات
-      console.error("فشلت جميع محاولات التحقق من حالة الخادم");
-      
-      // إعادة محاولة الاتصال تلقائياً
-      this.startAutoReconnect();
-      
-      if (showToasts) {
-        toast.error(`تعذر الاتصال بخادم Render: ${lastError instanceof Error ? lastError.message : 'خطأ غير معروف'}`);
-      }
-      
-      throw lastError;
+      return await ConnectionManager.checkServerStatus(showToasts);
     } catch (error) {
-      console.error("فشل التحقق من حالة الخادم في AutomationService:", error);
-      
-      // إعادة محاولة الاتصال تلقائياً
-      this.startAutoReconnect();
-      
-      if (showToasts) {
-        toast.error(`تعذر الاتصال بخادم Render: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
-      }
-      
+      console.error("خطأ في التحقق من حالة خادم الأتمتة:", error);
       throw error;
     }
   }
-  
+
   /**
    * بدء محاولات إعادة الاتصال التلقائية
    */
   static startAutoReconnect(callback?: (isConnected: boolean) => void): void {
     ConnectionManager.startAutoReconnect(callback);
-    toast.info("جاري محاولة إعادة الاتصال بخادم Render...", {
-      duration: 5000,
-    });
   }
-  
+
   /**
    * إيقاف محاولات إعادة الاتصال التلقائية
    */
   static stopReconnect(): void {
     ConnectionManager.stopReconnect();
   }
-  
+
   /**
-   * تشغيل سيناريو الأتمتة باستخدام Puppeteer
+   * التحقق من صحة إعدادات الأتمتة قبل تنفيذها
    */
-  static async runAutomation(config: AutomationConfig) {
-    try {
-      return await AutomationRunner.runAutomation(config);
-    } catch (error) {
-      console.error("فشل تنفيذ الأتمتة في AutomationService:", error);
-      
-      // التحقق إذا كان الخطأ بسبب عدم الاتصال بالخادم
-      if (error instanceof Error && error.message.includes("Failed to fetch")) {
-        toast.error("فشل تنفيذ الأتمتة: تعذر الاتصال بخادم Render", {
-          description: "تأكد من أن خادم Render يعمل أو انتظر إعادة محاولة الاتصال التلقائية",
-          duration: 7000,
-        });
-        this.startAutoReconnect();
-      } else {
-        toast.error(`فشل تنفيذ الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
-      }
-      
-      throw error;
+  static validateAutomationConfig(config: AutomationConfig): string[] {
+    const errors: string[] = [];
+
+    // التحقق من وجود URL المشروع
+    if (!config.projectUrl) {
+      errors.push("يجب تحديد رابط المشروع");
+    } else if (!config.projectUrl.startsWith("http")) {
+      errors.push("يجب أن يبدأ رابط المشروع بـ http:// أو https://");
     }
-  }
-  
-  /**
-   * التحقق من اتصال الخادم قبل تشغيل الأتمتة
-   */
-  static async validateAndRunAutomation(config: AutomationConfig) {
-    try {
-      // في بيئة المعاينة، التحقق من وجود علامة التنفيذ الفعلي
-      const forceRealExecution = localStorage.getItem('force_real_execution') === 'true';
-      
-      // في بيئة المعاينة العادية، تخطي التحقق من الخادم
-      if (isPreviewEnvironment() && !forceRealExecution) {
-        toast.info("أنت في بيئة المعاينة. سيتم محاكاة تنفيذ الأتمتة.", {
-          duration: 3000,
-        });
-        
-        // محاكاة تأخير للتجربة الواقعية
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // إرجاع استجابة مزيفة مع إضافة خاصية details
-        return {
-          success: true,
-          message: "تمت محاكاة تنفيذ الأتمتة بنجاح (بيئة المعاينة)",
-          automationType: 'client',
-          details: [
-            `عدد الإجراءات: ${config.actions.length}`,
-            `الرابط: ${config.projectUrl}`,
-            `استخدام بيانات المتصفح: ${config.useBrowserData ? 'نعم' : 'لا'}`
-          ]
-        };
-      }
-      
-      // التحقق من حالة الخادم أولاً بإصرار أكبر
-      try {
-        // استخدام checkServerStatus مع محاولات متعددة مدمجة
-        await this.checkServerStatus(false);
-      } catch (error) {
-        console.warn("فشل التحقق من حالة الخادم، محاولة أخيرة مباشرة عبر ConnectionManager");
-        
-        // محاولة مباشرة أخيرة
-        await ConnectionManager.checkServerStatus(true);
-      }
-      
-      // إذا نجح التحقق، نقوم بتشغيل الأتمتة
-      return await this.runAutomation(config);
-    } catch (error) {
-      console.error("فشل التحقق من الخادم:", error);
-      
-      // بدء إعادة المحاولات التلقائية
-      this.startAutoReconnect();
-      
-      toast.error("تعذر تنفيذ الأتمتة: فشل الاتصال بخادم Render", {
-        description: "سيتم محاولة إعادة الاتصال تلقائياً. يمكنك المحاولة مرة أخرى بعد استعادة الاتصال.",
-        duration: 5000,
-      });
-      
-      throw new Error(`تعذر الاتصال بخادم الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
-    }
-  }
-  
-  /**
-   * الحصول على بيانات المتصفح المحفوظة (الكوكيز وبيانات التسجيل)
-   */
-  static async getBrowserData() {
-    try {
-      // التحقق من وجود علامة التنفيذ الفعلي
-      const forceRealExecution = localStorage.getItem('force_real_execution') === 'true';
-      
-      // في بيئة المعاينة العادية، إرجاع بيانات وهمية
-      if (isPreviewEnvironment() && !forceRealExecution) {
-        return {
-          success: true,
-          cookies: [],
-          localStorage: {},
-          sessionStorage: {}
-        };
-      }
-      
-      const serverUrl = ConnectionManager.getServerUrl();
-      const response = await fetch(`${serverUrl}/api/browser-data`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
+
+    // التحقق من وجود إجراءات الأتمتة
+    if (!config.actions || config.actions.length === 0) {
+      errors.push("يجب إضافة إجراء واحد على الأقل");
+    } else {
+      // التحقق من تفاصيل كل إجراء
+      for (let i = 0; i < config.actions.length; i++) {
+        const action = config.actions[i];
+        // نتحقق من وجود العناصر الأساسية حسب نوع الواجهة
+        if ('type' in action) {
+          // إذا كان من نوع Action
+          if (!action.type) {
+            errors.push(`الإجراء #${i + 1}: يجب تحديد نوع الإجراء`);
+          }
+          if (!action.selector && !action.finder) {
+            errors.push(`الإجراء #${i + 1}: يجب تحديد المحدد الخاص بالإجراء`);
+          }
+        } else {
+          // إذا كان من نوع AutomationAction
+          if (!action.name) {
+            errors.push(`الإجراء #${i + 1}: يجب تحديد اسم الإجراء`);
+          }
+          if (!action.finder) {
+            errors.push(`الإجراء #${i + 1}: يجب تحديد المحدد الخاص بالإجراء`);
+          }
         }
-      });
+      }
+    }
+
+    // التحقق من نوع الأتمتة
+    if (!config.automationType) {
+      errors.push("يجب تحديد نوع الأتمتة (server أو client)");
+    }
+
+    // التحقق من قيمة useBrowserData
+    if (config.useBrowserData === undefined) {
+      errors.push("يجب تحديد قيمة useBrowserData");
+    }
+
+    return errors;
+  }
+
+  /**
+   * التحقق من الإعدادات وتنفيذ الأتمتة
+   */
+  static async validateAndRunAutomation(config: AutomationConfig): Promise<AutomationResponse> {
+    // التحقق من الإعدادات قبل التنفيذ
+    const validationErrors = this.validateAutomationConfig(config);
+    if (validationErrors.length > 0) {
+      return {
+        success: false,
+        message: "فشل التحقق من إعدادات الأتمتة",
+        automationType: config.automationType,
+        details: validationErrors,
+        error: {
+          message: validationErrors.join("\n"),
+          type: "ValidationError"
+        }
+      };
+    }
+
+    // إذا كنا في وضع المعاينة، قم بمحاكاة الاستجابة بدلاً من تنفيذ الأتمتة الفعلية
+    if (isPreviewEnvironment()) {
+      return this.simulateAutomationResponse(config);
+    }
+
+    try {
+      // تنفيذ الأتمتة
+      return await this.runAutomation(config);
+    } catch (error: any) {
+      console.error("خطأ أثناء تنفيذ الأتمتة:", error);
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "حدث خطأ غير معروف أثناء تنفيذ الأتمتة";
+      
+      // تحسين رسالة الخطأ للمستخدم
+      let userFriendlyMessage = "حدث خطأ أثناء تنفيذ الأتمتة.";
+      let errorType = "UnknownError";
+      
+      if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
+        userFriendlyMessage = "حدث خطأ في الشبكة أثناء الاتصال بالخادم. تأكد من اتصالك بالإنترنت.";
+        errorType = "NetworkError";
+      } else if (errorMessage.includes("timeout") || errorMessage.includes("timed out")) {
+        userFriendlyMessage = "انتهت مهلة الاتصال بالخادم. قد يكون الخادم بطيئًا أو غير متاح حاليًا.";
+        errorType = "TimeoutError";
+      } else if (errorMessage.includes("CORS")) {
+        userFriendlyMessage = "حدث خطأ في اتصال CORS. قد يكون هناك مشكلة في إعدادات الخادم.";
+        errorType = "CORSError";
+      }
+      
+      return {
+        success: false,
+        message: userFriendlyMessage,
+        automationType: config.automationType,
+        error: {
+          message: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+          type: errorType
+        }
+      };
+    }
+  }
+
+  /**
+   * تنفيذ الأتمتة
+   */
+  static async runAutomation(config: AutomationConfig): Promise<AutomationResponse> {
+    if (this.isRunning) {
+      return {
+        success: false,
+        message: "هناك عملية أتمتة قيد التنفيذ بالفعل. يرجى الانتظار حتى اكتمالها.",
+        automationType: config.automationType
+      };
+    }
+
+    // التحقق من اتصال الخادم قبل تنفيذ الأتمتة
+    const connectionStatus = getLastConnectionStatus();
+    if (!connectionStatus.isConnected && config.automationType === 'server') {
+      // محاولة إعادة الاتصال قبل الفشل
+      try {
+        const retryResult = await this.retryServerConnection(2);
+        if (!retryResult) {
+          return {
+            success: false,
+            message: "تعذر الاتصال بخادم الأتمتة. تأكد من اتصالك بالإنترنت.",
+            automationType: config.automationType,
+            error: {
+              message: "حدث خطأ في الشبكة أثناء الاتصال بالخادم. تأكد من اتصالك بالإنترنت.",
+              type: "ConnectionError"
+            }
+          };
+        }
+      } catch (error) {
+        console.error("خطأ أثناء محاولة إعادة الاتصال:", error);
+      }
+    }
+
+    this.isRunning = true;
+    let failed = false;
+    
+    try {
+      // تحديد وقت بدء التنفيذ
+      const startTime = Date.now();
+      
+      // الحصول على رابط خادم الأتمتة
+      const serverUrl = getAutomationServerUrl();
+      if (!serverUrl && config.automationType === 'server') {
+        throw new Error("لم يتم تحديد رابط خادم الأتمتة");
+      }
+      
+      // إعداد طلب الأتمتة
+      const endpoint = `${serverUrl}/api/automation/run`;
+      console.log(`إرسال طلب الأتمتة إلى ${endpoint}`, config);
+      
+      // تنفيذ الأتمتة مع إعادة المحاولة تلقائيًا
+      const response = await fetchWithRetry(
+        endpoint, 
+        createFetchOptions('POST', config),
+        this.maxRetries,
+        this.retryDelay
+      );
       
       if (!response.ok) {
-        throw new Error(`فشل في الحصول على بيانات المتصفح: ${response.status}`);
+        failed = true;
+        
+        // محاولة استخراج تفاصيل الخطأ من الاستجابة
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `فشل الطلب بحالة: ${response.status}`);
+        } catch (parseError) {
+          throw new Error(`فشل الطلب بحالة: ${response.status} ${response.statusText}`);
+        }
       }
       
-      return await response.json();
-    } catch (error) {
-      console.error("فشل في الحصول على بيانات المتصفح:", error);
+      // استخراج نتائج الأتمتة
+      const result = await response.json();
+      console.log("نتيجة تنفيذ الأتمتة:", result);
       
-      // إذا كان الخطأ بسبب فشل الاتصال، ابدأ إعادة المحاولة
-      if (error instanceof Error && error.message.includes("Failed to fetch")) {
+      // تحديد وقت الانتهاء وحساب مدة التنفيذ
+      const endTime = Date.now();
+      const executionTime = endTime - startTime;
+      
+      // إضافة معلومات إضافية للنتيجة
+      return {
+        ...result,
+        executionTime,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error: any) {
+      failed = true;
+      console.error("خطأ أثناء تنفيذ الأتمتة:", error);
+      
+      // إعداد رسالة خطأ أكثر تفصيلاً
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      let userFriendlyMessage = "حدث خطأ أثناء تنفيذ الأتمتة";
+      let errorType = "AutomationError";
+      
+      // تحسين رسالة الخطأ بناءً على نوع الخطأ
+      if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
+        userFriendlyMessage = "حدث خطأ في الشبكة أثناء الاتصال بالخادم. تأكد من اتصالك بالإنترنت.";
+        errorType = "NetworkError";
+        
+        // محاولة إعادة اتصال الخادم
         this.startAutoReconnect();
+      } else if (errorMessage.includes("timeout") || errorMessage.includes("timed out")) {
+        userFriendlyMessage = "انتهت مهلة الاتصال بالخادم. قد يكون الخادم بطيئًا أو غير متوفر حاليًا.";
+        errorType = "TimeoutError";
+      } else if (errorMessage.includes("CORS") || errorMessage.includes("cross-origin")) {
+        userFriendlyMessage = "حدث خطأ في اتصال CORS. قد يكون هناك مشكلة في إعدادات الخادم.";
+        errorType = "CORSError";
       }
       
-      throw error;
+      return {
+        success: false,
+        message: userFriendlyMessage,
+        automationType: config.automationType,
+        error: {
+          message: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+          type: errorType
+        }
+      };
+    } finally {
+      this.isRunning = false;
+      
+      // إذا فشلت العملية، حاول إعادة الاتصال
+      if (failed && config.automationType === 'server') {
+        // تحديث حالة الاتصال وإعادة المحاولة إذا لزم الأمر
+        try {
+          await this.checkServerStatus(false);
+        } catch (error) {
+          console.error("فشل التحقق من حالة الخادم بعد فشل الأتمتة:", error);
+        }
+      }
     }
   }
-  
+
   /**
-   * محاولة فورية لإعادة الاتصال بالخادم
+   * محاولة إعادة الاتصال بالخادم قبل فشل العملية
    */
-  static async forceReconnect(): Promise<boolean> {
-    try {
-      toast.info("جاري محاولة الاتصال بالخادم...", {
-        duration: 3000,
-      });
-      
-      // إعادة تعيين حالة الاتصال أولاً
-      ConnectionManager.resetConnectionState();
-      
-      // استخدام طريقة مباشرة أولاً
-      const serverUrl = ConnectionManager.getServerUrl();
-      console.log("محاولة اتصال مباشر بـ:", serverUrl);
-      
+  private static async retryServerConnection(maxRetries: number): Promise<boolean> {
+    console.log(`محاولة إعادة الاتصال بالخادم (${maxRetries} محاولات)...`);
+    
+    for (let i = 0; i < maxRetries; i++) {
       try {
-        const options = createFetchOptions('GET', null, {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store',
-          'Pragma': 'no-cache',
-          'X-Request-Time': Date.now().toString() // لتجنب ذاكرة التخزين المؤقت
-        });
+        toast.info(`محاولة إعادة الاتصال بالخادم (${i + 1}/${maxRetries})...`);
         
-        // استخدام نقطة نهاية /api/ping بدلاً من /api/status للتحقق بشكل أسرع
-        const pingUrl = `${serverUrl}/api/ping`;
-        console.log("محاولة اتصال سريع مع:", pingUrl);
+        // انتظار قبل إعادة المحاولة
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
         
-        const response = await fetch(pingUrl, options);
+        await this.checkServerStatus(false);
+        const status = getLastConnectionStatus();
         
-        if (response.ok) {
-          console.log("نجح الاتصال المباشر!");
-          toast.success("تم الاتصال بخادم Render بنجاح!");
-          ConnectionManager.updateLastSuccessfulConnection();
+        if (status.isConnected) {
+          console.log("تم إعادة الاتصال بالخادم بنجاح!");
+          toast.success("تم إعادة الاتصال بالخادم بنجاح");
           return true;
         }
-      } catch (directError) {
-        console.error("فشل الاتصال المباشر:", directError);
+      } catch (error) {
+        console.error(`فشلت محاولة إعادة الاتصال ${i + 1}/${maxRetries}:`, error);
       }
-      
-      // محاولة الاتصال من خلال ConnectionManager
-      await ConnectionManager.checkServerStatus(true);
-      
-      // إذا وصلنا إلى هنا، فقد نجح الاتصال
-      toast.success("تم الاتصال بخادم Render بنجاح!");
-      return true;
-    } catch (error) {
-      console.error("فشلت محاولة إعادة الاتصال القسرية:", error);
-      
-      toast.error("فشلت محاولة الاتصال بالخادم", {
-        description: "تأكد من تشغيل الخادم وصحة عنوان URL",
-        duration: 5000,
-      });
-      
-      // بدء إعادة محاولات الاتصال التلقائية
-      this.startAutoReconnect();
-      return false;
     }
+    
+    console.error(`فشلت جميع محاولات إعادة الاتصال (${maxRetries} محاولات)`);
+    return false;
   }
-  
+
   /**
-   * إجراء فحص الاتصال مع التحقق من وجود خادم الأتمتة
+   * محاكاة استجابة الأتمتة في بيئة المعاينة
    */
-  static async checkServerExistence(throwError = false): Promise<boolean> {
-    try {
-      const serverUrl = ConnectionManager.getServerUrl();
-      if (!serverUrl) {
-        console.warn("عنوان URL للخادم غير موجود");
-        return false;
-      }
+  private static simulateAutomationResponse(config: AutomationConfig): AutomationResponse {
+    console.log("محاكاة استجابة الأتمتة في بيئة المعاينة:", config);
+    
+    // تأخير مصطنع لمحاكاة وقت التنفيذ
+    const executionTime = Math.floor(Math.random() * 2000) + 1000;
+    
+    // محاكاة نتائج الإجراءات
+    const results: any[] = [];
+    
+    for (let i = 0; i < config.actions.length; i++) {
+      const action = config.actions[i];
+      const isSuccess = Math.random() > 0.2; // 80% احتمال النجاح
       
-      const response = await fetch(`${serverUrl}/api/ping`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store',
-          'Pragma': 'no-cache',
-          'X-Request-Time': Date.now().toString()
-        },
-        // تقليل وقت الانتظار للاستجابة السريعة
-        signal: AbortSignal.timeout(5000)
-      });
+      // استخراج البيانات المناسبة حسب نوع الإجراء
+      const actionName = 'name' in action ? action.name : (`type` in action ? action.type : 'إجراء');
+      const selector = 'selector' in action ? action.selector : ('finder' in action ? action.finder : '');
+      const value = 'value' in action ? action.value : '';
       
-      return response.ok;
-    } catch (error) {
-      console.error("خطأ في التحقق من وجود الخادم:", error);
-      if (throwError) {
-        throw error;
-      }
-      return false;
-    }
-  }
-  
-  /**
-   * تبديل وضع التنفيذ الفعلي في بيئة المعاينة
-   */
-  static toggleRealExecution(enabled: boolean): void {
-    if (enabled) {
-      localStorage.setItem('force_real_execution', 'true');
-      toast.success("تم تفعيل وضع التنفيذ الفعلي", {
-        description: "سيتم الآن محاولة الاتصال بالخادم الحقيقي وتنفيذ الأتمتة فعلياً.",
-        duration: 5000,
-      });
-    } else {
-      localStorage.removeItem('force_real_execution');
-      toast.info("تم تعطيل وضع التنفيذ الفعلي", {
-        description: "سيتم الآن استخدام المحاكاة بدلاً من التنفيذ الفعلي.",
-        duration: 5000,
+      results.push({
+        index: i,
+        action: actionName,
+        selector: selector,
+        value: value,
+        success: isSuccess,
+        error: isSuccess ? null : "خطأ محاكى: لم يتم العثور على العنصر",
+        timestamp: new Date().toISOString(),
+        duration: Math.floor(Math.random() * 500) + 100,
+        screenshots: []
       });
     }
     
-    // محاولة التحقق من حالة الخادم بعد تغيير الوضع
-    if (enabled) {
-      this.checkServerStatus(true).catch(error => {
-        console.error("فشل التحقق من حالة الخادم بعد تفعيل وضع التنفيذ الفعلي:", error);
-      });
-    }
-  }
-  
-  /**
-   * التحقق من حالة وضع التنفيذ الفعلي
-   */
-  static isRealExecutionEnabled(): boolean {
-    return localStorage.getItem('force_real_execution') === 'true';
+    return {
+      success: true,
+      message: "تم تنفيذ الأتمتة بنجاح (محاكاة)",
+      automationType: config.automationType,
+      results: results,
+      executionTime: executionTime,
+      timestamp: new Date().toISOString()
+    };
   }
 }

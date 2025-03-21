@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { PlayCircle, Trash2, Copy, ExternalLink, FileText, Info } from 'lucide-r
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { AutomationService } from '@/utils/automationService';
-import { AutomationConfig, AutomationAction } from '@/utils/automation/types';
+import { AutomationConfig, AutomationAction, AutomationResponse } from '@/utils/automation/types';
 import { toast } from 'sonner';
 import { 
   Dialog,
@@ -17,6 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import ActionResultsList from './ActionResultsList';
 
 interface SavedAutomation {
   id: string;
@@ -31,6 +33,8 @@ const SavedAutomations: React.FC = () => {
   const [selectedAutomation, setSelectedAutomation] = useState<SavedAutomation | null>(null);
   const [isRunning, setIsRunning] = useState<{[key: string]: boolean}>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [automationResponse, setAutomationResponse] = useState<AutomationResponse | null>(null);
+  const [showResults, setShowResults] = useState(false);
   
   useEffect(() => {
     loadSavedAutomations();
@@ -59,6 +63,7 @@ const SavedAutomations: React.FC = () => {
   
   const handleRun = async (automation: SavedAutomation) => {
     setIsRunning(prev => ({ ...prev, [automation.id]: true }));
+    setShowResults(true);
     toast.info('جاري تنفيذ الأتمتة...', { duration: 3000 });
     
     try {
@@ -71,6 +76,7 @@ const SavedAutomations: React.FC = () => {
       };
       
       const result = await AutomationService.validateAndRunAutomation(config);
+      setAutomationResponse(result);
       
       if (result.success) {
         toast.success('تم تنفيذ الأتمتة بنجاح!');
@@ -79,8 +85,18 @@ const SavedAutomations: React.FC = () => {
       }
     } catch (error) {
       toast.error(`حدث خطأ أثناء تنفيذ الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+      setAutomationResponse({
+        success: false,
+        message: 'حدث خطأ أثناء تنفيذ الأتمتة',
+        automationType: 'server',
+        error: {
+          message: error instanceof Error ? error.message : 'خطأ غير معروف',
+          type: 'UnknownError'
+        }
+      });
     } finally {
       setIsRunning(prev => ({ ...prev, [automation.id]: false }));
+      setIsDialogOpen(false);
     }
   };
   
@@ -115,6 +131,11 @@ const SavedAutomations: React.FC = () => {
     }
   };
   
+  const handleClearResults = () => {
+    setAutomationResponse(null);
+    setShowResults(false);
+  };
+  
   return (
     <div>
       {savedAutomations.length === 0 ? (
@@ -128,68 +149,79 @@ const SavedAutomations: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {savedAutomations.map((automation) => (
-            <Card key={automation.id} className="overflow-hidden">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">{automation.name}</CardTitle>
-                <CardDescription>
-                  <span dir="ltr" className="text-xs opacity-70">{automation.url}</span>
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent>
-                <div className="text-sm mb-2">
-                  <span className="text-muted-foreground">عدد الإجراءات: </span>
-                  <span className="font-medium">{automation.actions.length}</span>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  تم الإنشاء {formatDate(automation.createdAt)}
-                </div>
-              </CardContent>
-              
-              <CardFooter className="flex justify-between pt-2 pb-3 border-t">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => viewDetails(automation)}
-                >
-                  <Info className="h-4 w-4 mr-1" />
-                  التفاصيل
-                </Button>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {savedAutomations.map((automation) => (
+              <Card key={automation.id} className="overflow-hidden">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">{automation.name}</CardTitle>
+                  <CardDescription>
+                    <span dir="ltr" className="text-xs opacity-70">{automation.url}</span>
+                  </CardDescription>
+                </CardHeader>
                 
-                <div className="flex gap-1">
+                <CardContent>
+                  <div className="text-sm mb-2">
+                    <span className="text-muted-foreground">عدد الإجراءات: </span>
+                    <span className="font-medium">{automation.actions.length}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    تم الإنشاء {formatDate(automation.createdAt)}
+                  </div>
+                </CardContent>
+                
+                <CardFooter className="flex justify-between pt-2 pb-3 border-t">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(automation.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDuplicate(automation)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  
-                  <Button
-                    variant="default"
+                    variant="outline"
                     size="sm"
-                    className="bg-purple-600 hover:bg-purple-700"
-                    onClick={() => handleRun(automation)}
-                    disabled={isRunning[automation.id]}
+                    onClick={() => viewDetails(automation)}
                   >
-                    <PlayCircle className={`h-4 w-4 mr-1 ${isRunning[automation.id] ? 'animate-spin' : ''}`} />
-                    تشغيل
+                    <Info className="h-4 w-4 mr-1" />
+                    التفاصيل
                   </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+                  
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(automation.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDuplicate(automation)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700"
+                      onClick={() => handleRun(automation)}
+                      disabled={isRunning[automation.id]}
+                    >
+                      <PlayCircle className={`h-4 w-4 mr-1 ${isRunning[automation.id] ? 'animate-spin' : ''}`} />
+                      تشغيل
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+          
+          {showResults && automationResponse && (
+            <div className="mt-6">
+              <ActionResultsList 
+                automationResponse={automationResponse} 
+                onHideResults={handleClearResults} 
+              />
+            </div>
+          )}
+        </>
       )}
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -262,11 +294,23 @@ const SavedAutomations: React.FC = () => {
                 className="bg-purple-600 hover:bg-purple-700"
                 onClick={() => {
                   handleRun(selectedAutomation);
-                  setIsDialogOpen(false);
                 }}
+                disabled={isRunning[selectedAutomation.id]}
               >
-                <PlayCircle className="mr-2 h-4 w-4" />
-                تشغيل الأتمتة
+                {isRunning[selectedAutomation.id] ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    جاري التنفيذ...
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="mr-2 h-4 w-4" />
+                    تشغيل الأتمتة
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
