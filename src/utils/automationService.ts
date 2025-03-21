@@ -1,4 +1,3 @@
-
 /**
  * خدمة للتفاعل مع خادم الأتمتة
  */
@@ -28,8 +27,42 @@ export class AutomationService {
         };
       }
       
-      // محاولة الاتصال الفعلي بالخادم
-      return await ConnectionManager.checkServerStatus(showToasts);
+      // محاولة الاتصال الفعلي بالخادم مع زيادة المحاولات
+      const maxRetries = 2;
+      let lastError;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`محاولة فحص حالة الخادم ${attempt}/${maxRetries}`);
+          const result = await ConnectionManager.checkServerStatus(showToasts && attempt === maxRetries);
+          console.log("نتيجة فحص الخادم:", result);
+          
+          // إيقاف محاولات إعادة الاتصال التلقائية إذا كان الاتصال ناجحاً
+          this.stopReconnect();
+          
+          return result;
+        } catch (error) {
+          console.error(`فشل المحاولة ${attempt}/${maxRetries}:`, error);
+          lastError = error;
+          
+          // إذا لم تكن المحاولة الأخيرة، انتظر قبل إعادة المحاولة
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+      
+      // إذا وصلنا إلى هنا، فقد فشلت جميع المحاولات
+      console.error("فشلت جميع محاولات التحقق من حالة الخادم");
+      
+      // إعادة محاولة الاتصال تلقائياً
+      this.startAutoReconnect();
+      
+      if (showToasts) {
+        toast.error(`تعذر الاتصال بخادم Render: ${lastError instanceof Error ? lastError.message : 'خطأ غير معروف'}`);
+      }
+      
+      throw lastError;
     } catch (error) {
       console.error("فشل التحقق من حالة الخادم في AutomationService:", error);
       
@@ -107,8 +140,16 @@ export class AutomationService {
         };
       }
       
-      // التحقق من حالة الخادم أولاً
-      await ConnectionManager.checkServerStatus();
+      // التحقق من حالة الخادم أولاً بإصرار أكبر
+      try {
+        // استخدام checkServerStatus مع محاولات متعددة مدمجة
+        await this.checkServerStatus(false);
+      } catch (error) {
+        console.warn("فشل التحقق من حالة الخادم، محاولة أخيرة مباشرة عبر ConnectionManager");
+        
+        // محاولة مباشرة أخيرة
+        await ConnectionManager.checkServerStatus(true);
+      }
       
       // إذا نجح التحقق، نقوم بتشغيل الأتمتة
       return await this.runAutomation(config);
@@ -164,6 +205,38 @@ export class AutomationService {
       }
       
       throw error;
+    }
+  }
+  
+  /**
+   * محاولة فورية لإعادة الاتصال بالخادم
+   */
+  static async forceReconnect(): Promise<boolean> {
+    try {
+      toast.info("جاري محاولة الاتصال بالخادم...", {
+        duration: 3000,
+      });
+      
+      // إعادة تعيين حالة الاتصال أولاً
+      ConnectionManager.resetConnectionState();
+      
+      // محاولة الاتصال المباشر
+      await ConnectionManager.checkServerStatus(true);
+      
+      // إذا وصلنا إلى هنا، فقد نجح الاتصال
+      toast.success("تم الاتصال بخادم Render بنجاح!");
+      return true;
+    } catch (error) {
+      console.error("فشلت محاولة إعادة الاتصال القسرية:", error);
+      
+      toast.error("فشلت محاولة الاتصال بالخادم", {
+        description: "تأكد من تشغيل الخادم وصحة عنوان URL",
+        duration: 5000,
+      });
+      
+      // بدء إعادة محاولات الاتصال التلقائية
+      this.startAutoReconnect();
+      return false;
     }
   }
 }

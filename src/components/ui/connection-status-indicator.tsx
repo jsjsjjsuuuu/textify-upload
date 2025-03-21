@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Wifi, WifiOff, RefreshCw, Clock, AlertTriangle } from "lucide-react";
+import { Wifi, WifiOff, RefreshCw, Clock, AlertTriangle, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConnectionManager } from "@/utils/automation/connectionManager";
 import { getLastConnectionStatus, isPreviewEnvironment, resetAutomationServerUrl } from "@/utils/automationServerUrl";
@@ -9,6 +9,7 @@ import { ServerStatusResponse } from "@/utils/automation/types";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { AutomationService } from "@/utils/automationService";
 
 interface ConnectionStatusIndicatorProps {
   className?: string;
@@ -42,11 +43,19 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       const attempts = ConnectionManager.getReconnectAttempts();
       setReconnectAttempts(attempts);
       
-      // التحقق من الاتصال الفعلي
-      const status = await ConnectionManager.checkServerStatus(false);
+      // استخدام التحقق المحسن من خلال AutomationService
+      const status = await AutomationService.checkServerStatus(false);
+      
+      console.log("نتيجة التحقق من الاتصال:", status);
       setServerInfo(status);
       setIsConnected(true);
       onStatusChange?.(true);
+      
+      // عرض إشعار بنجاح الاتصال (فقط إذا كان هناك محاولات إعادة اتصال سابقة)
+      if (reconnectAttempts > 0) {
+        toast.success("تم استعادة الاتصال بخادم Render");
+        setReconnectAttempts(0);
+      }
     } catch (error) {
       console.error("فشل التحقق من حالة الاتصال:", error);
       setIsConnected(false);
@@ -83,13 +92,16 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       resetAutomationServerUrl();
     }
     
-    // ثم التحقق الفعلي من الاتصال
-    checkConnectionStatus();
+    // ثم التحقق الفعلي من الاتصال بعد فترة قصيرة
+    const timer = setTimeout(() => {
+      checkConnectionStatus();
+    }, 1000);
     
-    // إعداد فاصل زمني للتحقق الدوري (كل 2 دقيقة)
-    const intervalId = setInterval(checkConnectionStatus, 120000);
+    // إعداد فاصل زمني للتحقق الدوري (كل دقيقة)
+    const intervalId = setInterval(checkConnectionStatus, 60000);
     
     return () => {
+      clearTimeout(timer);
       clearInterval(intervalId);
     };
   }, []);
@@ -100,6 +112,13 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       duration: 3000,
     });
     checkConnectionStatus();
+  };
+  
+  const handleForceReconnect = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsChecking(true);
+    await AutomationService.forceReconnect();
+    await checkConnectionStatus();
   };
   
   const handleGoToSettings = (e: React.MouseEvent) => {
@@ -134,12 +153,15 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
           <div 
             onClick={handleManualCheck}
             className={cn(
-              "inline-flex items-center gap-2 cursor-pointer",
+              "inline-flex items-center gap-2 cursor-pointer px-2 py-1 rounded-md transition-colors",
+              isChecking ? "bg-amber-50 dark:bg-amber-950/30" :
+              isConnected ? "bg-green-50 dark:bg-green-950/30" : 
+              "bg-red-50 dark:bg-red-950/30",
               className
             )}
           >
             {isChecking ? (
-              <RefreshCw className="h-4 w-4 animate-spin text-amber-500" />
+              <Activity className="h-4 w-4 animate-pulse text-amber-500" />
             ) : isConnected ? (
               <Wifi className="h-4 w-4 text-green-500" />
             ) : (
@@ -149,16 +171,16 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
             {showText && (
               <span className={cn(
                 "text-xs font-medium",
-                isChecking ? "text-amber-600" : 
-                isConnected ? "text-green-600" : 
-                "text-red-600"
+                isChecking ? "text-amber-600 dark:text-amber-400" : 
+                isConnected ? "text-green-600 dark:text-green-400" : 
+                "text-red-600 dark:text-red-400"
               )}>
                 {getStatusText()}
               </span>
             )}
           </div>
         </TooltipTrigger>
-        <TooltipContent className="p-4 max-w-80 bg-white/95 backdrop-blur-sm">
+        <TooltipContent className="p-4 max-w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
           <div className="space-y-3">
             <div className="font-medium">حالة اتصال خادم الأتمتة</div>
             
@@ -179,7 +201,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
                 </div>
                 
                 {!isConnected && (
-                  <div className="text-xs bg-red-50 text-red-800 p-2 rounded flex items-start gap-2 mt-2">
+                  <div className="text-xs bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-200 p-2 rounded flex items-start gap-2 mt-2">
                     <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
                     <div>
                       <p className="font-medium">تعذر الاتصال بخادم Render</p>
@@ -203,10 +225,17 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
                 )}
                 
                 <div className="flex gap-2 mt-2">
-                  <Button variant="secondary" size="sm" onClick={handleManualCheck} className="w-full text-xs">
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    إعادة الاتصال
-                  </Button>
+                  {!isConnected ? (
+                    <Button variant="default" size="sm" onClick={handleForceReconnect} className="w-full text-xs bg-purple-600 hover:bg-purple-700">
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      إعادة اتصال فورية
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" size="sm" onClick={handleManualCheck} className="w-full text-xs">
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      تحديث الحالة
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" onClick={handleGoToSettings} className="w-full text-xs">
                     الإعدادات
                   </Button>
