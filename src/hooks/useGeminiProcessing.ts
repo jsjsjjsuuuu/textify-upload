@@ -4,6 +4,7 @@ import { ImageData } from "@/types/ImageData";
 import { extractDataWithGemini, fileToBase64 } from "@/lib/gemini";
 import { useToast } from "@/hooks/use-toast";
 import { updateImageWithExtractedData } from "@/utils/imageDataParser";
+import { isPreviewEnvironment } from "@/utils/automationServerUrl";
 
 export const useGeminiProcessing = () => {
   const [useGemini, setUseGemini] = useState(false);
@@ -27,6 +28,17 @@ export const useGeminiProcessing = () => {
   const processWithGemini = async (file: File, image: ImageData, fallbackProcessor: (file: File, image: ImageData) => Promise<ImageData>): Promise<ImageData> => {
     const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
     console.log("Using Gemini API key of length:", geminiApiKey.length);
+
+    // في بيئة المعاينة، استخدم المعالج الاحتياطي مباشرة بسبب قيود CORS
+    if (isPreviewEnvironment()) {
+      console.log("Running in preview environment (Lovable). Using fallback processor instead of Gemini due to CORS restrictions.");
+      toast({
+        title: "تنبيه",
+        description: "استخدام OCR التقليدي في بيئة المعاينة بسبب قيود CORS",
+        variant: "default"
+      });
+      return fallbackProcessor(file, image);
+    }
 
     try {
       console.log("Converting file to base64");
