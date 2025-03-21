@@ -29,7 +29,7 @@ export const useGeminiProcessing = () => {
     const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
     console.log("Using Gemini API key of length:", geminiApiKey.length);
 
-    // في بيئة المعاينة، نستخدم Gemini ولكن قد نواجه قيود CORS
+    // في بيئة المعاينة، نحاول استخدام Gemini مع تحذير المستخدم
     if (isPreviewEnvironment()) {
       console.log("Running in preview environment (Lovable). Attempting to use Gemini but may face CORS restrictions.");
       toast({
@@ -48,7 +48,9 @@ export const useGeminiProcessing = () => {
       const extractionResult = await extractDataWithGemini({
         apiKey: geminiApiKey,
         imageBase64,
-        enhancedExtraction: true
+        enhancedExtraction: true,
+        maxRetries: 5,  // زيادة عدد المحاولات للتغلب على أخطاء الشبكة
+        retryDelayMs: 1000  // انتظار ثانية واحدة بين المحاولات
       });
       console.log("Gemini extraction result:", extractionResult);
       
@@ -135,9 +137,15 @@ export const useGeminiProcessing = () => {
     } catch (geminiError: any) {
       console.error("Error in Gemini processing:", geminiError);
       
+      // تحسين رسالة الخطأ لتكون أكثر تفصيلاً وفائدة
+      let errorMessage = geminiError.message || 'خطأ غير معروف';
+      if (errorMessage.includes('Failed to fetch')) {
+        errorMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك والمحاولة مرة أخرى.';
+      }
+      
       toast({
         title: "خطأ",
-        description: `فشل في استخراج البيانات: ${geminiError.message || 'خطأ غير معروف'}`,
+        description: `فشل في استخراج البيانات: ${errorMessage}`,
         variant: "destructive"
       });
       
@@ -145,7 +153,7 @@ export const useGeminiProcessing = () => {
       return {
         ...image,
         status: "error",
-        extractedText: "خطأ في المعالجة: " + (geminiError.message || 'خطأ غير معروف')
+        extractedText: "خطأ في المعالجة: " + errorMessage
       };
     }
   };

@@ -43,4 +43,6 @@ export interface GeminiExtractParams {
   temperature?: number;
   modelVersion?: string;
   enhancedExtraction?: boolean;
+  maxRetries?: number;
+  retryDelayMs?: number;
 }

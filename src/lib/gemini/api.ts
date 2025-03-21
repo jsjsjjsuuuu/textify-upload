@@ -18,7 +18,9 @@ export async function extractDataWithGemini({
   extractionPrompt,
   temperature = 0.2,
   modelVersion = 'gemini-2.0-flash',
-  enhancedExtraction = true
+  enhancedExtraction = true,
+  maxRetries = 3,
+  retryDelayMs = 500
 }: GeminiExtractParams): Promise<ApiResult> {
   if (!apiKey) {
     console.error("Gemini API Key is missing");
@@ -47,6 +49,7 @@ export async function extractDataWithGemini({
     console.log("Using model version:", modelVersion);
     console.log("Using temperature:", temperature);
     console.log("Using prompt:", prompt.substring(0, 100) + "...");
+    console.log("Max retries:", maxRetries);
     
     // استخدام إصدار النموذج المحدد
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent`;
@@ -85,8 +88,13 @@ export async function extractDataWithGemini({
       }
     );
     
-    // استخدام fetchWithRetry بدلاً من fetch العادي
-    const response = await fetchWithRetry(`${endpoint}?key=${apiKey}`, fetchOptions, 3);
+    // استخدام fetchWithRetry مع محاولات أكثر
+    const response = await fetchWithRetry(
+      `${endpoint}?key=${apiKey}`, 
+      fetchOptions, 
+      maxRetries, 
+      retryDelayMs
+    );
     
     console.log("Gemini API Response status:", response.status);
     
@@ -148,9 +156,19 @@ export async function extractDataWithGemini({
     }
   } catch (error) {
     console.error("خطأ عند استخدام Gemini API:", error);
+    const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+    
+    // تحسين رسائل الخطأ
+    let userFriendlyMessage = `حدث خطأ أثناء معالجة الطلب: ${errorMessage}`;
+    if (errorMessage.includes('Failed to fetch')) {
+      userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN إذا كنت تواجه قيود جغرافية.';
+    } else if (errorMessage.includes('CORS')) {
+      userFriendlyMessage = 'تم منع الطلب بسبب قيود CORS. حاول استخدام الموقع الرئيسي بدلاً من بيئة المعاينة.';
+    }
+    
     return {
       success: false,
-      message: `حدث خطأ أثناء معالجة الطلب: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`
+      message: userFriendlyMessage
     };
   }
 }
@@ -200,9 +218,16 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
     };
   } catch (error) {
     console.error("خطأ عند اختبار اتصال Gemini API:", error);
+    const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+    
+    let userFriendlyMessage = `حدث خطأ أثناء اختبار اتصال Gemini API: ${errorMessage}`;
+    if (errorMessage.includes('Failed to fetch')) {
+      userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN.';
+    }
+    
     return {
       success: false,
-      message: `حدث خطأ أثناء اختبار اتصال Gemini API: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`
+      message: userFriendlyMessage
     };
   }
 }
