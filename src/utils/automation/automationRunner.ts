@@ -1,3 +1,4 @@
+
 /**
  * تشغيل سيناريوهات الأتمتة
  */
@@ -19,26 +20,37 @@ export class AutomationRunner {
         duration: 3000,
       });
       
-      // إذا كنا في بيئة المعاينة، نعرض تحذيرًا
+      // إذا كنا في بيئة المعاينة، نتحقق ما إذا كان المستخدم يريد التنفيذ الفعلي
       if (isPreviewEnvironment()) {
-        toast("أنت في بيئة المعاينة (لوفابل). التنفيذ الفعلي لا يعمل هنا، سيتم محاكاة النتائج فقط.", {
-          duration: 5000,
-        });
+        // التحقق من وجود علامة التنفيذ الفعلي في التخزين المحلي
+        const forceRealExecution = localStorage.getItem('force_real_execution') === 'true';
         
-        // محاكاة تأخير لتجربة أكثر واقعية
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // إرجاع استجابة مزيفة للمحاكاة مع إضافة خاصية details
-        return {
-          success: true,
-          message: "تمت محاكاة تنفيذ الأتمتة بنجاح (بيئة المعاينة)",
-          automationType: 'client',
-          details: [
-            `عدد الإجراءات: ${config.actions.length}`,
-            `الرابط: ${config.projectUrl}`,
-            `استخدام بيانات المتصفح: ${config.useBrowserData ? 'نعم' : 'لا'}`
-          ]
-        };
+        if (!forceRealExecution) {
+          toast("أنت في بيئة المعاينة (لوفابل). التنفيذ الفعلي لا يعمل هنا، سيتم محاكاة النتائج فقط.", {
+            duration: 5000,
+          });
+          
+          // محاكاة تأخير لتجربة أكثر واقعية
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // إرجاع استجابة مزيفة للمحاكاة مع إضافة خاصية details
+          return {
+            success: true,
+            message: "تمت محاكاة تنفيذ الأتمتة بنجاح (بيئة المعاينة)",
+            automationType: 'client',
+            details: [
+              `عدد الإجراءات: ${config.actions.length}`,
+              `الرابط: ${config.projectUrl}`,
+              `استخدام بيانات المتصفح: ${config.useBrowserData ? 'نعم' : 'لا'}`
+            ]
+          };
+        } else {
+          // إظهار رسالة أن المستخدم يستخدم التنفيذ الفعلي في بيئة المعاينة
+          toast.warning("تم تفعيل التنفيذ الفعلي في بيئة المعاينة. سيتم محاولة الاتصال بالخادم الحقيقي.", {
+            duration: 5000,
+          });
+          console.log("تشغيل الأتمتة الفعلية في بيئة المعاينة بناءً على طلب المستخدم");
+        }
       }
       
       // استخدام عنوان IP متناوب في كل محاولة

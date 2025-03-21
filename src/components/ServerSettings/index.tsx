@@ -5,6 +5,7 @@ import ConnectionStatus from "./ConnectionStatus";
 import ServerInfoDisplay from "./ServerInfoDisplay";
 import AutoReconnectToggle from "./AutoReconnectToggle";
 import ConfigurationTips from "./ConfigurationTips";
+import RealExecutionToggle from "./RealExecutionToggle";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Server, RefreshCw } from "lucide-react";
@@ -81,6 +82,8 @@ const ServerSettingsComponent: React.FC<ServerSettingsComponentProps> = ({
                 autoReconnect={autoReconnect}
                 onAutoReconnectChange={onAutoReconnectChange}
               />
+              
+              <RealExecutionToggle />
               
               <ServerInfoDisplay
                 serverInfo={serverInfo}

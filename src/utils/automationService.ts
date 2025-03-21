@@ -1,3 +1,4 @@
+
 /**
  * خدمة للتفاعل مع خادم الأتمتة
  */
@@ -13,8 +14,11 @@ export class AutomationService {
    */
   static async checkServerStatus(showToasts = true): Promise<any> {
     try {
-      // في بيئة المعاينة، قم بمحاكاة نجاح الاتصال دائماً
-      if (isPreviewEnvironment()) {
+      // في بيئة المعاينة، التحقق من وجود علامة التنفيذ الفعلي
+      const forceRealExecution = localStorage.getItem('force_real_execution') === 'true';
+      
+      // في بيئة المعاينة العادية، قم بمحاكاة نجاح الاتصال دائماً
+      if (isPreviewEnvironment() && !forceRealExecution) {
         if (showToasts) {
           toast.success("متصل بخادم Render (محاكاة بيئة المعاينة)");
         }
@@ -168,8 +172,11 @@ export class AutomationService {
    */
   static async validateAndRunAutomation(config: AutomationConfig) {
     try {
-      // في بيئة المعاينة، تخطي التحقق من الخادم
-      if (isPreviewEnvironment()) {
+      // في بيئة المعاينة، التحقق من وجود علامة التنفيذ الفعلي
+      const forceRealExecution = localStorage.getItem('force_real_execution') === 'true';
+      
+      // في بيئة المعاينة العادية، تخطي التحقق من الخادم
+      if (isPreviewEnvironment() && !forceRealExecution) {
         toast.info("أنت في بيئة المعاينة. سيتم محاكاة تنفيذ الأتمتة.", {
           duration: 3000,
         });
@@ -223,8 +230,11 @@ export class AutomationService {
    */
   static async getBrowserData() {
     try {
-      // في بيئة المعاينة، إرجاع بيانات وهمية
-      if (isPreviewEnvironment()) {
+      // التحقق من وجود علامة التنفيذ الفعلي
+      const forceRealExecution = localStorage.getItem('force_real_execution') === 'true';
+      
+      // في بيئة المعاينة العادية، إرجاع بيانات وهمية
+      if (isPreviewEnvironment() && !forceRealExecution) {
         return {
           success: true,
           cookies: [],
@@ -349,5 +359,38 @@ export class AutomationService {
       }
       return false;
     }
+  }
+  
+  /**
+   * تبديل وضع التنفيذ الفعلي في بيئة المعاينة
+   */
+  static toggleRealExecution(enabled: boolean): void {
+    if (enabled) {
+      localStorage.setItem('force_real_execution', 'true');
+      toast.success("تم تفعيل وضع التنفيذ الفعلي", {
+        description: "سيتم الآن محاولة الاتصال بالخادم الحقيقي وتنفيذ الأتمتة فعلياً.",
+        duration: 5000,
+      });
+    } else {
+      localStorage.removeItem('force_real_execution');
+      toast.info("تم تعطيل وضع التنفيذ الفعلي", {
+        description: "سيتم الآن استخدام المحاكاة بدلاً من التنفيذ الفعلي.",
+        duration: 5000,
+      });
+    }
+    
+    // محاولة التحقق من حالة الخادم بعد تغيير الوضع
+    if (enabled) {
+      this.checkServerStatus(true).catch(error => {
+        console.error("فشل التحقق من حالة الخادم بعد تفعيل وضع التنفيذ الفعلي:", error);
+      });
+    }
+  }
+  
+  /**
+   * التحقق من حالة وضع التنفيذ الفعلي
+   */
+  static isRealExecutionEnabled(): boolean {
+    return localStorage.getItem('force_real_execution') === 'true';
   }
 }
