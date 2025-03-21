@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Sun, Moon, AlertTriangle, Wifi, Server } from 'lucide-react';
@@ -36,7 +35,7 @@ const AppHeader = () => {
         setServerConnected(connected);
         
         // عرض إشعار للمستخدم إذا كان الخادم غير متصل
-        if (!connected && (status.retryCount || 0) > 5) {
+        if (!connected && status.retryCount > 5) {
           // إظهار شريط الإشعار فقط إذا كانت هناك عدة محاولات فاشلة
           setShowConnectionBanner(true);
           
@@ -127,6 +126,7 @@ const AppHeader = () => {
             <div className="flex items-center justify-end gap-4">
               <div className="flex items-center space-x-2">
                 <ConnectionStatusIndicator 
+                  showText={true} 
                   className="bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-md"
                   onStatusChange={setServerConnected}
                 />

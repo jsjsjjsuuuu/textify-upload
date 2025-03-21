@@ -1,333 +1,405 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Copy, Check, AlertCircle, Search, Download, ExternalLink } from 'lucide-react';
-import { AlertDescription, AlertTitle, Alert } from '@/components/ui/alert';
-import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Trash, Plus, PenLine, PlayCircle, Check, Alert, Copy, FileDown, File, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Textarea } from "@/components/ui/textarea";
+import { AutomationConfig, AutomationAction } from "@/utils/automation/types";
+import { AutomationService } from "@/utils/automationService";
+import { Alert as AlertComponent, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 
-interface ElementFinderSectionProps {
-  onCodeGenerated: (code: string) => void;
+interface ElementFinderProps {
+  onBookmarkletGenerated?: (code: string) => void;
 }
 
-const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({ onCodeGenerated }) => {
-  const [elementSelector, setElementSelector] = useState('');
-  const [attributeName, setAttributeName] = useState('');
-  const [generatedCode, setGeneratedCode] = useState('');
-  const [isCopied, setIsCopied] = useState(false);
-  const [useEventListener, setUseEventListener] = useState(true);
-  const [eventType, setEventType] = useState('click');
-  const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isBookmarklet, setIsBookmarklet] = useState(false);
-  const [includeToast, setIncludeToast] = useState(true);
-  const [includeCopyToClipboard, setIncludeCopyToClipboard] = useState(true);
-  const [includeConsoleLog, setIncludeConsoleLog] = useState(true);
-  const [customFunctionName, setCustomFunctionName] = useState('getElementInfo');
-  const [customToastMessage, setCustomToastMessage] = useState('تم نسخ معلومات العنصر إلى الحافظة!');
-  const [customConsoleLogMessage, setCustomConsoleLogMessage] = useState('معلومات العنصر:');
-  const [isMinified, setIsMinified] = useState(true);
+const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGenerated }) => {
+  const [actions, setActions] = useState<{ name: string; finder: string; value: string; delay: string }[]>([
+    { name: "click", finder: "", value: "", delay: "300" },
+  ]);
+  const [projectUrl, setProjectUrl] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [useRealBrowser, setUseRealBrowser] = useState(false);
+  const [actionType, setActionType] = useState("click");
+  const [customName, setCustomName] = useState("");
+  const [automationProgress, setAutomationProgress] = useState(0);
+  const [automationStatus, setAutomationStatus] = useState("");
+  const [serverError, setServerError] = useState<string | null>(null);
+  
+  const { toast: hookToast } = useToast();
+  
+  const handleAddAction = () => {
+    setActions([...actions, { name: actionType, finder: "", value: "", delay: "300" }]);
+  };
+  
+  const handleRemoveAction = (index: number) => {
+    const newActions = [...actions];
+    newActions.splice(index, 1);
+    setActions(newActions);
+  };
+  
+  const handleActionChange = (index: number, field: keyof (typeof actions)[0], value: string) => {
+    const newActions = [...actions];
+    newActions[index] = { ...newActions[index], [field]: value };
+    setActions(newActions);
+  };
 
-  const generateCode = () => {
-    if (!elementSelector) {
-      toast.error('الرجاء إدخال محدد العنصر أولاً');
+  const handleRunAutomation = async () => {
+    if (!projectUrl) {
+      toast.error("يجب إدخال رابط المشروع");
       return;
     }
-
-    setIsGenerating(true);
-
+    
+    if (actions.length === 0 || !actions.some(a => a.finder.trim())) {
+      toast.error("يجب إضافة إجراء واحد على الأقل مع محدد");
+      return;
+    }
+    
+    setIsRunning(true);
+    setAutomationProgress(10);
+    setAutomationStatus("جاري بدء الأتمتة...");
+    setServerError(null);
+    
     try {
-      // إنشاء الكود
-      let code = `// وظيفة استخراج معلومات العناصر
-function ${customFunctionName}() {
-  try {
-    const element = document.querySelector('${elementSelector}');
-    if (!element) {
-      console.error('لم يتم العثور على العنصر: ${elementSelector}');
-      return null;
-    }
-    
-    const elementInfo = {
-      tagName: element.tagName.toLowerCase(),
-      id: element.id || '',
-      className: element.className || '',
-      textContent: element.textContent?.trim() || '',
-      ${attributeName ? `${attributeName}: element.getAttribute('${attributeName}') || '',` : ''}
-      selector: '${elementSelector}'
-    };
-    
-    ${includeConsoleLog ? `console.log('${customConsoleLogMessage}', elementInfo);` : ''}
-    ${includeCopyToClipboard ? `
-    // نسخ المعلومات إلى الحافظة
-    const jsonString = JSON.stringify(elementInfo, null, 2);
-    navigator.clipboard.writeText(jsonString)
-      .then(() => {
-        ${includeToast ? `
-        // إظهار إشعار نجاح
-        const toast = document.createElement('div');
-        toast.style.position = 'fixed';
-        toast.style.bottom = '20px';
-        toast.style.right = '20px';
-        toast.style.backgroundColor = '#4CAF50';
-        toast.style.color = 'white';
-        toast.style.padding = '16px';
-        toast.style.borderRadius = '4px';
-        toast.style.zIndex = '9999';
-        toast.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-        toast.style.fontFamily = 'Arial, sans-serif';
-        toast.style.direction = 'rtl';
-        toast.textContent = '${customToastMessage}';
-        document.body.appendChild(toast);
+      // إعداد كائن الأتمتة
+      const config: AutomationConfig = {
+        projectName: customName || "محدد العناصر",
+        projectUrl: projectUrl,
+        actions: actions.map(action => ({
+          name: action.name,
+          finder: action.finder,
+          value: action.value,
+          delay: action.delay ? parseInt(action.delay, 10) : 0 // تحويل delay إلى رقم
+        })) as AutomationAction[],
+        automationType: 'server' as 'server' | 'client',
+        useBrowserData: true
+      };
+      
+      setAutomationProgress(30);
+      setAutomationStatus("جاري الاتصال بالخادم...");
+      
+      // تنفيذ الأتمتة
+      const result = await AutomationService.validateAndRunAutomation(config);
+      
+      setAutomationProgress(100);
+      
+      if (result.success) {
+        setAutomationStatus("تم تنفيذ الأتمتة بنجاح!");
+        toast.success("تم تنفيذ الأتمتة بنجاح");
         
-        setTimeout(() => {
-          toast.style.opacity = '0';
-          toast.style.transition = 'opacity 0.5s';
-          setTimeout(() => document.body.removeChild(toast), 500);
-        }, 3000);` : ''}
-      })
-      .catch(err => console.error('فشل نسخ المعلومات:', err));
-    ` : ''}
-    
-    return elementInfo;
-  } catch (error) {
-    console.error('حدث خطأ:', error);
-    return null;
-  }
-}
-
-${useEventListener ? `
-// إضافة مستمع حدث للعنصر
-document.addEventListener('${eventType}', function(e) {
-  if (e.target.matches('${elementSelector}')) {
-    ${customFunctionName}();
-  }
-});` : `// تنفيذ الوظيفة مباشرة
-${customFunctionName}();`}`;
-
-      // تحويل الكود إلى بوكماركلت إذا كان مطلوباً
-      if (isBookmarklet) {
-        code = `javascript:(function(){${isMinified ? code.replace(/\s+/g, ' ').replace(/\/\/.*?(?=\n|$)/g, '') : code}})();`;
+        // عرض النتائج بشكل أفضل
+        hookToast({
+          title: "نتائج الأتمتة",
+          description: (
+            <div className="mt-2 space-y-2">
+              <p>تم تنفيذ {result.results?.filter(r => r.success).length || 0} إجراء بنجاح من أصل {result.results?.length || 0}</p>
+              {result.results && result.results.some(r => !r.success) && (
+                <p className="text-red-500">فشل تنفيذ {result.results.filter(r => !r.success).length} إجراء</p>
+              )}
+              <p>وقت التنفيذ: {(result.executionTime || 0) / 1000} ثانية</p>
+            </div>
+          ),
+        });
+      } else {
+        setAutomationStatus("فشل تنفيذ الأتمتة");
+        setServerError(result.message || "حدث خطأ غير معروف أثناء تنفيذ الأتمتة");
+        toast.error(`فشل تنفيذ الأتمتة: ${result.message}`);
       }
-
-      setGeneratedCode(code);
-      onCodeGenerated(code);
-      toast.success('تم إنشاء الكود بنجاح!');
     } catch (error) {
-      console.error('حدث خطأ أثناء إنشاء الكود:', error);
-      toast.error('حدث خطأ أثناء إنشاء الكود');
+      setAutomationProgress(100);
+      setAutomationStatus("فشل تنفيذ الأتمتة");
+      const errorMessage = error instanceof Error ? error.message : "حدث خطأ غير معروف";
+      setServerError(errorMessage);
+      toast.error(`حدث خطأ أثناء تنفيذ الأتمتة: ${errorMessage}`);
     } finally {
-      setIsGenerating(false);
+      setIsRunning(false);
     }
   };
-
-  const copyCode = () => {
-    navigator.clipboard.writeText(generatedCode)
-      .then(() => {
-        setIsCopied(true);
-        toast.success('تم نسخ الكود إلى الحافظة!');
-        setTimeout(() => setIsCopied(false), 3000);
-      })
-      .catch(err => {
-        console.error('فشل نسخ الكود:', err);
-        toast.error('فشل نسخ الكود');
-      });
-  };
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>إنشاء أداة استخراج معلومات العناصر</CardTitle>
-          <CardDescription>
-            أنشئ أداة تساعدك في استخراج معلومات عن عناصر HTML المحددة في أي صفحة ويب
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="element-selector">محدد العنصر (CSS Selector)</Label>
-              <Input
-                id="element-selector"
-                placeholder="#myElement, .class-name, div[data-id], etc."
-                value={elementSelector}
-                onChange={(e) => setElementSelector(e.target.value)}
-                dir="ltr"
-              />
-            </div>
+  
+  const generateBookmarkletCode = () => {
+    const code = `javascript:(function(){
+      console.log("محدد العناصر: بدء التشغيل");
+      const actions = ${JSON.stringify(actions)};
+      const executeActions = async (actions) => {
+        for (let i = 0; i < actions.length; i++) {
+          const action = actions[i];
+          console.log(\`تنفيذ الإجراء \${i+1}: \${action.name}\`);
+          
+          try {
+            // البحث عن العنصر باستخدام المحدد
+            const element = document.querySelector(action.finder);
+            if (!element) {
+              console.error(\`لم يتم العثور على العنصر باستخدام المحدد: \${action.finder}\`);
+              alert(\`فشل الإجراء \${i+1}: لم يتم العثور على العنصر\`);
+              continue;
+            }
             
-            <div>
-              <Label htmlFor="attribute-name">اسم السمة المخصصة (اختياري)</Label>
-              <Input
-                id="attribute-name"
-                placeholder="data-id, href, src, etc."
-                value={attributeName}
-                onChange={(e) => setAttributeName(e.target.value)}
-                dir="ltr"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2 space-x-reverse">
-              <Switch
-                id="use-event-listener"
-                checked={useEventListener}
-                onCheckedChange={setUseEventListener}
-              />
-              <Label htmlFor="use-event-listener">استخدام مستمع الحدث</Label>
-            </div>
-
-            {useEventListener && (
-              <div>
-                <Label htmlFor="event-type">نوع الحدث</Label>
-                <select
-                  id="event-type"
-                  className="w-full p-2 border rounded-md"
-                  value={eventType}
-                  onChange={(e) => setEventType(e.target.value)}
-                >
-                  <option value="click">click</option>
-                  <option value="mouseover">mouseover</option>
-                  <option value="mouseenter">mouseenter</option>
-                  <option value="focus">focus</option>
-                </select>
-              </div>
-            )}
-
-            <div className="flex items-center space-x-2 space-x-reverse">
-              <Switch
-                id="is-bookmarklet"
-                checked={isBookmarklet}
-                onCheckedChange={setIsBookmarklet}
-              />
-              <Label htmlFor="is-bookmarklet">تحويل إلى بوكماركلت</Label>
-            </div>
-
+            // تنفيذ الإجراء حسب النوع
+            switch (action.name) {
+              case "click":
+                element.click();
+                break;
+              case "input":
+              case "type":
+                if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+                  element.value = action.value;
+                  // إطلاق حدث تغيير القيمة
+                  element.dispatchEvent(new Event('input', { bubbles: true }));
+                  element.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                break;
+              case "select":
+                if (element instanceof HTMLSelectElement) {
+                  element.value = action.value;
+                  element.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                break;
+              default:
+                console.warn(\`نوع الإجراء غير معروف: \${action.name}\`);
+            }
+            
+            console.log(\`تم تنفيذ الإجراء \${i+1} بنجاح\`);
+            
+            // انتظار قبل تنفيذ الإجراء التالي
+            if (action.delay) {
+              await new Promise(resolve => setTimeout(resolve, parseInt(action.delay, 10)));
+            }
+          } catch (error) {
+            console.error(\`خطأ في تنفيذ الإجراء \${i+1}:\`, error);
+            alert(\`فشل الإجراء \${i+1}: \${error.message}\`);
+          }
+        }
+        console.log("محدد العناصر: انتهى التنفيذ");
+      };
+      
+      executeActions(actions);
+    })();`;
+    
+    if (onBookmarkletGenerated) {
+      onBookmarkletGenerated(code);
+    }
+    
+    return code;
+  };
+  
+  const handleCopyBookmarklet = () => {
+    const code = generateBookmarkletCode();
+    navigator.clipboard.writeText(code);
+    toast.success("تم نسخ الكود إلى الحافظة");
+  };
+  
+  const handleExportJson = () => {
+    try {
+      const dataStr = JSON.stringify(actions, null, 2);
+      const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
+      
+      const exportName = `element-finder-${new Date().toISOString().slice(0, 10)}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportName);
+      linkElement.click();
+      
+      toast.success("تم تصدير الإجراءات بنجاح");
+    } catch (error) {
+      toast.error("حدث خطأ أثناء تصدير الإجراءات");
+    }
+  };
+  
+  const handleActionTypeChange = (value: string) => {
+    if (value) {
+      setActionType(value);
+    }
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>محدد العناصر</CardTitle>
+        <CardDescription>
+          أداة تساعدك في البحث عن العناصر على صفحات الويب وتنفيذ إجراءات عليها
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="projectUrl">رابط المشروع</Label>
+          <Input
+            id="projectUrl"
+            placeholder="https://example.com"
+            value={projectUrl}
+            onChange={(e) => setProjectUrl(e.target.value)}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="customName">اسم مخصص (اختياري)</Label>
+          <Input
+            id="customName"
+            placeholder="اسم المشروع المخصص"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+          />
+        </div>
+        
+        <div className="border-t pt-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-medium">الإجراءات</h3>
             <Button
               variant="outline"
-              onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
+              size="sm"
+              onClick={handleAddAction}
+              disabled={isRunning}
             >
-              {isAdvancedOptionsOpen ? 'إخفاء الخيارات المتقدمة' : 'عرض الخيارات المتقدمة'}
+              <Plus className="h-4 w-4 mr-1" /> إضافة إجراء
             </Button>
-
-            {isAdvancedOptionsOpen && (
-              <div className="space-y-4 p-4 border rounded-md">
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Switch
-                    id="include-toast"
-                    checked={includeToast}
-                    onCheckedChange={setIncludeToast}
-                  />
-                  <Label htmlFor="include-toast">إظهار إشعار عند النسخ</Label>
-                </div>
-
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Switch
-                    id="include-copy"
-                    checked={includeCopyToClipboard}
-                    onCheckedChange={setIncludeCopyToClipboard}
-                  />
-                  <Label htmlFor="include-copy">نسخ المعلومات إلى الحافظة</Label>
-                </div>
-
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Switch
-                    id="include-console"
-                    checked={includeConsoleLog}
-                    onCheckedChange={setIncludeConsoleLog}
-                  />
-                  <Label htmlFor="include-console">عرض المعلومات في وحدة التحكم</Label>
-                </div>
-
-                <div>
-                  <Label htmlFor="function-name">اسم الوظيفة</Label>
-                  <Input
-                    id="function-name"
-                    value={customFunctionName}
-                    onChange={(e) => setCustomFunctionName(e.target.value)}
-                    dir="ltr"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="toast-message">رسالة الإشعار</Label>
-                  <Input
-                    id="toast-message"
-                    value={customToastMessage}
-                    onChange={(e) => setCustomToastMessage(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="console-message">رسالة وحدة التحكم</Label>
-                  <Input
-                    id="console-message"
-                    value={customConsoleLogMessage}
-                    onChange={(e) => setCustomConsoleLogMessage(e.target.value)}
-                  />
-                </div>
-
-                {isBookmarklet && (
-                  <div className="flex items-center space-x-2 space-x-reverse">
-                    <Switch
-                      id="is-minified"
-                      checked={isMinified}
-                      onCheckedChange={setIsMinified}
-                    />
-                    <Label htmlFor="is-minified">تصغير الكود</Label>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
+          
+          <div className="space-y-4">
+            {actions.map((action, index) => (
+              <div key={index} className="border rounded-md p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-medium">الإجراء #{index + 1}</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveAction(index)}
+                    disabled={isRunning || actions.length === 1}
+                  >
+                    <Trash className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <Label>نوع الإجراء</Label>
+                    <ToggleGroup
+                      type="single"
+                      value={action.name}
+                      onValueChange={(value) => handleActionChange(index, "name", value || "click")}
+                      className="justify-start"
+                    >
+                      <ToggleGroupItem value="click">نقر</ToggleGroupItem>
+                      <ToggleGroupItem value="type">كتابة</ToggleGroupItem>
+                      <ToggleGroupItem value="select">اختيار</ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor={`finder-${index}`}>محدد العنصر (CSS Selector)</Label>
+                    <Textarea
+                      id={`finder-${index}`}
+                      placeholder="مثال: #username, .submit-button, button[type='submit']"
+                      value={action.finder}
+                      onChange={(e) => handleActionChange(index, "finder", e.target.value)}
+                      className="font-mono text-sm"
+                      disabled={isRunning}
+                    />
+                  </div>
+                  
+                  {(action.name === "type" || action.name === "select") && (
+                    <div>
+                      <Label htmlFor={`value-${index}`}>القيمة</Label>
+                      <Input
+                        id={`value-${index}`}
+                        placeholder="القيمة المراد إدخالها"
+                        value={action.value}
+                        onChange={(e) => handleActionChange(index, "value", e.target.value)}
+                        disabled={isRunning}
+                      />
+                    </div>
+                  )}
+                  
+                  <div>
+                    <Label htmlFor={`delay-${index}`}>التأخير (مللي ثانية)</Label>
+                    <Input
+                      id={`delay-${index}`}
+                      type="number"
+                      min="0"
+                      step="100"
+                      placeholder="300"
+                      value={action.delay}
+                      onChange={(e) => handleActionChange(index, "delay", e.target.value)}
+                      disabled={isRunning}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {isRunning && (
+          <div className="space-y-2 mt-4">
+            <div className="flex justify-between text-sm">
+              <span>{automationStatus}</span>
+              <span>{automationProgress}%</span>
+            </div>
+            <Progress value={automationProgress} className="h-2" />
+          </div>
+        )}
+        
+        {serverError && (
+          <AlertComponent variant="destructive">
+            <Alert className="h-4 w-4" />
+            <AlertTitle>فشل تنفيذ الأتمتة</AlertTitle>
+            <AlertDescription>{serverError}</AlertDescription>
+          </AlertComponent>
+        )}
+        
+        <div className="flex items-center space-x-2 space-x-reverse">
+          <Switch
+            id="use-real-browser"
+            checked={useRealBrowser}
+            onCheckedChange={setUseRealBrowser}
+            disabled={isRunning}
+          />
+          <Label htmlFor="use-real-browser">استخدام متصفح حقيقي للتنفيذ</Label>
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between border-t pt-4">
+        <div className="flex gap-2">
           <Button
-            onClick={generateCode}
-            disabled={isGenerating || !elementSelector}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            variant="outline"
+            onClick={handleCopyBookmarklet}
+            disabled={isRunning}
           >
-            {isGenerating ? 'جاري الإنشاء...' : 'إنشاء الكود'}
+            <Copy className="h-4 w-4 mr-1" />
+            نسخ Bookmarklet
           </Button>
-        </CardFooter>
-      </Card>
-
-      {generatedCode && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex justify-between items-center">
-              <span>الكود المُنشأ</span>
-              <Button variant="ghost" size="sm" onClick={copyCode}>
-                {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {isCopied ? 'تم النسخ' : 'نسخ'}
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-96 w-full border rounded-md p-4">
-              <pre className="text-xs whitespace-pre-wrap overflow-x-auto" dir="ltr">
-                {generatedCode}
-              </pre>
-            </ScrollArea>
-          </CardContent>
-          {isBookmarklet && (
-            <CardFooter>
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>استخدام البوكماركلت</AlertTitle>
-                <AlertDescription>
-                  اسحب هذا الرابط إلى شريط المفضلة الخاص بك أو انقر بزر الماوس الأيمن وأضفه إلى المفضلة.
-                </AlertDescription>
-              </Alert>
-            </CardFooter>
+          <Button
+            variant="outline"
+            onClick={handleExportJson}
+            disabled={isRunning}
+          >
+            <FileDown className="h-4 w-4 mr-1" />
+            تصدير JSON
+          </Button>
+        </div>
+        <Button
+          onClick={handleRunAutomation}
+          disabled={isRunning}
+          className="bg-purple-600 hover:bg-purple-700"
+        >
+          {isRunning ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              جاري التنفيذ...
+            </>
+          ) : (
+            <>
+              <PlayCircle className="h-4 w-4 mr-1" />
+              تنفيذ الأتمتة
+            </>
           )}
-        </Card>
-      )}
-    </div>
+        </Button>
+      </CardFooter>
+    </Card>
   );
 };
 

@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { AutomationService } from '@/utils/automationService';
-import { ConnectionManager } from '@/utils/automation/connectionManager';
 import { Play, Save, Plus, Trash2, Database, CheckCircle2, AlertCircle, Clock, Timer } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
