@@ -5,8 +5,7 @@ import {
   setAutomationServerUrl,
   resetAutomationServerUrl,
   getLastConnectionStatus,
-  checkConnection,
-  isValidServerUrl
+  checkConnection
 } from '../utils/automationServerUrl';
 import { AutomationService } from '../utils/automationService';
 import { toast } from 'sonner';
@@ -110,7 +109,9 @@ const ServerSettings = () => {
   const handleSaveUrl = () => {
     try {
       // التحقق من صحة URL
-      if (!isValidServerUrl(serverUrl)) {
+      try {
+        new URL(serverUrl);
+      } catch (e) {
         toast.error('يرجى إدخال عنوان URL صحيح');
         return;
       }
@@ -156,15 +157,10 @@ const ServerSettings = () => {
       const connectionCheck = await checkConnection();
       
       if (connectionCheck.isConnected) {
-        // إذا نجح فحص الاتصال، ضع مؤشر حالة الخادم على "متصل"
+        // إذا نجح فحص الاتصال، استمر للحصول على معلومات الخادم
+        const result = await AutomationService.checkServerStatus(showToasts);
         setServerStatus('online');
-        setServerInfo({
-          status: "ok",
-          message: "الخادم متصل ومستجيب",
-          time: new Date().toISOString(),
-          uptime: 0,
-          environment: "production"
-        });
+        setServerInfo(result);
         
         if (showToasts) {
           toast.success('الخادم متصل ويعمل بشكل صحيح');

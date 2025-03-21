@@ -6,31 +6,32 @@ export interface AutomationConfig {
   useBrowserData: boolean;
   automationType: 'server' | 'client';
   forceRealExecution: boolean;
-  timeout?: number;
-  retries?: number;
+  timeout?: number; // إضافة حقل مهلة اختياري
+  retries?: number; // إضافة حقل محاولات اختياري
 }
 
 export interface Action {
-  type?: string;
-  name?: string;
+  type: string;
   selector?: string;
-  finder?: string;
   value?: string;
+  name?: string;
+  finder?: string;
   delay?: number;
-  description?: string;
+  description?: string; // إضافة حقل الوصف
 }
 
+// إضافة واجهة AutomationAction لدعم المكونات الحالية
 export interface AutomationAction {
   name: string;
   finder: string;
   value: string;
   delay: number;
-  description?: string;
+  description?: string; // إضافة حقل الوصف
 }
 
 export interface ServerStatusResponse {
   status: string;
-  message?: string;
+  message?: string; // إضافة حقل الرسالة
   time: string;
   uptime: number;
   environment: string;

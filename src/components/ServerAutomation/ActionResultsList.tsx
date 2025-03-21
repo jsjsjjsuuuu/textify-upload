@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ActionResult, AutomationResponse } from '@/utils/automation/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,23 +63,11 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
           </ul>
         </div>
       );
-    } else if (error.type === 'ResponseError') {
-      detailedInfo = (
-        <div className="mt-2 text-sm">
-          <p className="font-semibold">حلول مقترحة لمشاكل معالجة الاستجابة:</p>
-          <ul className="list-disc list-inside mt-1 space-y-1">
-            <li>حدثت مشكلة في معالجة استجابة الخادم "body stream already read".</li>
-            <li>هذه مشكلة تقنية تحدث عند محاولة قراءة استجابة الخادم أكثر من مرة.</li>
-            <li>حاول مرة أخرى، فقد تم تحسين النظام للتعامل مع هذه المشكلة.</li>
-            <li>يمكنك تحديث الصفحة وإعادة المحاولة إذا استمرت المشكلة.</li>
-          </ul>
-        </div>
-      );
     }
     
     return detailedInfo;
   };
-
+  
   return (
     <div className="space-y-4 mt-4">
       <Card className={success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>

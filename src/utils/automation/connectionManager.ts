@@ -1,4 +1,3 @@
-
 /**
  * إدارة الاتصال بخادم الأتمتة
  */
@@ -65,11 +64,7 @@ export class ConnectionManager {
         console.log("بيئة المعاينة: محاكاة اتصال ناجح بالخادم");
         
         // تحديث حالة الاتصال (مع محاكاة النجاح بشكل دائم في بيئة المعاينة)
-        updateConnectionStatus({
-          isConnected: true,
-          message: "محاكاة اتصال ناجح",
-          timestamp: new Date().toISOString()
-        });
+        updateConnectionStatus(true);
         this.lastError = null;
         this.lastSuccessfulConnection = new Date();
         
@@ -96,7 +91,7 @@ export class ConnectionManager {
       console.log("استخدام عنوان IP:", currentIp);
       
       // إنشاء طلب مع رؤوس مخصصة وزيادة مهلة الانتظار لتجنب أخطاء المهلة
-      const signal = createTimeoutSignal(30000); // زيادة المهلة إلى 30 ثانية
+      const timeoutSignal = createTimeoutSignal(30000); // زيادة المهلة إلى 30 ثانية
       
       // الحصول على أصل (origin) النافذة الحالية
       const windowOrigin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -127,7 +122,7 @@ export class ConnectionManager {
             mode: 'cors',
             cache: 'no-cache',
             credentials: 'omit',
-            signal
+            signal: timeoutSignal
           });
           
           if (!response.ok) {
@@ -140,11 +135,7 @@ export class ConnectionManager {
             }
             
             const errorMessage = `فشل الاتصال: ${response.status} ${response.statusText}`;
-            updateConnectionStatus({
-              isConnected: false,
-              message: errorMessage,
-              timestamp: new Date().toISOString()
-            });
+            updateConnectionStatus(false);
             throw new Error(errorMessage);
           }
           
@@ -152,11 +143,7 @@ export class ConnectionManager {
           console.log("نتيجة التحقق من حالة الخادم:", result);
           
           // تحديث حالة الاتصال
-          updateConnectionStatus({
-            isConnected: true,
-            message: "تم الاتصال بنجاح",
-            timestamp: new Date().toISOString()
-          });
+          updateConnectionStatus(true);
           this.lastError = null;
           this.reconnectAttempts = 0;
           this.lastSuccessfulConnection = new Date();
@@ -193,11 +180,7 @@ export class ConnectionManager {
       if (this.isPreviewEnvironment()) {
         console.log("بيئة المعاينة: تجاهل خطأ الاتصال وإرجاع حالة ناجحة");
         // تحديث حالة الاتصال كما لو كانت ناجحة دائماً في بيئة المعاينة
-        updateConnectionStatus({
-          isConnected: true,
-          message: "محاكاة اتصال ناجح",
-          timestamp: new Date().toISOString()
-        });
+        updateConnectionStatus(true);
         this.lastSuccessfulConnection = new Date();
         
         // إرجاع بيانات مُحاكاة
@@ -211,11 +194,7 @@ export class ConnectionManager {
       }
       
       // تحديث حالة الاتصال وتخزين الخطأ الأخير
-      updateConnectionStatus({
-        isConnected: false,
-        message: `فشل الاتصال: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`,
-        timestamp: new Date().toISOString()
-      });
+      updateConnectionStatus(false);
       this.lastError = error instanceof Error ? error : new Error(String(error));
       
       // رسالة خطأ أفضل للمستخدم
@@ -357,11 +336,7 @@ export class ConnectionManager {
     this.stopReconnect();
     this.lastError = null;
     this.reconnectAttempts = 0;
-    updateConnectionStatus({
-      isConnected: false,
-      message: "تم إعادة تعيين حالة الاتصال",
-      timestamp: new Date().toISOString()
-    });
+    updateConnectionStatus(false);
   }
   
   /**
@@ -376,11 +351,7 @@ export class ConnectionManager {
    */
   static updateLastSuccessfulConnection(): void {
     this.lastSuccessfulConnection = new Date();
-    updateConnectionStatus({
-      isConnected: true,
-      message: "تم تحديث آخر اتصال ناجح",
-      timestamp: new Date().toISOString()
-    });
+    updateConnectionStatus(true);
     this.reconnectAttempts = 0;
   }
   
