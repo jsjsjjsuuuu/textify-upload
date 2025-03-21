@@ -5,23 +5,17 @@
 
 /**
  * التحقق مما إذا كان التطبيق يعمل في بيئة المعاينة (Lovable)
- * @returns {boolean} صحيح إذا كانت بيئة معاينة
+ * @returns {boolean} دائمًا يرجع false (تم تعطيله للعمل دائمًا في البيئة الفعلية)
  */
 export const isPreview = (): boolean => {
-  // التحقق من وجود hostname محدد لبيئة المعاينة
-  if (typeof window !== 'undefined' && window.location) {
-    const hostname = window.location.hostname;
-    return hostname.includes('lovable.ai') || 
-           hostname.includes('localhost') || 
-           hostname.includes('127.0.0.1');
-  }
+  // تم تعطيل التحقق من بيئة المعاينة وجعله دائمًا يعتبر أنه في البيئة الفعلية
   return false;
 };
 
 /**
  * التحقق مما إذا كان التطبيق يعمل في بيئة الإنتاج
- * @returns {boolean} صحيح إذا كانت بيئة إنتاج
+ * @returns {boolean} دائمًا يرجع true (تم تعطيله للعمل دائمًا في البيئة الفعلية)
  */
 export const isProduction = (): boolean => {
-  return !isPreview();
+  return true;
 };

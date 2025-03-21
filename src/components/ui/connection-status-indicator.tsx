@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { ConnectionManager } from "@/utils/automation/connectionManager";
 import { 
   getLastConnectionStatus, 
-  isPreviewEnvironment, 
   resetAutomationServerUrl,
   checkConnection,
   getAutomationServerUrl
@@ -38,14 +37,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   const checkConnectionStatus = async () => {
     setIsChecking(true);
     try {
-      // في بيئة المعاينة، دائمًا نعتبر الاتصال ناجحًا
-      if (isPreviewEnvironment()) {
-        setIsConnected(true);
-        onStatusChange?.(true);
-        setIsChecking(false);
-        setLastCheckTime(new Date());
-        return;
-      }
+      // دائمًا نتحقق من الاتصال الفعلي بالخادم
       
       // الحصول على عنوان الخادم
       const serverUrl = getAutomationServerUrl();
@@ -195,10 +187,6 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   };
   
   const getStatusText = () => {
-    if (isPreviewEnvironment()) {
-      return "متصل (بيئة معاينة)";
-    }
-    
     if (isChecking) {
       return "جارٍ التحقق...";
     }
@@ -252,72 +240,64 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
           <div className="space-y-3">
             <div className="font-medium">حالة اتصال خادم الأتمتة</div>
             
-            {isPreviewEnvironment() ? (
-              <p className="text-sm text-muted-foreground">
-                أنت في بيئة معاينة. يتم محاكاة الاتصال بالخادم.
-              </p>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <div className={cn(
-                    "w-3 h-3 rounded-full",
-                    isConnected ? "bg-green-500" : "bg-red-500"
-                  )} />
-                  <span className="text-sm">
-                    {isConnected ? "متصل" : "غير متصل"}
-                  </span>
-                  {lastCheckTime && (
-                    <span className="text-xs text-muted-foreground mr-auto">
-                      آخر تحديث: {lastCheckTime.toLocaleTimeString()}
-                    </span>
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "w-3 h-3 rounded-full",
+                isConnected ? "bg-green-500" : "bg-red-500"
+              )} />
+              <span className="text-sm">
+                {isConnected ? "متصل" : "غير متصل"}
+              </span>
+              {lastCheckTime && (
+                <span className="text-xs text-muted-foreground mr-auto">
+                  آخر تحديث: {lastCheckTime.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+            
+            {!isConnected && (
+              <div className="text-xs bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-200 p-2 rounded flex items-start gap-2 mt-2">
+                <ServerCrash className="h-4 w-4 text-red-500 mt-0.5" />
+                <div>
+                  <p className="font-medium">تعذر الاتصال بخادم Render</p>
+                  <p className="mt-1">قد يكون الخادم في وضع السكون أو غير متاح حالياً. جاري إعادة المحاولة تلقائياً.</p>
+                  <p className="mt-1 text-[10px] flex items-center">
+                    <span className="font-mono bg-red-100 dark:bg-red-900 px-1 rounded">{getAutomationServerUrl()}</span>
+                  </p>
+                  {reconnectAttempts > 0 && (
+                    <p className="mt-1 flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span>محاولات إعادة الاتصال: {reconnectAttempts}</span>
+                    </p>
                   )}
                 </div>
-                
-                {!isConnected && (
-                  <div className="text-xs bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-200 p-2 rounded flex items-start gap-2 mt-2">
-                    <ServerCrash className="h-4 w-4 text-red-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium">تعذر الاتصال بخادم Render</p>
-                      <p className="mt-1">قد يكون الخادم في وضع السكون أو غير متاح حالياً. جاري إعادة المحاولة تلقائياً.</p>
-                      <p className="mt-1 text-[10px] flex items-center">
-                        <span className="font-mono bg-red-100 dark:bg-red-900 px-1 rounded">{getAutomationServerUrl()}</span>
-                      </p>
-                      {reconnectAttempts > 0 && (
-                        <p className="mt-1 flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>محاولات إعادة الاتصال: {reconnectAttempts}</span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                {serverInfo && (
-                  <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                    <div>الوقت: {new Date(serverInfo.time).toLocaleTimeString()}</div>
-                    <div>مدة التشغيل: {Math.floor(serverInfo.uptime / 60)} دقيقة</div>
-                    <div>البيئة: {serverInfo.environment}</div>
-                  </div>
-                )}
-                
-                <div className="flex gap-2 mt-2">
-                  {!isConnected ? (
-                    <Button variant="default" size="sm" onClick={handleForceReconnect} className="w-full text-xs bg-purple-600 hover:bg-purple-700">
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      إعادة اتصال فورية
-                    </Button>
-                  ) : (
-                    <Button variant="secondary" size="sm" onClick={handleManualCheck} className="w-full text-xs">
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      تحديث الحالة
-                    </Button>
-                  )}
-                  <Button variant="outline" size="sm" onClick={handleGoToSettings} className="w-full text-xs">
-                    الإعدادات
-                  </Button>
-                </div>
-              </>
+              </div>
             )}
+            
+            {serverInfo && (
+              <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                <div>الوقت: {new Date(serverInfo.time).toLocaleTimeString()}</div>
+                <div>مدة التشغيل: {Math.floor(serverInfo.uptime / 60)} دقيقة</div>
+                <div>البيئة: {serverInfo.environment}</div>
+              </div>
+            )}
+            
+            <div className="flex gap-2 mt-2">
+              {!isConnected ? (
+                <Button variant="default" size="sm" onClick={handleForceReconnect} className="w-full text-xs bg-purple-600 hover:bg-purple-700">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  إعادة اتصال فورية
+                </Button>
+              ) : (
+                <Button variant="secondary" size="sm" onClick={handleManualCheck} className="w-full text-xs">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  تحديث الحالة
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={handleGoToSettings} className="w-full text-xs">
+                الإعدادات
+              </Button>
+            </div>
           </div>
         </TooltipContent>
       </Tooltip>

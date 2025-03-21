@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 
 export const SERVER_URL_KEY = "automationServerUrl";
@@ -8,8 +7,8 @@ export const CONNECTION_STATUS_KEY = "connectionStatus";
  * الحصول على مهلة الاتصال
  */
 export const getConnectionTimeout = () => {
-  // زيادة المهلة الزمنية بشكل كبير لتجنب أخطاء المهلة المنتهية
-  return isPreviewEnvironment() ? 60000 : 120000; // 1-2 دقائق بدلاً من ثواني
+  // زيادة المهلة الزمنية بشكل موحد - تم إلغاء الفحص للبيئة
+  return 120000; // دائمًا استخدام 2 دقيقة كمهلة
 };
 
 /**
@@ -70,13 +69,10 @@ export const isValidServerUrl = (url: string): boolean => {
 
 /**
  * تحديد ما إذا كنا في بيئة المعاينة (Lovable)
+ * تم تعديله ليعود دائمًا بالقيمة false (للعمل دائمًا في البيئة الفعلية)
  */
 export const isPreviewEnvironment = () => {
-  // فحص عنوان URL الحالي
-  if (typeof window !== 'undefined') {
-    return window.location.hostname.includes("lovable") || 
-           window.location.hostname.includes("lovableproject.com");
-  }
+  // تم تعطيل التحقق وإرجاع false دائمًا لإلغاء سلوك بيئة المعاينة
   return false;
 };
 
@@ -331,11 +327,8 @@ export function createFetchOptions(method: string, body: any, additionalHeaders:
  * التحقق من الاتصال بخادم التشغيل الآلي
  */
 export const isConnected = async (forceCheck = false) => {
-  // محاكاة الاتصال الناجح في بيئة المعاينة
-  if (isPreviewEnvironment()) {
-    console.log("بيئة المعاينة: محاكاة اتصال ناجح");
-    return true;
-  }
+  // تم تعديله لإلغاء محاكاة الاتصال في بيئة المعاينة
+  // دائمًا نقوم بالتحقق الفعلي من الاتصال
   
   // التحقق من آخر حالة اتصال إذا كانت حديثة (خلال الدقيقة الماضية)
   const status = getLastConnectionStatus();

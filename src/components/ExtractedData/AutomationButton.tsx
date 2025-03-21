@@ -25,21 +25,20 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'success' | 'error'>('unknown');
-  const [isRealExecutionEnabled, setIsRealExecutionEnabled] = useState(() => AutomationService.isRealExecutionEnabled());
+  // دائمًا نستخدم وضع التنفيذ الفعلي
+  const [isRealExecutionEnabled, setIsRealExecutionEnabled] = useState(true);
   const navigate = useNavigate();
   
   // التحقق مما إذا كانت البيانات مكتملة بما يكفي لإرسالها إلى الأتمتة
   const hasRequiredData = !!image.code && !!image.senderName && !!image.phoneNumber;
 
-  // التحقق من حالة الاتصال وإعدادات التنفيذ الفعلي عند تحميل المكون
+  // تفعيل وضع التنفيذ الفعلي تلقائيًا وفحص الاتصال بالخادم
   useEffect(() => {
-    const isRealExecution = AutomationService.isRealExecutionEnabled();
-    setIsRealExecutionEnabled(isRealExecution);
+    // تفعيل وضع التنفيذ الفعلي دائمًا
+    AutomationService.toggleRealExecution(true);
     
-    if (isRealExecution) {
-      // التحقق من وجود الاتصال بالخادم
-      checkConnectionStatus();
-    }
+    // التحقق من وجود الاتصال بالخادم
+    checkConnectionStatus();
   }, []);
   
   const checkConnectionStatus = async () => {
@@ -71,32 +70,29 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
       return;
     }
     
-    // التحقق من وجود وضع التنفيذ الفعلي
-    const isRealExecution = AutomationService.isRealExecutionEnabled();
-    setIsRealExecutionEnabled(isRealExecution);
+    // التنفيذ الفعلي مفعل دائمًا
+    AutomationService.toggleRealExecution(true);
     
-    if (isRealExecution) {
-      // التحقق من حالة الاتصال بالخادم أولاً
-      setIsTestingConnection(true);
-      try {
-        const isConnected = await AutomationService.checkServerExistence(false);
-        setConnectionStatus(isConnected ? 'success' : 'error');
-        
-        if (!isConnected) {
-          // إظهار نافذة الاتصال إذا كان غير متصل
-          setShowConnectionDialog(true);
-          setIsTestingConnection(false);
-          return;
-        }
-      } catch (error) {
-        console.error("فشل التحقق من حالة الاتصال:", error);
-        setConnectionStatus('error');
+    // التحقق من حالة الاتصال بالخادم أولاً
+    setIsTestingConnection(true);
+    try {
+      const isConnected = await AutomationService.checkServerExistence(false);
+      setConnectionStatus(isConnected ? 'success' : 'error');
+      
+      if (!isConnected) {
+        // إظهار نافذة الاتصال إذا كان غير متصل
         setShowConnectionDialog(true);
         setIsTestingConnection(false);
         return;
       }
+    } catch (error) {
+      console.error("فشل التحقق من حالة الاتصال:", error);
+      setConnectionStatus('error');
+      setShowConnectionDialog(true);
       setIsTestingConnection(false);
+      return;
     }
+    setIsTestingConnection(false);
     
     setIsLoading(true);
     
@@ -159,16 +155,7 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     setShowConnectionDialog(false);
   };
   
-  const toggleRealExecution = () => {
-    const newState = !isRealExecutionEnabled;
-    setIsRealExecutionEnabled(newState);
-    AutomationService.toggleRealExecution(newState);
-    
-    if (newState) {
-      // عند تفعيل وضع التنفيذ الفعلي، تحقق من الاتصال
-      checkConnectionStatus();
-    }
-  };
+  // تم تعطيل تبديل وضع التنفيذ الفعلي لأنه دائمًا مفعل
   
   return (
     <>
@@ -198,7 +185,7 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
           </Button>
         </motion.div>
         
-        {/* عرض زر التحقق من الاتصال وتبديل وضع التنفيذ الفعلي */}
+        {/* عرض حالة الاتصال بالخادم فقط */}
         <div className="flex items-center gap-2 mt-1 text-xs">
           <button
             onClick={checkConnectionStatus}
@@ -224,18 +211,11 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
             <RefreshCw className="w-3 h-3 ml-1" />
           </button>
           
-          {/* زر تبديل وضع التنفيذ الفعلي */}
-          <button
-            onClick={toggleRealExecution}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
-              isRealExecutionEnabled 
-                ? 'text-purple-600 hover:text-purple-700' 
-                : 'text-gray-600 hover:text-gray-700'
-            }`}
-          >
-            <div className={`w-2 h-2 rounded-full ${isRealExecutionEnabled ? 'bg-purple-500' : 'bg-gray-400'}`}></div>
-            <span>{isRealExecutionEnabled ? 'وضع التنفيذ الفعلي مفعل' : 'محاكاة فقط'}</span>
-          </button>
+          {/* إزالة زر تبديل وضع التنفيذ الفعلي واستبداله بنص بسيط */}
+          <div className="flex items-center gap-1 px-2 py-1 rounded text-xs text-purple-600">
+            <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+            <span>وضع التنفيذ الفعلي مفعل</span>
+          </div>
         </div>
       </div>
       
