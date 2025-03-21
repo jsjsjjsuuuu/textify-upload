@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
-import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useDataFormatting } from "@/hooks/useDataFormatting";
 import { createReliableBlobUrl } from "@/lib/gemini/utils";
@@ -24,7 +23,6 @@ export const useFileUpload = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   
-  const { processWithOcr } = useOcrProcessing();
   const { useGemini, processWithGemini } = useGeminiProcessing();
   const { formatPhoneNumber, formatPrice } = useDataFormatting();
 
@@ -88,19 +86,9 @@ export const useFileUpload = ({
       console.log("تمت إضافة صورة جديدة إلى الحالة بالمعرف:", newImage.id);
       
       try {
-        let processedImage: ImageData;
-        
-        if (useGemini) {
-          console.log("استخدام Gemini API للاستخراج");
-          processedImage = await processWithGemini(
-            file, 
-            newImage, 
-            processWithOcr
-          );
-        } else {
-          console.log("لا يوجد مفتاح Gemini API، استخدام OCR مباشرة");
-          processedImage = await processWithOcr(file, newImage);
-        }
+        // استخدام Gemini فقط للمعالجة
+        console.log("استخدام Gemini API للاستخراج");
+        const processedImage = await processWithGemini(file, newImage);
         
         // إذا كان هناك سعر، نتأكد من تنسيقه بشكل صحيح
         if (processedImage.price) {
@@ -125,7 +113,7 @@ export const useFileUpload = ({
         // تحديث حالة الصورة إلى "مكتملة" إذا كانت تحتوي على جميع البيانات الأساسية
         if (processedImage.code && processedImage.senderName && processedImage.phoneNumber) {
           processedImage.status = "completed";
-        } else {
+        } else if (processedImage.status !== "error") {
           processedImage.status = "pending";
         }
         
@@ -154,7 +142,7 @@ export const useFileUpload = ({
     if (processedFiles > 0) {
       toast({
         title: "تم معالجة الصور بنجاح",
-        description: `تم معالجة ${processedFiles} صورة${useGemini ? " باستخدام Gemini AI" : ""}`,
+        description: `تم معالجة ${processedFiles} صورة باستخدام Gemini AI`,
         variant: "default"
       });
       

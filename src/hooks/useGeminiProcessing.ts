@@ -25,53 +25,18 @@ export const useGeminiProcessing = () => {
     }
   }, []);
 
-  const processWithGemini = async (file: File, image: ImageData, fallbackProcessor: (file: File, image: ImageData) => Promise<ImageData>): Promise<ImageData> => {
+  const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
     const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
     console.log("Using Gemini API key of length:", geminiApiKey.length);
 
-    // في بيئة المعاينة، استخدم المعالج الاحتياطي مباشرة بسبب قيود CORS
+    // في بيئة المعاينة، نستخدم Gemini ولكن قد نواجه قيود CORS
     if (isPreviewEnvironment()) {
-      console.log("Running in preview environment (Lovable). Using fallback processor instead of Gemini due to CORS restrictions.");
+      console.log("Running in preview environment (Lovable). Attempting to use Gemini but may face CORS restrictions.");
       toast({
         title: "تنبيه",
-        description: "استخدام OCR التقليدي في بيئة المعاينة بسبب قيود CORS",
+        description: "استخدام Gemini في بيئة المعاينة قد يواجه قيود CORS",
         variant: "default"
       });
-      
-      try {
-        // استخدام المعالج الاحتياطي ومعالجة البيانات الناتجة
-        const processedImage = await fallbackProcessor(file, image);
-        
-        // تأكد من أن البيانات المستخرجة موجودة ومرئية
-        console.log("تم استخراج البيانات بنجاح:", {
-          code: processedImage.code,
-          senderName: processedImage.senderName,
-          phoneNumber: processedImage.phoneNumber,
-          province: processedImage.province,
-          price: processedImage.price,
-          companyName: processedImage.companyName
-        });
-        
-        // تعيين الحالة استنادًا إلى وجود البيانات الرئيسية
-        if (processedImage.code || processedImage.senderName || processedImage.phoneNumber) {
-          processedImage.status = "completed";
-        }
-        
-        return processedImage;
-      } catch (error) {
-        console.error("خطأ في المعالج الاحتياطي:", error);
-        toast({
-          title: "خطأ في المعالجة",
-          description: "فشل في استخراج البيانات باستخدام OCR التقليدي",
-          variant: "destructive"
-        });
-        
-        // إرجاع الصورة مع حالة خطأ
-        return {
-          ...image,
-          status: "error"
-        };
-      }
     }
 
     try {
@@ -128,72 +93,60 @@ export const useGeminiProcessing = () => {
             companyName: updatedImage.companyName
           });
           
+          // تعيين الحالة استنادًا إلى وجود البيانات الرئيسية
+          if (updatedImage.code || updatedImage.senderName || updatedImage.phoneNumber) {
+            updatedImage.status = "completed";
+          } else {
+            updatedImage.status = "pending";
+          }
+          
           return updatedImage;
         } else {
-          console.log("Gemini returned empty data, falling back to OCR");
-          
+          console.log("Gemini returned empty data");
           toast({
             title: "تنبيه",
-            description: "لم يتم استخراج بيانات من Gemini، جاري استخدام OCR التقليدي",
-            variant: "default"
+            description: "لم يتمكن Gemini من استخراج بيانات من الصورة",
+            variant: "warning"
           });
           
-          // استخدام المعالج الاحتياطي مع تسجيل البيانات المستخرجة
-          const processedImage = await fallbackProcessor(file, image);
-          console.log("بيانات المعالج الاحتياطي:", {
-            code: processedImage.code,
-            senderName: processedImage.senderName,
-            phoneNumber: processedImage.phoneNumber,
-            province: processedImage.province,
-            price: processedImage.price,
-            companyName: processedImage.companyName
-          });
-          
-          return processedImage;
+          // إعادة الصورة مع حالة انتظار
+          return {
+            ...image,
+            status: "pending",
+            extractedText: extractedText || "لم يتم استخراج نص"
+          };
         }
       } else {
-        console.log("Gemini extraction failed, falling back to OCR:", extractionResult.message);
+        console.log("Gemini extraction failed:", extractionResult.message);
         
         toast({
-          title: "تنبيه",
-          description: "تم استخدام OCR التقليدي بسبب: " + extractionResult.message,
-          variant: "default"
+          title: "فشل الاستخراج",
+          description: "فشل استخراج البيانات: " + extractionResult.message,
+          variant: "destructive"
         });
         
-        // استخدام المعالج الاحتياطي مع تسجيل البيانات المستخرجة
-        const processedImage = await fallbackProcessor(file, image);
-        console.log("بيانات المعالج الاحتياطي بعد فشل Gemini:", {
-          code: processedImage.code,
-          senderName: processedImage.senderName,
-          phoneNumber: processedImage.phoneNumber,
-          province: processedImage.province,
-          price: processedImage.price,
-          companyName: processedImage.companyName
-        });
-        
-        return processedImage;
+        // إعادة الصورة مع حالة خطأ
+        return {
+          ...image,
+          status: "error",
+          extractedText: "فشل استخراج النص: " + extractionResult.message
+        };
       }
-    } catch (geminiError) {
+    } catch (geminiError: any) {
       console.error("Error in Gemini processing:", geminiError);
       
       toast({
-        title: "تنبيه",
-        description: "تم استخدام OCR التقليدي بسبب خطأ في Gemini",
-        variant: "default"
+        title: "خطأ",
+        description: `فشل في استخراج البيانات: ${geminiError.message || 'خطأ غير معروف'}`,
+        variant: "destructive"
       });
       
-      // استخدام المعالج الاحتياطي مع تسجيل البيانات المستخرجة
-      const processedImage = await fallbackProcessor(file, image);
-      console.log("بيانات المعالج الاحتياطي بعد خطأ Gemini:", {
-        code: processedImage.code,
-        senderName: processedImage.senderName,
-        phoneNumber: processedImage.phoneNumber,
-        province: processedImage.province,
-        price: processedImage.price,
-        companyName: processedImage.companyName
-      });
-      
-      return processedImage;
+      // إعادة الصورة مع حالة خطأ
+      return {
+        ...image,
+        status: "error",
+        extractedText: "خطأ في المعالجة: " + (geminiError.message || 'خطأ غير معروف')
+      };
     }
   };
 
