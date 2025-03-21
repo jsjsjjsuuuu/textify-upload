@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -132,7 +131,9 @@ const ElementFinderSection: React.FC<ElementFinderSectionProps> = ({
           finder: action.finder,
           value: action.value,
           delay: action.delay ? parseInt(action.delay, 10) : 0 // تحويل delay إلى رقم
-        })) as AutomationAction[]
+        })) as AutomationAction[],
+        automationType: 'server' as 'server' | 'client',
+        useBrowserData: true
       };
       
       setAutomationProgress(30);

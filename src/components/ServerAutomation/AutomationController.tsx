@@ -47,7 +47,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
     setIsPreviewMode(previewMode);
     
     if (previewMode) {
-      toast.warning("أنت في بيئة المعاينة. ستعمل الأتمتة في وضع المحاكاة فقط.", {
+      toast.warning("أنت في بيئة المعاينة. ستعمل الأتمتة في وضع المحاكاة فقط ولن تتصل بالمواقع الخارجية.", {
         duration: 5000,
       });
     }
@@ -123,7 +123,8 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
         projectName,
         projectUrl,
         actions,
-        automationType: 'server'
+        automationType: 'server',
+        useBrowserData: true
       };
 
       const result = await AutomationService.validateAndRunAutomation(config);
@@ -238,7 +239,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
         // استخدام مزيج من محددات CSS و XPath للعثور على حقل رقم الهاتف
         finder: [
           // محددات CSS
-          'input[name*="phone"], input[id*="phone"], input[name*="mobile"], input[id*="mobile"], input[type="tel"], input[placeholder*="رقم الهاتف"], input[placeholder*="الهاتف"], input[placeholder*="الموبايل"], input[placeholder*="الجوال"], input[name*="tel"], input[id*="tel"], input[name="client_phone"], input[id="client_phone"], input[name="customer_mobile"], input[id="customer_mobile"]',
+          'input[name*="phone"], input[id*="phone"], input[name*="mobile"], input[id*="mobile"], input[type="tel"], input[placeholder*="رقم الهاتف"], input[placeholder*="الهاتف"], input[placeholder*="الموبايل"], input[placeholder*="الجوال"], input[placeholder*="تليفون"], input[name*="tel"], input[id*="tel"], input[name="client_phone"], input[id="client_phone"], input[name="customer_mobile"], input[id="customer_mobile"]',
           // محددات XPath
           '//input[contains(@name, "phone") or contains(@id, "phone")]',
           '//input[contains(@name, "mobile") or contains(@id, "mobile")]',

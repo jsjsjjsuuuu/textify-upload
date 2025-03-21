@@ -1,6 +1,8 @@
+
 export interface AutomationConfig {
   projectUrl: string;
-  actions: Action[];
+  projectName?: string; // إضافة اسم المشروع كحقل اختياري
+  actions: Action[] | AutomationAction[];
   useBrowserData: boolean;
   automationType: 'server' | 'client';
 }
@@ -9,10 +11,22 @@ export interface Action {
   type: string;
   selector?: string;
   value?: string;
+  name?: string;
+  finder?: string;
+  delay?: number;
+}
+
+// إضافة واجهة AutomationAction لدعم المكونات الحالية
+export interface AutomationAction {
+  name: string;
+  finder: string;
+  value: string;
+  delay: number;
 }
 
 export interface ServerStatusResponse {
   status: string;
+  message?: string; // إضافة حقل الرسالة
   time: string;
   uptime: number;
   environment: string;
