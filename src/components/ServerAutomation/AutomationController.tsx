@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AutomationConfig, AutomationAction } from '@/utils/automation/types';
 import { AutomationService } from '@/utils/automationService';
@@ -173,17 +172,34 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
     toast.info('تم مسح البيانات المستخرجة');
   };
   
-  // إنشاء إجراءات تلقائية بناءً على البيانات المستخرجة
+  // تحسين وظيفة إنشاء إجراءات تلقائية بناءً على البيانات المستخرجة مع محددات متعددة وأكثر مرونة
   const generateActionsFromExtractedData = () => {
     if (!extractedData) return;
     
     const newActions: AutomationAction[] = [];
     
-    // إضافة إجراءات لكل حقل من البيانات المستخرجة
+    // محددات محسنة ومتعددة لكل حقل من البيانات المستخرجة
     if (extractedData.code) {
       newActions.push({
         name: 'إدخال الكود',
-        finder: '#code', // محدد افتراضي، يجب تغييره حسب الموقع المستهدف
+        // استخدام مزيج من محددات CSS و XPath للعثور على حقل الكود
+        finder: [
+          // محددات CSS
+          'input[name*="code"], input[id*="code"], input[name*="reference"], input[id*="reference"], input[placeholder*="كود"], input[placeholder*="رقم الوصل"], input[placeholder*="رقم الشحنة"], input[name*="wasl"], input[id*="wasl"], input[name*="order"], input[id*="order"], input[name*="tracking"], input[id*="tracking"], input[name="bill_number"], input[name="shipment_number"]',
+          // محددات XPath
+          '//input[contains(@name, "code") or contains(@id, "code")]',
+          '//input[contains(@name, "order") or contains(@id, "order")]',
+          '//input[contains(@name, "reference") or contains(@id, "reference")]',
+          '//input[contains(@name, "tracking") or contains(@id, "tracking")]',
+          '//input[contains(@name, "wasl") or contains(@id, "wasl")]',
+          '//input[contains(@placeholder, "رقم") and contains(@placeholder, "وصل")]',
+          '//input[contains(@placeholder, "رقم") and contains(@placeholder, "شحنة")]',
+          '//input[contains(@placeholder, "رقم") and contains(@placeholder, "طلب")]',
+          '//input[contains(@placeholder, "كود")]',
+          '//label[contains(text(), "رقم الوصل") or contains(text(), "رقم الشحنة") or contains(text(), "رقم الطلب") or contains(text(), "الكود")]/following::input[1]',
+          '//span[contains(text(), "رقم الوصل") or contains(text(), "رقم الشحنة") or contains(text(), "رقم الطلب") or contains(text(), "الكود")]/following::input[1]',
+          '//div[contains(text(), "رقم الوصل") or contains(text(), "رقم الشحنة") or contains(text(), "رقم الطلب") or contains(text(), "الكود")]/following::input[1]'
+        ].join(', '),
         value: extractedData.code,
         delay: 500
       });
@@ -192,7 +208,25 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
     if (extractedData.senderName) {
       newActions.push({
         name: 'إدخال اسم المرسل',
-        finder: '#sender_name',
+        // استخدام مزيج من محددات CSS و XPath للعثور على حقل اسم المرسل
+        finder: [
+          // محددات CSS
+          'input[name*="sender"], input[id*="sender"], input[name*="customer"], input[id*="customer"], input[name*="client"], input[id*="client"], input[name*="name"], input[id*="name"], input[placeholder*="اسم المرسل"], input[placeholder*="اسم العميل"], input[placeholder*="اسم الزبون"], select[name*="client"], select[id*="client"], select[name*="customer"], select[id*="customer"]',
+          // محددات XPath
+          '//input[contains(@name, "sender") or contains(@id, "sender")]',
+          '//input[contains(@name, "customer") or contains(@id, "customer")]',
+          '//input[contains(@name, "client") or contains(@id, "client")]',
+          '//input[contains(@name, "name") or contains(@id, "name")]',
+          '//input[contains(@placeholder, "اسم") and (contains(@placeholder, "مرسل") or contains(@placeholder, "عميل") or contains(@placeholder, "زبون"))]',
+          '//select[contains(@name, "client") or contains(@id, "client")]',
+          '//select[contains(@name, "customer") or contains(@id, "customer")]',
+          '//label[contains(text(), "اسم المرسل") or contains(text(), "اسم العميل") or contains(text(), "اسم الزبون")]/following::input[1]',
+          '//span[contains(text(), "اسم المرسل") or contains(text(), "اسم العميل") or contains(text(), "اسم الزبون")]/following::input[1]',
+          '//div[contains(text(), "اسم المرسل") or contains(text(), "اسم العميل") or contains(text(), "اسم الزبون")]/following::input[1]',
+          '//label[contains(text(), "اسم المرسل") or contains(text(), "اسم العميل") or contains(text(), "اسم الزبون")]/following::select[1]',
+          '//span[contains(text(), "اسم المرسل") or contains(text(), "اسم العميل") or contains(text(), "اسم الزبون")]/following::select[1]',
+          '//div[contains(text(), "اسم المرسل") or contains(text(), "اسم العميل") or contains(text(), "اسم الزبون")]/following::select[1]'
+        ].join(', '),
         value: extractedData.senderName,
         delay: 500
       });
@@ -201,7 +235,21 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
     if (extractedData.phoneNumber) {
       newActions.push({
         name: 'إدخال رقم الهاتف',
-        finder: '#phone',
+        // استخدام مزيج من محددات CSS و XPath للعثور على حقل رقم الهاتف
+        finder: [
+          // محددات CSS
+          'input[name*="phone"], input[id*="phone"], input[name*="mobile"], input[id*="mobile"], input[type="tel"], input[placeholder*="رقم الهاتف"], input[placeholder*="الهاتف"], input[placeholder*="الموبايل"], input[placeholder*="الجوال"], input[name*="tel"], input[id*="tel"], input[name="client_phone"], input[id="client_phone"], input[name="customer_mobile"], input[id="customer_mobile"]',
+          // محددات XPath
+          '//input[contains(@name, "phone") or contains(@id, "phone")]',
+          '//input[contains(@name, "mobile") or contains(@id, "mobile")]',
+          '//input[contains(@name, "tel") or contains(@id, "tel")]',
+          '//input[@type="tel"]',
+          '//input[contains(@placeholder, "رقم") and (contains(@placeholder, "هاتف") or contains(@placeholder, "موبايل") or contains(@placeholder, "جوال"))]',
+          '//input[contains(@placeholder, "تليفون")]',
+          '//label[contains(text(), "رقم الهاتف") or contains(text(), "الهاتف") or contains(text(), "الموبايل") or contains(text(), "الجوال")]/following::input[1]',
+          '//span[contains(text(), "رقم الهاتف") or contains(text(), "الهاتف") or contains(text(), "الموبايل") or contains(text(), "الجوال")]/following::input[1]',
+          '//div[contains(text(), "رقم الهاتف") or contains(text(), "الهاتف") or contains(text(), "الموبايل") or contains(text(), "الجوال")]/following::input[1]'
+        ].join(', '),
         value: extractedData.phoneNumber,
         delay: 500
       });
@@ -210,7 +258,35 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
     if (extractedData.province) {
       newActions.push({
         name: 'اختيار المحافظة',
-        finder: '#province',
+        // استخدام مزيج من محددات CSS و XPath للعثور على حقل المحافظة (سواء قائمة منسدلة أو حقل نص)
+        finder: [
+          // محددات CSS للقوائم المنسدلة
+          'select[name*="province"], select[id*="province"], select[name*="city"], select[id*="city"], select[name*="governorate"], select[id*="governorate"], select[name*="area"], select[id*="area"], select[placeholder*="المحافظة"], select[placeholder*="المدينة"], select[placeholder*="المنطقة"], select[name="destination"], select[id="destination"]',
+          // محددات CSS لحقول النص
+          'input[name*="province"], input[id*="province"], input[name*="city"], input[id*="city"], input[placeholder*="المحافظة"], input[placeholder*="المدينة"], input[placeholder*="المنطقة"]',
+          // محددات XPath للقوائم المنسدلة
+          '//select[contains(@name, "province") or contains(@id, "province")]',
+          '//select[contains(@name, "city") or contains(@id, "city")]',
+          '//select[contains(@name, "governorate") or contains(@id, "governorate")]',
+          '//select[contains(@name, "area") or contains(@id, "area")]',
+          '//select[contains(@placeholder, "محافظة") or contains(@placeholder, "مدينة") or contains(@placeholder, "منطقة")]',
+          // محددات XPath لحقول النص
+          '//input[contains(@name, "province") or contains(@id, "province")]',
+          '//input[contains(@name, "city") or contains(@id, "city")]',
+          '//input[contains(@placeholder, "محافظة") or contains(@placeholder, "مدينة") or contains(@placeholder, "منطقة")]',
+          // محددات XPath عامة باستخدام النصوص القريبة
+          '//label[contains(text(), "المحافظة") or contains(text(), "المدينة") or contains(text(), "المنطقة")]/following::select[1]',
+          '//label[contains(text(), "المحافظة") or contains(text(), "المدينة") or contains(text(), "المنطقة")]/following::input[1]',
+          '//span[contains(text(), "المحافظة") or contains(text(), "المدينة") or contains(text(), "المنطقة")]/following::select[1]',
+          '//span[contains(text(), "المحافظة") or contains(text(), "المدينة") or contains(text(), "المنطقة")]/following::input[1]',
+          '//div[contains(text(), "المحافظة") or contains(text(), "المدينة") or contains(text(), "المنطقة")]/following::select[1]',
+          '//div[contains(text(), "المحافظة") or contains(text(), "المدينة") or contains(text(), "المنطقة")]/following::input[1]',
+          // محددات إضافية للمصطلحات العراقية الشائعة
+          '//select[contains(@name, "muhafaza") or contains(@id, "muhafaza")]',
+          '//select[contains(@name, "mouhafaza") or contains(@id, "mouhafaza")]',
+          '//select[contains(@placeholder, "إلى")]',
+          '//div[contains(text(), "إلى")]/following::select[1]'
+        ].join(', '),
         value: extractedData.province,
         delay: 500
       });
@@ -219,8 +295,74 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
     if (extractedData.price) {
       newActions.push({
         name: 'إدخال السعر',
-        finder: '#price',
+        // استخدام مزيج من محددات CSS و XPath للعثور على حقل السعر
+        finder: [
+          // محددات CSS
+          'input[name*="price"], input[id*="price"], input[name*="amount"], input[id*="amount"], input[name*="total"], input[id*="total"], input[name*="cost"], input[id*="cost"], input[placeholder*="المبلغ"], input[placeholder*="السعر"], input[placeholder*="التكلفة"], input[type="number"], input[name="total_amount"], input[id="total_amount"], input[name="cod_amount"], input[id="cod_amount"], input[name="grand_total"], input[id="grand_total"], input[name*="mablagh"], input[id*="mablagh"], input[placeholder*="المبلغ بالدينار"], input[placeholder*="سعر"], input[placeholder*="قيمة"]',
+          // محددات XPath
+          '//input[contains(@name, "price") or contains(@id, "price")]',
+          '//input[contains(@name, "amount") or contains(@id, "amount")]',
+          '//input[contains(@name, "total") or contains(@id, "total")]',
+          '//input[contains(@name, "cost") or contains(@id, "cost")]',
+          '//input[contains(@placeholder, "مبلغ") or contains(@placeholder, "سعر") or contains(@placeholder, "تكلفة") or contains(@placeholder, "قيمة")]',
+          '//input[@type="number"]',
+          '//label[contains(text(), "المبلغ") or contains(text(), "السعر") or contains(text(), "التكلفة") or contains(text(), "القيمة")]/following::input[1]',
+          '//span[contains(text(), "المبلغ") or contains(text(), "السعر") or contains(text(), "التكلفة") or contains(text(), "القيمة")]/following::input[1]',
+          '//div[contains(text(), "المبلغ") or contains(text(), "السعر") or contains(text(), "التكلفة") or contains(text(), "القيمة")]/following::input[1]'
+        ].join(', '),
         value: extractedData.price,
+        delay: 500
+      });
+    }
+    
+    if (extractedData.address) {
+      newActions.push({
+        name: 'إدخال العنوان',
+        // استخدام مزيج من محددات CSS و XPath للعثور على حقل العنوان
+        finder: [
+          // محددات CSS
+          'input[name*="address"], input[id*="address"], textarea[name*="address"], textarea[id*="address"], input[placeholder*="العنوان"], textarea[placeholder*="العنوان"], input[name*="location"], input[id*="location"], textarea[name*="location"], textarea[id*="location"]',
+          // محددات XPath
+          '//input[contains(@name, "address") or contains(@id, "address")]',
+          '//textarea[contains(@name, "address") or contains(@id, "address")]',
+          '//input[contains(@name, "location") or contains(@id, "location")]',
+          '//textarea[contains(@name, "location") or contains(@id, "location")]',
+          '//input[contains(@placeholder, "عنوان")]',
+          '//textarea[contains(@placeholder, "عنوان")]',
+          '//label[contains(text(), "العنوان") or contains(text(), "الموقع")]/following::input[1]',
+          '//label[contains(text(), "العنوان") or contains(text(), "الموقع")]/following::textarea[1]',
+          '//span[contains(text(), "العنوان") or contains(text(), "الموقع")]/following::input[1]',
+          '//span[contains(text(), "العنوان") or contains(text(), "الموقع")]/following::textarea[1]',
+          '//div[contains(text(), "العنوان") or contains(text(), "الموقع")]/following::input[1]',
+          '//div[contains(text(), "العنوان") or contains(text(), "الموقع")]/following::textarea[1]'
+        ].join(', '),
+        value: extractedData.address,
+        delay: 500
+      });
+    }
+    
+    if (extractedData.notes) {
+      newActions.push({
+        name: 'إدخال الملاحظات',
+        // استخدام مزيج من محددات CSS و XPath للعثور على حقل الملاحظات
+        finder: [
+          // محددات CSS
+          'textarea[name*="note"], textarea[id*="note"], input[name*="note"], input[id*="note"], textarea[placeholder*="ملاحظات"], input[placeholder*="ملاحظات"], textarea[name*="comment"], textarea[id*="comment"], input[name*="comment"], input[id*="comment"]',
+          // محددات XPath
+          '//textarea[contains(@name, "note") or contains(@id, "note")]',
+          '//input[contains(@name, "note") or contains(@id, "note")]',
+          '//textarea[contains(@name, "comment") or contains(@id, "comment")]',
+          '//input[contains(@name, "comment") or contains(@id, "comment")]',
+          '//textarea[contains(@placeholder, "ملاحظ")]',
+          '//input[contains(@placeholder, "ملاحظ")]',
+          '//label[contains(text(), "ملاحظات") or contains(text(), "تعليق")]/following::textarea[1]',
+          '//label[contains(text(), "ملاحظات") or contains(text(), "تعليق")]/following::input[1]',
+          '//span[contains(text(), "ملاحظات") or contains(text(), "تعليق")]/following::textarea[1]',
+          '//span[contains(text(), "ملاحظات") or contains(text(), "تعليق")]/following::input[1]',
+          '//div[contains(text(), "ملاحظات") or contains(text(), "تعليق")]/following::textarea[1]',
+          '//div[contains(text(), "ملاحظات") or contains(text(), "تعليق")]/following::input[1]'
+        ].join(', '),
+        value: extractedData.notes,
         delay: 500
       });
     }
@@ -228,13 +370,24 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
     // إضافة إجراء للنقر على زر الإرسال
     newActions.push({
       name: 'إرسال النموذج',
-      finder: 'button[type="submit"]',
+      // استخدام مزيج من محددات CSS و XPath للعثور على زر الإرسال
+      finder: [
+        // محددات CSS
+        'button[type="submit"], input[type="submit"], button:contains("حفظ"), button:contains("إرسال"), button:contains("تأكيد"), button:contains("إضافة"), .submit-btn, .save-btn, #submitBtn, #saveBtn, button.btn-primary, button.btn-success',
+        // محددات XPath
+        '//button[@type="submit"]',
+        '//input[@type="submit"]',
+        '//button[contains(text(), "حفظ") or contains(text(), "إرسال") or contains(text(), "تأكيد") or contains(text(), "إضافة")]',
+        '//input[contains(@value, "حفظ") or contains(@value, "إرسال") or contains(@value, "تأكيد") or contains(@value, "إضافة")]',
+        '//button[contains(@class, "submit") or contains(@class, "save") or contains(@class, "primary") or contains(@class, "success")]',
+        '//a[contains(@class, "btn") and (contains(text(), "حفظ") or contains(text(), "إرسال") or contains(text(), "تأكيد") or contains(text(), "إضافة"))]'
+      ].join(', '),
       value: 'click',
       delay: 1000
     });
     
     setActions(newActions);
-    toast.success('تم إنشاء إجراءات تلقائية من البيانات المستخرجة');
+    toast.success('تم إنشاء إجراءات تلقائية من البيانات المستخرجة مع محددات متعددة');
   };
 
   return (
@@ -263,7 +416,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ defaultUrl 
             <Alert className="border-green-200 bg-green-50">
               <AlertDescription className="text-green-700 flex justify-between items-center">
                 <div>
-                  <span className="font-semibold">تم استيراد البيانات المستخرجة: </span>
+                  <span className="font-semibold">تم استيراد البيانات المستخرجة: </span> 
                   {extractedData.code && <span className="ml-2">الكود: {extractedData.code}</span>}
                   {extractedData.senderName && <span className="ml-2">المرسل: {extractedData.senderName}</span>}
                 </div>
