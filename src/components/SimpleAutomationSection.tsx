@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,14 @@ import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { isPreviewEnvironment } from '@/utils/automationServerUrl';
 import { toast as sonnerToast } from 'sonner';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter 
+} from "@/components/ui/dialog";
 
 interface SimpleAction {
   id: string;
@@ -17,6 +26,15 @@ interface SimpleAction {
   name: string;
   value: string;
   delay: string;
+}
+
+interface SavedAutomation {
+  id: string;
+  name: string;
+  url: string;
+  actions: SimpleAction[];
+  createdAt: string;
+  useBrowserData: boolean;
 }
 
 const SimpleAutomationSection = () => {
@@ -30,6 +48,12 @@ const SimpleAutomationSection = () => {
   const [serverConnected, setServerConnected] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const { toast } = useToast();
+  
+  // إضافة حالات للنوافذ المنبثقة
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
+  const [savedAutomations, setSavedAutomations] = useState<SavedAutomation[]>([]);
+  const [selectedAutomation, setSelectedAutomation] = useState<string | null>(null);
 
   // التحقق من حالة الخادم عند تحميل المكون
   useEffect(() => {
@@ -52,6 +76,9 @@ const SimpleAutomationSection = () => {
         console.error('خطأ في استرجاع البيانات المحفوظة:', error);
       }
     }
+    
+    // تحميل الأتمتة المحفوظة
+    loadSavedAutomationsList();
   }, []);
 
   // حفظ البيانات عند تغييرها
@@ -96,6 +123,19 @@ const SimpleAutomationSection = () => {
     ));
   };
 
+  // تحميل قائمة الأتمتة المحفوظة
+  const loadSavedAutomationsList = () => {
+    try {
+      const savedAutomationsString = localStorage.getItem('saved_automations');
+      if (savedAutomationsString) {
+        const automations = JSON.parse(savedAutomationsString) as SavedAutomation[];
+        setSavedAutomations(automations);
+      }
+    } catch (error) {
+      console.error('خطأ في تحميل قائمة الأتمتة المحفوظة:', error);
+    }
+  };
+
   const runAutomation = async () => {
     if (!projectUrl) {
       toast({
@@ -129,11 +169,12 @@ const SimpleAutomationSection = () => {
       const result = await AutomationService.validateAndRunAutomation(config);
       
       if (result.success) {
-        sonnerToast('تم تنفيذ الأتمتة بنجاح!');
+        sonnerToast.success('تم تنفيذ الأتمتة بنجاح!');
       } else {
         sonnerToast.error(`فشل تنفيذ الأتمتة: ${result.message}`);
       }
     } catch (error) {
+      console.error('خطأ أثناء تنفيذ الأتمتة:', error);
       sonnerToast.error(`حدث خطأ أثناء تنفيذ الأتمتة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
     } finally {
       setIsRunning(false);
@@ -141,10 +182,13 @@ const SimpleAutomationSection = () => {
   };
 
   const saveAutomation = () => {
+    if (!projectName.trim()) {
+      sonnerToast.error('يرجى إدخال اسم للمشروع');
+      return;
+    }
+
     try {
-      const savedAutomations = JSON.parse(localStorage.getItem('saved_automations') || '[]');
-      
-      const automationToSave = {
+      const automationToSave: SavedAutomation = {
         id: Date.now().toString(),
         name: projectName,
         url: projectUrl,
@@ -153,37 +197,58 @@ const SimpleAutomationSection = () => {
         useBrowserData
       };
       
-      localStorage.setItem('saved_automations', JSON.stringify([...savedAutomations, automationToSave]));
+      // إضافة الأتمتة الجديدة إلى القائمة المحفوظة
+      const updatedAutomations = [...savedAutomations, automationToSave];
+      localStorage.setItem('saved_automations', JSON.stringify(updatedAutomations));
+      setSavedAutomations(updatedAutomations);
       
-      sonnerToast('تم حفظ الأتمتة بنجاح');
+      sonnerToast.success('تم حفظ الأتمتة بنجاح');
+      setIsSaveDialogOpen(false);
     } catch (error) {
       sonnerToast.error('حدث خطأ أثناء حفظ الأتمتة');
     }
   };
 
-  const loadSavedAutomation = () => {
+  const loadSelectedAutomation = () => {
+    if (!selectedAutomation) {
+      sonnerToast.error('يرجى اختيار أتمتة لتحميلها');
+      return;
+    }
+    
     try {
-      const savedAutomations = JSON.parse(localStorage.getItem('saved_automations') || '[]');
+      const automationToLoad = savedAutomations.find(automation => automation.id === selectedAutomation);
       
-      if (savedAutomations.length === 0) {
-        sonnerToast('لا توجد أتمتة محفوظة');
-        return;
+      if (automationToLoad) {
+        setProjectName(automationToLoad.name);
+        setProjectUrl(automationToLoad.url);
+        setActions(automationToLoad.actions);
+        if (automationToLoad.useBrowserData !== undefined) {
+          setUseBrowserData(automationToLoad.useBrowserData);
+        }
+        
+        sonnerToast.success('تم تحميل الأتمتة بنجاح');
+        setIsLoadDialogOpen(false);
       }
-      
-      // هنا يمكن إنشاء نافذة منبثقة لاختيار الأتمتة المحفوظة
-      // لتبسيط المثال، سنستخدم أحدث أتمتة تم حفظها
-      const latestAutomation = savedAutomations[savedAutomations.length - 1];
-      
-      setProjectName(latestAutomation.name);
-      setProjectUrl(latestAutomation.url);
-      setActions(latestAutomation.actions);
-      if (latestAutomation.useBrowserData !== undefined) {
-        setUseBrowserData(latestAutomation.useBrowserData);
-      }
-      
-      sonnerToast('تم تحميل الأتمتة بنجاح');
     } catch (error) {
       sonnerToast.error('حدث خطأ أثناء تحميل الأتمتة');
+    }
+  };
+
+  const deleteAutomation = (id: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    
+    try {
+      const updatedAutomations = savedAutomations.filter(automation => automation.id !== id);
+      localStorage.setItem('saved_automations', JSON.stringify(updatedAutomations));
+      setSavedAutomations(updatedAutomations);
+      
+      if (selectedAutomation === id) {
+        setSelectedAutomation(null);
+      }
+      
+      sonnerToast.success('تم حذف الأتمتة بنجاح');
+    } catch (error) {
+      sonnerToast.error('حدث خطأ أثناء حذف الأتمتة');
     }
   };
 
@@ -240,7 +305,7 @@ const SimpleAutomationSection = () => {
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">الإجراءات</h3>
             <Button variant="outline" size="sm" onClick={addAction}>
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="h-4 w-4 ml-1" />
               إضافة إجراء
             </Button>
           </div>
@@ -312,12 +377,15 @@ const SimpleAutomationSection = () => {
 
       <CardFooter className="flex justify-between gap-2">
         <div className="flex gap-2">
-          <Button variant="outline" onClick={saveAutomation}>
-            <Save className="h-4 w-4 mr-1" />
+          <Button variant="outline" onClick={() => setIsSaveDialogOpen(true)}>
+            <Save className="h-4 w-4 ml-1" />
             حفظ
           </Button>
-          <Button variant="outline" onClick={loadSavedAutomation}>
-            <Database className="h-4 w-4 mr-1" />
+          <Button variant="outline" onClick={() => {
+            loadSavedAutomationsList();
+            setIsLoadDialogOpen(true);
+          }}>
+            <Database className="h-4 w-4 ml-1" />
             تحميل
           </Button>
         </div>
@@ -326,10 +394,115 @@ const SimpleAutomationSection = () => {
           disabled={isRunning || !projectUrl || (!serverConnected && !isPreviewMode)}
           className="bg-purple-600 hover:bg-purple-700"
         >
-          <Play className="h-4 w-4 mr-1" />
+          <Play className="h-4 w-4 ml-1" />
           {isRunning ? 'جاري التنفيذ...' : 'تشغيل الأتمتة'}
         </Button>
       </CardFooter>
+
+      {/* نافذة حفظ الأتمتة */}
+      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>حفظ الأتمتة</DialogTitle>
+            <DialogDescription>
+              قم بحفظ إعدادات الأتمتة الحالية لاستخدامها لاحقًا
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div>
+              <Label htmlFor="save-project-name">اسم المشروع</Label>
+              <Input
+                id="save-project-name"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                className="mt-1"
+                placeholder="اسم المشروع"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsSaveDialogOpen(false)}
+            >
+              إلغاء
+            </Button>
+            <Button type="button" onClick={saveAutomation}>
+              <Save className="h-4 w-4 ml-1" />
+              حفظ الأتمتة
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة تحميل الأتمتة */}
+      <Dialog open={isLoadDialogOpen} onOpenChange={setIsLoadDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>تحميل الأتمتة</DialogTitle>
+            <DialogDescription>
+              اختر واحدة من الأتمتة المحفوظة مسبقًا لتحميلها
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[400px] overflow-y-auto">
+            {savedAutomations.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">لا توجد أتمتة محفوظة</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {savedAutomations.map((automation) => (
+                  <div
+                    key={automation.id}
+                    className={`border rounded-md p-3 cursor-pointer flex justify-between items-center ${
+                      selectedAutomation === automation.id
+                        ? "border-primary bg-primary/10"
+                        : "hover:border-gray-400"
+                    }`}
+                    onClick={() => setSelectedAutomation(automation.id)}
+                  >
+                    <div>
+                      <p className="font-medium">{automation.name}</p>
+                      <p className="text-sm text-gray-500 truncate max-w-[300px]">
+                        {automation.url}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(automation.createdAt).toLocaleString('ar-IQ')}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                      onClick={(e) => deleteAutomation(automation.id, e)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsLoadDialogOpen(false)}
+            >
+              إلغاء
+            </Button>
+            <Button 
+              type="button" 
+              onClick={loadSelectedAutomation}
+              disabled={!selectedAutomation || savedAutomations.length === 0}
+            >
+              <Database className="h-4 w-4 ml-1" />
+              تحميل الأتمتة
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
