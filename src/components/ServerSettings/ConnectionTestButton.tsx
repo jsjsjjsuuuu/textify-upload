@@ -1,9 +1,15 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, AlertCircle, RefreshCw, Settings, ExternalLink } from "lucide-react";
+import { CheckCircle2, AlertCircle, RefreshCw, Settings, ExternalLink, Wifi } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { checkConnection, RENDER_ALLOWED_IPS, getLastConnectionStatus, isPreviewEnvironment } from "@/utils/automationServerUrl";
+import { 
+  checkConnection, 
+  RENDER_ALLOWED_IPS, 
+  getLastConnectionStatus, 
+  isPreviewEnvironment,
+  getAutomationServerUrl  
+} from "@/utils/automationServerUrl";
 import { 
   Popover,
   PopoverContent,
@@ -47,8 +53,9 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
       }
       
       // إظهار رسالة أثناء الاختبار
+      const currentServerUrl = getAutomationServerUrl();
       toast("جاري اختبار الاتصال", {
-        description: "يتم التحقق من الاتصال بخادم Render...",
+        description: `يتم التحقق من الاتصال بخادم Render على: ${currentServerUrl}`,
         duration: 5000,
       });
       
@@ -197,6 +204,7 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
               <ul className="text-xs space-y-1 list-disc list-inside">
                 <li>تأكد من أن خادم Render يعمل ويمكن الوصول إليه من الإنترنت</li>
                 <li>تحقق من إعدادات URL الخادم في صفحة إعدادات الخادم</li>
+                <li>تأكد من أن نقاط النهاية /api/ping و /api/health موجودة في الخادم</li>
                 <li>تفعيل خيار إعادة الاتصال التلقائي</li>
                 <li>جرب تبديل عنوان IP المستخدم للاتصال</li>
               </ul>
@@ -227,11 +235,20 @@ const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({
               </div>
               
               <div className="mt-2 text-xs text-muted-foreground">
+                <p className="mb-2">
+                  <Wifi className="h-3 w-3 inline mr-1" />
+                  <span>عناوين IP المستخدمة للاتصال:</span>
+                </p>
+                <div className="grid grid-cols-2 gap-1">
+                  {RENDER_ALLOWED_IPS.map((ip, idx) => (
+                    <code key={idx} className="text-[10px] px-1 bg-slate-100 rounded">{ip}</code>
+                  ))}
+                </div>
                 <a 
                   href="https://docs.render.com/network" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="flex items-center hover:underline"
+                  className="flex items-center hover:underline mt-2"
                 >
                   <ExternalLink className="h-3 w-3 mr-1" />
                   مستندات Render لإعدادات الشبكة

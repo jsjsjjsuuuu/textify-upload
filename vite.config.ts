@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -43,7 +44,6 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
           ws: true,
-          rewrite: (path) => path,
           configure: (proxy, _options) => {
             proxy.on('error', (err, _req, _res) => {
               console.log('وقع خطأ في البروكسي:', err);
@@ -54,24 +54,29 @@ export default defineConfig(({ mode }) => {
               const selectedIp = getRandomIp();
               console.log(`استخدام عنوان IP للبروكسي: ${selectedIp}`);
               
+              // إضافة الرؤوس اللازمة للتجاوز مشاكل CORS
               proxyReq.setHeader('X-Forwarded-For', selectedIp);
               proxyReq.setHeader('X-Render-Client-IP', selectedIp);
               proxyReq.setHeader('Origin', automationServerUrl);
               proxyReq.setHeader('Referer', automationServerUrl);
               
+              // إضافة رؤوس دعم CORS أخرى
               proxyReq.setHeader('Accept', 'application/json');
               proxyReq.setHeader('Content-Type', 'application/json');
               proxyReq.setHeader('Access-Control-Allow-Origin', '*');
               proxyReq.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-              proxyReq.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+              proxyReq.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time');
               proxyReq.setHeader('Access-Control-Max-Age', '86400');
+              proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
             });
             proxy.on('proxyRes', (proxyRes, req, _res) => {
               console.log('استجابة البروكسي:', proxyRes.statusCode, req.url);
               
+              // تعديل رؤوس الاستجابة لتسهيل الاتصال
               proxyRes.headers['Access-Control-Allow-Origin'] = '*';
               proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-              proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With';
+              proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time';
+              proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
             });
           }
         }

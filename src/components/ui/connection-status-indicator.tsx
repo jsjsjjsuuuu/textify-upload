@@ -3,7 +3,13 @@ import React, { useState, useEffect } from "react";
 import { Wifi, WifiOff, RefreshCw, Clock, AlertTriangle, Activity, ServerCrash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConnectionManager } from "@/utils/automation/connectionManager";
-import { getLastConnectionStatus, isPreviewEnvironment, resetAutomationServerUrl } from "@/utils/automationServerUrl";
+import { 
+  getLastConnectionStatus, 
+  isPreviewEnvironment, 
+  resetAutomationServerUrl,
+  checkConnection,
+  getAutomationServerUrl
+} from "@/utils/automationServerUrl";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ServerStatusResponse } from "@/utils/automation/types";
 import { toast } from "sonner";
@@ -41,20 +47,33 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
         return;
       }
       
+      // الحصول على عنوان الخادم
+      const serverUrl = getAutomationServerUrl();
+      
       // التحقق من الوصول السريع باستخدام نقطة نهاية /api/ping أولاً
       try {
-        const pingResponse = await fetch(`${ConnectionManager.getServerUrl()}/api/ping`, {
+        console.log(`محاولة اتصال سريع: ${serverUrl}/api/ping`);
+        const pingResponse = await fetch(`${serverUrl}/api/ping`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-cache, no-store',
             'Pragma': 'no-cache',
             'X-Request-Time': Date.now().toString()
-          }
+          },
+          mode: 'cors',
+          credentials: 'omit',
+          // مهلة قصيرة للفحص السريع
+          signal: AbortSignal.timeout(10000)
         });
         
         if (pingResponse.ok) {
           console.log('Ping response successful:', await pingResponse.json());
+          setIsConnected(true);
+          onStatusChange?.(true);
+          setLastCheckTime(new Date());
+          setIsChecking(false);
+          return;
         } else {
           console.warn('Ping response not OK:', pingResponse.status);
         }
@@ -62,40 +81,43 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
         console.warn('خطأ في الوصول لنقطة نهاية ping:', pingError);
       }
       
-      // قبل محاولة الاتصال الكاملة، تحقق أولاً من وجود الخادم
-      const exists = await AutomationService.checkServerExistence();
-      if (!exists) {
-        console.warn("خطأ: الخادم غير موجود في العنوان المحدد");
+      // إذا فشل ping، نستخدم آلية checkConnection
+      console.log('استخدام آلية checkConnection...');
+      const result = await checkConnection();
+      console.log('نتيجة checkConnection:', result);
+      
+      if (result.isConnected) {
+        setIsConnected(true);
+        onStatusChange?.(true);
+        
+        // عرض إشعار بنجاح الاتصال (فقط إذا كان هناك محاولات إعادة اتصال سابقة)
+        if (reconnectAttempts > 0) {
+          toast.success("تم استعادة الاتصال بخادم Render");
+          setReconnectAttempts(0);
+        }
+      } else {
         setIsConnected(false);
         onStatusChange?.(false);
-        setIsChecking(false);
-        setLastCheckTime(new Date());
-        return;
-      }
-      
-      // عدد محاولات إعادة الاتصال الحالية
-      const attempts = ConnectionManager.getReconnectAttempts();
-      setReconnectAttempts(attempts);
-      
-      // استخدام التحقق المحسن من خلال AutomationService
-      const status = await AutomationService.checkServerStatus(false);
-      
-      console.log("نتيجة التحقق من الاتصال:", status);
-      setServerInfo(status);
-      setIsConnected(true);
-      onStatusChange?.(true);
-      setLastCheckTime(new Date());
-      
-      // عرض إشعار بنجاح الاتصال (فقط إذا كان هناك محاولات إعادة اتصال سابقة)
-      if (reconnectAttempts > 0) {
-        toast.success("تم استعادة الاتصال بخادم Render");
-        setReconnectAttempts(0);
+        
+        // محاولة استخدام خدمة AutomationService كبديل
+        try {
+          const statusResult = await AutomationService.checkServerStatus(false);
+          console.log('نتيجة AutomationService.checkServerStatus:', statusResult);
+          
+          if (statusResult) {
+            setServerInfo(statusResult);
+            setIsConnected(true);
+            onStatusChange?.(true);
+          }
+        } catch (serviceError) {
+          console.warn('فشل التحقق عبر AutomationService:', serviceError);
+          // الاستمرار مع النتيجة السابقة (غير متصل)
+        }
       }
     } catch (error) {
       console.error("فشل التحقق من حالة الاتصال:", error);
       setIsConnected(false);
       onStatusChange?.(false);
-      setLastCheckTime(new Date());
       
       // إذا كانت هناك محاولات متكررة فاشلة، فتح مربع حوار للمساعدة
       if (reconnectAttempts > 5) {
@@ -112,6 +134,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
       }
     } finally {
       setIsChecking(false);
+      setLastCheckTime(new Date());
     }
   };
   
@@ -120,9 +143,10 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
     // التحقق أولاً من الحالة المخزنة
     const savedStatus = getLastConnectionStatus();
     setIsConnected(savedStatus.isConnected);
+    setReconnectAttempts(savedStatus.retryCount || 0);
     
     // التأكد من وجود عنوان URL للخادم
-    const serverUrl = ConnectionManager.getServerUrl();
+    const serverUrl = getAutomationServerUrl();
     if (!serverUrl) {
       console.warn("لم يتم العثور على عنوان URL للخادم، جاري إعادة تعيينه");
       resetAutomationServerUrl();
@@ -153,7 +177,15 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   const handleForceReconnect = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsChecking(true);
-    await AutomationService.forceReconnect();
+    
+    // محاولة إعادة الاتصال باستخدام كلا المنهجين
+    try {
+      await AutomationService.forceReconnect();
+    } catch (error) {
+      console.warn("فشل إعادة الاتصال باستخدام AutomationService:", error);
+    }
+    
+    // ثم التحقق من الاتصال
     await checkConnectionStatus();
   };
   
@@ -247,6 +279,9 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
                     <div>
                       <p className="font-medium">تعذر الاتصال بخادم Render</p>
                       <p className="mt-1">قد يكون الخادم في وضع السكون أو غير متاح حالياً. جاري إعادة المحاولة تلقائياً.</p>
+                      <p className="mt-1 text-[10px] flex items-center">
+                        <span className="font-mono bg-red-100 dark:bg-red-900 px-1 rounded">{getAutomationServerUrl()}</span>
+                      </p>
                       {reconnectAttempts > 0 && (
                         <p className="mt-1 flex items-center gap-1">
                           <Clock className="h-3 w-3" />

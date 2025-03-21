@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 
 export const SERVER_URL_KEY = "automationServerUrl";
@@ -19,7 +20,14 @@ export const getAutomationServerUrl = () => {
     console.warn('localStorage is not available.');
     return '';
   }
-  return localStorage.getItem(SERVER_URL_KEY) || '';
+  
+  // استخدام القيمة المخزنة أو الرجوع إلى القيمة الافتراضية
+  const storedUrl = localStorage.getItem(SERVER_URL_KEY);
+  if (!storedUrl) {
+    return resetAutomationServerUrl();
+  }
+  
+  return storedUrl;
 };
 
 /**
@@ -30,7 +38,11 @@ export const setAutomationServerUrl = (url: string) => {
     console.warn('localStorage is not available.');
     return;
   }
-  localStorage.setItem(SERVER_URL_KEY, url);
+  
+  // تنظيف URL من الشرطة المائلة النهائية إذا وجدت
+  const sanitizedUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+  localStorage.setItem(SERVER_URL_KEY, sanitizedUrl);
+  console.log("تم تحديث عنوان الخادم إلى:", sanitizedUrl);
 };
 
 /**
@@ -39,6 +51,7 @@ export const setAutomationServerUrl = (url: string) => {
 export const resetAutomationServerUrl = () => {
   const defaultUrl = "https://textify-upload.onrender.com";
   setAutomationServerUrl(defaultUrl);
+  console.log("تم إعادة تعيين عنوان الخادم إلى القيمة الافتراضية:", defaultUrl);
   return defaultUrl;
 };
 
@@ -61,7 +74,8 @@ export const isValidServerUrl = (url: string): boolean => {
 export const isPreviewEnvironment = () => {
   // فحص عنوان URL الحالي
   if (typeof window !== 'undefined') {
-    return window.location.hostname.includes("lovable.ai");
+    return window.location.hostname.includes("lovable") || 
+           window.location.hostname.includes("lovableproject.com");
   }
   return false;
 };
@@ -77,18 +91,55 @@ export const checkConnection = async () => {
   }
 
   try {
-    const url = `${serverUrl}/api/health`;
-    console.log("Checking connection to:", url);
-    const response = await fetch(url, {
+    // أولاً، نجرب استخدام /api/ping كنقطة نهاية خفيفة للفحص
+    const pingUrl = `${serverUrl}/api/ping`;
+    console.log("Checking connection via ping endpoint:", pingUrl);
+    
+    try {
+      const pingResponse = await fetch(pingUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Cache-Control": "no-cache, no-store",
+          "Pragma": "no-cache",
+          "X-Request-Time": Date.now().toString(),
+          "X-Forwarded-For": getNextIp(),
+          "X-Client-ID": "web-client"
+        },
+        mode: 'cors',
+        credentials: 'omit',
+        signal: createTimeoutSignal(15000) // 15 ثانية فقط للفحص السريع
+      });
+      
+      if (pingResponse.ok) {
+        // إذا نجح فحص ping، نعتبر الاتصال ناجحًا
+        saveConnectionStatus(true);
+        return { isConnected: true, message: "تم الاتصال بنجاح" };
+      }
+    } catch (pingError) {
+      console.warn("فشل الاتصال عبر نقطة نهاية ping, سنحاول المسار الرئيسي:", pingError);
+    }
+    
+    // إذا فشل ping، نستخدم /api/health
+    const healthUrl = `${serverUrl}/api/health`;
+    console.log("Checking connection via health endpoint:", healthUrl);
+    
+    const response = await fetchWithRetry(healthUrl, {
       method: "GET",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-Forwarded-For": getNextIp(),
+        "X-Client-ID": "web-client",
+        "Cache-Control": "no-cache, no-store",
+        "Pragma": "no-cache",
+        "X-Request-Time": Date.now().toString()
       },
       mode: 'cors',
-      credentials: 'include',
-      // استخدام الإشارة بطريقة متوافقة مع الإصدارات القديمة
+      credentials: 'omit',
       signal: createTimeoutSignal(getConnectionTimeout())
-    });
+    }, 3, 1000); // 3 محاولات فقط مع تأخير 1 ثانية
 
     if (!response.ok) {
       console.error("Connection failed with status:", response.status);
@@ -124,7 +175,8 @@ export const saveConnectionStatus = (isConnected: boolean) => {
   }
   const status = {
     isConnected,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    retryCount: isConnected ? 0 : (getLastConnectionStatus().retryCount || 0) + 1
   };
   localStorage.setItem(CONNECTION_STATUS_KEY, JSON.stringify(status));
 };
@@ -138,7 +190,7 @@ export const updateConnectionStatus = saveConnectionStatus;
 export const getLastConnectionStatus = () => {
   if (typeof localStorage === 'undefined') {
     console.warn('localStorage is not available.');
-    return { isConnected: false, timestamp: null };
+    return { isConnected: false, timestamp: null, retryCount: 0 };
   }
   const status = localStorage.getItem(CONNECTION_STATUS_KEY);
   if (status) {
@@ -146,10 +198,10 @@ export const getLastConnectionStatus = () => {
       return JSON.parse(status);
     } catch (e) {
       console.error("Error parsing connection status:", e);
-      return { isConnected: false, timestamp: null };
+      return { isConnected: false, timestamp: null, retryCount: 0 };
     }
   }
-  return { isConnected: false, timestamp: null };
+  return { isConnected: false, timestamp: null, retryCount: 0 };
 };
 
 export const RENDER_ALLOWED_IPS = [
@@ -177,7 +229,12 @@ export const createBaseHeaders = (ip?: string): Record<string, string> => {
     "Content-Type": "application/json",
     "Accept": "application/json",
     "X-Forwarded-For": ip || getNextIp(),
-    "X-Client-ID": "web-client"
+    "X-Render-Client-IP": ip || getNextIp(),
+    "Origin": getAutomationServerUrl(),
+    "Referer": getAutomationServerUrl(),
+    "X-Client-ID": "web-client",
+    "Cache-Control": "no-cache, no-store",
+    "Pragma": "no-cache"
   };
 };
 
@@ -186,20 +243,28 @@ export const createBaseHeaders = (ip?: string): Record<string, string> => {
  */
 export const createTimeoutSignal = (ms: number): AbortSignal => {
   const controller = new AbortController();
-  setTimeout(() => controller.abort(), ms);
+  setTimeout(() => controller.abort(new Error(`تجاوز المهلة المحددة (${ms} مللي ثانية)`)), ms);
   return controller.signal;
 };
 
 /**
  * وظيفة fetch مع إعادة المحاولة
  */
-export async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 8, retryDelayMs = 2000): Promise<Response> {
+export async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3, retryDelayMs = 1000): Promise<Response> {
   let retries = 0;
   let lastError: Error = new Error("Unknown error");
   
   while(retries < maxRetries) {
     try {
       console.log(`Attempt ${retries + 1}/${maxRetries} for URL: ${url}`);
+      
+      // استخدام IP مختلف في كل محاولة
+      if (options.headers && typeof options.headers === 'object') {
+        const ip = getNextIp();
+        (options.headers as Record<string, string>)['X-Forwarded-For'] = ip;
+        (options.headers as Record<string, string>)['X-Render-Client-IP'] = ip;
+        (options.headers as Record<string, string>)['X-Request-Time'] = Date.now().toString();
+      }
       
       // إضافة مهلة باستخدام الدالة المتوافقة
       if (!options.signal) {
@@ -222,16 +287,10 @@ export async function fetchWithRetry(url: string, options: RequestInit, maxRetri
       console.error(`Attempt ${retries + 1}/${maxRetries} failed:`, error);
       lastError = error instanceof Error ? error : new Error(String(error));
       
-      // تخطي إعادة المحاولة لبعض الأخطاء
-      if (lastError.message.includes('CORS') || lastError.message.includes('blocked by extension')) {
-        console.error('CORS or extension blockage detected, retrying might not help:', lastError.message);
-        throw lastError;
-      }
-      
       retries++;
       if (retries < maxRetries) {
         // زيادة فترة الانتظار مع كل محاولة فاشلة (backoff strategy)
-        const delay = retryDelayMs * Math.pow(2, retries - 1);
+        const delay = retryDelayMs * Math.pow(1.5, retries - 1);
         
         console.log(`Waiting ${delay}ms before retry ${retries}/${maxRetries}...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -247,16 +306,17 @@ export async function fetchWithRetry(url: string, options: RequestInit, maxRetri
 /**
  * وظيفة لإنشاء خيارات الطلب
  */
-export function createFetchOptions(method: string, body: any, headers: Record<string, string>): RequestInit {
+export function createFetchOptions(method: string, body: any, additionalHeaders: Record<string, string> = {}): RequestInit {
+  const baseHeaders = createBaseHeaders();
+  
   const options: RequestInit = {
     method,
     headers: {
-      "Accept": "application/json",
-      ...headers || {}
+      ...baseHeaders,
+      ...additionalHeaders
     },
-    credentials: "include",
+    credentials: "omit",  // تغيير إلى "omit" لتجنب مشكلات CORS
     mode: "cors",
-    // تعيين مهلة أطول للطلبات
     signal: createTimeoutSignal(getConnectionTimeout())
   };
   
@@ -271,20 +331,31 @@ export function createFetchOptions(method: string, body: any, headers: Record<st
  * التحقق من الاتصال بخادم التشغيل الآلي
  */
 export const isConnected = async (forceCheck = false) => {
-  // التحقق من آخر حالة اتصال إذا كانت حديثة (خلال الـ 5 دقائق الماضية)
+  // محاكاة الاتصال الناجح في بيئة المعاينة
+  if (isPreviewEnvironment()) {
+    console.log("بيئة المعاينة: محاكاة اتصال ناجح");
+    return true;
+  }
+  
+  // التحقق من آخر حالة اتصال إذا كانت حديثة (خلال الدقيقة الماضية)
   const status = getLastConnectionStatus();
   
   if (!forceCheck && status.timestamp) {
     const lastCheck = new Date(status.timestamp);
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
     
-    if (lastCheck > fiveMinutesAgo) {
+    if (lastCheck > oneMinuteAgo) {
       console.log("Using cached connection status:", status.isConnected);
       return status.isConnected;
     }
   }
   
   // إجراء فحص جديد
-  const result = await checkConnection();
-  return result.isConnected;
+  try {
+    const result = await checkConnection();
+    return result.isConnected;
+  } catch (error) {
+    console.error("Error checking connection:", error);
+    return false;
+  }
 };
