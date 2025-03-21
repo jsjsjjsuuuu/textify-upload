@@ -1,3 +1,4 @@
+
 import { isPreview } from "./automation";
 
 const SERVER_URL_KEY = "automationServerUrl";
@@ -26,6 +27,28 @@ export const setAutomationServerUrl = (url: string) => {
 };
 
 /**
+ * إعادة تعيين عنوان URL لخادم التشغيل الآلي إلى القيمة الافتراضية
+ */
+export const resetAutomationServerUrl = () => {
+  const defaultUrl = "https://automation-server.onrender.com";
+  setAutomationServerUrl(defaultUrl);
+  return defaultUrl;
+};
+
+/**
+ * التحقق من صحة URL الخادم
+ */
+export const isValidServerUrl = (url: string): boolean => {
+  if (!url) return false;
+  try {
+    const urlObj = new URL(url);
+    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+  } catch (e) {
+    return false;
+  }
+};
+
+/**
  * فحص ما إذا كنا في بيئة المعاينة (Lovable)
  */
 export const isPreviewEnvironment = (): boolean => {
@@ -38,6 +61,76 @@ export const isPreviewEnvironment = (): boolean => {
 export const getConnectionTimeout = (): number => {
   // مهلة أقصر في بيئة المعاينة
   return isPreviewEnvironment() ? 5000 : 10000;
+};
+
+/**
+ * تحديث حالة الاتصال
+ */
+export const updateConnectionStatus = (isConnected: boolean, lastUsedIp?: string) => {
+  saveConnectionStatus(isConnected, isConnected ? undefined : "حدث خطأ في الاتصال", lastUsedIp);
+};
+
+/**
+ * التحقق من حالة الاتصال الحالية
+ */
+export const isConnected = async (silent: boolean = false): Promise<boolean> => {
+  // في بيئة المعاينة، دائماً نعتبر الاتصال ناجح
+  if (isPreviewEnvironment()) {
+    return true;
+  }
+  
+  // التحقق من آخر حالة معروفة
+  const lastStatus = getLastConnectionStatus();
+  
+  // إذا كان الاتصال ناجح في آخر 5 دقائق، نعتبره لا يزال متصل
+  if (lastStatus.isConnected && lastStatus.timestamp) {
+    const lastTimestamp = new Date(lastStatus.timestamp).getTime();
+    const now = new Date().getTime();
+    const fiveMinutes = 5 * 60 * 1000;
+    
+    if (now - lastTimestamp < fiveMinutes) {
+      return true;
+    }
+  }
+  
+  // محاولة التحقق من الاتصال مباشرة
+  try {
+    const result = await checkConnection();
+    return result.isConnected;
+  } catch (error) {
+    if (!silent) {
+      console.error("خطأ في التحقق من الاتصال:", error);
+    }
+    return false;
+  }
+};
+
+/**
+ * إنشاء رؤوس طلب HTTP أساسية
+ */
+export const createBaseHeaders = (ipAddress?: string): Record<string, string> => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "X-Client-Version": "1.0.0"
+  };
+  
+  if (ipAddress) {
+    headers["X-Forwarded-For"] = ipAddress;
+    headers["X-Real-IP"] = ipAddress;
+  }
+  
+  return headers;
+};
+
+/**
+ * الحصول على عنوان IP التالي من قائمة العناوين المسموح بها
+ */
+export const getNextIp = (): string => {
+  const lastStatus = getLastConnectionStatus();
+  const retryCount = lastStatus.retryCount || 0;
+  const index = retryCount % RENDER_ALLOWED_IPS.length;
+  return RENDER_ALLOWED_IPS[index];
 };
 
 /**
@@ -86,7 +179,7 @@ export const checkConnection = async (): Promise<{ isConnected: boolean; message
 /**
  * حفظ حالة الاتصال في التخزين المحلي
  */
-const saveConnectionStatus = (isConnected: boolean, message?: string) => {
+const saveConnectionStatus = (isConnected: boolean, message?: string, lastUsedIp?: string) => {
   if (typeof localStorage === 'undefined') {
     console.warn('localStorage is not available.');
     return;
@@ -94,6 +187,7 @@ const saveConnectionStatus = (isConnected: boolean, message?: string) => {
   const status = {
     isConnected,
     message,
+    lastUsedIp,
     timestamp: new Date().toISOString(),
     retryCount: getLastConnectionStatus().retryCount + 1
   };
@@ -103,7 +197,7 @@ const saveConnectionStatus = (isConnected: boolean, message?: string) => {
 /**
  * استرجاع آخر حالة اتصال
  */
-export const getLastConnectionStatus = (): { isConnected: boolean; message?: string; timestamp?: string; retryCount: number } => {
+export const getLastConnectionStatus = (): { isConnected: boolean; message?: string; timestamp?: string; retryCount: number; lastUsedIp?: string } => {
   if (typeof localStorage === 'undefined') {
     console.warn('localStorage is not available.');
     return { isConnected: false, retryCount: 0 };
