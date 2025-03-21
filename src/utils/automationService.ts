@@ -56,4 +56,28 @@ export class AutomationService {
       throw error;
     }
   }
+  
+  /**
+   * الحصول على بيانات المتصفح المحفوظة (الكوكيز وبيانات التسجيل)
+   */
+  static async getBrowserData() {
+    try {
+      const serverUrl = await ConnectionManager.getServerUrl();
+      const response = await fetch(`${serverUrl}/api/browser-data`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`فشل في الحصول على بيانات المتصفح: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error("فشل في الحصول على بيانات المتصفح:", error);
+      throw error;
+    }
+  }
 }

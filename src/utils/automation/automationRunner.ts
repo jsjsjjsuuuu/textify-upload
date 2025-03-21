@@ -45,7 +45,8 @@ export class AutomationRunner {
       console.log("بيانات الطلب:", {
         projectUrl: config.projectUrl,
         actionsCount: config.actions.length,
-        ipAddress: currentIp
+        ipAddress: currentIp,
+        useBrowserData: config.useBrowserData
       });
       
       // إضافة عنوان IP إلى التكوين للاستخدام في الخادم

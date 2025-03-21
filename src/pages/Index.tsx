@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Server, Wifi, WifiOff, AlertCircle } from "lucide-react";
 import { AutomationService } from "@/utils/automationService";
 import { isConnected, getLastConnectionStatus } from "@/utils/automationServerUrl";
+import SimpleAutomationSection from "@/components/SimpleAutomationSection";
 
 const Index = () => {
   const {
@@ -152,6 +153,11 @@ const Index = () => {
                 </Button>
               </div>
             </div>
+          </div>
+
+          {/* إضافة قسم الأتمتة المبسط */}
+          <div className="w-full">
+            <SimpleAutomationSection />
           </div>
 
           <div className="w-full mt-8">
