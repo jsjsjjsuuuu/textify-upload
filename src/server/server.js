@@ -1,3 +1,4 @@
+
 import express from 'express';
 import puppeteer from 'puppeteer';
 import cors from 'cors';
@@ -378,6 +379,384 @@ const checkPuppeteer = async () => {
   }
 };
 
+/**
+ * دالة مساعدة للعثور على أفضل خيار في القائمة المنسدلة
+ * @param {Array} options قائمة الخيارات المتاحة
+ * @param {string} targetValue القيمة المستهدفة
+ * @returns {Object|null} أفضل خيار مطابق أو null
+ */
+const findBestSelectOption = async (page, selectElementHandle, targetValue) => {
+  return await page.evaluate((element, target) => {
+    if (!element || !target || target.trim() === '') return null;
+    
+    const options = Array.from(element.options || []);
+    if (!options.length) return null;
+    
+    const normalizedTarget = target.trim().toLowerCase();
+    
+    // محاولة المطابقة المباشرة أولاً
+    let bestMatch = options.find(option => {
+      const optionText = option.text.trim().toLowerCase();
+      const optionValue = option.value.trim().toLowerCase();
+      return optionText === normalizedTarget || optionValue === normalizedTarget;
+    });
+    
+    // إذا لم نجد مطابقة مباشرة، نبحث عن مطابقة جزئية
+    if (!bestMatch) {
+      bestMatch = options.find(option => {
+        const optionText = option.text.trim().toLowerCase();
+        const optionValue = option.value.trim().toLowerCase();
+        return optionText.includes(normalizedTarget) || normalizedTarget.includes(optionText) ||
+               optionValue.includes(normalizedTarget) || normalizedTarget.includes(optionValue);
+      });
+    }
+    
+    // إذا لم نجد أي مطابقة، قد نحاول استراتيجيات أخرى...
+    
+    if (bestMatch) {
+      return {
+        value: bestMatch.value,
+        text: bestMatch.text,
+        index: bestMatch.index
+      };
+    }
+    
+    return null;
+  }, selectElementHandle, targetValue);
+};
+
+/**
+ * دالة محسنة للعثور على العنصر باستخدام استراتيجيات متعددة
+ */
+const findElement = async (page, finder, context = null) => {
+  // قائمة بكل المحددات والـ XPaths التي سنحاول بها
+  const selectors = [];
+  const xpaths = [];
+  
+  console.log(`محاولة العثور على العنصر باستخدام: ${finder}`);
+  
+  // تحديد الاستراتيجية المناسبة بناءً على نمط المحدد
+  if (finder.startsWith('//') || finder.startsWith('/html')) {
+    // XPath: إضافة المحدد الأصلي أولاً
+    xpaths.push(finder);
+  } else if (finder.startsWith('#')) {
+    // معرف: إضافة المحدد الأصلي أولاً
+    selectors.push(finder);
+    
+    // المحاولة أيضًا باستخدام XPath للمعرف
+    const id = finder.substring(1);
+    xpaths.push(`//*[@id="${id}"]`);
+  } else if (finder.startsWith('Id::')) {
+    // معرف بتنسيق مختلف
+    const id = finder.replace('Id::', '');
+    selectors.push(`#${id}`);
+    xpaths.push(`//*[@id="${id}"]`);
+  } else if (finder.startsWith('ClassName::')) {
+    // اسم الصف
+    const className = finder.replace('ClassName::', '');
+    const classNames = className.split(' ');
+    
+    // محدد CSS للصف
+    if (classNames.length === 1) {
+      selectors.push(`.${className}`);
+    } else {
+      selectors.push(`.${classNames.join('.')}`);
+    }
+    
+    // محاولة باستخدام XPath للصف
+    xpaths.push(`//*[contains(@class, "${className}")]`);
+  } else if (finder.startsWith('Name::')) {
+    // استخدام سمة الاسم
+    const name = finder.replace('Name::', '');
+    selectors.push(`[name="${name}"]`);
+    xpaths.push(`//*[@name="${name}"]`);
+  } else if (finder.startsWith('TagName::')) {
+    // استخدام اسم العلامة
+    const tagName = finder.replace('TagName::', '');
+    selectors.push(tagName);
+    xpaths.push(`//${tagName}`);
+  } else if (finder.startsWith('Selector::')) {
+    // استخدام محدد CSS
+    const selector = finder.replace('Selector::', '');
+    selectors.push(selector);
+  } else if (finder.startsWith('SelectorAll::')) {
+    // استخدام محدد SelectorAll
+    const selector = finder.replace('SelectorAll::', '');
+    selectors.push(selector);
+  } else {
+    // محاولة استخدام المحدد كما هو
+    selectors.push(finder);
+    
+    // محاولة استنتاج أنواع أخرى من المحددات بناءً على النمط
+    if (finder.includes('[') && finder.includes(']')) {
+      // ربما محدد سمة
+      xpaths.push(`//*${finder}`);
+    } else if (!finder.includes(' ') && !finder.includes('>') && !finder.includes('+')) {
+      // ربما اسم علامة بسيط
+      xpaths.push(`//${finder}`);
+    }
+  }
+  
+  // محاولات اكتشاف مرنة إضافية - إضافة محددات آلية عامة
+  const generalFieldTypes = ['input', 'select', 'textarea', 'button'];
+  for (const type of generalFieldTypes) {
+    xpaths.push(`//${type}[contains(@name, "${finder}") or contains(@id, "${finder}") or contains(@placeholder, "${finder}")]`);
+  }
+  
+  // إضافة محددات أكثر ذكاءً استنادًا إلى أنماط الحقول المعروفة
+  if (finder.includes('phone') || finder.includes('mobile') || finder.includes('هاتف') || finder.includes('جوال')) {
+    selectors.push('input[type="tel"]');
+    selectors.push('input[name*="phone"]');
+    selectors.push('input[id*="phone"]');
+    selectors.push('input[placeholder*="هاتف"]');
+    selectors.push('input[placeholder*="جوال"]');
+    xpaths.push('//input[contains(@placeholder, "هاتف")]');
+    xpaths.push('//input[contains(@placeholder, "جوال")]');
+    xpaths.push('//label[contains(text(), "هاتف")]/following::input[1]');
+    xpaths.push('//label[contains(text(), "جوال")]/following::input[1]');
+  } else if (finder.includes('name') || finder.includes('اسم')) {
+    selectors.push('input[name*="name"]');
+    selectors.push('input[id*="name"]');
+    selectors.push('input[placeholder*="اسم"]');
+    xpaths.push('//input[contains(@placeholder, "اسم")]');
+    xpaths.push('//label[contains(text(), "اسم")]/following::input[1]');
+  } else if (finder.includes('city') || finder.includes('province') || finder.includes('مدينة') || finder.includes('محافظة')) {
+    selectors.push('select[name*="city"]');
+    selectors.push('select[id*="city"]');
+    selectors.push('select[name*="province"]');
+    selectors.push('select[id*="province"]');
+    selectors.push('select[placeholder*="مدينة"]');
+    selectors.push('select[placeholder*="محافظة"]');
+    xpaths.push('//select[contains(@name, "city") or contains(@name, "province")]');
+    xpaths.push('//label[contains(text(), "مدينة") or contains(text(), "محافظة")]/following::select[1]');
+  } else if (finder.includes('price') || finder.includes('amount') || finder.includes('cost') || finder.includes('سعر') || finder.includes('مبلغ')) {
+    selectors.push('input[type="number"]');
+    selectors.push('input[name*="price"]');
+    selectors.push('input[id*="price"]');
+    selectors.push('input[name*="amount"]');
+    selectors.push('input[id*="amount"]');
+    selectors.push('input[placeholder*="سعر"]');
+    selectors.push('input[placeholder*="مبلغ"]');
+    xpaths.push('//input[contains(@placeholder, "سعر") or contains(@placeholder, "مبلغ")]');
+    xpaths.push('//label[contains(text(), "سعر") or contains(text(), "مبلغ")]/following::input[1]');
+  }
+  
+  // خاص بالعراق - محددات إضافية للحقول العراقية الشائعة
+  if (finder.includes('code') || finder.includes('tracking') || finder.includes('رمز') || finder.includes('كود') || finder.includes('وصل')) {
+    selectors.push('input[name*="wasl"]');
+    selectors.push('input[id*="wasl"]');
+    selectors.push('input[placeholder*="رقم الوصل"]');
+    selectors.push('input[placeholder*="رقم البوليصة"]');
+    xpaths.push('//input[contains(@placeholder, "رقم") and contains(@placeholder, "وصل")]');
+    xpaths.push('//label[contains(text(), "رقم الوصل")]/following::input[1]');
+  }
+  
+  // بدء محاولات العثور على العنصر
+  let element = null;
+
+  // محاولة باستخدام محددات CSS أولاً
+  for (const selector of selectors) {
+    try {
+      console.log(`محاولة العثور على العنصر باستخدام المحدد CSS: ${selector}`);
+      const selectorElement = context 
+        ? await context.$(selector) 
+        : await page.$(selector);
+      
+      if (selectorElement) {
+        console.log(`تم العثور على العنصر باستخدام المحدد CSS: ${selector}`);
+        element = selectorElement;
+        break;
+      }
+    } catch (error) {
+      console.warn(`فشل في استخدام المحدد CSS '${selector}':`, error.message);
+    }
+  }
+
+  // إذا لم يتم العثور على العنصر، نحاول باستخدام XPath
+  if (!element) {
+    for (const xpath of xpaths) {
+      try {
+        console.log(`محاولة العثور على العنصر باستخدام XPath: ${xpath}`);
+        const [xpathElement] = context 
+          ? await context.$x(xpath) 
+          : await page.$x(xpath);
+        
+        if (xpathElement) {
+          console.log(`تم العثور على العنصر باستخدام XPath: ${xpath}`);
+          element = xpathElement;
+          break;
+        }
+      } catch (error) {
+        console.warn(`فشل في استخدام XPath '${xpath}':`, error.message);
+      }
+    }
+  }
+
+  return element;
+};
+
+/**
+ * دالة محسنة لملء حقل النموذج استنادًا إلى نوعه
+ */
+const fillFormField = async (page, element, value) => {
+  if (!element) return false;
+  
+  // الحصول على نوع العنصر
+  const tagName = await page.evaluate(el => el.tagName.toLowerCase(), element);
+  const type = await page.evaluate(el => el.type && el.type.toLowerCase(), element);
+  
+  console.log(`ملء العنصر من النوع ${tagName}${type ? '/' + type : ''} بالقيمة: ${value}`);
+  
+  if (tagName === 'select') {
+    // القائمة المنسدلة - استخدام استراتيجية متعددة
+    try {
+      // أولاً: محاولة اختيار الخيار مباشرة باستخدام الوظيفة المحسنة
+      const bestOption = await findBestSelectOption(page, element, value);
+      
+      if (bestOption) {
+        await page.evaluate((el, option) => {
+          el.value = option.value;
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }, element, bestOption);
+        
+        console.log(`تم اختيار "${bestOption.text}" (القيمة: ${bestOption.value}) من القائمة المنسدلة`);
+        return true;
+      }
+      
+      // ثانيًا: محاولة البحث عن النص المطابق في الخيارات المتاحة
+      const optionsSelected = await page.evaluate((el, val) => {
+        // البحث عن مطابقة نصية
+        for (let i = 0; i < el.options.length; i++) {
+          const optionText = el.options[i].text.trim().toLowerCase();
+          const optionValue = el.options[i].value.trim().toLowerCase();
+          const targetValue = val.trim().toLowerCase();
+          
+          // تجربة مطابقة دقيقة أولاً
+          if (optionText === targetValue || optionValue === targetValue) {
+            el.selectedIndex = i;
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            return { success: true, text: el.options[i].text, value: el.options[i].value };
+          }
+          
+          // ثم تجربة مطابقة جزئية
+          if (optionText.includes(targetValue) || targetValue.includes(optionText)) {
+            el.selectedIndex = i;
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            return { success: true, text: el.options[i].text, value: el.options[i].value };
+          }
+        }
+        
+        return { success: false };
+      }, element, value);
+      
+      if (optionsSelected.success) {
+        console.log(`تم اختيار "${optionsSelected.text}" (القيمة: ${optionsSelected.value}) من القائمة المنسدلة`);
+        return true;
+      }
+      
+      // ثالثًا: إذا لم تنجح المحاولات السابقة، انقر على القائمة وابحث عن الخيار في واجهة المستخدم
+      await element.click();
+      await page.waitForTimeout(500); // انتظار ظهور القائمة
+      
+      // محاولة النقر على خيار يحتوي على النص المطلوب
+      const optionXPath = `//option[contains(text(), "${value}")]|//li[contains(text(), "${value}")]`;
+      try {
+        const [option] = await page.$x(optionXPath);
+        if (option) {
+          await option.click();
+          console.log(`تم النقر على الخيار "${value}" من القائمة المنسدلة`);
+          return true;
+        }
+      } catch (error) {
+        console.warn('فشل في النقر على الخيار من القائمة المنسدلة:', error.message);
+      }
+      
+      // إذا وصلنا إلى هنا، فقد فشلت جميع المحاولات
+      console.warn(`لم يتم العثور على خيار مناسب للقيمة "${value}" في القائمة المنسدلة`);
+      return false;
+    } catch (error) {
+      console.error('فشل في التعامل مع القائمة المنسدلة:', error.message);
+      return false;
+    }
+  } else if (tagName === 'input' || tagName === 'textarea') {
+    // حقول الإدخال - استراتيجية محسنة
+    try {
+      // مسح القيمة الحالية أولاً
+      await page.evaluate(el => {
+        el.value = '';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }, element);
+      
+      // محاولة تعيين القيمة
+      if (type === 'checkbox' || type === 'radio') {
+        // خانات الاختيار والأزرار الإشعاعية
+        const shouldBeChecked = value === true || value === 'true' || value === '1' || value === 'on' || value === 'yes';
+        await page.evaluate((el, check) => {
+          if (el.checked !== check) {
+            el.click();
+          }
+        }, element, shouldBeChecked);
+      } else if (type === 'file') {
+        // حقول الملفات
+        // هنا يمكن إضافة معالجة تحميل الملفات إذا لزم الأمر
+        console.log('حقول الملفات غير مدعومة حاليًا');
+      } else {
+        // مدخلات النصوص والأرقام
+        // تنظيف القيمة وتنسيقها
+        let formattedValue = value;
+        if (type === 'tel' || type === 'phone') {
+          // تنسيق أرقام الهواتف للعراق
+          formattedValue = value.toString().replace(/\D/g, '');
+          if (formattedValue.startsWith('964')) {
+            formattedValue = `+${formattedValue}`;
+          } else if (formattedValue.startsWith('0')) {
+            formattedValue = `+964${formattedValue.substring(1)}`;
+          }
+        } else if (type === 'number' || type === 'currency') {
+          // تنسيق الأرقام
+          formattedValue = value.toString().replace(/[^\d.]/g, '');
+        }
+        
+        // إدخال النص بطريقة طبيعية مع تأخير
+        await element.type(formattedValue.toString(), { delay: 100 });
+        
+        // التأكد من تحديث القيمة وإطلاق الأحداث المناسبة
+        await page.evaluate(el => {
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }, element);
+      }
+      
+      console.log(`تم ملء الحقل بالقيمة: ${value}`);
+      return true;
+    } catch (error) {
+      console.error('فشل في ملء حقل الإدخال:', error.message);
+      return false;
+    }
+  } else if (tagName === 'button' || (tagName === 'input' && (type === 'button' || type === 'submit'))) {
+    // زر - قم بالنقر عليه
+    try {
+      await element.click();
+      console.log('تم النقر على الزر');
+      return true;
+    } catch (error) {
+      console.error('فشل في النقر على الزر:', error.message);
+      return false;
+    }
+  } else {
+    // أنواع أخرى من العناصر
+    try {
+      // محاولة النقر على العنصر كحل افتراضي
+      await element.click();
+      console.log(`تم النقر على عنصر من النوع ${tagName}`);
+      return true;
+    } catch (error) {
+      console.error(`فشل في التفاعل مع عنصر من النوع ${tagName}:`, error.message);
+      return false;
+    }
+  }
+};
+
 // مسار لتنفيذ السيناريو باستخدام Puppeteer
 app.post('/api/automate', async (req, res) => {
   // تعيين الرؤوس مع التحقق من صحة الأصل
@@ -385,7 +764,7 @@ app.post('/api/automate', async (req, res) => {
     return res.status(403).json({ error: 'CORS policy violation: Origin not allowed' });
   }
   
-  const { projectUrl, actions } = req.body;
+  const { projectUrl, actions, useBrowserData } = req.body;
   
   if (!projectUrl || !actions || !Array.isArray(actions)) {
     return res.status(400).json({ 
@@ -396,6 +775,7 @@ app.post('/api/automate', async (req, res) => {
 
   console.log(`بدء أتمتة العملية على: ${projectUrl}`);
   console.log(`عدد الإجراءات: ${actions.length}`);
+  console.log(`استخدام بيانات المتصفح: ${useBrowserData ? 'نعم' : 'لا'}`);
 
   // التحقق من تثبيت Puppeteer قبل المتابعة
   const puppeteerReady = await checkPuppeteer();
@@ -414,7 +794,7 @@ app.post('/api/automate', async (req, res) => {
       fs.mkdirSync(screenshotDir, { recursive: true });
     }
 
-    // بدء متصفح جديد
+    // بدء متصفح جديد بإعدادات محسنة
     browser = await puppeteer.launch({
       headless: 'new', // استخدام وضع headless الجديد لتحسين الأداء والتوافق
       args: [
@@ -422,7 +802,10 @@ app.post('/api/automate', async (req, res) => {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
-        '--disable-gpu'
+        '--disable-gpu',
+        '--window-size=1366,768',
+        '--disable-web-security', // للمساعدة في تجاوز قيود CORS
+        '--allow-running-insecure-content' // للسماح بالمحتوى المختلط
       ],
       defaultViewport: { width: 1366, height: 768 }
     });
@@ -456,8 +839,39 @@ app.post('/api/automate', async (req, res) => {
       );
     });
     
-    // الانتقال إلى الصفحة المطلوبة
+    // تعيين رؤوس إضافية
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    });
+    
+    // الانتقال إلى الصفحة المطلوبة مع زيادة المهلة
+    console.log(`الانتقال إلى: ${projectUrl}`);
     await page.goto(projectUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+    console.log(`تم تحميل الصفحة: ${projectUrl}`);
+    
+    // انتظار قليلاً للتأكد من تحميل الصفحة بالكامل
+    await page.waitForTimeout(2000);
+    
+    // إضافة معلومات تشخيصية عن الصفحة
+    const pageTitle = await page.title();
+    const pageUrl = page.url();
+    console.log(`عنوان الصفحة: ${pageTitle}`);
+    console.log(`URL الفعلي: ${pageUrl}`);
+    
+    // الكشف عن الإطارات في الصفحة
+    const framesInfo = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('iframe')).map(iframe => ({
+        id: iframe.id || 'بدون معرف',
+        name: iframe.name || 'بدون اسم',
+        src: iframe.src || 'بدون مصدر'
+      }));
+    });
+    
+    if (framesInfo.length > 0) {
+      console.log(`تم اكتشاف ${framesInfo.length} إطار في الصفحة:`, framesInfo);
+    }
     
     // تنفيذ كل إجراء واحد تلو الآخر
     const results = [];
@@ -467,66 +881,69 @@ app.post('/api/automate', async (req, res) => {
         
         // انتظار إذا تم تحديد تأخير
         if (delay && !isNaN(parseInt(delay))) {
-          await page.waitForTimeout(parseInt(delay) * 1000);
+          const delayMs = parseInt(delay) * 1000;
+          console.log(`انتظار ${delayMs}ms قبل تنفيذ الإجراء التالي`);
+          await page.waitForTimeout(delayMs);
         }
         
         // تسجيل الإجراء الحالي
         console.log(`تنفيذ الإجراء: ${name || 'بلا اسم'} (${finder})`);
         
-        // تحديد طريقة العثور على العنصر
-        let element;
-        if (finder.startsWith('//') || finder.startsWith('/html')) {
-          // استخدام XPath
-          await page.waitForXPath(finder, { timeout: 5000 });
-          const elements = await page.$x(finder);
-          if (elements.length > 0) element = elements[0];
-        } else if (finder.startsWith('#')) {
-          // استخدام معرف
-          await page.waitForSelector(finder, { timeout: 5000 });
-          element = await page.$(finder);
-        } else if (finder.startsWith('Id::')) {
-          // استخدام معرف بتنسيق مختلف
-          const id = finder.replace('Id::', '');
-          await page.waitForSelector(`#${id}`, { timeout: 5000 });
-          element = await page.$(`#${id}`);
-        } else if (finder.startsWith('ClassName::')) {
-          // استخدام اسم الصف
-          const className = finder.replace('ClassName::', '');
-          const classSelector = '.' + className.split(' ').join('.');
-          await page.waitForSelector(classSelector, { timeout: 5000 });
-          element = await page.$(classSelector);
-        } else if (finder.startsWith('Name::')) {
-          // استخدام الاسم
-          const name = finder.replace('Name::', '');
-          await page.waitForSelector(`[name="${name}"]`, { timeout: 5000 });
-          element = await page.$(`[name="${name}"]`);
-        } else if (finder.startsWith('TagName::')) {
-          // استخدام اسم العلامة
-          const tagName = finder.replace('TagName::', '');
-          await page.waitForSelector(tagName, { timeout: 5000 });
-          element = await page.$(tagName);
-        } else if (finder.startsWith('Selector::')) {
-          // استخدام محدد CSS
-          const selector = finder.replace('Selector::', '');
-          await page.waitForSelector(selector, { timeout: 5000 });
-          element = await page.$(selector);
-        } else if (finder.startsWith('SelectorAll::')) {
-          // استخدام محدد SelectorAll
-          const selector = finder.replace('SelectorAll::', '');
-          await page.waitForSelector(selector, { timeout: 5000 });
-          const elements = await page.$$(selector);
-          if (elements.length > 0) element = elements[0];
-        } else {
-          // محاولة استخدام المحدد كما هو
-          await page.waitForSelector(finder, { timeout: 5000 });
-          element = await page.$(finder);
+        // بحث متعدد الاستراتيجيات عن العنصر
+        let element = await findElement(page, finder);
+        
+        // إذا لم يتم العثور على العنصر، نحاول البحث في الإطارات
+        if (!element && framesInfo.length > 0) {
+          console.log(`لم يتم العثور على العنصر في الصفحة الرئيسية. محاولة البحث في الإطارات...`);
+          
+          const frames = page.frames();
+          for (const frame of frames) {
+            if (frame !== page.mainFrame()) {
+              console.log(`البحث في الإطار: ${frame.name() || 'بدون اسم'}`);
+              try {
+                element = await findElement(frame, finder);
+                if (element) {
+                  console.log(`تم العثور على العنصر في الإطار!`);
+                  break;
+                }
+              } catch (frameError) {
+                console.warn(`خطأ أثناء البحث في الإطار:`, frameError.message);
+              }
+            }
+          }
+        }
+        
+        if (!element) {
+          // إضافة استراتيجية إضافية: محاولة انتظار ظهور العنصر
+          console.log(`لم يتم العثور على العنصر. محاولة الانتظار لمدة 5 ثوانٍ...`);
+          
+          try {
+            await page.waitForFunction((finderStr) => {
+              // تحويل المحدد إلى استعلام DOM مناسب
+              let selector = finderStr;
+              if (finderStr.startsWith('Id::')) selector = `#${finderStr.replace('Id::', '')}`;
+              else if (finderStr.startsWith('ClassName::')) selector = `.${finderStr.replace('ClassName::', '').split(' ').join('.')}`;
+              else if (finderStr.startsWith('Name::')) selector = `[name="${finderStr.replace('Name::', '')}"]`;
+              else if (finderStr.startsWith('TagName::')) selector = finderStr.replace('TagName::', '');
+              else if (finderStr.startsWith('Selector::')) selector = finderStr.replace('Selector::', '');
+              
+              // محاولة العثور على العنصر
+              const el = document.querySelector(selector);
+              return !!el;
+            }, { timeout: 5000 }, finder);
+            
+            // محاولة أخرى للعثور على العنصر بعد الانتظار
+            element = await findElement(page, finder);
+          } catch (waitError) {
+            console.warn(`انتهت مهلة الانتظار للعنصر:`, waitError.message);
+          }
         }
         
         if (!element) {
           results.push({
             name: name || 'بلا اسم',
             success: false,
-            message: `لم يتم العثور على العنصر: ${finder}`
+            message: `لم يتم العثور على العنصر: ${finder} بعد محاولات متعددة`
           });
           continue;
         }
@@ -544,42 +961,26 @@ app.post('/api/automate', async (req, res) => {
             el.style.backgroundColor = originalBackground;
             el.style.border = originalBorder;
           }, 500);
+          
+          // تمرير العنصر إلى عرض المستخدم
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, element);
         
-        // الحصول على نوع العنصر
-        const tagName = await page.evaluate(el => el.tagName.toLowerCase(), element);
+        // انتظار لحظة قبل التفاعل مع العنصر
+        await page.waitForTimeout(500);
         
-        // التعامل مع العنصر حسب نوعه
-        if (tagName === 'select') {
-          // القائمة المنسدلة
-          await page.evaluate((el, val) => {
-            // البحث عن الخيار بالنص أو القيمة
-            for (let i = 0; i < el.options.length; i++) {
-              if (el.options[i].text === val || el.options[i].value === val) {
-                el.selectedIndex = i;
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-                return true;
-              }
-            }
-            return false;
-          }, element, value);
-        } else if (tagName === 'input' || tagName === 'textarea') {
-          // حقول الإدخال
-          await element.click({ clickCount: 3 }); // تحديد النص الحالي
-          await element.type(value, { delay: 100 }); // كتابة ببطء لتقليد سلوك المستخدم
-        } else {
-          // أزرار أو عناصر أخرى
-          await element.click();
-        }
+        // استخدام الدالة المحسنة لملء الحقل
+        const success = await fillFormField(page, element, value);
+        
+        // تخزين نتيجة الإجراء
+        results.push({
+          name: name || 'بلا اسم',
+          success: success,
+          message: success ? `تم تنفيذ الإجراء بنجاح` : `فشل ملء الحقل بالقيمة: ${value}`
+        });
         
         // إضافة تأخير صغير بعد كل إجراء لمحاكاة تفاعل المستخدم
         await page.waitForTimeout(500);
-        
-        results.push({
-          name: name || 'بلا اسم',
-          success: true,
-          message: `تم تنفيذ الإجراء بنجاح`
-        });
       } catch (error) {
         console.error(`خطأ في تنفيذ الإجراء:`, error);
         results.push({
@@ -590,12 +991,87 @@ app.post('/api/automate', async (req, res) => {
       }
     }
     
+    // محاولة للنقر تلقائيًا على زر الحفظ
+    try {
+      console.log(`محاولة البحث عن زر الحفظ تلقائيًا...`);
+      
+      // قائمة محددات أزرار الحفظ المحتملة
+      const saveButtonSelectors = [
+        'button[type="submit"]',
+        'input[type="submit"]',
+        'button.save',
+        'button.submit',
+        'button:contains("حفظ")',
+        'button:contains("إرسال")',
+        'button:contains("تأكيد")',
+        '[type="submit"]',
+        '.btn-primary'
+      ];
+      
+      const saveButtonXPaths = [
+        '//button[contains(text(), "حفظ") or contains(text(), "خزن")]',
+        '//button[contains(text(), "إرسال") or contains(text(), "ارسال")]',
+        '//button[contains(text(), "تأكيد") or contains(text(), "أكد")]',
+        '//input[@type="submit"]',
+        '//button[@type="submit"]'
+      ];
+      
+      let saveButton = null;
+      
+      // محاولة العثور على زر الحفظ باستخدام محددات CSS
+      for (const selector of saveButtonSelectors) {
+        try {
+          const button = await page.$(selector);
+          if (button) {
+            console.log(`تم العثور على زر الحفظ باستخدام المحدد: ${selector}`);
+            saveButton = button;
+            break;
+          }
+        } catch (e) {
+          // استمرار إلى المحاولة التالية
+        }
+      }
+      
+      // إذا لم يتم العثور على الزر، حاول باستخدام XPath
+      if (!saveButton) {
+        for (const xpath of saveButtonXPaths) {
+          try {
+            const [button] = await page.$x(xpath);
+            if (button) {
+              console.log(`تم العثور على زر الحفظ باستخدام XPath: ${xpath}`);
+              saveButton = button;
+              break;
+            }
+          } catch (e) {
+            // استمرار إلى المحاولة التالية
+          }
+        }
+      }
+      
+      // إذا تم العثور على زر الحفظ، انقر عليه
+      if (saveButton) {
+        console.log(`تم العثور على زر الحفظ، جاري النقر عليه...`);
+        await saveButton.click();
+        await page.waitForTimeout(2000); // انتظار لرؤية نتيجة النقر
+        
+        results.push({
+          name: 'النقر التلقائي على زر الحفظ',
+          success: true,
+          message: 'تم النقر على زر الحفظ تلقائيًا'
+        });
+      } else {
+        console.log(`لم يتم العثور على زر حفظ يمكن النقر عليه تلقائيًا`);
+      }
+    } catch (saveButtonError) {
+      console.warn(`فشل في محاولة النقر التلقائي على زر الحفظ:`, saveButtonError.message);
+    }
+    
     // تأخير قبل الإغلاق للتمكن من رؤية النتائج
     await page.waitForTimeout(2000);
     
     // التقاط لقطة شاشة
     const screenshotPath = path.join(screenshotDir, `automation_${Date.now()}.png`);
-    await page.screenshot({ path: screenshotPath, type: 'png' });
+    await page.screenshot({ path: screenshotPath, type: 'png', fullPage: true });
     const screenshot = fs.readFileSync(screenshotPath).toString('base64');
     
     // إغلاق المتصفح
@@ -605,7 +1081,12 @@ app.post('/api/automate', async (req, res) => {
       success: true,
       message: 'تم تنفيذ العمليات بنجاح',
       results,
-      screenshot: `data:image/png;base64,${screenshot}`
+      screenshot: `data:image/png;base64,${screenshot}`,
+      pageInfo: {
+        title: pageTitle,
+        url: pageUrl,
+        frames: framesInfo.length
+      }
     });
   } catch (error) {
     console.error('خطأ في تنفيذ الأتمتة:', error);

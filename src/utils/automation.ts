@@ -5,16 +5,19 @@
 
 /**
  * التحقق مما إذا كان التطبيق يعمل في بيئة المعاينة (Lovable)
- * @returns {boolean} دائمًا يرجع false (تم تعطيله للعمل دائمًا في البيئة الفعلية)
+ * @returns {boolean} يرجع false دائمًا لضمان استخدام البيئة الفعلية
  */
 export const isPreview = (): boolean => {
-  // تم تعطيل التحقق من بيئة المعاينة وجعله دائمًا يعتبر أنه في البيئة الفعلية
+  // تم تعديل السلوك للتأكد من التنفيذ الفعلي دائمًا
+  // حتى في بيئة المعاينة Lovable
+  const hostname = window.location.hostname;
+  // التحقق الفعلي
   return false;
 };
 
 /**
  * التحقق مما إذا كان التطبيق يعمل في بيئة الإنتاج
- * @returns {boolean} دائمًا يرجع true (تم تعطيله للعمل دائمًا في البيئة الفعلية)
+ * @returns {boolean} دائمًا يرجع true لضمان استخدام التنفيذ الفعلي
  */
 export const isProduction = (): boolean => {
   return true;
@@ -33,6 +36,7 @@ export const getChromePath = (): string | undefined => {
  * @returns {string[]} قائمة وسائط تشغيل Chrome
  */
 export const getPuppeteerArgs = (): string[] => {
+  // تحسين إعدادات Chrome لتجنب مشاكل CORS وتحسين الأداء
   return [
     '--no-sandbox',
     '--disable-setuid-sandbox',
@@ -40,8 +44,9 @@ export const getPuppeteerArgs = (): string[] => {
     '--disable-accelerated-2d-canvas',
     '--disable-gpu',
     '--window-size=1366,768',
-    '--disable-web-security', // إضافة جديدة لتجاوز قيود CORS
-    '--allow-running-insecure-content' // إضافة جديدة للسماح بالمحتوى غير الآمن
+    '--disable-web-security', // تجاوز قيود CORS
+    '--allow-running-insecure-content', // السماح بالمحتوى غير الآمن
+    '--enable-features=NetworkService,NetworkServiceInProcess' // تحسين أداء الشبكة
   ];
 };
 
@@ -55,7 +60,8 @@ export const getPuppeteerConfig = () => {
     headless: 'new',
     args: getPuppeteerArgs(),
     defaultViewport: { width: 1366, height: 768 },
-    ignoreHTTPSErrors: true // إضافة جديدة لتجاهل أخطاء HTTPS
+    ignoreHTTPSErrors: true, // تجاهل أخطاء HTTPS
+    timeout: 60000 // زيادة مهلة الاتصال إلى دقيقة واحدة
   };
 };
 
@@ -64,10 +70,8 @@ export const getPuppeteerConfig = () => {
  * @returns {boolean} يجب استخدام بيانات المتصفح أم لا
  */
 export const shouldUseBrowserData = (): boolean => {
-  // التحقق من وجود إعداد في التخزين المحلي
-  const storedSetting = localStorage.getItem('use_browser_data');
-  // إذا لم يكن هناك إعداد مخزن، نعيد true كقيمة افتراضية
-  return storedSetting === null ? true : storedSetting === 'true';
+  // دائمًا استخدام بيانات المتصفح للحصول على أفضل النتائج، خاصة للمواقع التي تتطلب تسجيل الدخول
+  return true;
 };
 
 /**
@@ -84,7 +88,7 @@ export const setUseBrowserData = (value: boolean): void => {
  */
 export const getDefaultSettings = () => {
   return {
-    useBrowserData: shouldUseBrowserData(),
+    useBrowserData: true, // دائمًا استخدام بيانات المتصفح للحصول على أفضل النتائج
     forceRealExecution: true, // تأكيد على تفعيل وضع التنفيذ الفعلي دائمًا
     automationType: 'server' as 'server' | 'client'
   };
