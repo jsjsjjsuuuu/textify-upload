@@ -44,8 +44,8 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
   const checkConnectionStatus = async () => {
     setIsTestingConnection(true);
     try {
-      // محاولة التحقق من الاتصال بالخادم
-      const result = await AutomationService.checkServerExistence(false);
+      // محاولة التحقق من الاتصال بالخادم - تصحيح: إزالة القيمة المنطقية وتمرير فارغ
+      const result = await AutomationService.checkServerExistence();
       setConnectionStatus(result ? 'success' : 'error');
       
       if (result) {
@@ -76,7 +76,8 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     // التحقق من حالة الاتصال بالخادم أولاً
     setIsTestingConnection(true);
     try {
-      const isConnected = await AutomationService.checkServerExistence(false);
+      // تصحيح: إزالة القيمة المنطقية وتمرير فارغ
+      const isConnected = await AutomationService.checkServerExistence();
       setConnectionStatus(isConnected ? 'success' : 'error');
       
       if (!isConnected) {
