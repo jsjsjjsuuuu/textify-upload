@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
@@ -346,9 +345,9 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
         
         {/* تبديل المتصفح */}
         <BrowserToggle
-          useRealBrowser={useRealBrowser}
-          isRunning={isRunning}
+          useBrowserData={useRealBrowser}
           onToggle={setUseRealBrowser}
+          isRunning={isRunning}
         />
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4">

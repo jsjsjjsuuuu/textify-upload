@@ -8,9 +8,10 @@ import { HelpCircle } from "lucide-react";
 interface BrowserToggleProps {
   useBrowserData: boolean;
   onToggle: (value: boolean) => void;
+  isRunning?: boolean;
 }
 
-const BrowserToggle: React.FC<BrowserToggleProps> = ({ useBrowserData, onToggle }) => {
+const BrowserToggle: React.FC<BrowserToggleProps> = ({ useBrowserData, onToggle, isRunning }) => {
   // تأكد من أن الحالة الافتراضية هي true دائمًا
   const [isRealBrowser, setIsRealBrowser] = useState(true);
   

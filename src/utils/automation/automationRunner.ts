@@ -47,8 +47,8 @@ export class AutomationRunner {
             const success = Math.random() > 0.2; // 80% نسبة نجاح
             return {
               index,
-              action: action.type,
-              selector: action.selector || '',
+              action: action.type || action.name || '',
+              selector: action.selector || action.finder || '',
               value: action.value || '',
               success,
               error: success ? null : 'خطأ محاكاة: لم يتم العثور على العنصر',
@@ -114,7 +114,7 @@ export class AutomationRunner {
       };
       
       // إعداد معالجة المهلة
-      const timeoutSignal = createTimeoutSignal(120000); // زيادة المهلة إلى دقيقتين
+      const signal = createTimeoutSignal(120000); // زيادة المهلة إلى دقيقتين
       
       // إعداد الرؤوس
       const headers = createBaseHeaders(currentIp);
@@ -142,7 +142,7 @@ export class AutomationRunner {
             mode: 'cors',
             credentials: 'omit',
             body: JSON.stringify(enhancedConfig),
-            signal: timeoutSignal
+            signal
           });
           
           console.log(`استجابة الخادم: ${response.status} ${response.statusText}`);
@@ -157,7 +157,11 @@ export class AutomationRunner {
           console.log("نتيجة تنفيذ الأتمتة:", result);
           
           // تحديث حالة الاتصال
-          updateConnectionStatus(true);
+          updateConnectionStatus({
+            isConnected: true,
+            message: "تم الاتصال بنجاح",
+            timestamp: new Date().toISOString()
+          });
           
           // تسجيل نتائج الإجراءات
           if (result.results && Array.isArray(result.results)) {
@@ -215,7 +219,11 @@ export class AutomationRunner {
       console.error("خطأ في تنفيذ الأتمتة:", error);
       
       // تحديث حالة الاتصال
-      updateConnectionStatus(false);
+      updateConnectionStatus({
+        isConnected: false,
+        message: "فشل الاتصال",
+        timestamp: new Date().toISOString()
+      });
       
       // إنشاء رسالة خطأ مفصلة
       let errorMessage = "حدث خطأ أثناء تنفيذ الأتمتة";
@@ -306,4 +314,3 @@ export class AutomationRunner {
     }
   }
 }
-

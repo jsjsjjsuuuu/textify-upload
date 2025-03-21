@@ -98,9 +98,10 @@ export const setAutomationServerUrl = (url: string): void => {
 /**
  * إعادة تعيين عنوان URL لخادم الأتمتة إلى القيمة الافتراضية
  */
-export const resetAutomationServerUrl = (): void => {
+export const resetAutomationServerUrl = (): string => {
   localStorage.removeItem('automation_server_url');
   console.log(`تم إعادة تعيين عنوان URL لخادم الأتمتة إلى القيمة الافتراضية: ${DEFAULT_SERVER_URL}`);
+  return DEFAULT_SERVER_URL;
 };
 
 /**
@@ -159,25 +160,28 @@ export const getConnectionTimeout = (): number => {
 /**
  * إنشاء الرؤوس الأساسية للطلبات
  */
-export const createBaseHeaders = (): HeadersInit => {
-  return {
+export const createBaseHeaders = (ipAddress?: string): HeadersInit => {
+  const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'X-Client-Id': 'web-client',
     'Cache-Control': 'no-cache, no-store',
     'Pragma': 'no-cache'
   };
+
+  if (ipAddress) {
+    headers['X-Forwarded-For'] = ipAddress;
+  }
+
+  return headers;
 };
 
 /**
  * إنشاء إشارة المهلة
  */
-export const createTimeoutSignal = (timeoutMs: number): { signal: AbortSignal; clear: () => void } => {
+export const createTimeoutSignal = (timeoutMs: number): AbortSignal => {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  return {
-    signal: controller.signal,
-    clear: () => clearTimeout(timeoutId)
-  };
+  setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
 };
 
 /**
@@ -230,7 +234,7 @@ export const createFetchOptions = (
   body: object | null = null,
   timeoutMs: number = 10000
 ): RequestInit => {
-  const { signal, clear } = createTimeoutSignal(timeoutMs);
+  const signal = createTimeoutSignal(timeoutMs);
   
   const options: RequestInit = {
     method,
@@ -253,7 +257,7 @@ export const checkConnection = async (): Promise<ConnectionStatus> => {
   
   // تعيين مهلة الاتصال بناءً على خادم الاتصال
   const timeoutMs = getConnectionTimeout();
-  const { signal, clear } = createTimeoutSignal(timeoutMs);
+  const signal = createTimeoutSignal(timeoutMs);
   
   try {
     const startTime = Date.now();
@@ -263,9 +267,6 @@ export const checkConnection = async (): Promise<ConnectionStatus> => {
       headers: createBaseHeaders(),
       signal
     });
-    
-    // إلغاء مؤقت المهلة
-    clear();
     
     if (!response.ok) {
       throw new Error(`فشل الطلب مع رمز الحالة: ${response.status}`);
@@ -285,9 +286,6 @@ export const checkConnection = async (): Promise<ConnectionStatus> => {
     updateConnectionStatus(connectionStatus);
     return connectionStatus;
   } catch (error) {
-    // إلغاء مؤقت المهلة في حالة حدوث خطأ
-    clear();
-    
     console.error('فشل في الاتصال بخادم الأتمتة:', error);
     
     // زيادة عدد محاولات إعادة الاتصال

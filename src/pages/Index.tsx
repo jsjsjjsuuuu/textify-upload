@@ -1,175 +1,80 @@
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { isConnected } from '@/utils/automationServerUrl';
+import { toast } from 'sonner';
+import ImageCard from '@/components/ImageCard';
+import BackgroundPattern from '@/components/BackgroundPattern';
 
-import BackgroundPattern from "@/components/BackgroundPattern";
-import ImageUploader from "@/components/ImageUploader";
-import AppHeader from "@/components/AppHeader";
-import ImagePreviewContainer from "@/components/ImageViewer/ImagePreviewContainer";
-import { useImageProcessing } from "@/hooks/useImageProcessing";
-import { formatDate } from "@/utils/dateFormatter";
-import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Server, Wifi, WifiOff, AlertCircle } from "lucide-react";
-import { AutomationService } from "@/utils/automationService";
-import { isConnected, getLastConnectionStatus } from "@/utils/automationServerUrl";
-import SimpleAutomationSection from "@/components/SimpleAutomationSection";
-
-const Index = () => {
-  const {
-    images,
-    isProcessing,
-    processingProgress,
-    isSubmitting,
-    useGemini,
-    bookmarkletStats,
-    handleFileChange,
-    handleTextChange,
-    handleDelete,
-    handleSubmitToApi
-  } = useImageProcessing();
+const Index: React.FC = () => {
+  const [showConnectionWarning, setShowConnectionWarning] = useState(false);
   
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const [serverConnected, setServerConnected] = useState<boolean | null>(null);
-  const [isCheckingConnection, setIsCheckingConnection] = useState(false);
-  
-  // وظيفة wrapper لمعالجة توقيع الدالة للحفاظ على التوافق مع واجهة ImagePreviewContainer
-  const handleDeleteImage = (id: string) => {
-    handleDelete(id);
-  };
-
-  // تعديل وظيفة wrapper للإرسال لتتوافق مع واجهة ImagePreviewContainer
-  const handleSubmit = (id: string) => {
-    // البحث عن الصورة المطلوبة باستخدام المعرف
-    const image = images.find(img => img.id === id);
-    if (image) {
-      handleSubmitToApi(id, image);
-    }
-  };
-
-  // التحقق من حالة الاتصال بالخادم عند تحميل الصفحة
   useEffect(() => {
-    checkServerConnection();
-  }, []);
-
-  // التحقق من حالة الاتصال بالخادم
-  const checkServerConnection = async () => {
-    setIsCheckingConnection(true);
-    try {
-      // التحقق من الحالة المحفوظة أولاً
-      const status = getLastConnectionStatus();
-      setServerConnected(status.isConnected);
-      
-      // ثم التحقق من الحالة الفعلية
-      const connected = await isConnected(false);
-      setServerConnected(connected);
-      
-      if (connected) {
-        toast({
-          title: "تم الاتصال بالخادم",
-          description: "تم الاتصال بخادم الأتمتة بنجاح",
-        });
-      } else {
-        toast({
-          title: "تعذر الاتصال بالخادم",
-          description: "يرجى التحقق من إعدادات الخادم",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("خطأ في التحقق من حالة الخادم:", error);
-      setServerConnected(false);
-      
-      toast({
-        title: "خطأ في الاتصال",
-        description: error instanceof Error ? error.message : "حدث خطأ غير معروف",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCheckingConnection(false);
+    // التحقق من حالة الاتصال عند تحميل الصفحة
+    const isServerConnected = isConnected();
+    setShowConnectionWarning(!isServerConnected);
+    
+    if (!isServerConnected) {
+      toast.warning(
+        "لم يتم الاتصال بخادم الأتمتة بعد",
+        {
+          description: "قد لا تعمل بعض ميزات الأتمتة. يرجى التحقق من الاتصال في إعدادات الخادم.",
+          duration: 8000,
+        }
+      );
     }
-  };
-
-  // الانتقال إلى صفحة إعدادات الخادم
-  const goToServerSettings = () => {
-    navigate("/server-settings");
-  };
+  }, []);
+  
+  const cards = [
+    {
+      title: "محدد العناصر",
+      description: "إنشاء بوكماركلت مخصص لتحديد العناصر والتفاعل معها على أي صفحة ويب.",
+      image: "/element-finder.png",
+      href: "/element-finder",
+    },
+    {
+      title: "مولد البوكماركلت",
+      description: "إنشاء بوكماركلت لتنفيذ إجراءات محددة على أي صفحة ويب.",
+      image: "/bookmarklet-generator.png",
+      href: "/bookmarklet-generator",
+    },
+    {
+      title: "إعدادات الخادم",
+      description: "تكوين عنوان URL لخادم الأتمتة وإدارة إعدادات الاتصال.",
+      image: "/server-settings.png",
+      href: "/server-settings",
+    },
+  ];
 
   return (
-    <div className="relative min-h-screen pb-20">
+    <div className="relative flex flex-col min-h-screen">
       <BackgroundPattern />
-
-      <div className="container px-4 sm:px-6 py-4 sm:py-6 mx-auto max-w-5xl">
-        <AppHeader />
-
-        <div className="flex flex-col items-center justify-center pt-4">
-          <div className="w-full flex justify-center mx-auto">
-            <ImageUploader 
-              isProcessing={isProcessing}
-              processingProgress={processingProgress}
-              useGemini={useGemini}
-              onFileChange={handleFileChange}
+      <div className="container mx-auto px-4 py-10 z-10">
+        <h1 className="text-3xl font-semibold text-center mb-8">
+          مرحبا بك في أدوات الأتمتة
+        </h1>
+        {showConnectionWarning && (
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-6" role="alert">
+            <strong className="font-bold">تحذير:</strong>
+            <span className="block sm:inline"> لم يتم الاتصال بخادم الأتمتة بعد. قد لا تعمل بعض الميزات.</span>
+            <Link to="/server-settings">
+              <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
+                <svg className="fill-current h-6 w-6 text-yellow-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
+              </span>
+            </Link>
+          </div>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {cards.map((card, index) => (
+            <ImageCard
+              key={index}
+              title={card.title}
+              description={card.description}
+              image={card.image}
+              href={card.href}
             />
-          </div>
-
-          {/* شريط حالة الاتصال */}
-          <div className="w-full mt-4 mb-2">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                {serverConnected === true ? (
-                  <Wifi className="h-5 w-5 text-green-500" />
-                ) : serverConnected === false ? (
-                  <WifiOff className="h-5 w-5 text-red-500" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-yellow-500" />
-                )}
-                
-                <span className="text-sm font-medium">
-                  {serverConnected === true
-                    ? "متصل بخادم الأتمتة"
-                    : serverConnected === false
-                    ? "غير متصل بخادم الأتمتة"
-                    : "جاري التحقق من حالة الاتصال..."}
-                </span>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  disabled={isCheckingConnection}
-                  onClick={checkServerConnection}
-                >
-                  فحص الاتصال
-                </Button>
-                
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  onClick={goToServerSettings}
-                >
-                  <Server className="h-4 w-4 mr-1" />
-                  إعدادات الخادم
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* إضافة قسم الأتمتة المبسط */}
-          <div className="w-full">
-            <SimpleAutomationSection />
-          </div>
-
-          <div className="w-full mt-8">
-            <ImagePreviewContainer 
-              images={images}
-              isSubmitting={isSubmitting}
-              onTextChange={handleTextChange}
-              onDelete={handleDeleteImage}
-              onSubmit={handleSubmit}
-              formatDate={formatDate}
-            />
-          </div>
+          ))}
         </div>
       </div>
     </div>
