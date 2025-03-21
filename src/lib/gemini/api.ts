@@ -19,8 +19,8 @@ export async function extractDataWithGemini({
   temperature = 0.2,
   modelVersion = 'gemini-2.0-flash',
   enhancedExtraction = true,
-  maxRetries = 3,
-  retryDelayMs = 500
+  maxRetries = 5,
+  retryDelayMs = 2000
 }: GeminiExtractParams): Promise<ApiResult> {
   if (!apiKey) {
     console.error("Gemini API Key is missing");
@@ -78,7 +78,7 @@ export async function extractDataWithGemini({
     
     console.log("Sending request to Gemini API endpoint:", endpoint);
     
-    // إنشاء خيارات الطلب مع رؤوس مخصصة
+    // إنشاء خيارات الطلب مع رؤوس مخصصة ومهلة زمنية أطول
     const fetchOptions = createFetchOptions(
       "POST", 
       requestBody, 
@@ -88,7 +88,7 @@ export async function extractDataWithGemini({
       }
     );
     
-    // استخدام fetchWithRetry مع محاولات أكثر
+    // استخدام fetchWithRetry مع محاولات أكثر ومهلة زمنية أطول لكل محاولة
     const response = await fetchWithRetry(
       `${endpoint}?key=${apiKey}`, 
       fetchOptions, 
@@ -158,9 +158,12 @@ export async function extractDataWithGemini({
     console.error("خطأ عند استخدام Gemini API:", error);
     const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
     
-    // تحسين رسائل الخطأ
+    // تحسين رسائل الخطأ وتوفير رسائل أكثر تفصيلاً
     let userFriendlyMessage = `حدث خطأ أثناء معالجة الطلب: ${errorMessage}`;
-    if (errorMessage.includes('Failed to fetch')) {
+    
+    if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError') || errorMessage.includes('AbortError')) {
+      userFriendlyMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى التحقق من اتصال الإنترنت الخاص بك والمحاولة مرة أخرى لاحقًا.';
+    } else if (errorMessage.includes('Failed to fetch')) {
       userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN إذا كنت تواجه قيود جغرافية.';
     } else if (errorMessage.includes('CORS')) {
       userFriendlyMessage = 'تم منع الطلب بسبب قيود CORS. حاول استخدام الموقع الرئيسي بدلاً من بيئة المعاينة.';
@@ -187,7 +190,7 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
   try {
     const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
     
-    // إنشاء خيارات الطلب مع رؤوس مخصصة
+    // إنشاء خيارات الطلب مع رؤوس مخصصة ومهلة زمنية أطول
     const fetchOptions = createFetchOptions(
       "POST", 
       {
@@ -209,8 +212,8 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
       }
     );
     
-    // استخدام fetchWithRetry بدلاً من fetch العادي
-    const response = await fetchWithRetry(`${endpoint}?key=${apiKey}`, fetchOptions, 3);
+    // استخدام fetchWithRetry بدلاً من fetch العادي مع محاولات أكثر
+    const response = await fetchWithRetry(`${endpoint}?key=${apiKey}`, fetchOptions, 5, 2000);
 
     return {
       success: true,
@@ -221,7 +224,10 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
     const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
     
     let userFriendlyMessage = `حدث خطأ أثناء اختبار اتصال Gemini API: ${errorMessage}`;
-    if (errorMessage.includes('Failed to fetch')) {
+    
+    if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
+      userFriendlyMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى المحاولة مرة أخرى لاحقًا.';
+    } else if (errorMessage.includes('Failed to fetch')) {
       userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN.';
     }
     

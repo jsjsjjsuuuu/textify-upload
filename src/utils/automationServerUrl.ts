@@ -57,10 +57,11 @@ export const isPreviewEnvironment = (): boolean => {
 
 /**
  * الحصول على مهلة الاتصال
+ * تم زيادة المهلة لتجنب مشكلة signal timed out
  */
 export const getConnectionTimeout = (): number => {
-  // مهلة أقصر في بيئة المعاينة
-  return isPreviewEnvironment() ? 5000 : 10000;
+  // مهلة أطول لتجنب انتهاء المهلة الزمنية
+  return isPreviewEnvironment() ? 15000 : 30000;
 };
 
 /**
@@ -229,16 +230,28 @@ export const RENDER_ALLOWED_IPS = [
 ];
 
 /**
- * وظيفة fetch مع إعادة المحاولة
+ * وظيفة fetch مع إعادة المحاولة وزيادة المهلة الزمنية
  */
-export async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3, retryDelayMs = 500): Promise<Response> {
+export async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 5, retryDelayMs = 1000): Promise<Response> {
   let retries = 0;
   let lastError: Error = new Error("Unknown error");
 
   while (retries < maxRetries) {
     try {
       console.log(`Attempt ${retries + 1}/${maxRetries} for URL: ${url}`);
-      const response = await fetch(url, options);
+      
+      // نسخة من خيارات الطلب مع إمكانية تعديلها
+      const optionsWithSignal = { ...options };
+      
+      // إذا لم يتم تحديد مهلة زمنية للطلب، قم بتعيينها
+      if (!optionsWithSignal.signal) {
+        // زيادة المهلة مع كل محاولة
+        const timeout = getConnectionTimeout() * (retries + 1);
+        optionsWithSignal.signal = AbortSignal.timeout(timeout);
+        console.log(`Set timeout to ${timeout}ms for attempt ${retries + 1}`);
+      }
+      
+      const response = await fetch(url, optionsWithSignal);
       
       if (!response.ok) {
         // التعامل مع الاستجابة غير الناجحة، وإعادة المحاولة للأخطاء التي يمكن إصلاحها
@@ -260,15 +273,23 @@ export async function fetchWithRetry(url: string, options: RequestInit, maxRetri
       console.error(`Attempt ${retries + 1}/${maxRetries} failed:`, error);
       lastError = error instanceof Error ? error : new Error(String(error));
       
+      // التحقق من نوع الخطأ
+      const errorMsg = lastError.message || '';
+      
+      // تعامل خاص مع أخطاء المهلة الزمنية
+      if (errorMsg.includes('timed out') || errorMsg.includes('TimeoutError') || errorMsg.includes('AbortError')) {
+        console.warn('Request timed out, increasing timeout for next attempt');
+        // سنحاول مرة أخرى مع زيادة المهلة في المحاولة التالية
+      }
       // تخطي إعادة المحاولة لبعض الأخطاء
-      if (lastError.message.includes('CORS') || lastError.message.includes('blocked by extension')) {
+      else if (errorMsg.includes('CORS') || errorMsg.includes('blocked by extension')) {
         console.error('CORS or extension blockage detected, retrying might not help:', lastError.message);
-        throw lastError;
+        // سنحاول على أي حال، ولكن مع تأخير أطول
       }
       
       retries++;
       if (retries < maxRetries) {
-        // زيادة فترة الانتظار مع كل محاولة فاشلة (backoff strategy)
+        // زيادة فترة الانتظار مع كل محاولة فاشلة (backoff strategy) - مع زيادة تصاعدية
         const delay = retryDelayMs * Math.pow(2, retries - 1);
         console.log(`Waiting ${delay}ms before retry ${retries}/${maxRetries}...`);
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -293,7 +314,7 @@ export function createFetchOptions(method: string, body?: any, headers?: Headers
     },
     credentials: "include",
     mode: "cors",
-    // تعيين مهلة قصيرة للطلبات لتجنب الانتظار لفترة طويلة
+    // تعيين مهلة أطول للطلبات لتجنب مشكلة signal timed out
     signal: AbortSignal.timeout(getConnectionTimeout())
   };
   

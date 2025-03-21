@@ -49,8 +49,8 @@ export const useGeminiProcessing = () => {
         apiKey: geminiApiKey,
         imageBase64,
         enhancedExtraction: true,
-        maxRetries: 5,  // زيادة عدد المحاولات للتغلب على أخطاء الشبكة
-        retryDelayMs: 1000  // انتظار ثانية واحدة بين المحاولات
+        maxRetries: 8,  // زيادة عدد المحاولات بشكل كبير للتغلب على مشكلة انتهاء المهلة
+        retryDelayMs: 2000  // زيادة مدة الانتظار بين المحاولات
       });
       console.log("Gemini extraction result:", extractionResult);
       
@@ -108,7 +108,7 @@ export const useGeminiProcessing = () => {
           toast({
             title: "تنبيه",
             description: "لم يتمكن Gemini من استخراج بيانات من الصورة",
-            variant: "default"  // تم تغيير "warning" إلى "default" لتصحيح الخطأ
+            variant: "default"
           });
           
           // إعادة الصورة مع حالة انتظار
@@ -139,8 +139,11 @@ export const useGeminiProcessing = () => {
       
       // تحسين رسالة الخطأ لتكون أكثر تفصيلاً وفائدة
       let errorMessage = geminiError.message || 'خطأ غير معروف';
+      
       if (errorMessage.includes('Failed to fetch')) {
         errorMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك والمحاولة مرة أخرى.';
+      } else if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
+        errorMessage = 'انتهت مهلة الاتصال بخادم Gemini. الرجاء المحاولة مرة أخرى لاحقًا.';
       }
       
       toast({
