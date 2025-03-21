@@ -19,7 +19,7 @@ export function parseGeminiResponse(extractedText: string): {
   try {
     // نبحث عن أي نص JSON في الاستجابة
     const jsonMatch = extractedText.match(/```json\s*([\s\S]*?)\s*```/) || 
-                     extractedText.match(/{[\s\S]*?}/);
+                      extractedText.match(/{[\s\S]*?}/);
     
     if (jsonMatch) {
       const jsonText = jsonMatch[0].replace(/```json|```/g, '').trim();
@@ -29,165 +29,122 @@ export function parseGeminiResponse(extractedText: string): {
         console.log("Successfully parsed JSON:", parsedData);
       } catch (jsonError) {
         console.error("Error parsing JSON:", jsonError);
+        
         // إذا فشل تحليل JSON، نحاول إصلاحه
-        const cleanJsonText = jsonText.replace(/[\u0600-\u06FF]+\s*:\s*/g, (match) => {
-          return `"${match.trim().slice(0, -1)}": `;
-        }).replace(/'/g, '"');
         try {
-          parsedData = JSON.parse(cleanJsonText);
+          // تنظيف النص وإضافة علامات اقتباس للمفاتيح والقيم
+          const cleanedText = jsonText
+            .replace(/([{,]\s*)([^"}\s][^":,}]*?)(\s*:)/g, '$1"$2"$3')
+            .replace(/(:(?:\s*)(?!true|false|null|{|\[|"|')([^,}\s]+))/g, ':"$2"')
+            .replace(/'/g, '"');
+          
+          console.log("Cleaned JSON text:", cleanedText);
+          parsedData = JSON.parse(cleanedText);
           console.log("Successfully parsed cleaned JSON:", parsedData);
         } catch (cleanJsonError) {
           console.error("Error parsing cleaned JSON:", cleanJsonError);
-        }
-      }
-    }
-    
-    // تحسين استخراج البيانات بعد الحصول على JSON
-    const enhancedData = enhanceExtractedData(parsedData, extractedText);
-    
-    // تحويل البيانات العربية إلى مفاتيح إنجليزية
-    const mappedData: Record<string, string> = {};
-    
-    // استخراج اسم الشركة (يكون عادة في أعلى اليسار بخط كبير)
-    if (!enhancedData.companyName) {
-      const companyNamePatterns = [
-        // البحث عن نص في بداية النص المستخرج (يكون غالبًا في الأعلى)
-        /^([^:\n\r]+?)(?:\n|\r|$)/i,
-        // البحث عن "شركة" أو "مؤسسة" أو "مجموعة"
-        /شركة\s+(.+?)(?:\n|\r|$)/i,
-        /مؤسسة\s+(.+?)(?:\n|\r|$)/i,
-        /مجموعة\s+(.+?)(?:\n|\r|$)/i,
-        // البحث عن "company" باللغة الإنجليزية
-        /company[:\s]+(.+?)(?:\n|\r|$)/i
-      ];
-      
-      for (const pattern of companyNamePatterns) {
-        const match = extractedText.match(pattern);
-        if (match && match[1]) {
-          enhancedData.companyName = match[1].trim();
-          break;
-        }
-      }
-    }
-    
-    // تحقق من وجود أي من الحقول في parsedData وتعيينها للمفاتيح الإنجليزية
-    if (enhancedData.companyName || enhancedData["اسم الشركة"] || enhancedData["الشركة"]) {
-      mappedData.companyName = enhancedData.companyName || enhancedData["اسم الشركة"] || enhancedData["الشركة"];
-    }
-    
-    if (enhancedData.code || enhancedData["الكود"] || enhancedData["كود"]) {
-      mappedData.code = enhancedData.code || enhancedData["الكود"] || enhancedData["كود"];
-    }
-    
-    if (enhancedData.senderName || enhancedData["اسم المرسل"] || enhancedData["الاسم"]) {
-      mappedData.senderName = enhancedData.senderName || enhancedData["اسم المرسل"] || enhancedData["الاسم"];
-    }
-    
-    if (enhancedData.phoneNumber || enhancedData["رقم الهاتف"] || enhancedData["الهاتف"]) {
-      mappedData.phoneNumber = enhancedData.phoneNumber || enhancedData["رقم الهاتف"] || enhancedData["الهاتف"];
-    }
-    
-    if (enhancedData.province || enhancedData["المحافظة"] || enhancedData["محافظة"]) {
-      let province = enhancedData.province || enhancedData["المحافظة"] || enhancedData["محافظة"];
-      // تصحيح اسم المحافظة
-      mappedData.province = correctProvinceName(province);
-    } else {
-      // البحث في النص كاملاً عن أي اسم محافظة عراقية
-      for (const province of IRAQ_PROVINCES) {
-        if (extractedText.includes(province)) {
-          mappedData.province = province;
-          break;
-        }
-      }
-    }
-    
-    if (enhancedData.price || enhancedData["السعر"] || enhancedData["سعر"]) {
-      let price = enhancedData.price || enhancedData["السعر"] || enhancedData["سعر"];
-      // Format the price according to business rules - استخدام الدالة المخصصة لتنسيق السعر
-      mappedData.price = formatPrice(price);
-    }
-    
-    // إذا لم نتمكن من استخراج البيانات من JSON، نحاول استخراجها من النص مباشرة
-    if (Object.keys(mappedData).length === 0) {
-      console.log("No JSON data found, parsing text manually");
-      const lines = extractedText.split('\n');
-      const dataFields: Record<string, string> = {
-        "اسم الشركة": "companyName",
-        "الشركة": "companyName",
-        "الكود": "code",
-        "كود": "code",
-        "اسم المرسل": "senderName",
-        "الاسم": "senderName", 
-        "رقم الهاتف": "phoneNumber",
-        "الهاتف": "phoneNumber",
-        "المحافظة": "province",
-        "محافظة": "province",
-        "السعر": "price",
-        "سعر": "price"
-      };
-      
-      lines.forEach(line => {
-        for (const [arabicKey, englishKey] of Object.entries(dataFields)) {
-          if (line.includes(arabicKey)) {
-            const value = line.split(':')[1]?.trim() || line.split('،')[1]?.trim() || "";
-            if (englishKey === "price" && value) {
-              mappedData[englishKey] = formatPrice(value);
-            } else {
-              mappedData[englishKey] = value;
-            }
+          
+          // إذا فشل تنظيف JSON، نحاول استخراج أزواج المفاتيح والقيم
+          try {
+            const keyValuePattern = /"?([^":,}\s]+)"?\s*:\s*"?([^",}]+)"?/g;
+            const matches = [...jsonText.matchAll(keyValuePattern)];
+            
+            matches.forEach(match => {
+              const key = match[1].trim();
+              const value = match[2].trim();
+              parsedData[key] = value;
+            });
+            
+            console.log("Extracted key-value pairs:", parsedData);
+          } catch (extractionError) {
+            console.error("Error extracting key-value pairs:", extractionError);
           }
         }
-      });
+      }
+    } else {
+      console.log("No JSON format found in response, trying to extract data from text");
     }
     
-    // تصحيح اسم المحافظة في النهاية
-    if (mappedData.province) {
-      mappedData.province = correctProvinceName(mappedData.province);
-    }
-    
-    // البحث عن أسماء المدن الرئيسية العراقية في النص إذا لم نجد المحافظة بعد
-    if (!mappedData.province) {
-      const cityProvinceMap: Record<string, string> = {
-        'بغداد': 'بغداد',
-        'البصرة': 'البصرة',
-        'الموصل': 'نينوى',
-        'أربيل': 'أربيل',
-        'النجف': 'النجف',
-        'الناصرية': 'ذي قار',
-        'كركوك': 'كركوك',
-        'الرمادي': 'الأنبار',
-        'بعقوبة': 'ديالى',
-        'السماوة': 'المثنى',
-        'الديوانية': 'القادسية',
-        'العمارة': 'ميسان',
-        'الكوت': 'واسط',
-        'تكريت': 'صلاح الدين',
-        'الحلة': 'بابل',
-        'كربلاء': 'كربلاء',
-        'دهوك': 'دهوك',
-        'السليمانية': 'السليمانية'
+    // إذا لم نستطع استخراج JSON أو كان فارغًا، نحاول استخراج البيانات من النص
+    if (Object.keys(parsedData).length === 0) {
+      // البحث عن أنماط نصية محددة في النص
+      const patterns = {
+        companyName: [
+          /شركة\s+(.+?)(?:\n|$)/i,
+          /company\s*:\s*(.+?)(?:\n|$)/i,
+          /اسم الشركة\s*:\s*(.+?)(?:\n|$)/i
+        ],
+        code: [
+          /كود\s*:\s*([0-9]+)/i,
+          /code\s*:\s*([0-9]+)/i,
+          /رقم\s*:\s*([0-9]+)/i,
+          /رمز\s*:\s*([0-9]+)/i
+        ],
+        senderName: [
+          /اسم المرسل\s*:\s*(.+?)(?:\n|$)/i,
+          /sender\s*:\s*(.+?)(?:\n|$)/i,
+          /المرسل\s*:\s*(.+?)(?:\n|$)/i
+        ],
+        phoneNumber: [
+          /هاتف\s*:\s*([0-9\s\-]+)/i,
+          /phone\s*:\s*([0-9\s\-]+)/i,
+          /رقم الهاتف\s*:\s*([0-9\s\-]+)/i
+        ],
+        province: [
+          /محافظة\s*:\s*(.+?)(?:\n|$)/i,
+          /province\s*:\s*(.+?)(?:\n|$)/i,
+          /المدينة\s*:\s*(.+?)(?:\n|$)/i
+        ],
+        price: [
+          /سعر\s*:\s*(.+?)(?:\n|$)/i,
+          /price\s*:\s*(.+?)(?:\n|$)/i,
+          /المبلغ\s*:\s*(.+?)(?:\n|$)/i
+        ]
       };
       
-      for (const [city, province] of Object.entries(cityProvinceMap)) {
-        if (extractedText.includes(city)) {
-          mappedData.province = province;
+      // محاولة استخراج كل حقل باستخدام الأنماط
+      for (const [field, fieldPatterns] of Object.entries(patterns)) {
+        for (const pattern of fieldPatterns) {
+          const match = extractedText.match(pattern);
+          if (match && match[1]) {
+            parsedData[field] = match[1].trim();
+            break;
+          }
+        }
+      }
+      
+      console.log("Extracted data from text patterns:", parsedData);
+    }
+    
+    // معالجة وتحسين البيانات المستخرجة
+    const enhancedData = enhanceExtractedData(parsedData, extractedText);
+    console.log("Enhanced extracted data:", enhancedData);
+    
+    // تصحيح اسم المحافظة إذا وجد
+    if (enhancedData.province) {
+      enhancedData.province = correctProvinceName(enhancedData.province);
+    }
+    
+    // البحث في النص كاملاً عن أي اسم محافظة عراقية إذا لم نجد المحافظة
+    if (!enhancedData.province) {
+      for (const province of IRAQ_PROVINCES) {
+        if (extractedText.includes(province)) {
+          enhancedData.province = province;
           break;
         }
       }
     }
     
-    // تنسيق السعر النهائي مرة أخرى للتأكد من صحته
-    if (mappedData.price) {
-      mappedData.price = formatPrice(mappedData.price);
+    // تنسيق السعر وفقًا لقواعد العمل
+    if (enhancedData.price) {
+      enhancedData.price = formatPrice(enhancedData.price);
     }
     
-    console.log("Final mapped data:", mappedData);
-    
     // تقييم جودة البيانات المستخرجة
-    const confidenceScore = calculateConfidenceScore(mappedData);
+    const confidenceScore = calculateConfidenceScore(enhancedData);
     
     return {
-      parsedData: mappedData,
+      parsedData: enhancedData,
       confidenceScore
     };
   } catch (error) {

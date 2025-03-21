@@ -36,25 +36,41 @@ export const useGeminiProcessing = () => {
       console.log("Calling extractDataWithGemini");
       const extractionResult = await extractDataWithGemini({
         apiKey: geminiApiKey,
-        imageBase64
+        imageBase64,
+        enhancedExtraction: true
       });
       console.log("Gemini extraction result:", extractionResult);
       
       if (extractionResult.success && extractionResult.data) {
         const { parsedData, extractedText } = extractionResult.data;
         
-        toast({
-          title: "تم الاستخراج بنجاح",
-          description: "تم استخراج البيانات باستخدام Gemini AI",
-        });
+        // تحقق من وجود بيانات تم استخراجها
+        if (parsedData && Object.keys(parsedData).length > 0) {
+          console.log("Gemini successfully extracted data:", parsedData);
+          
+          toast({
+            title: "تم الاستخراج بنجاح",
+            description: "تم استخراج البيانات باستخدام Gemini AI",
+          });
 
-        return updateImageWithExtractedData(
-          image,
-          extractedText || "",
-          parsedData || {},
-          95,
-          "gemini"
-        );
+          return updateImageWithExtractedData(
+            image,
+            extractedText || "",
+            parsedData || {},
+            95,
+            "gemini"
+          );
+        } else {
+          console.log("Gemini returned empty data, falling back to OCR");
+          
+          toast({
+            title: "تنبيه",
+            description: "لم يتم استخراج بيانات من Gemini، جاري استخدام OCR التقليدي",
+            variant: "default"
+          });
+          
+          return fallbackProcessor(file, image);
+        }
       } else {
         console.log("Gemini extraction failed, falling back to OCR");
         

@@ -46,6 +46,7 @@ export async function extractDataWithGemini({
     console.log("Image Base64 length:", imageBase64.length);
     console.log("Using model version:", modelVersion);
     console.log("Using temperature:", temperature);
+    console.log("Using prompt:", prompt.substring(0, 100) + "...");
     
     // استخدام إصدار النموذج المحدد
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent`;
@@ -93,6 +94,7 @@ export async function extractDataWithGemini({
     console.log("Gemini API Response data:", JSON.stringify(data).substring(0, 200) + "...");
     
     if (data.promptFeedback?.blockReason) {
+      console.error("Gemini blocked the request:", data.promptFeedback.blockReason);
       return {
         success: false,
         message: `تم حظر الاستعلام: ${data.promptFeedback.blockReason}`
@@ -100,9 +102,18 @@ export async function extractDataWithGemini({
     }
 
     if (!data.candidates || data.candidates.length === 0) {
+      console.error("No candidates in Gemini response:", JSON.stringify(data));
       return {
         success: false,
         message: "لم يتم إنشاء أي استجابة من Gemini"
+      };
+    }
+
+    if (!data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
+      console.error("Missing content parts in Gemini response:", JSON.stringify(data));
+      return {
+        success: false,
+        message: "استجابة Gemini غير مكتملة"
       };
     }
 
@@ -112,6 +123,8 @@ export async function extractDataWithGemini({
     // تحليل الاستجابة واستخراج البيانات المنظمة
     try {
       const { parsedData, confidenceScore } = parseGeminiResponse(extractedText);
+      console.log("Parsed data from Gemini:", parsedData);
+      console.log("Confidence score:", confidenceScore);
       
       return {
         success: true,
