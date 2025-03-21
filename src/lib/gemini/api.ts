@@ -2,7 +2,7 @@
 import { GeminiExtractParams, GeminiRequest, GeminiResponse } from "./types";
 import { ApiResult } from "../apiService";
 import { parseGeminiResponse } from "./parsers";
-import { getEnhancedExtractionPrompt, getBasicExtractionPrompt } from "./prompts";
+import { getEnhancedExtractionPrompt, getBasicExtractionPrompt, getTextOnlyExtractionPrompt } from "./prompts";
 import { 
   createFetchOptions, 
   fetchWithRetry, 
@@ -16,21 +16,21 @@ export async function extractDataWithGemini({
   apiKey,
   imageBase64,
   extractionPrompt,
-  temperature = 0.2,
-  modelVersion = 'gemini-1.5-flash',  // تحديث إلى الإصدار الأحدث
+  temperature = 0.1,
+  modelVersion = 'gemini-1.5-pro',
   enhancedExtraction = true,
-  maxRetries = 12,
-  retryDelayMs = 3000
+  maxRetries = 3,
+  retryDelayMs = 5000
 }: GeminiExtractParams): Promise<ApiResult> {
   if (!apiKey) {
-    console.error("Gemini API Key is missing");
+    console.error("Gemini API Key مفقود");
     return {
       success: false,
       message: "يرجى توفير مفتاح API صالح"
     };
   }
 
-  // إذا تم تفعيل الاستخراج المحسن، استخدم مطالبة أكثر دقة وتوجيهًا
+  // تحديد المطالبة المناسبة بناءً على الإعدادات
   let prompt = extractionPrompt;
   
   if (!prompt) {
@@ -42,18 +42,22 @@ export async function extractDataWithGemini({
   }
 
   try {
-    console.log("جاري إرسال الطلب إلى Gemini API...");
-    console.log("API Key length:", apiKey.length);
-    console.log("First 5 characters of API Key:", apiKey.substring(0, 5));
-    console.log("Image Base64 length:", imageBase64.length);
-    console.log("Using model version:", modelVersion);
-    console.log("Using temperature:", temperature);
-    console.log("Using prompt:", prompt.substring(0, 100) + "...");
-    console.log("Max retries:", maxRetries);
+    console.log("إرسال طلب إلى Gemini API...");
+    console.log("طول مفتاح API:", apiKey.length);
+    console.log("أول 5 أحرف من مفتاح API:", apiKey.substring(0, 5));
+    console.log("طول صورة Base64:", imageBase64.length);
+    console.log("استخدام إصدار النموذج:", modelVersion);
+    console.log("استخدام درجة حرارة:", temperature);
+    console.log("استخدام المطالبة:", prompt.substring(0, 100) + "...");
+    console.log("الحد الأقصى للمحاولات:", maxRetries);
     
-    // استخدام إصدار النموذج المحدد
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent`;
+    // تنظيف معرف صورة Base64
+    const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
     
+    // محاولة استخراج النص فقط أولاً للتأكد من أن الصورة يمكن قراءتها
+    console.log("محاولة استخراج النص الأولي فقط...");
+    
+    // إنشاء محتوى الطلب
     const requestBody: GeminiRequest = {
       contents: [
         {
@@ -62,7 +66,7 @@ export async function extractDataWithGemini({
             {
               inline_data: {
                 mime_type: "image/jpeg",
-                data: imageBase64.replace(/^data:image\/\w+;base64,/, "")
+                data: cleanBase64
               }
             }
           ]
@@ -76,33 +80,44 @@ export async function extractDataWithGemini({
       }
     };
     
-    console.log("Sending request to Gemini API endpoint:", endpoint);
+    // إنشاء عنوان URL للطلب
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent`;
+    console.log("إرسال طلب إلى نقطة نهاية Gemini API:", endpoint);
     
-    // إنشاء خيارات الطلب مع رؤوس مخصصة ومهلة زمنية أطول
-    const fetchOptions = createFetchOptions(
-      "POST", 
-      requestBody, 
-      {
+    // إنشاء خيارات الطلب
+    const fetchOptions = {
+      method: "POST",
+      headers: {
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey
-      }
-    );
+        "x-goog-api-key": apiKey
+      },
+      body: JSON.stringify(requestBody)
+    };
     
-    // استخدام fetchWithRetry مع محاولات أكثر ومهلة زمنية أطول لكل محاولة
-    const response = await fetchWithRetry(
-      `${endpoint}?key=${apiKey}`, 
-      fetchOptions, 
-      maxRetries, 
-      retryDelayMs
-    );
+    // تنفيذ الطلب مع محاولات إعادة المحاولة
+    console.log("بدء طلب API...");
+    const timeBeforeRequest = Date.now();
     
-    console.log("Gemini API Response status:", response.status);
+    // استخدام fetch مباشرة للتبسيط
+    const response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
+    
+    const timeAfterRequest = Date.now();
+    console.log(`استغرق طلب Gemini API ${timeAfterRequest - timeBeforeRequest}ms`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Gemini API رد بخطأ:", response.status, errorText);
+      return {
+        success: false,
+        message: `خطأ من Gemini API: ${response.status} - ${errorText}`
+      };
+    }
     
     const data: GeminiResponse = await response.json();
-    console.log("Gemini API Response data:", JSON.stringify(data).substring(0, 200) + "...");
+    console.log("بيانات استجابة Gemini API:", JSON.stringify(data).substring(0, 200) + "...");
     
     if (data.promptFeedback?.blockReason) {
-      console.error("Gemini blocked the request:", data.promptFeedback.blockReason);
+      console.error("Gemini حظر الطلب:", data.promptFeedback.blockReason);
       return {
         success: false,
         message: `تم حظر الاستعلام: ${data.promptFeedback.blockReason}`
@@ -110,7 +125,7 @@ export async function extractDataWithGemini({
     }
 
     if (!data.candidates || data.candidates.length === 0) {
-      console.error("No candidates in Gemini response:", JSON.stringify(data));
+      console.error("لا توجد مرشحات في استجابة Gemini:", data);
       return {
         success: false,
         message: "لم يتم إنشاء أي استجابة من Gemini"
@@ -118,7 +133,7 @@ export async function extractDataWithGemini({
     }
 
     if (!data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
-      console.error("Missing content parts in Gemini response:", JSON.stringify(data));
+      console.error("أجزاء المحتوى مفقودة في استجابة Gemini:", data);
       return {
         success: false,
         message: "استجابة Gemini غير مكتملة"
@@ -126,11 +141,64 @@ export async function extractDataWithGemini({
     }
 
     const extractedText = data.candidates[0].content.parts[0].text || '';
-    console.log("Extracted text from Gemini:", extractedText);
+    console.log("النص المستخرج من Gemini:", extractedText.substring(0, 200) + (extractedText.length > 200 ? "..." : ""));
     
     // التحقق من وجود نص مستخرج
     if (!extractedText) {
-      console.error("Gemini returned empty text");
+      console.error("Gemini أرجع نصًا فارغًا");
+      
+      // محاولة استخدام مطالبة أبسط للنص فقط
+      console.log("محاولة استخدام مطالبة نص فقط بسيطة...");
+      
+      try {
+        const textOnlyRequestBody = {
+          ...requestBody,
+          contents: [
+            {
+              parts: [
+                { text: getTextOnlyExtractionPrompt() },
+                {
+                  inline_data: {
+                    mime_type: "image/jpeg",
+                    data: cleanBase64
+                  }
+                }
+              ]
+            }
+          ]
+        };
+        
+        const textOnlyResponse = await fetch(`${endpoint}?key=${apiKey}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey
+          },
+          body: JSON.stringify(textOnlyRequestBody)
+        });
+        
+        if (textOnlyResponse.ok) {
+          const textOnlyData: GeminiResponse = await textOnlyResponse.json();
+          
+          if (textOnlyData.candidates?.[0]?.content?.parts?.[0]?.text) {
+            const rawExtractedText = textOnlyData.candidates[0].content.parts[0].text;
+            console.log("تم استخراج النص الخام بنجاح:", rawExtractedText.substring(0, 200));
+            
+            return {
+              success: true,
+              message: "تم استخراج النص الخام فقط، لم يتم التعرف على البيانات المنظمة",
+              data: {
+                extractedText: rawExtractedText,
+                rawText: rawExtractedText,
+                parsedData: {}
+              }
+            };
+          }
+        }
+      } catch (textOnlyError) {
+        console.error("فشلت محاولة النص فقط:", textOnlyError);
+      }
+      
       return {
         success: false,
         message: "لم يتم استخراج أي نص من الصورة"
@@ -140,8 +208,8 @@ export async function extractDataWithGemini({
     // تحليل الاستجابة واستخراج البيانات المنظمة
     try {
       const { parsedData, confidenceScore } = parseGeminiResponse(extractedText);
-      console.log("Parsed data from Gemini:", parsedData);
-      console.log("Confidence score:", confidenceScore);
+      console.log("البيانات المحللة من Gemini:", parsedData);
+      console.log("درجة الثقة:", confidenceScore);
       
       return {
         success: true,
@@ -160,7 +228,7 @@ export async function extractDataWithGemini({
         data: {
           extractedText,
           rawText: extractedText,
-          parsedData: {} // إضافة كائن فارغ على الأقل
+          parsedData: {}
         }
       };
     }
@@ -168,7 +236,7 @@ export async function extractDataWithGemini({
     console.error("خطأ عند استخدام Gemini API:", error);
     const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
     
-    // تحسين رسائل الخطأ وتوفير رسائل أكثر تفصيلاً
+    // تحسين رسائل الخطأ
     let userFriendlyMessage = `حدث خطأ أثناء معالجة الطلب: ${errorMessage}`;
     
     if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError') || errorMessage.includes('AbortError')) {
@@ -200,10 +268,13 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
   try {
     const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
     
-    // إنشاء خيارات الطلب مع رؤوس مخصصة ومهلة زمنية أطول
-    const fetchOptions = createFetchOptions(
-      "POST", 
-      {
+    const fetchOptions = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey
+      },
+      body: JSON.stringify({
         contents: [
           {
             parts: [
@@ -212,19 +283,24 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
           }
         ],
         generationConfig: {
-          temperature: 0.2,
+          temperature: 0.1,
           maxOutputTokens: 128
         }
-      }, 
-      {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey
-      }
-    );
+      })
+    };
     
-    // استخدام fetchWithRetry بدلاً من fetch العادي مع محاولات أكثر
-    const response = await fetchWithRetry(`${endpoint}?key=${apiKey}`, fetchOptions, 5, 2000);
-
+    console.log("إرسال طلب اختبار إلى Gemini API...");
+    const response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("فشل اختبار Gemini API:", response.status, errorText);
+      return {
+        success: false,
+        message: `خطأ من Gemini API: ${response.status} - ${errorText}`
+      };
+    }
+    
     return {
       success: true,
       message: "تم الاتصال بـ Gemini API بنجاح"
