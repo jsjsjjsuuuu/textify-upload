@@ -25,14 +25,17 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'success' | 'error'>('unknown');
+  const [isRealExecutionEnabled, setIsRealExecutionEnabled] = useState(() => AutomationService.isRealExecutionEnabled());
   const navigate = useNavigate();
   
   // التحقق مما إذا كانت البيانات مكتملة بما يكفي لإرسالها إلى الأتمتة
   const hasRequiredData = !!image.code && !!image.senderName && !!image.phoneNumber;
 
-  // التحقق من حالة الاتصال عند تحميل المكون
+  // التحقق من حالة الاتصال وإعدادات التنفيذ الفعلي عند تحميل المكون
   useEffect(() => {
     const isRealExecution = AutomationService.isRealExecutionEnabled();
+    setIsRealExecutionEnabled(isRealExecution);
+    
     if (isRealExecution) {
       // التحقق من وجود الاتصال بالخادم
       checkConnectionStatus();
@@ -45,6 +48,13 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
       // محاولة التحقق من الاتصال بالخادم
       const result = await AutomationService.checkServerExistence(false);
       setConnectionStatus(result ? 'success' : 'error');
+      
+      if (result) {
+        toast.success("تم الاتصال بخادم الأتمتة بنجاح", {
+          id: "connection-success",
+          duration: 3000
+        });
+      }
     } catch (error) {
       console.error("فشل التحقق من حالة الاتصال:", error);
       setConnectionStatus('error');
@@ -63,6 +73,8 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     
     // التحقق من وجود وضع التنفيذ الفعلي
     const isRealExecution = AutomationService.isRealExecutionEnabled();
+    setIsRealExecutionEnabled(isRealExecution);
+    
     if (isRealExecution) {
       // التحقق من حالة الاتصال بالخادم أولاً
       setIsTestingConnection(true);
@@ -128,6 +140,7 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
       if (result) {
         // إغلاق النافذة إذا كان الاتصال ناجحًا
         setShowConnectionDialog(false);
+        toast.success("تم الاتصال بخادم الأتمتة بنجاح، يمكنك الآن تنفيذ الأتمتة");
         // متابعة تنفيذ الأتمتة
         handleAutomation();
       } else {
@@ -146,32 +159,85 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     setShowConnectionDialog(false);
   };
   
+  const toggleRealExecution = () => {
+    const newState = !isRealExecutionEnabled;
+    setIsRealExecutionEnabled(newState);
+    AutomationService.toggleRealExecution(newState);
+    
+    if (newState) {
+      // عند تفعيل وضع التنفيذ الفعلي، تحقق من الاتصال
+      checkConnectionStatus();
+    }
+  };
+  
   return (
     <>
-      <motion.div 
-        whileHover={{ scale: 1.05 }} 
-        whileTap={{ scale: 0.95 }}
-        className="inline-block"
-      >
-        <Button
-          onClick={handleAutomation}
-          disabled={isLoading || !hasRequiredData || isTestingConnection}
-          className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
-          size="lg"
+      <div className="flex flex-col gap-2 items-center">
+        <motion.div 
+          whileHover={{ scale: 1.05 }} 
+          whileTap={{ scale: 0.95 }}
+          className="inline-block"
         >
-          {isLoading || isTestingConnection ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>{isTestingConnection ? "جاري التحقق من الاتصال..." : "جاري الإعداد..."}</span>
-            </>
-          ) : (
-            <>
-              <Send className="w-5 h-5" />
-              <span>تعبئة البيانات تلقائيًا</span>
-            </>
-          )}
-        </Button>
-      </motion.div>
+          <Button
+            onClick={handleAutomation}
+            disabled={isLoading || !hasRequiredData || isTestingConnection}
+            className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+            size="lg"
+          >
+            {isLoading || isTestingConnection ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>{isTestingConnection ? "جاري التحقق من الاتصال..." : "جاري الإعداد..."}</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5" />
+                <span>تعبئة البيانات تلقائيًا</span>
+              </>
+            )}
+          </Button>
+        </motion.div>
+        
+        {/* عرض زر التحقق من الاتصال وتبديل وضع التنفيذ الفعلي */}
+        <div className="flex items-center gap-2 mt-1 text-xs">
+          <button
+            onClick={checkConnectionStatus}
+            disabled={isTestingConnection}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+              connectionStatus === 'success' 
+                ? 'text-green-600 hover:text-green-700' 
+                : connectionStatus === 'error'
+                ? 'text-red-600 hover:text-red-700'
+                : 'text-gray-600 hover:text-gray-700'
+            }`}
+          >
+            {isTestingConnection ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : connectionStatus === 'success' ? (
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            ) : connectionStatus === 'error' ? (
+              <div className="w-2 h-2 rounded-full bg-red-500"></div>
+            ) : (
+              <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+            )}
+            <span>حالة الاتصال بالخادم</span>
+            <RefreshCw className="w-3 h-3 ml-1" />
+          </button>
+          
+          {/* زر تبديل وضع التنفيذ الفعلي */}
+          <button
+            onClick={toggleRealExecution}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+              isRealExecutionEnabled 
+                ? 'text-purple-600 hover:text-purple-700' 
+                : 'text-gray-600 hover:text-gray-700'
+            }`}
+          >
+            <div className={`w-2 h-2 rounded-full ${isRealExecutionEnabled ? 'bg-purple-500' : 'bg-gray-400'}`}></div>
+            <span>{isRealExecutionEnabled ? 'وضع التنفيذ الفعلي مفعل' : 'محاكاة فقط'}</span>
+          </button>
+        </div>
+      </div>
       
       {/* نافذة التحقق من الاتصال */}
       <Dialog open={showConnectionDialog} onOpenChange={setShowConnectionDialog}>
