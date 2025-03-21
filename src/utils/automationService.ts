@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { AutomationConfig, AutomationResponse } from "./automation/types";
 import { ConnectionManager } from "./automation/connectionManager";
@@ -11,8 +10,8 @@ import {
 } from "./automationServerUrl";
 
 export class AutomationService {
-  private static readonly maxRetries = 3;
-  private static readonly retryDelay = 2000;
+  private static readonly maxRetries = 5; // زيادة من 3 إلى 5
+  private static readonly retryDelay = 3000; // زيادة من 2000 إلى 3000
   private static isRunning = false;
   private static readonly DEBUG = true; // تمكين وضع التشخيص
 
@@ -30,7 +29,7 @@ export class AutomationService {
   }
 
   /**
-   * التحقق من حالة اتصال خادم الأتمتة
+   * التحقق من حالة خادم الأتمتة
    */
   static async checkServerStatus(showToasts = true): Promise<any> {
     this.log("جاري التحقق من حالة خادم الأتمتة");
@@ -150,6 +149,32 @@ export class AutomationService {
   }
 
   /**
+   * التحقق من محددات CSS قبل التنفيذ
+   * @param selectors قائمة المحددات المراد فحصها
+   * @returns أي مشاكل تم اكتشافها في المحددات
+   */
+  private static validateSelectors(selectors: string[]): string[] {
+    const warnings: string[] = [];
+    
+    selectors.forEach((selector, index) => {
+      // التحقق من وجود محددات غير صالحة أو خطرة
+      if (!selector || selector.trim() === '') {
+        warnings.push(`المحدد رقم ${index + 1} فارغ`);
+      } else if (selector.includes('//')) {
+        warnings.push(`المحدد رقم ${index + 1} يبدو كمحدد XPath وليس CSS: ${selector}`);
+      } else if (selector.includes('<') || selector.includes('>')) {
+        warnings.push(`المحدد رقم ${index + 1} يحتوي على رموز HTML غير صالحة: ${selector}`);
+      } else if (selector === 'body' || selector === 'html') {
+        warnings.push(`المحدد رقم ${index + 1} واسع جدًا (${selector})، قد لا يعمل كما هو متوقع`);
+      } else if (selector.startsWith('#') && selector.indexOf(' ') === -1 && selector.length < 3) {
+        warnings.push(`المحدد رقم ${index + 1} قصير جدًا: ${selector}`);
+      }
+    });
+    
+    return warnings;
+  }
+
+  /**
    * التحقق من الإعدادات وتنفيذ الأتمتة
    */
   static async validateAndRunAutomation(config: AutomationConfig): Promise<AutomationResponse> {
@@ -158,6 +183,16 @@ export class AutomationService {
     // التأكد من تمكين وضع التنفيذ الفعلي دائمًا
     config.forceRealExecution = true;
     this.log("تم تفعيل وضع التنفيذ الفعلي إجبارياً");
+    
+    // تأكد من صحة الموقع المستهدف
+    if (config.projectUrl) {
+      try {
+        const url = new URL(config.projectUrl);
+        this.log(`تحليل عنوان URL: ${url.href}, المضيف: ${url.hostname}, المسار: ${url.pathname}`);
+      } catch (e) {
+        this.log("عنوان URL غير صالح:", config.projectUrl);
+      }
+    }
     
     // التحقق من الإعدادات قبل التنفيذ
     const validationErrors = this.validateAutomationConfig(config);
@@ -173,6 +208,25 @@ export class AutomationService {
           type: "ValidationError"
         }
       };
+    }
+    
+    // التحقق من محددات CSS
+    const selectors = config.actions.map(action => {
+      if ('selector' in action) {
+        return action.selector;
+      } else if ('finder' in action) {
+        return action.finder;
+      }
+      return '';
+    }).filter(Boolean);
+    
+    const selectorWarnings = this.validateSelectors(selectors);
+    if (selectorWarnings.length > 0) {
+      this.log("تحذيرات المحددات:", selectorWarnings);
+      // لا نرفض التنفيذ، ولكن نوفر تحذيرات للمستخدم
+      toast.warning("هناك بعض المشاكل المحتملة في المحددات", {
+        description: "قد تؤثر على نجاح الأتمتة. راجع وحدة التحكم للتفاصيل."
+      });
     }
 
     console.log("تكوين الأتمتة قبل التنفيذ:", JSON.stringify(config, null, 2));
@@ -200,6 +254,9 @@ export class AutomationService {
       } else if (errorMessage.includes("CORS")) {
         userFriendlyMessage = "حدث خطأ في اتصال CORS. قد يكون هناك مشكلة في إعدادات الخادم.";
         errorType = "CORSError";
+      } else if (errorMessage.includes("Authentication") || errorMessage.includes("auth") || errorMessage.includes("login")) {
+        userFriendlyMessage = "مشكلة في المصادقة. قد يحتاج الموقع المستهدف إلى تسجيل الدخول.";
+        errorType = "AuthenticationError";
       }
       
       return {
@@ -241,13 +298,13 @@ export class AutomationService {
         let type = 'click';
         
         // تحديد نوع الإجراء من الاسم أو القيمة
-        if (action.name === 'انقر' || action.value === 'click' || action.name === 'click') {
+        if (action.name === 'انقر' || action.name === 'click') {
           type = 'click';
         } else if (action.name === 'أدخل نص' || action.name === 'type') {
           type = 'type';
         } else if (action.name === 'اختر قيمة' || action.name === 'select') {
           type = 'select';
-        } else if (action.name === 'انتظر' || action.value === 'wait' || action.name === 'wait') {
+        } else if (action.name === 'انتظر' || action.name === 'wait') {
           type = 'wait';
         }
         
@@ -281,7 +338,7 @@ export class AutomationService {
       this.log("الخادم غير متصل، محاولة إعادة الاتصال قبل المتابعة...");
       // محاولة إعادة الاتصال قبل الفشل
       try {
-        const retryResult = await this.retryServerConnection(2);
+        const retryResult = await this.retryServerConnection(3); // زيادة عدد المحاولات
         if (!retryResult) {
           this.log("فشلت جميع محاولات إعادة الاتصال");
           return {
@@ -321,13 +378,29 @@ export class AutomationService {
       // التأكد دائمًا من تمكين وضع التنفيذ الفعلي
       config.forceRealExecution = true;
       
-      // تنفيذ الأتمتة مع إعادة المحاولة تلقائيًا
-      this.log("بدء إرسال طلب الأتمتة مع إمكانية إعادة المحاولة");
-      const fetchOptions = createFetchOptions('POST', {
+      // تحضير إعدادات إضافية لتحسين التوثيق والجلسات
+      const enhancedConfig = {
         ...config,
         // إضافة طابع زمني لتجنب التخزين المؤقت
-        _timestamp: Date.now()
-      });
+        _timestamp: Date.now(),
+        // إعدادات إضافية لتحسين معالجة الجلسات
+        sessionOptions: {
+          // الاحتفاظ بملفات تعريف الارتباط بين الطلبات
+          preserveCookies: true,
+          // استخدام بيانات المتصفح إذا كانت متاحة
+          useUserAgent: true,
+          // زيادة مهلة انتظار الطلب للمواقع البطيئة
+          timeout: 60000, // 60 ثانية
+          // محاولة تجاوز اكتشاف البوت
+          bypassBotDetection: true
+        }
+      };
+      
+      this.log("إعدادات الطلب المحسنة:", enhancedConfig);
+      
+      // تنفيذ الأتمتة مع إعادة المحاولة تلقائيًا
+      this.log("بدء إرسال طلب الأتمتة مع إمكانية إعادة المحاولة");
+      const fetchOptions = createFetchOptions('POST', enhancedConfig);
       
       this.log("خيارات الطلب:", fetchOptions);
       
@@ -361,6 +434,20 @@ export class AutomationService {
       // استخراج نتائج الأتمتة
       const result = await response.json();
       console.log("نتيجة تنفيذ الأتمتة:", result);
+      
+      // فحص إضافي للمحددات المفقودة في النتائج
+      if (result.results && Array.isArray(result.results)) {
+        const failedSelectors = result.results
+          .filter(r => !r.success && r.error && r.error.includes('selector'))
+          .map(r => r.selector || r.action?.selector || 'غير معروف');
+        
+        if (failedSelectors.length > 0) {
+          this.log("محددات فشلت أثناء التنفيذ:", failedSelectors);
+          toast.warning(`فشل العثور على ${failedSelectors.length} عنصر في الصفحة`, {
+            description: "تأكد من صحة المحددات أو قد تكون الصفحة تختلف عما تتوقع"
+          });
+        }
+      }
       
       // تحديد وقت الانتهاء وحساب مدة التنفيذ
       const endTime = Date.now();
@@ -397,6 +484,12 @@ export class AutomationService {
       } else if (errorMessage.includes("selector") || errorMessage.includes("element not found")) {
         userFriendlyMessage = "تعذر العثور على العنصر المحدد في الصفحة. يرجى التحقق من صحة المحدد.";
         errorType = "SelectorError";
+      } else if (errorMessage.includes("captcha") || errorMessage.includes("robot") || errorMessage.includes("automated")) {
+        userFriendlyMessage = "يبدو أن الموقع يمنع الأتمتة أو يطلب حل كابتشا. قد يحتاج إلى تدخل يدوي.";
+        errorType = "CaptchaError";
+      } else if (errorMessage.includes("auth") || errorMessage.includes("login") || errorMessage.includes("session")) {
+        userFriendlyMessage = "قد تكون هناك مشكلة في المصادقة أو الجلسة. تحقق مما إذا كان الموقع يتطلب تسجيل الدخول.";
+        errorType = "AuthenticationError";
       }
       
       return {
