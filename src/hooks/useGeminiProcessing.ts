@@ -55,9 +55,9 @@ export const useGeminiProcessing = () => {
       console.log("File converted to base64, length:", imageBase64.length);
       
       // تحديث الصورة لتظهر أنها قيد المعالجة
-      let updatedImage = { 
+      let updatedImage: ImageData = { 
         ...image, 
-        status: "processing" as const,
+        status: "processing",
         extractedText: "جاري معالجة الصورة واستخراج البيانات..."
       };
       
@@ -114,9 +114,15 @@ export const useGeminiProcessing = () => {
           
           // تعيين الحالة استنادًا إلى وجود البيانات الرئيسية
           if (updatedImage.code || updatedImage.senderName || updatedImage.phoneNumber) {
-            updatedImage.status = "completed";
+            updatedImage = {
+              ...updatedImage,
+              status: "completed"
+            };
           } else {
-            updatedImage.status = "pending";
+            updatedImage = {
+              ...updatedImage,
+              status: "pending"
+            };
           }
         } else {
           console.log("Gemini returned empty data");
