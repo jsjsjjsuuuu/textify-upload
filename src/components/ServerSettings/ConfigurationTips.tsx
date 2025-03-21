@@ -2,10 +2,22 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RENDER_ALLOWED_IPS } from "@/utils/automationServerUrl";
-import { AlertTriangle, Server, Shield, Wifi, RefreshCw } from "lucide-react";
+import { AlertTriangle, Server, Shield, Wifi, RefreshCw, ExternalLink, FileCode } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { getAutomationServerUrl } from "@/utils/automationServerUrl";
 
 const ConfigurationTips: React.FC = () => {
+  // الحصول على عنوان الخادم الحالي
+  const currentServerUrl = getAutomationServerUrl();
+  
+  // فتح عنوان الخادم في نافذة جديدة
+  const openServerInNewTab = () => {
+    if (currentServerUrl) {
+      window.open(currentServerUrl, '_blank');
+    }
+  };
+  
   return (
     <Card className="mt-8 max-w-2xl mx-auto">
       <CardHeader>
@@ -19,8 +31,19 @@ const ConfigurationTips: React.FC = () => {
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertTitle className="text-amber-800">حل مشكلة "Failed to fetch"</AlertTitle>
           <AlertDescription className="text-amber-700">
-            إذا كنت تواجه خطأ "Failed to fetch"، فذلك يشير إلى وجود مشكلة في الاتصال بخادم Render. 
-            اتبع الإرشادات أدناه لحل المشكلة.
+            <p className="mb-2">
+              إذا كنت تواجه خطأ "Failed to fetch"، فذلك يشير إلى وجود مشكلة في الاتصال بخادم Render. 
+              اتبع الإرشادات أدناه لحل المشكلة.
+            </p>
+            <div className="flex mt-3">
+              <Button variant="outline" size="sm" onClick={openServerInNewTab} className="bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                زيارة خادم Render مباشرة
+              </Button>
+            </div>
+            <p className="text-xs mt-2">
+              زيارة الخادم مباشرة قد تساعد في "إيقاظه" إذا كان في وضع السكون.
+            </p>
           </AlertDescription>
         </Alert>
         
@@ -74,6 +97,30 @@ app.use(cors({
 }));
             `}</pre>
           </div>
+          <div className="mt-3">
+            <Button variant="outline" size="sm" className="text-green-700 border-green-200 hover:bg-green-50" onClick={() => {
+              // نسخ النص إلى الحافظة
+              navigator.clipboard.writeText(`// إعدادات CORS المطلوبة
+const cors = require('cors');
+app.use(cors({
+  origin: '*',  // يفضل تحديد نطاقك بدلاً من '*' في الإنتاج
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'X-Forwarded-For', 
+    'X-Render-Client-IP'
+  ],
+  credentials: true,
+  maxAge: 86400
+}));`);
+              alert('تم نسخ كود CORS إلى الحافظة!');
+            }}>
+              <FileCode className="h-4 w-4 mr-2" />
+              نسخ الكود
+            </Button>
+          </div>
         </div>
         
         <div className="space-y-2">
@@ -103,6 +150,12 @@ app.use(cors({
             <li className="pb-2 border-b border-gray-100">
               <span className="font-medium">تأكد من تشغيل خادم الأتمتة</span>
               <p className="mt-1 mr-6 text-gray-600">تحقق من أن خادم الأتمتة يعمل ومتاح على الإنترنت. يمكنك التحقق من حالته عن طريق زيارة عنوان URL الخاص به مباشرة في المتصفح.</p>
+              <div className="mt-2 mb-1 flex">
+                <Button variant="outline" size="sm" onClick={openServerInNewTab} className="text-xs">
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  زيارة {currentServerUrl && currentServerUrl.split('/')[2]}
+                </Button>
+              </div>
             </li>
             <li className="pb-2 border-b border-gray-100">
               <span className="font-medium">تحقق من جدار الحماية والشبكة</span>
