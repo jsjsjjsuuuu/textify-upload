@@ -65,11 +65,12 @@ export const useGeminiProcessing = () => {
             description: "تم استخراج البيانات باستخدام Gemini AI",
           });
 
+          // تحسين: تأكد من أن البيانات المستخرجة تُستخدم بالفعل لتحديث الصورة
           return updateImageWithExtractedData(
             image,
             extractedText || "",
             parsedData || {},
-            95,
+            parsedData.confidence ? parseInt(parsedData.confidence.toString()) : 95,
             "gemini"
           );
         } else {
@@ -84,7 +85,7 @@ export const useGeminiProcessing = () => {
           return fallbackProcessor(file, image);
         }
       } else {
-        console.log("Gemini extraction failed, falling back to OCR");
+        console.log("Gemini extraction failed, falling back to OCR:", extractionResult.message);
         
         toast({
           title: "تنبيه",

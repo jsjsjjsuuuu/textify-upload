@@ -17,6 +17,8 @@ export function parseGeminiResponse(extractedText: string): {
   let parsedData: Record<string, string> = {};
   
   try {
+    console.log("Parsing Gemini response text:", extractedText.substring(0, 100) + "...");
+    
     // نبحث عن أي نص JSON في الاستجابة
     const jsonMatch = extractedText.match(/```json\s*([\s\S]*?)\s*```/) || 
                       extractedText.match(/{[\s\S]*?}/);
@@ -47,12 +49,14 @@ export function parseGeminiResponse(extractedText: string): {
           // إذا فشل تنظيف JSON، نحاول استخراج أزواج المفاتيح والقيم
           try {
             const keyValuePattern = /"?([^":,}\s]+)"?\s*:\s*"?([^",}]+)"?/g;
-            const matches = [...jsonText.matchAll(keyValuePattern)];
+            const matches = [...extractedText.matchAll(keyValuePattern)];
             
             matches.forEach(match => {
               const key = match[1].trim();
               const value = match[2].trim();
-              parsedData[key] = value;
+              if (key && value) {
+                parsedData[key] = value;
+              }
             });
             
             console.log("Extracted key-value pairs:", parsedData);
@@ -63,57 +67,72 @@ export function parseGeminiResponse(extractedText: string): {
       }
     } else {
       console.log("No JSON format found in response, trying to extract data from text");
-    }
-    
-    // إذا لم نستطع استخراج JSON أو كان فارغًا، نحاول استخراج البيانات من النص
-    if (Object.keys(parsedData).length === 0) {
-      // البحث عن أنماط نصية محددة في النص
-      const patterns = {
-        companyName: [
-          /شركة\s+(.+?)(?:\n|$)/i,
-          /company\s*:\s*(.+?)(?:\n|$)/i,
-          /اسم الشركة\s*:\s*(.+?)(?:\n|$)/i
-        ],
-        code: [
-          /كود\s*:\s*([0-9]+)/i,
-          /code\s*:\s*([0-9]+)/i,
-          /رقم\s*:\s*([0-9]+)/i,
-          /رمز\s*:\s*([0-9]+)/i
-        ],
-        senderName: [
-          /اسم المرسل\s*:\s*(.+?)(?:\n|$)/i,
-          /sender\s*:\s*(.+?)(?:\n|$)/i,
-          /المرسل\s*:\s*(.+?)(?:\n|$)/i
-        ],
-        phoneNumber: [
-          /هاتف\s*:\s*([0-9\s\-]+)/i,
-          /phone\s*:\s*([0-9\s\-]+)/i,
-          /رقم الهاتف\s*:\s*([0-9\s\-]+)/i
-        ],
-        province: [
-          /محافظة\s*:\s*(.+?)(?:\n|$)/i,
-          /province\s*:\s*(.+?)(?:\n|$)/i,
-          /المدينة\s*:\s*(.+?)(?:\n|$)/i
-        ],
-        price: [
-          /سعر\s*:\s*(.+?)(?:\n|$)/i,
-          /price\s*:\s*(.+?)(?:\n|$)/i,
-          /المبلغ\s*:\s*(.+?)(?:\n|$)/i
-        ]
-      };
       
-      // محاولة استخراج كل حقل باستخدام الأنماط
-      for (const [field, fieldPatterns] of Object.entries(patterns)) {
-        for (const pattern of fieldPatterns) {
-          const match = extractedText.match(pattern);
-          if (match && match[1]) {
-            parsedData[field] = match[1].trim();
-            break;
-          }
-        }
+      // تحسين: البحث عن أنماط أكثر دقة في النص
+      const companyMatch = extractedText.match(/الشركة[:\s]+([^\n]+)/i) || 
+                         extractedText.match(/شركة[:\s]+([^\n]+)/i);
+      
+      if (companyMatch && companyMatch[1]) {
+        parsedData.companyName = companyMatch[1].trim();
       }
       
-      console.log("Extracted data from text patterns:", parsedData);
+      const codeMatch = extractedText.match(/الكود[:\s]+([0-9]+)/i) ||
+                       extractedText.match(/كود[:\s]+([0-9]+)/i) ||
+                       extractedText.match(/رقم الشحنة[:\s]+([0-9]+)/i) ||
+                       extractedText.match(/رقم[:\s]+([0-9]+)/i);
+      
+      if (codeMatch && codeMatch[1]) {
+        parsedData.code = codeMatch[1].trim();
+      }
+      
+      const senderMatch = extractedText.match(/اسم المرسل[:\s]+([^\n]+)/i) ||
+                         extractedText.match(/المرسل[:\s]+([^\n]+)/i);
+      
+      if (senderMatch && senderMatch[1]) {
+        parsedData.senderName = senderMatch[1].trim();
+      }
+      
+      const phoneMatch = extractedText.match(/الهاتف[:\s]+([0-9\s\-]+)/i) ||
+                        extractedText.match(/هاتف[:\s]+([0-9\s\-]+)/i) ||
+                        extractedText.match(/رقم الهاتف[:\s]+([0-9\s\-]+)/i) ||
+                        extractedText.match(/\b(07[0-9]{2}[0-9\s\-]{7,8})\b/);
+      
+      if (phoneMatch && phoneMatch[1]) {
+        parsedData.phoneNumber = phoneMatch[1].replace(/\D/g, '');
+      }
+      
+      const provinceMatch = extractedText.match(/المحافظة[:\s]+([^\n]+)/i) ||
+                           extractedText.match(/محافظة[:\s]+([^\n]+)/i);
+      
+      if (provinceMatch && provinceMatch[1]) {
+        parsedData.province = provinceMatch[1].trim();
+      }
+      
+      const priceMatch = extractedText.match(/السعر[:\s]+([0-9\s\-]+)/i) ||
+                        extractedText.match(/سعر[:\s]+([0-9\s\-]+)/i) ||
+                        extractedText.match(/المبلغ[:\s]+([0-9\s\-]+)/i);
+      
+      if (priceMatch && priceMatch[1]) {
+        parsedData.price = priceMatch[1].trim();
+      }
+    }
+    
+    // محاولة البحث عن رقم هاتف عراقي في النص بشكل مباشر
+    if (!parsedData.phoneNumber) {
+      const iraqiPhoneRegex = /\b(07[0-9]{2}[0-9\s\-]{7,8})\b/;
+      const phoneMatchDirect = extractedText.match(iraqiPhoneRegex);
+      if (phoneMatchDirect && phoneMatchDirect[1]) {
+        parsedData.phoneNumber = phoneMatchDirect[1].replace(/\D/g, '');
+      }
+    }
+    
+    // البحث عن أرقام بصيغ مختلفة قد تكون كود الشحنة
+    if (!parsedData.code) {
+      const possibleCodes = extractedText.match(/\b\d{5,10}\b/g);
+      if (possibleCodes && possibleCodes.length > 0) {
+        // استخدام أول رقم طويل (5-10 أرقام) كرمز محتمل
+        parsedData.code = possibleCodes[0];
+      }
     }
     
     // معالجة وتحسين البيانات المستخرجة
@@ -123,10 +142,8 @@ export function parseGeminiResponse(extractedText: string): {
     // تصحيح اسم المحافظة إذا وجد
     if (enhancedData.province) {
       enhancedData.province = correctProvinceName(enhancedData.province);
-    }
-    
-    // البحث في النص كاملاً عن أي اسم محافظة عراقية إذا لم نجد المحافظة
-    if (!enhancedData.province) {
+    } else {
+      // البحث في النص كاملاً عن أي اسم محافظة عراقية
       for (const province of IRAQ_PROVINCES) {
         if (extractedText.includes(province)) {
           enhancedData.province = province;
@@ -142,6 +159,7 @@ export function parseGeminiResponse(extractedText: string): {
     
     // تقييم جودة البيانات المستخرجة
     const confidenceScore = calculateConfidenceScore(enhancedData);
+    console.log("Calculated confidence score:", confidenceScore);
     
     return {
       parsedData: enhancedData,
