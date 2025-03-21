@@ -36,9 +36,10 @@ app.use(cors({
     // السماح بالطلبات بدون أصل (مثل تطبيقات الجوال أو curl أو Postman)
     if (!origin) return callback(null, true);
     
-    // السماح بأصول محددة
+    // السماح بأصول محددة - تمت إضافة lovableproject.com للسماح بالاتصال من lovable
     if (
       origin.includes('lovable.app') || 
+      origin.includes('lovableproject.com') || 
       origin.includes('localhost') || 
       origin.includes('127.0.0.1')
     ) {
@@ -344,7 +345,8 @@ app.post('/api/automate', async (req, res) => {
       
       // أغراض كاذبة للمساعدة في تجاوز كشف الروبوتات
       const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters) => (
+      window.navigator.permissions.query = (
+        parameters) => (
         parameters.name === 'notifications' ?
           Promise.resolve({ state: Notification.permission }) :
           originalQuery(parameters)
@@ -525,8 +527,23 @@ app.options('*', (req, res) => {
     origin: req.get('origin')
   });
   
-  // تعيين الرؤوس يدويًا للتأكد من تجاوز CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // تمت إضافة ضبط إضافي لضمان قبول الاستجابات من lovableproject.com
+  const origin = req.get('origin');
+  if (origin) {
+    if (
+      origin.includes('lovable.app') || 
+      origin.includes('lovableproject.com') || 
+      origin.includes('localhost') || 
+      origin.includes('127.0.0.1')
+    ) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Render-Client-IP, X-Client-ID, Cache-Control, Pragma, X-Request-Time, Origin, Referer');
   res.setHeader('Access-Control-Max-Age', '86400');
