@@ -16,6 +16,10 @@ services:
           envVarKey: PORT
       - key: PUPPETEER_SKIP_DOWNLOAD
         value: true
+      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
+        value: true
+      - key: CHROME_BIN
+        value: /usr/bin/google-chrome-stable
       - key: AUTOMATION_SERVER_URL
         value: ${RENDER_EXTERNAL_URL}
       - key: VITE_AUTOMATION_SERVER_URL
@@ -31,6 +35,11 @@ services:
 
     # ضبط منطقة النشر
     region: ohio
+    
+    # إضافة buildpacks لدعم Puppeteer
+    buildpacks:
+      - name: heroku/nodejs
+      - name: heroku/google-chrome
 
 # متغيرات عالمية مشتركة بين جميع الخدمات
 envVarGroups:

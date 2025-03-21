@@ -19,3 +19,39 @@ export const isPreview = (): boolean => {
 export const isProduction = (): boolean => {
   return true;
 };
+
+/**
+ * الحصول على مسار Chrome المثبت على الخادم
+ * @returns {string|undefined} مسار Chrome المثبت
+ */
+export const getChromePath = (): string | undefined => {
+  return process.env.CHROME_BIN || '/usr/bin/google-chrome-stable';
+};
+
+/**
+ * الحصول على وسائط تشغيل Puppeteer المناسبة لبيئة Render
+ * @returns {string[]} قائمة وسائط تشغيل Chrome
+ */
+export const getPuppeteerArgs = (): string[] => {
+  return [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-accelerated-2d-canvas',
+    '--disable-gpu',
+    '--window-size=1366,768'
+  ];
+};
+
+/**
+ * التأكد من تكوين Puppeteer الصحيح
+ * @returns {object} تكوين Puppeteer لبيئة Render
+ */
+export const getPuppeteerConfig = () => {
+  return {
+    executablePath: getChromePath(),
+    headless: 'new',
+    args: getPuppeteerArgs(),
+    defaultViewport: { width: 1366, height: 768 }
+  };
+};
