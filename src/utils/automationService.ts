@@ -34,7 +34,7 @@ export class AutomationService {
   
   /**
    * التحقق من وجود الخادم
-   * تعديل التوقيع ليكون serverUrl اختياريًا ولا نمرر قيمة boolean
+   * تعديل التوقيع ليكون serverUrl اختياريًا
    */
   static async checkServerExistence(serverUrl?: string): Promise<boolean> {
     try {
@@ -48,7 +48,7 @@ export class AutomationService {
         });
         return response.ok;
       } else {
-        // التحقق من الخادم المحدد حاليًا - تمرير showToasts كقيمة منطقية
+        // التحقق من الخادم المحدد حاليًا
         const status = await ConnectionManager.checkServerStatus(false);
         return status.status === 'ok';
       }
