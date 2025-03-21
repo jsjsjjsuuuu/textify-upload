@@ -14,11 +14,26 @@ export class AutomationService {
   private static readonly maxRetries = 3;
   private static readonly retryDelay = 2000;
   private static isRunning = false;
+  private static readonly DEBUG = true; // تمكين وضع التشخيص
+
+  /**
+   * التسجيل المُحسّن للتشخيص
+   */
+  private static log(message: string, data?: any): void {
+    if (this.DEBUG) {
+      if (data) {
+        console.log(`🔍 [AutomationService] ${message}`, data);
+      } else {
+        console.log(`🔍 [AutomationService] ${message}`);
+      }
+    }
+  }
 
   /**
    * التحقق من حالة اتصال خادم الأتمتة
    */
   static async checkServerStatus(showToasts = true): Promise<any> {
+    this.log("جاري التحقق من حالة خادم الأتمتة");
     try {
       return await ConnectionManager.checkServerStatus(showToasts);
     } catch (error) {
@@ -31,6 +46,7 @@ export class AutomationService {
    * التحقق من وجود خادم الأتمتة
    */
   static async checkServerExistence(showToasts = true): Promise<boolean> {
+    this.log("جاري التحقق من وجود خادم الأتمتة");
     try {
       const result = await this.checkServerStatus(showToasts);
       return result && result.status === 'ok';
@@ -44,6 +60,7 @@ export class AutomationService {
    * إجبار إعادة الاتصال بالخادم
    */
   static async forceReconnect(): Promise<boolean> {
+    this.log("محاولة إعادة الاتصال الإجباري بالخادم");
     try {
       const result = await this.checkServerStatus(false);
       return result && result.status === 'ok';
@@ -57,6 +74,7 @@ export class AutomationService {
    * بدء محاولات إعادة الاتصال التلقائية
    */
   static startAutoReconnect(callback?: (isConnected: boolean) => void): void {
+    this.log("بدء محاولات إعادة الاتصال التلقائية");
     ConnectionManager.startAutoReconnect(callback);
   }
 
@@ -64,6 +82,7 @@ export class AutomationService {
    * إيقاف محاولات إعادة الاتصال التلقائية
    */
   static stopReconnect(): void {
+    this.log("إيقاف محاولات إعادة الاتصال التلقائية");
     ConnectionManager.stopReconnect();
   }
 
@@ -71,7 +90,7 @@ export class AutomationService {
    * تبديل وضع التنفيذ الفعلي
    */
   static toggleRealExecution(enable: boolean): void {
-    console.log(`تبديل وضع التنفيذ الفعلي: ${enable ? 'مفعل' : 'غير مفعل'}`);
+    this.log(`تبديل وضع التنفيذ الفعلي: ${enable ? 'مفعل' : 'غير مفعل'}`);
     // دائمًا نستخدم وضع التنفيذ الفعلي
   }
 
@@ -79,6 +98,7 @@ export class AutomationService {
    * التحقق من صحة إعدادات الأتمتة قبل تنفيذها
    */
   static validateAutomationConfig(config: AutomationConfig): string[] {
+    this.log("التحقق من صحة إعدادات الأتمتة", config);
     const errors: string[] = [];
 
     // التحقق من وجود URL المشروع
@@ -133,12 +153,16 @@ export class AutomationService {
    * التحقق من الإعدادات وتنفيذ الأتمتة
    */
   static async validateAndRunAutomation(config: AutomationConfig): Promise<AutomationResponse> {
+    this.log("بدء عملية التحقق والتنفيذ", config);
+    
     // التأكد من تمكين وضع التنفيذ الفعلي دائمًا
     config.forceRealExecution = true;
+    this.log("تم تفعيل وضع التنفيذ الفعلي إجبارياً");
     
     // التحقق من الإعدادات قبل التنفيذ
     const validationErrors = this.validateAutomationConfig(config);
     if (validationErrors.length > 0) {
+      this.log("فشل التحقق من الإعدادات:", validationErrors);
       return {
         success: false,
         message: "فشل التحقق من إعدادات الأتمتة",
@@ -195,7 +219,10 @@ export class AutomationService {
    * تنفيذ الأتمتة
    */
   static async runAutomation(config: AutomationConfig): Promise<AutomationResponse> {
+    this.log("بدء تنفيذ الأتمتة", config);
+    
     if (this.isRunning) {
+      this.log("تم رفض الطلب: هناك عملية أتمتة قيد التنفيذ بالفعل");
       return {
         success: false,
         message: "هناك عملية أتمتة قيد التنفيذ بالفعل. يرجى الانتظار حتى اكتمالها.",
@@ -205,23 +232,34 @@ export class AutomationService {
 
     // التأكد دائمًا من تمكين وضع التنفيذ الفعلي
     config.forceRealExecution = true;
+    this.log("تم تفعيل وضع التنفيذ الفعلي إجبارياً");
 
     // إذا كانت الإجراءات من نوع AutomationAction، فسنقوم بتحويلها إلى نوع Action المتوافق مع واجهة خادم الأتمتة
     if (config.actions.length > 0 && 'name' in config.actions[0]) {
       const actions = config.actions as any[];
-      const mappedActions = actions.map(action => {
+      const mappedActions = actions.map((action, index) => {
         let type = 'click';
         
         // تحديد نوع الإجراء من الاسم أو القيمة
-        if (action.name === 'انقر' || action.value === 'click') {
+        if (action.name === 'انقر' || action.value === 'click' || action.name === 'click') {
           type = 'click';
-        } else if (action.name === 'أدخل نص') {
+        } else if (action.name === 'أدخل نص' || action.name === 'type') {
           type = 'type';
-        } else if (action.name === 'اختر قيمة') {
+        } else if (action.name === 'اختر قيمة' || action.name === 'select') {
           type = 'select';
-        } else if (action.name === 'انتظر' || action.value === 'wait') {
+        } else if (action.name === 'انتظر' || action.value === 'wait' || action.name === 'wait') {
           type = 'wait';
         }
+        
+        this.log(`تحويل الإجراء #${index + 1}:`, {
+          من: action,
+          إلى: {
+            type,
+            selector: action.finder,
+            value: action.value,
+            delay: action.delay
+          }
+        });
         
         return {
           type,
@@ -237,11 +275,15 @@ export class AutomationService {
 
     // التحقق من اتصال الخادم قبل تنفيذ الأتمتة
     const connectionStatus = getLastConnectionStatus();
+    this.log("حالة اتصال الخادم قبل التنفيذ:", connectionStatus);
+    
     if (!connectionStatus.isConnected && config.automationType === 'server') {
+      this.log("الخادم غير متصل، محاولة إعادة الاتصال قبل المتابعة...");
       // محاولة إعادة الاتصال قبل الفشل
       try {
         const retryResult = await this.retryServerConnection(2);
         if (!retryResult) {
+          this.log("فشلت جميع محاولات إعادة الاتصال");
           return {
             success: false,
             message: "تعذر الاتصال بخادم الأتمتة. تأكد من اتصالك بالإنترنت.",
@@ -266,6 +308,8 @@ export class AutomationService {
       
       // الحصول على رابط خادم الأتمتة
       const serverUrl = getAutomationServerUrl();
+      this.log("رابط خادم الأتمتة:", serverUrl);
+      
       if (!serverUrl && config.automationType === 'server') {
         throw new Error("لم يتم تحديد رابط خادم الأتمتة");
       }
@@ -278,12 +322,27 @@ export class AutomationService {
       config.forceRealExecution = true;
       
       // تنفيذ الأتمتة مع إعادة المحاولة تلقائيًا
+      this.log("بدء إرسال طلب الأتمتة مع إمكانية إعادة المحاولة");
+      const fetchOptions = createFetchOptions('POST', {
+        ...config,
+        // إضافة طابع زمني لتجنب التخزين المؤقت
+        _timestamp: Date.now()
+      });
+      
+      this.log("خيارات الطلب:", fetchOptions);
+      
       const response = await fetchWithRetry(
         endpoint, 
-        createFetchOptions('POST', config),
+        fetchOptions,
         this.maxRetries,
         this.retryDelay
       );
+      
+      this.log("استجابة الخادم:", {
+        حالة: response.status,
+        نص: response.statusText,
+        رؤوس: Object.fromEntries(response.headers.entries())
+      });
       
       if (!response.ok) {
         failed = true;
@@ -291,8 +350,10 @@ export class AutomationService {
         // محاولة استخراج تفاصيل الخطأ من الاستجابة
         try {
           const errorData = await response.json();
+          this.log("بيانات الخطأ:", errorData);
           throw new Error(errorData.message || `فشل الطلب بحالة: ${response.status}`);
         } catch (parseError) {
+          this.log("تعذر تحليل بيانات الخطأ:", parseError);
           throw new Error(`فشل الطلب بحالة: ${response.status} ${response.statusText}`);
         }
       }
@@ -350,6 +411,7 @@ export class AutomationService {
       };
     } finally {
       this.isRunning = false;
+      this.log("انتهاء تنفيذ الأتمتة، حالة الفشل:", failed);
       
       // إذا فشلت العملية، حاول إعادة الاتصال
       if (failed && config.automationType === 'server') {

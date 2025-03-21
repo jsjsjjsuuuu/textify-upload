@@ -9,9 +9,14 @@ interface RunButtonProps {
 }
 
 const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
+  const handleRun = () => {
+    console.log("زر التنفيذ: بدء تنفيذ الأتمتة");
+    onRun();
+  };
+
   return (
     <Button
-      onClick={onRun}
+      onClick={handleRun}
       disabled={isRunning}
       className="bg-purple-600 hover:bg-purple-700"
     >
