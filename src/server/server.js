@@ -1,3 +1,4 @@
+
 import express from 'express';
 import puppeteer from 'puppeteer';
 import cors from 'cors';
@@ -737,3 +738,696 @@ const fillFormField = async (page, element, value) => {
         }
       } catch (error) {
         console.warn('فشل في النقر على الخيار من القائمة المنسدلة:',
+          error.message);
+        return false;
+      }
+    } catch (error) {
+      console.warn('فشل في ملء القائمة المنسدلة:', error.message);
+      return false;
+    }
+  } else if (tagName === 'input' && (type === 'checkbox' || type === 'radio')) {
+    // مربع اختيار أو زر راديو - تحديد بناءً على قيمة (true/false أو قيمة محددة)
+    try {
+      if (value === true || value === 'true' || value === '1' || value === 'yes' || value === 'checked' || value === 'on') {
+        // تحقق مما إذا كان مربع الاختيار محددًا بالفعل
+        const isChecked = await page.evaluate(el => el.checked, element);
+        if (!isChecked) {
+          await element.click();
+          console.log(`تم تحديد مربع الاختيار/زر الراديو`);
+        } else {
+          console.log(`مربع الاختيار/زر الراديو محدد بالفعل`);
+        }
+      } else if (type === 'radio' && value) {
+        // للأزرار الراديو، يمكننا أيضًا اختيار استنادًا إلى قيمتها
+        const radioValue = await page.evaluate(el => el.value, element);
+        if (radioValue === value || radioValue.includes(value) || value.includes(radioValue)) {
+          await element.click();
+          console.log(`تم تحديد زر الراديو بالقيمة '${radioValue}'`);
+        }
+      } else if (value === false || value === 'false' || value === '0' || value === 'no' || value === 'unchecked' || value === 'off') {
+        // إذا كان مربع الاختيار محددًا ونريد إلغاء تحديده
+        const isChecked = await page.evaluate(el => el.checked, element);
+        if (isChecked && type === 'checkbox') { // يمكننا فقط إلغاء تحديد مربعات الاختيار وليس أزرار الراديو
+          await element.click();
+          console.log(`تم إلغاء تحديد مربع الاختيار`);
+        } else {
+          console.log(`مربع الاختيار غير محدد بالفعل`);
+        }
+      }
+      return true;
+    } catch (error) {
+      console.warn('فشل في تحديد/إلغاء تحديد مربع الاختيار/زر الراديو:', error.message);
+      return false;
+    }
+  } else if (tagName === 'textarea' || (tagName === 'input' && type !== 'file')) {
+    // حقول النص والإدخال (باستثناء حقول الملفات) - مسح وملء
+    try {
+      // مسح القيمة الحالية أولاً (3 محاولات مختلفة)
+      try {
+        await element.click({ clickCount: 3 }); // تحديد كل النص
+        await page.keyboard.press('Backspace'); // حذف النص المحدد
+      } catch (e) {
+        try {
+          await page.evaluate(el => { el.value = ''; }, element); // مسح مباشر للقيمة
+        } catch (e2) {
+          console.warn('فشل في مسح الحقل، محاولة كتابة القيمة مباشرة');
+        }
+      }
+      
+      // ثم كتابة القيمة الجديدة
+      await element.type(String(value));
+      console.log(`تم ملء الحقل بالقيمة: ${value}`);
+      
+      // إطلاق حدث التغيير يدويًا لضمان تنشيط المستمعين
+      await page.evaluate(el => {
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }, element);
+      
+      return true;
+    } catch (error) {
+      console.warn('فشل في ملء حقل النص:', error.message);
+      
+      // محاولة بديلة لملء الحقل
+      try {
+        await page.evaluate((el, val) => { el.value = val; }, element, String(value));
+        // إطلاق حدث التغيير يدويًا
+        await page.evaluate(el => {
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }, element);
+        
+        console.log(`تم ملء الحقل باستخدام طريقة بديلة: ${value}`);
+        return true;
+      } catch (backupError) {
+        console.error('فشلت جميع محاولات ملء الحقل:', backupError.message);
+        return false;
+      }
+    }
+  } else if (tagName === 'input' && type === 'file') {
+    // حقل ملف - لا يمكن معالجته عن بعد بسبب قيود الأمان
+    console.warn('لا يمكن ملء حقل ملف تلقائيًا بسبب قيود الأمان');
+    return false;
+  } else {
+    // أنواع أخرى من العناصر - محاولة ضبط المحتوى النصي
+    try {
+      await page.evaluate((el, val) => { 
+        if (typeof el.value !== 'undefined') {
+          el.value = val;
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        } else if (el.isContentEditable) {
+          el.textContent = val;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }, element, String(value));
+      
+      console.log(`تم ضبط قيمة العنصر إلى: ${value}`);
+      return true;
+    } catch (error) {
+      console.warn('فشل في ضبط قيمة العنصر:', error.message);
+      return false;
+    }
+  }
+};
+
+// إضافة نقطة نهاية لاختبار تثبيت Puppeteer
+app.get('/api/check-puppeteer', async (req, res) => {
+  if (!setCorsHeaders(req, res)) {
+    return res.status(403).json({ error: 'CORS policy violation: Origin not allowed' });
+  }
+  
+  try {
+    console.log('اختبار تثبيت Puppeteer...');
+    const success = await checkPuppeteer();
+    
+    if (success) {
+      res.json({
+        status: 'ok',
+        message: 'تم تثبيت Puppeteer بنجاح ويمكنه إطلاق المتصفح',
+        success: true,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(500).json({
+        status: 'error',
+        message: 'فشل في تهيئة Puppeteer أو إطلاق المتصفح',
+        success: false,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('خطأ أثناء اختبار Puppeteer:', error);
+    res.status(500).json({
+      status: 'error',
+      message: `فشل اختبار Puppeteer: ${error.message}`,
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// معالج الطلبات لتنفيذ السيناريو باستخدام Puppeteer
+app.post('/api/automate', async (req, res) => {
+  console.log('تم استلام طلب أتمتة جديد');
+  
+  // تعيين رؤوس CORS
+  if (!setCorsHeaders(req, res)) {
+    return res.status(403).json({ error: 'CORS policy violation: Origin not allowed' });
+  }
+  
+  console.log('نوع المحتوى:', req.get('Content-Type'));
+  console.log('منشأ الطلب:', req.get('Origin'));
+  
+  // التحقق من البيانات الواردة
+  const { projectUrl, actions, useBrowserData } = req.body;
+  
+  console.log(`معالجة طلب أتمتة لـ URL: ${projectUrl}`);
+  console.log(`عدد الإجراءات: ${Array.isArray(actions) ? actions.length : 'غير صالح'}`);
+  
+  // تسجيل عينة من الإجراءات للتشخيص
+  if (Array.isArray(actions) && actions.length > 0) {
+    console.log('عينة من الإجراءات:');
+    const sample = actions.slice(0, 3);
+    sample.forEach((action, index) => {
+      console.log(`إجراء ${index + 1}:`, {
+        type: action.type,
+        selector: action.selector,
+        value: action.value
+      });
+    });
+    
+    if (actions.length > 3) {
+      console.log(`... و ${actions.length - 3} إجراءات أخرى`);
+    }
+  }
+  
+  // التحقق من وجود URL المشروع والإجراءات
+  if (!projectUrl) {
+    console.error('خطأ: URL المشروع مفقود');
+    return res.status(400).json({
+      success: false,
+      message: 'URL المشروع مطلوب'
+    });
+  }
+  
+  if (!Array.isArray(actions) || actions.length === 0) {
+    console.error('خطأ: الإجراءات غير صالحة أو مفقودة');
+    return res.status(400).json({
+      success: false,
+      message: 'يجب توفير قائمة صالحة من الإجراءات'
+    });
+  }
+  
+  // بدء تشغيل متصفح Puppeteer
+  let browser = null;
+  let page = null;
+  let screenshots = [];
+  
+  try {
+    console.log('جاري بدء متصفح Puppeteer...');
+    
+    // إعدادات Puppeteer (مع مزيد من الخيارات للتوافق)
+    const browserOptions = {
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--window-size=1366,768',
+        '--no-zygote',
+        '--single-process',
+        '--disable-features=site-per-process'
+      ],
+      ignoreHTTPSErrors: true,
+      timeout: 60000,
+      protocolTimeout: 60000,
+      dumpio: true
+    };
+    
+    // اختيار مسار تنفيذي مخصص إذا كان متاحًا
+    if (process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN) {
+      browserOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN;
+      console.log(`استخدام متصفح Chrome/Chromium في المسار: ${browserOptions.executablePath}`);
+    }
+    
+    // بدء المتصفح مع تسجيل أفضل للأخطاء
+    try {
+      browser = await puppeteer.launch(browserOptions);
+      console.log('تم بدء متصفح Puppeteer بنجاح');
+    } catch (browserError) {
+      console.error('فشل في بدء متصفح Puppeteer:', browserError);
+      
+      // محاولة باستخدام إعدادات أبسط
+      console.log('جاري محاولة بدء المتصفح بإعدادات مبسطة...');
+      
+      try {
+        const simpleBrowserOptions = {
+          headless: 'new',
+          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+          ignoreHTTPSErrors: true
+        };
+        
+        browser = await puppeteer.launch(simpleBrowserOptions);
+        console.log('نجح بدء المتصفح باستخدام الإعدادات المبسطة');
+      } catch (simpleBrowserError) {
+        console.error('فشلت أيضًا محاولة بدء المتصفح بالإعدادات المبسطة:', simpleBrowserError);
+        
+        // إرجاع استجابة خطأ مفصلة
+        return res.status(500).json({
+          success: false,
+          message: 'فشل في بدء متصفح Puppeteer',
+          error: {
+            original: browserError.message,
+            simplified: simpleBrowserError.message,
+            stack: simpleBrowserError.stack
+          },
+          systemInfo: {
+            platform: process.platform,
+            nodeVersion: process.version,
+            puppeteerVersion: require('puppeteer/package.json').version,
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN || 'المسار الافتراضي'
+          }
+        });
+      }
+    }
+    
+    // إنشاء صفحة جديدة وضبط العرض
+    page = await browser.newPage();
+    
+    // ضبط حجم العرض
+    await page.setViewport({ width: 1366, height: 768 });
+    
+    // تسجيل الأخطاء من وحدة تحكم الصفحة
+    page.on('console', message => {
+      console.log(`وحدة تحكم المتصفح [${message.type()}]: ${message.text()}`);
+    });
+    
+    page.on('pageerror', error => {
+      console.error('خطأ في الصفحة:', error.message);
+    });
+    
+    // ضبط User-Agent مخصص للمساعدة في تجنب الكشف عن الروبوتات
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+    
+    // التنقل إلى URL المشروع
+    console.log(`جاري الانتقال إلى URL: ${projectUrl}`);
+    await page.goto(projectUrl, { 
+      waitUntil: 'networkidle2', 
+      timeout: 60000 
+    });
+    
+    console.log('تم تحميل الصفحة بنجاح، جاري تنفيذ الإجراءات...');
+    
+    // تجاوز تأثيرات التمرير لتحسين سرعة التنفيذ
+    await page.evaluate(() => {
+      // إيقاف تأثيرات التمرير السلسة
+      try {
+        Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+          value: function(arg) {
+            const rect = this.getBoundingClientRect();
+            window.scrollTo(window.pageXOffset, rect.top + window.pageYOffset);
+          },
+          configurable: true
+        });
+      } catch (e) {
+        console.warn('تعذر تعديل تأثير التمرير');
+      }
+    });
+    
+    // التقاط لقطة شاشة أولية للصفحة
+    const initialScreenshot = await page.screenshot({ 
+      encoding: 'base64',
+      type: 'jpeg',
+      quality: 70
+    });
+    
+    screenshots.push({
+      step: 'initial',
+      timestamp: new Date().toISOString(),
+      data: initialScreenshot
+    });
+    
+    // تنفيذ كل إجراء في تسلسل
+    const results = [];
+    
+    for (let i = 0; i < actions.length; i++) {
+      const action = actions[i];
+      const startTime = Date.now();
+      
+      console.log(`تنفيذ الإجراء ${i + 1}/${actions.length}:`, action);
+      
+      const actionResult = {
+        index: i,
+        action: action.type,
+        selector: action.selector || '',
+        value: action.value || '',
+        success: false,
+        error: null,
+        timestamp: new Date().toISOString(),
+        duration: 0,
+        screenshots: []
+      };
+      
+      try {
+        let element = null;
+        
+        // التعامل مع أنواع مختلفة من الإجراءات
+        switch (action.type) {
+          case 'click':
+            // العثور على العنصر باستخدام استراتيجيات متعددة
+            element = await findElement(page, action.selector);
+            
+            if (!element) {
+              throw new Error(`لم يتم العثور على العنصر باستخدام المحدد: ${action.selector}`);
+            }
+            
+            // التمرير إلى العنصر
+            await page.evaluate(el => {
+              el.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }, element);
+            
+            // انتظار قصير للتمرير
+            await page.waitForTimeout(300);
+            
+            // التقاط لقطة شاشة قبل النقر
+            const beforeClickScreenshot = await page.screenshot({ 
+              encoding: 'base64',
+              type: 'jpeg',
+              quality: 60
+            });
+            
+            actionResult.screenshots.push({
+              step: 'before-click',
+              timestamp: new Date().toISOString(),
+              data: beforeClickScreenshot
+            });
+            
+            // النقر على العنصر
+            await element.click({ delay: 50 });
+            
+            // انتظار استقرار الصفحة
+            await page.waitForTimeout(500);
+            
+            // التقاط لقطة شاشة بعد النقر
+            const afterClickScreenshot = await page.screenshot({ 
+              encoding: 'base64',
+              type: 'jpeg',
+              quality: 60
+            });
+            
+            actionResult.screenshots.push({
+              step: 'after-click',
+              timestamp: new Date().toISOString(),
+              data: afterClickScreenshot
+            });
+            
+            actionResult.success = true;
+            break;
+          
+          case 'fill':
+            // العثور على العنصر باستخدام وظيفة البحث المحسنة
+            element = await findElement(page, action.selector);
+            
+            if (!element) {
+              throw new Error(`لم يتم العثور على العنصر للملء باستخدام المحدد: ${action.selector}`);
+            }
+            
+            // التمرير إلى العنصر
+            await page.evaluate(el => {
+              el.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }, element);
+            
+            // انتظار قصير للتمرير
+            await page.waitForTimeout(300);
+            
+            // التقاط لقطة شاشة قبل الملء
+            const beforeFillScreenshot = await page.screenshot({
+              encoding: 'base64',
+              type: 'jpeg',
+              quality: 60
+            });
+            
+            actionResult.screenshots.push({
+              step: 'before-fill',
+              timestamp: new Date().toISOString(),
+              data: beforeFillScreenshot
+            });
+            
+            // ملء العنصر باستخدام وظيفة الملء المحسنة
+            const fillResult = await fillFormField(page, element, action.value);
+            
+            if (!fillResult) {
+              throw new Error(`فشل في ملء العنصر بالقيمة: ${action.value}`);
+            }
+            
+            // انتظار استقرار الصفحة
+            await page.waitForTimeout(500);
+            
+            // التقاط لقطة شاشة بعد الملء
+            const afterFillScreenshot = await page.screenshot({
+              encoding: 'base64',
+              type: 'jpeg',
+              quality: 60
+            });
+            
+            actionResult.screenshots.push({
+              step: 'after-fill',
+              timestamp: new Date().toISOString(),
+              data: afterFillScreenshot
+            });
+            
+            actionResult.success = true;
+            break;
+          
+          case 'select':
+            // العثور على العنصر باستخدام وظيفة البحث المحسنة
+            element = await findElement(page, action.selector);
+            
+            if (!element) {
+              throw new Error(`لم يتم العثور على عنصر القائمة المنسدلة باستخدام المحدد: ${action.selector}`);
+            }
+            
+            // التحقق مما إذا كان العنصر قائمة منسدلة
+            const tagName = await page.evaluate(el => el.tagName.toLowerCase(), element);
+            
+            if (tagName !== 'select') {
+              // محاولة العثور على قائمة منسدلة قريبة
+              console.log('العنصر ليس قائمة منسدلة، محاولة العثور على قائمة منسدلة قريبة...');
+              
+              // البحث عن أقرب قائمة منسدلة (أحد العناصر الأصلية أو التالية)
+              const nearbySelect = await page.evaluateHandle((el) => {
+                // البحث في العناصر الأصلية
+                if (el.querySelector('select')) {
+                  return el.querySelector('select');
+                }
+                
+                // البحث في العناصر التالية
+                const next = el.nextElementSibling;
+                if (next && next.tagName.toLowerCase() === 'select') {
+                  return next;
+                }
+                
+                // البحث في العناصر الأبناء التالية
+                const parent = el.parentElement;
+                if (parent && parent.querySelector('select')) {
+                  return parent.querySelector('select');
+                }
+                
+                return null;
+              }, element);
+              
+              // إذا وجدنا قائمة منسدلة، استخدمها
+              if (nearbySelect) {
+                console.log('تم العثور على قائمة منسدلة قريبة');
+                element = nearbySelect;
+              } else {
+                throw new Error('فشل في العثور على عنصر قائمة منسدلة صالح');
+              }
+            }
+            
+            // التمرير إلى العنصر
+            await page.evaluate(el => {
+              el.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }, element);
+            
+            // انتظار قصير
+            await page.waitForTimeout(300);
+            
+            // التقاط لقطة شاشة قبل الاختيار
+            const beforeSelectScreenshot = await page.screenshot({
+              encoding: 'base64',
+              type: 'jpeg',
+              quality: 60
+            });
+            
+            actionResult.screenshots.push({
+              step: 'before-select',
+              timestamp: new Date().toISOString(),
+              data: beforeSelectScreenshot
+            });
+            
+            // محاولة تحديد الخيار
+            const selectResult = await fillFormField(page, element, action.value);
+            
+            if (!selectResult) {
+              throw new Error(`فشل في اختيار القيمة "${action.value}" من القائمة المنسدلة`);
+            }
+            
+            // انتظار استقرار الصفحة
+            await page.waitForTimeout(500);
+            
+            // التقاط لقطة شاشة بعد الاختيار
+            const afterSelectScreenshot = await page.screenshot({
+              encoding: 'base64',
+              type: 'jpeg',
+              quality: 60
+            });
+            
+            actionResult.screenshots.push({
+              step: 'after-select',
+              timestamp: new Date().toISOString(),
+              data: afterSelectScreenshot
+            });
+            
+            actionResult.success = true;
+            break;
+          
+          case 'wait':
+            const waitTime = parseInt(action.value) || 1000;
+            console.log(`انتظار ${waitTime} مللي ثانية...`);
+            await page.waitForTimeout(waitTime);
+            actionResult.success = true;
+            break;
+          
+          case 'navigate':
+            console.log(`الانتقال إلى URL: ${action.value}`);
+            await page.goto(action.value, { waitUntil: 'networkidle2', timeout: 30000 });
+            actionResult.success = true;
+            break;
+          
+          default:
+            throw new Error(`نوع الإجراء غير مدعوم: ${action.type}`);
+        }
+      } catch (error) {
+        console.error(`فشل الإجراء ${i + 1}:`, error);
+        actionResult.success = false;
+        actionResult.error = error.message;
+        
+        // التقاط لقطة شاشة للخطأ
+        try {
+          const errorScreenshot = await page.screenshot({ 
+            encoding: 'base64',
+            type: 'jpeg',
+            quality: 70
+          });
+          
+          actionResult.screenshots.push({
+            step: 'error',
+            timestamp: new Date().toISOString(),
+            data: errorScreenshot
+          });
+        } catch (screenshotError) {
+          console.error('فشل في التقاط لقطة شاشة للخطأ:', screenshotError);
+        }
+      }
+      
+      // حساب مدة الإجراء
+      actionResult.duration = Date.now() - startTime;
+      
+      // إضافة نتيجة الإجراء إلى النتائج
+      results.push(actionResult);
+    }
+    
+    // التقاط لقطة شاشة نهائية
+    const finalScreenshot = await page.screenshot({ 
+      encoding: 'base64',
+      type: 'jpeg',
+      quality: 70
+    });
+    
+    screenshots.push({
+      step: 'final',
+      timestamp: new Date().toISOString(),
+      data: finalScreenshot
+    });
+    
+    console.log('تم الانتهاء من تنفيذ جميع الإجراءات، إغلاق المتصفح...');
+    
+    // إغلاق المتصفح
+    await browser.close();
+    
+    // حساب معدل النجاح
+    const successfulActions = results.filter(r => r.success).length;
+    const successRate = (successfulActions / actions.length) * 100;
+    const isFullySuccessful = successfulActions === actions.length;
+    
+    console.log(`معدل النجاح: ${successRate.toFixed(1)}% (${successfulActions}/${actions.length})`);
+    
+    // إرجاع النتائج
+    res.json({
+      success: isFullySuccessful,
+      message: isFullySuccessful 
+        ? 'تم تنفيذ جميع الإجراءات بنجاح'
+        : `تم تنفيذ ${successfulActions} من أصل ${actions.length} إجراءات بنجاح`,
+      automationType: 'server',
+      executionTime: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+      results: results,
+      screenshots: screenshots,
+      metrics: {
+        successRate: successRate,
+        successfulActions: successfulActions,
+        totalActions: actions.length,
+        browserInfo: {
+          platform: process.platform,
+          nodeVersion: process.version
+        }
+      }
+    });
+  } catch (error) {
+    console.error('خطأ أثناء تنفيذ الأتمتة:', error);
+    
+    // إغلاق المتصفح إذا كان لا يزال مفتوحًا
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (closeError) {
+        console.error('خطأ عند إغلاق المتصفح:', closeError);
+      }
+    }
+    
+    // إرجاع استجابة الخطأ
+    res.status(500).json({
+      success: false,
+      message: `فشل في تنفيذ الأتمتة: ${error.message}`,
+      error: {
+        message: error.message,
+        stack: error.stack
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// الاستماع على المنفذ المحدد
+app.listen(PORT, () => {
+  console.log(`خادم الأتمتة يعمل على المنفذ ${PORT}`);
+  console.log(`NODE_ENV: ${NODE_ENV}`);
+  console.log(`AUTOMATION_SERVER_URL: ${AUTOMATION_SERVER_URL}`);
+  
+  // التحقق من تثبيت Puppeteer عند بدء التشغيل
+  checkPuppeteer()
+    .then(success => {
+      if (success) {
+        console.log('تم تهيئة Puppeteer بنجاح ويمكنه إطلاق المتصفح');
+      } else {
+        console.error('فشل في تهيئة Puppeteer، قد تكون هناك مشكلة في تثبيت المتصفح');
+      }
+    })
+    .catch(error => {
+      console.error('خطأ أثناء التحقق من تثبيت Puppeteer:', error);
+    });
+});
