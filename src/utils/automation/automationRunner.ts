@@ -1,4 +1,3 @@
-
 /**
  * تشغيل سيناريوهات الأتمتة
  */
@@ -110,6 +109,22 @@ export class AutomationRunner {
           logElementDetails: true,
           logNetworkRequests: true,
           logErrors: true
+        },
+        // إضافة معلومات الخادم المستخدم لمساعدة في التشخيص
+        serverInfo: {
+          renderEnvironment: process.env.RENDER || 'unknown',
+          isProduction: process.env.NODE_ENV === 'production',
+          timestamp: new Date().toISOString()
+        },
+        // إضافة خيارات خاصة لـ Puppeteer لمساعدة في تهيئته
+        puppeteerOptions: {
+          useSingleProcess: true,
+          disableGpu: true,
+          additionalArgs: [
+            '--no-zygote',
+            '--disable-features=site-per-process',
+            '--ignore-certificate-errors'
+          ]
         }
       };
       
@@ -152,9 +167,27 @@ export class AutomationRunner {
           console.log(`استجابة الخادم: ${response.status} ${response.statusText}`);
           
           if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`فشل في تنفيذ الأتمتة (${response.status}):`, errorText);
-            throw new Error(`فشل في تنفيذ الأتمتة: ${response.status} ${response.statusText} - ${errorText}`);
+            // تحسين معالجة الأخطاء للحصول على المزيد من المعلومات
+            let errorText = '';
+            try {
+              const errorBody = await response.json();
+              errorText = errorBody.message || errorBody.error || '';
+              console.error('تفاصيل الخطأ من الخادم:', errorBody);
+            } catch {
+              errorText = await response.text();
+            }
+            
+            if (errorText.includes('Puppeteer') || errorText.includes('Chrome') || errorText.includes('browser')) {
+              console.error('خطأ في تهيئة Puppeteer على الخادم:', errorText);
+              toast.error('فشل في تهيئة Puppeteer على الخادم', {
+                description: 'تحقق من تثبيت Chrome وضبط متغيرات البيئة المناسبة.'
+              });
+              
+              throw new Error(`فشل في تهيئة Puppeteer: ${errorText}`);
+            } else {
+              console.error(`فشل في تنفيذ الأتمتة (${response.status}):`, errorText);
+              throw new Error(`فشل في تنفيذ الأتمتة: ${response.status} ${response.statusText} - ${errorText}`);
+            }
           }
           
           const result = await response.json();
@@ -232,8 +265,16 @@ export class AutomationRunner {
         errorMessage = String(error);
       }
       
-      // فحص نوع الخطأ لتقديم رسالة أكثر تفصيلاً
-      if (errorMessage.includes('timeout') || errorMessage.includes('مهلة')) {
+      // تحسين فحص نوع الخطأ لتقديم إرشادات محددة للمستخدم
+      if (errorMessage.includes('Puppeteer') || errorMessage.includes('Chrome') || errorMessage.includes('browser')) {
+        errorMessage = "فشل في تهيئة Puppeteer على الخادم. تحقق من تثبيت Chrome وضبط متغيرات البيئة المناسبة.";
+        
+        // إظهار رسالة مفصلة ومفيدة
+        toast.error("فشل في تهيئة Puppeteer", {
+          duration: 8000,
+          description: "هناك مشكلة في إعداد المتصفح على الخادم. تواصل مع مسؤول النظام."
+        });
+      } else if (errorMessage.includes('timeout') || errorMessage.includes('مهلة')) {
         errorMessage = "انتهت مهلة الاتصال بخادم الأتمتة. قد يكون الخادم مشغولًا أو بطيئًا.";
       } else if (errorMessage.includes('NetworkError') || errorMessage.includes('fetch')) {
         errorMessage = "حدث خطأ في الشبكة أثناء الاتصال بالخادم. تأكد من اتصالك بالإنترنت.";
@@ -310,4 +351,3 @@ export class AutomationRunner {
     }
   }
 }
-

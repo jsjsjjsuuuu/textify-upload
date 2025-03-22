@@ -1,4 +1,3 @@
-
 import express from 'express';
 import puppeteer from 'puppeteer';
 import cors from 'cors';
@@ -363,18 +362,87 @@ app.get('/api/ping', (req, res) => {
   });
 });
 
-// التحقق من تثبيت Puppeteer
+// تحسين دالة التحقق من تثبيت Puppeteer
 const checkPuppeteer = async () => {
   try {
-    const browser = await puppeteer.launch({ 
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      timeout: 10000 
-    });
-    await browser.close();
-    return true;
+    console.log('جاري التحقق من تثبيت Puppeteer وتوفر متصفح Chrome...');
+    
+    // طباعة معلومات النظام للتشخيص
+    console.log('معلومات النظام:');
+    console.log(`- نظام التشغيل: ${process.platform}`);
+    console.log(`- معمارية النظام: ${process.arch}`);
+    console.log(`- إصدار Node.js: ${process.version}`);
+    console.log(`- مجلد العمل الحالي: ${process.cwd()}`);
+    
+    // تحقق من وجود الملفات المطلوبة
+    const browserFetcher = puppeteer.createBrowserFetcher();
+    const localRevisions = await browserFetcher.localRevisions();
+    console.log(`- إصدارات المتصفح المثبتة محلياً: ${localRevisions.join(', ') || 'لا يوجد'}`);
+    
+    // محاولة متعددة بضبط مختلف
+    try {
+      console.log('محاولة إطلاق المتصفح مع الإعدادات الأساسية...');
+      const browser = await puppeteer.launch({ 
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        timeout: 30000,
+        ignoreHTTPSErrors: true,
+        dumpio: true // طباعة stdout و stderr من المتصفح للمساعدة في التصحيح
+      });
+      await browser.close();
+      console.log('تم تشغيل وإغلاق المتصفح بنجاح!');
+      return true;
+    } catch (basicError) {
+      console.error('فشل في الإطلاق مع الإعدادات الأساسية:', basicError.message);
+      
+      // محاولة ثانية مع إعدادات مختلفة
+      try {
+        console.log('محاولة إطلاق المتصفح مع إعدادات متقدمة...');
+        const browser = await puppeteer.launch({ 
+          headless: 'new',
+          args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox', 
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-zygote',
+            '--single-process',
+            '--disable-extensions'
+          ],
+          executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN || undefined,
+          timeout: 60000,
+          ignoreHTTPSErrors: true,
+          dumpio: true
+        });
+        await browser.close();
+        console.log('تم تشغيل وإغلاق المتصفح بنجاح (مع الإعدادات المتقدمة)!');
+        return true;
+      } catch (advancedError) {
+        console.error('فشل في الإطلاق حتى مع الإعدادات المتقدمة:', advancedError.message);
+        
+        // تحقق من وجود ملف تنفيذي للمتصفح
+        const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN;
+        if (executablePath) {
+          const fs = require('fs');
+          const exists = fs.existsSync(executablePath);
+          console.log(`- ملف تنفيذي للمتصفح (${executablePath}): ${exists ? 'موجود' : 'غير موجود'}`);
+        } else {
+          console.log('- لم يتم تعيين PUPPETEER_EXECUTABLE_PATH أو CHROME_BIN');
+        }
+        
+        // طباعة متغيرات البيئة المتعلقة بـ Puppeteer
+        Object.keys(process.env)
+          .filter(key => key.includes('PUPPETEER') || key.includes('CHROME'))
+          .forEach(key => {
+            console.log(`- ${key}: ${process.env[key]}`);
+          });
+        
+        // محاولة اكتشاف المشكلة بشكل أفضل
+        throw new Error(`تعذر تهيئة Puppeteer: ${basicError.message}، وأيضاً: ${advancedError.message}`);
+      }
+    }
   } catch (error) {
-    console.error('خطأ في تهيئة Puppeteer:', error.message);
+    console.error('خطأ في تهيئة Puppeteer:', error);
     return false;
   }
 };
@@ -668,508 +736,4 @@ const fillFormField = async (page, element, value) => {
           return true;
         }
       } catch (error) {
-        console.warn('فشل في النقر على الخيار من القائمة المنسدلة:', error.message);
-      }
-      
-      // إذا وصلنا إلى هنا، فقد فشلت جميع المحاولات
-      console.warn(`لم يتم العثور على خيار مناسب للقيمة "${value}" في القائمة المنسدلة`);
-      return false;
-    } catch (error) {
-      console.error('فشل في التعامل مع القائمة المنسدلة:', error.message);
-      return false;
-    }
-  } else if (tagName === 'input' || tagName === 'textarea') {
-    // حقول الإدخال - استراتيجية محسنة
-    try {
-      // مسح القيمة الحالية أولاً
-      await page.evaluate(el => {
-        el.value = '';
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-      }, element);
-      
-      // محاولة تعيين القيمة
-      if (type === 'checkbox' || type === 'radio') {
-        // خانات الاختيار والأزرار الإشعاعية
-        const shouldBeChecked = value === true || value === 'true' || value === '1' || value === 'on' || value === 'yes';
-        await page.evaluate((el, check) => {
-          if (el.checked !== check) {
-            el.click();
-          }
-        }, element, shouldBeChecked);
-      } else if (type === 'file') {
-        // حقول الملفات
-        // هنا يمكن إضافة معالجة تحميل الملفات إذا لزم الأمر
-        console.log('حقول الملفات غير مدعومة حاليًا');
-      } else {
-        // مدخلات النصوص والأرقام
-        // تنظيف القيمة وتنسيقها
-        let formattedValue = value;
-        if (type === 'tel' || type === 'phone') {
-          // تنسيق أرقام الهواتف للعراق
-          formattedValue = value.toString().replace(/\D/g, '');
-          if (formattedValue.startsWith('964')) {
-            formattedValue = `+${formattedValue}`;
-          } else if (formattedValue.startsWith('0')) {
-            formattedValue = `+964${formattedValue.substring(1)}`;
-          }
-        } else if (type === 'number' || type === 'currency') {
-          // تنسيق الأرقام
-          formattedValue = value.toString().replace(/[^\d.]/g, '');
-        }
-        
-        // إدخال النص بطريقة طبيعية مع تأخير
-        await element.type(formattedValue.toString(), { delay: 100 });
-        
-        // التأكد من تحديث القيمة وإطلاق الأحداث المناسبة
-        await page.evaluate(el => {
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-        }, element);
-      }
-      
-      console.log(`تم ملء الحقل بالقيمة: ${value}`);
-      return true;
-    } catch (error) {
-      console.error('فشل في ملء حقل الإدخال:', error.message);
-      return false;
-    }
-  } else if (tagName === 'button' || (tagName === 'input' && (type === 'button' || type === 'submit'))) {
-    // زر - قم بالنقر عليه
-    try {
-      await element.click();
-      console.log('تم النقر على الزر');
-      return true;
-    } catch (error) {
-      console.error('فشل في النقر على الزر:', error.message);
-      return false;
-    }
-  } else {
-    // أنواع أخرى من العناصر
-    try {
-      // محاولة النقر على العنصر كحل افتراضي
-      await element.click();
-      console.log(`تم النقر على عنصر من النوع ${tagName}`);
-      return true;
-    } catch (error) {
-      console.error(`فشل في التفاعل مع عنصر من النوع ${tagName}:`, error.message);
-      return false;
-    }
-  }
-};
-
-// مسار لتنفيذ السيناريو باستخدام Puppeteer
-app.post('/api/automate', async (req, res) => {
-  // تعيين الرؤوس مع التحقق من صحة الأصل
-  if (!setCorsHeaders(req, res)) {
-    return res.status(403).json({ error: 'CORS policy violation: Origin not allowed' });
-  }
-  
-  const { projectUrl, actions, useBrowserData } = req.body;
-  
-  if (!projectUrl || !actions || !Array.isArray(actions)) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'يرجى توفير عنوان URL للمشروع وقائمة الإجراءات' 
-    });
-  }
-
-  console.log(`بدء أتمتة العملية على: ${projectUrl}`);
-  console.log(`عدد الإجراءات: ${actions.length}`);
-  console.log(`استخدام بيانات المتصفح: ${useBrowserData ? 'نعم' : 'لا'}`);
-
-  // التحقق من تثبيت Puppeteer قبل المتابعة
-  const puppeteerReady = await checkPuppeteer();
-  if (!puppeteerReady) {
-    return res.status(500).json({
-      success: false,
-      message: 'فشل في تهيئة Puppeteer. تأكد من تثبيت جميع الاعتماديات.'
-    });
-  }
-
-  let browser;
-  try {
-    // إنشاء دليل للقطات الشاشة إذا لم يكن موجودًا
-    const screenshotDir = path.join(__dirname, 'screenshots');
-    if (!fs.existsSync(screenshotDir)) {
-      fs.mkdirSync(screenshotDir, { recursive: true });
-    }
-
-    // بدء متصفح جديد بإعدادات محسنة
-    browser = await puppeteer.launch({
-      headless: 'new', // استخدام وضع headless الجديد لتحسين الأداء والتوافق
-      args: [
-        '--no-sandbox', 
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu',
-        '--window-size=1366,768',
-        '--disable-web-security', // للمساعدة في تجاوز قيود CORS
-        '--allow-running-insecure-content' // للسماح بالمحتوى المختلط
-      ],
-      defaultViewport: { width: 1366, height: 768 }
-    });
-
-    const page = await browser.newPage();
-    
-    // تكوين المتصفح لتجاوز حماية مكافحة الروبوتات
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    await page.setJavaScriptEnabled(true); // تمكين JavaScript
-    
-    // إضافة تعديلات متقدمة لتجاوز كشف البوتات
-    await page.evaluateOnNewDocument(() => {
-      // إخفاء خصائص webdriver
-      Object.defineProperty(navigator, 'webdriver', { get: () => false });
-      
-      // إضافة متصفح كامل window.chrome
-      window.chrome = {
-        runtime: {},
-        loadTimes: function() {},
-        csi: function() {},
-        app: {}
-      };
-      
-      // أغراض كاذبة للمساعدة في تجاوز كشف الروبوتات
-      const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (
-        parameters) => (
-        parameters.name === 'notifications' ?
-          Promise.resolve({ state: Notification.permission }) :
-          originalQuery(parameters)
-      );
-    });
-    
-    // تعيين رؤوس إضافية
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache'
-    });
-    
-    // الانتقال إلى الصفحة المطلوبة مع زيادة المهلة
-    console.log(`الانتقال إلى: ${projectUrl}`);
-    await page.goto(projectUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-    console.log(`تم تحميل الصفحة: ${projectUrl}`);
-    
-    // انتظار قليلاً للتأكد من تحميل الصفحة بالكامل
-    await page.waitForTimeout(2000);
-    
-    // إضافة معلومات تشخيصية عن الصفحة
-    const pageTitle = await page.title();
-    const pageUrl = page.url();
-    console.log(`عنوان الصفحة: ${pageTitle}`);
-    console.log(`URL الفعلي: ${pageUrl}`);
-    
-    // الكشف عن الإطارات في الصفحة
-    const framesInfo = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll('iframe')).map(iframe => ({
-        id: iframe.id || 'بدون معرف',
-        name: iframe.name || 'بدون اسم',
-        src: iframe.src || 'بدون مصدر'
-      }));
-    });
-    
-    if (framesInfo.length > 0) {
-      console.log(`تم اكتشاف ${framesInfo.length} إطار في الصفحة:`, framesInfo);
-    }
-    
-    // تنفيذ كل إجراء واحد تلو الآخر
-    const results = [];
-    for (const action of actions) {
-      try {
-        const { name, finder, value, delay } = action;
-        
-        // انتظار إذا تم تحديد تأخير
-        if (delay && !isNaN(parseInt(delay))) {
-          const delayMs = parseInt(delay) * 1000;
-          console.log(`انتظار ${delayMs}ms قبل تنفيذ الإجراء التالي`);
-          await page.waitForTimeout(delayMs);
-        }
-        
-        // تسجيل الإجراء الحالي
-        console.log(`تنفيذ الإجراء: ${name || 'بلا اسم'} (${finder})`);
-        
-        // بحث متعدد الاستراتيجيات عن العنصر
-        let element = await findElement(page, finder);
-        
-        // إذا لم يتم العثور على العنصر، نحاول البحث في الإطارات
-        if (!element && framesInfo.length > 0) {
-          console.log(`لم يتم العثور على العنصر في الصفحة الرئيسية. محاولة البحث في الإطارات...`);
-          
-          const frames = page.frames();
-          for (const frame of frames) {
-            if (frame !== page.mainFrame()) {
-              console.log(`البحث في الإطار: ${frame.name() || 'بدون اسم'}`);
-              try {
-                element = await findElement(frame, finder);
-                if (element) {
-                  console.log(`تم العثور على العنصر في الإطار!`);
-                  break;
-                }
-              } catch (frameError) {
-                console.warn(`خطأ أثناء البحث في الإطار:`, frameError.message);
-              }
-            }
-          }
-        }
-        
-        if (!element) {
-          // إضافة استراتيجية إضافية: محاولة انتظار ظهور العنصر
-          console.log(`لم يتم العثور على العنصر. محاولة الانتظار لمدة 5 ثوانٍ...`);
-          
-          try {
-            await page.waitForFunction((finderStr) => {
-              // تحويل المحدد إلى استعلام DOM مناسب
-              let selector = finderStr;
-              if (finderStr.startsWith('Id::')) selector = `#${finderStr.replace('Id::', '')}`;
-              else if (finderStr.startsWith('ClassName::')) selector = `.${finderStr.replace('ClassName::', '').split(' ').join('.')}`;
-              else if (finderStr.startsWith('Name::')) selector = `[name="${finderStr.replace('Name::', '')}"]`;
-              else if (finderStr.startsWith('TagName::')) selector = finderStr.replace('TagName::', '');
-              else if (finderStr.startsWith('Selector::')) selector = finderStr.replace('Selector::', '');
-              
-              // محاولة العثور على العنصر
-              const el = document.querySelector(selector);
-              return !!el;
-            }, { timeout: 5000 }, finder);
-            
-            // محاولة أخرى للعثور على العنصر بعد الانتظار
-            element = await findElement(page, finder);
-          } catch (waitError) {
-            console.warn(`انتهت مهلة الانتظار للعنصر:`, waitError.message);
-          }
-        }
-        
-        if (!element) {
-          results.push({
-            name: name || 'بلا اسم',
-            success: false,
-            message: `لم يتم العثور على العنصر: ${finder} بعد محاولات متعددة`
-          });
-          continue;
-        }
-        
-        // توثيق العنصر قبل التفاعل
-        await page.evaluate(el => {
-          // إضافة تأثير بصري مؤقت
-          const originalBackground = el.style.backgroundColor;
-          const originalBorder = el.style.border;
-          el.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
-          el.style.border = '2px solid #ff5722';
-          
-          // إعادة الأسلوب الأصلي بعد فترة وجيزة
-          setTimeout(() => {
-            el.style.backgroundColor = originalBackground;
-            el.style.border = originalBorder;
-          }, 500);
-          
-          // تمرير العنصر إلى عرض المستخدم
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, element);
-        
-        // انتظار لحظة قبل التفاعل مع العنصر
-        await page.waitForTimeout(500);
-        
-        // استخدام الدالة المحسنة لملء الحقل
-        const success = await fillFormField(page, element, value);
-        
-        // تخزين نتيجة الإجراء
-        results.push({
-          name: name || 'بلا اسم',
-          success: success,
-          message: success ? `تم تنفيذ الإجراء بنجاح` : `فشل ملء الحقل بالقيمة: ${value}`
-        });
-        
-        // إضافة تأخير صغير بعد كل إجراء لمحاكاة تفاعل المستخدم
-        await page.waitForTimeout(500);
-      } catch (error) {
-        console.error(`خطأ في تنفيذ الإجراء:`, error);
-        results.push({
-          name: action.name || 'بلا اسم',
-          success: false,
-          message: `خطأ: ${error.message}`
-        });
-      }
-    }
-    
-    // محاولة للنقر تلقائيًا على زر الحفظ
-    try {
-      console.log(`محاولة البحث عن زر الحفظ تلقائيًا...`);
-      
-      // قائمة محددات أزرار الحفظ المحتملة
-      const saveButtonSelectors = [
-        'button[type="submit"]',
-        'input[type="submit"]',
-        'button.save',
-        'button.submit',
-        'button:contains("حفظ")',
-        'button:contains("إرسال")',
-        'button:contains("تأكيد")',
-        '[type="submit"]',
-        '.btn-primary'
-      ];
-      
-      const saveButtonXPaths = [
-        '//button[contains(text(), "حفظ") or contains(text(), "خزن")]',
-        '//button[contains(text(), "إرسال") or contains(text(), "ارسال")]',
-        '//button[contains(text(), "تأكيد") or contains(text(), "أكد")]',
-        '//input[@type="submit"]',
-        '//button[@type="submit"]'
-      ];
-      
-      let saveButton = null;
-      
-      // محاولة العثور على زر الحفظ باستخدام محددات CSS
-      for (const selector of saveButtonSelectors) {
-        try {
-          const button = await page.$(selector);
-          if (button) {
-            console.log(`تم العثور على زر الحفظ باستخدام المحدد: ${selector}`);
-            saveButton = button;
-            break;
-          }
-        } catch (e) {
-          // استمرار إلى المحاولة التالية
-        }
-      }
-      
-      // إذا لم يتم العثور على الزر، حاول باستخدام XPath
-      if (!saveButton) {
-        for (const xpath of saveButtonXPaths) {
-          try {
-            const [button] = await page.$x(xpath);
-            if (button) {
-              console.log(`تم العثور على زر الحفظ باستخدام XPath: ${xpath}`);
-              saveButton = button;
-              break;
-            }
-          } catch (e) {
-            // استمرار إلى المحاولة التالية
-          }
-        }
-      }
-      
-      // إذا تم العثور على زر الحفظ، انقر عليه
-      if (saveButton) {
-        console.log(`تم العثور على زر الحفظ، جاري النقر عليه...`);
-        await saveButton.click();
-        await page.waitForTimeout(2000); // انتظار لرؤية نتيجة النقر
-        
-        results.push({
-          name: 'النقر التلقائي على زر الحفظ',
-          success: true,
-          message: 'تم النقر على زر الحفظ تلقائيًا'
-        });
-      } else {
-        console.log(`لم يتم العثور على زر حفظ يمكن النقر عليه تلقائيًا`);
-      }
-    } catch (saveButtonError) {
-      console.warn(`فشل في محاولة النقر التلقائي على زر الحفظ:`, saveButtonError.message);
-    }
-    
-    // تأخير قبل الإغلاق للتمكن من رؤية النتائج
-    await page.waitForTimeout(2000);
-    
-    // التقاط لقطة شاشة
-    const screenshotPath = path.join(screenshotDir, `automation_${Date.now()}.png`);
-    await page.screenshot({ path: screenshotPath, type: 'png', fullPage: true });
-    const screenshot = fs.readFileSync(screenshotPath).toString('base64');
-    
-    // إغلاق المتصفح
-    await browser.close();
-    
-    res.json({
-      success: true,
-      message: 'تم تنفيذ العمليات بنجاح',
-      results,
-      screenshot: `data:image/png;base64,${screenshot}`,
-      pageInfo: {
-        title: pageTitle,
-        url: pageUrl,
-        frames: framesInfo.length
-      }
-    });
-  } catch (error) {
-    console.error('خطأ في تنفيذ الأتمتة:', error);
-    
-    // تأكد من إغلاق المتصفح في حالة حدوث خطأ
-    if (browser) {
-      await browser.close();
-    }
-    
-    res.status(500).json({
-      success: false,
-      message: `حدث خطأ أثناء الأتمتة: ${error.message}`
-    });
-  }
-});
-
-// إضافة '*' كمسار لتوجيه أي طلب آخر إلى index.html (SPA)
-app.get('*', (req, res) => {
-  // التحقق مما إذا كان الطلب موجهًا إلى مسار API
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ 
-      status: 'error',
-      message: `مسار API غير موجود: ${req.path}` 
-    });
-  }
-
-  // خدمة index.html للتطبيق وحيد الصفحة (SPA)
-  const indexPath = path.join(staticDir, 'index.html');
-  
-  if (fs.existsSync(indexPath)) {
-    console.log(`توجيه الطلب ${req.path} إلى index.html`);
-    return res.sendFile(indexPath);
-  }
-  
-  // إذا لم يتم العثور على index.html، أعرض رسالة خطأ
-  res.status(404).send(`
-    <html dir="rtl">
-      <head><title>صفحة غير موجودة</title></head>
-      <body>
-        <h1>لم يتم العثور على الصفحة المطلوبة</h1>
-        <p>لم يتم العثور على index.html في مجلد الملفات الثابتة.</p>
-        <p>مسار: ${indexPath}</p>
-        <p>معلومات إضافية:</p>
-        <pre>${JSON.stringify({
-          staticDir,
-          publicDir,
-          exists: {
-            staticDir: fs.existsSync(staticDir),
-            publicDir: fs.existsSync(publicDir)
-          },
-          files: fs.existsSync(staticDir) ? fs.readdirSync(staticDir) : []
-        }, null, 2)}</pre>
-      </body>
-    </html>
-  `);
-});
-
-// بدء تشغيل الخادم
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`
-╭───────────────────────────────────────╮
-│                                       │
-│   خادم الأتمتة يعمل على المنفذ ${PORT}    │
-│                                       │
-│   للتحقق قم بزيارة:                   │
-│   ${AUTOMATION_SERVER_URL}/api/status   │
-│                                       │
-│   متغيرات البيئة:                     │
-│   NODE_ENV: ${NODE_ENV}                │
-│   AUTOMATION_SERVER_URL: ${AUTOMATION_SERVER_URL}│
-│                                       │
-│   لإيقاف الخادم اضغط: Ctrl+C          │
-│                                       │
-╰───────────────────────────────────────╯
-  `);
-});
-
-// التعامل مع الإغلاق الآمن
-process.on('SIGINT', async () => {
-  console.log('إيقاف خادم الأتمتة...');
-  process.exit(0);
-});
-
-process.on('uncaughtException', (error) => {
-  console.error('خطأ غير معالج:', error);
-});
+        console.warn('فشل في النقر على الخيار من القائمة المنسدلة:',
