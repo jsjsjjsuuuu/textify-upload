@@ -139,8 +139,8 @@ export class AutomationRunner {
           
           console.log(`محاولة الاتصال #${retries + 1} بخادم الأتمتة...`);
           
-          // تغيير نقطة النهاية من /api/automate إلى /api/automation/execute
-          const response = await fetch(`${serverUrl}/api/automation/execute`, {
+          // تصحيح نقطة النهاية من /api/automation/execute إلى /api/automate
+          const response = await fetch(`${serverUrl}/api/automate`, {
             method: 'POST',
             headers: headersWithRetry,
             mode: 'cors',
@@ -310,3 +310,4 @@ export class AutomationRunner {
     }
   }
 }
+

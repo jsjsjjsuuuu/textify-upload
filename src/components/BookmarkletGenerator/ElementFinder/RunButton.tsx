@@ -52,8 +52,9 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
       
       // استخدام نقطة النهاية /api/automate بدلاً من /api/automation/execute
       try {
+        // استخدام HEAD بدلاً من OPTIONS للتحقق بشكل أخف
         const endpointCheck = await fetch(`${serverUrl}/api/automate`, {
-          method: 'GET', // استخدام GET بدلاً من OPTIONS للتحقق
+          method: 'HEAD',
           headers: {
             'X-Client-Id': 'web-client',
             'Cache-Control': 'no-cache',
@@ -113,3 +114,4 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
 };
 
 export default RunButton;
+
