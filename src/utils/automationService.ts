@@ -4,10 +4,51 @@
  */
 
 import { AutomationConfig, AutomationResponse, ErrorType } from "./automation/types";
-import { getAutomationServerUrl, createFetchOptions, fetchWithRetry, updateConnectionStatus } from "./automationServerUrl";
+import { getAutomationServerUrl, updateConnectionStatus } from "./automationServerUrl";
 import { toast } from "sonner";
 
 export class AutomationService {
+  // سجل حالة التنفيذ الفعلي
+  private static _useRealExecution: boolean = true;
+
+  /**
+   * تبديل وضع التنفيذ الفعلي
+   */
+  static toggleRealExecution(value: boolean): void {
+    this._useRealExecution = value;
+    localStorage.setItem('useRealExecution', value ? 'true' : 'false');
+    console.log(`تم تبديل وضع التنفيذ الفعلي إلى: ${value ? 'مفعل' : 'معطل'}`);
+  }
+
+  /**
+   * التحقق مما إذا كان وضع التنفيذ الفعلي مفعلاً
+   */
+  static isRealExecutionEnabled(): boolean {
+    // استرجاع القيمة من التخزين المحلي أو استخدام القيمة الافتراضية
+    const storedValue = localStorage.getItem('useRealExecution');
+    return storedValue !== null ? storedValue === 'true' : this._useRealExecution;
+  }
+
+  /**
+   * إعادة الاتصال بالخادم بقوة وتحديث حالة الاتصال
+   */
+  static async forceReconnect(): Promise<boolean> {
+    try {
+      // فحص حالة الخادم
+      const data = await this.checkServerStatus(false);
+      if (data && data.status === 'ok') {
+        updateConnectionStatus(true);
+        return true;
+      }
+      updateConnectionStatus(false);
+      return false;
+    } catch (error) {
+      console.error('خطأ في إعادة الاتصال بالخادم:', error);
+      updateConnectionStatus(false);
+      return false;
+    }
+  }
+
   /**
    * التحقق من حالة خادم الأتمتة
    */
@@ -70,6 +111,7 @@ export class AutomationService {
       return {
         success: false,
         message: 'يجب تحديد رابط المشروع',
+        automationType: config.automationType || 'server',
         error: {
           type: ErrorType.ValidationError,
           message: 'يجب تحديد رابط المشروع',
@@ -81,6 +123,7 @@ export class AutomationService {
       return {
         success: false,
         message: 'يجب تحديد إجراء واحد على الأقل',
+        automationType: config.automationType || 'server',
         error: {
           type: ErrorType.ValidationError,
           message: 'يجب تحديد إجراء واحد على الأقل',
@@ -130,6 +173,7 @@ export class AutomationService {
           message: 'فشل الاتصال بخادم الأتمتة. تأكد من إعدادات الخادم.',
           executionTime: Date.now() - startTime,
           timestamp: new Date().toISOString(),
+          automationType: config.automationType || 'server',
           error: {
             type: ErrorType.NetworkError,
             message: 'تعذر الاتصال بخادم الأتمتة',
@@ -169,10 +213,11 @@ export class AutomationService {
             message: 'نقطة النهاية API غير موجودة، تأكد من تكوين خادم الأتمتة بشكل صحيح. يرجى استخدام نقطة نهاية API أخرى مثل: /api/automation/execute',
             executionTime: Date.now() - startTime,
             timestamp: new Date().toISOString(),
+            automationType: config.automationType || 'server',
             error: {
               type: ErrorType.EndpointNotFoundError,
               message: 'استجابة HTML بدلاً من JSON، مما يشير إلى أن نقطة النهاية API غير موجودة',
-              details: textResponse.substring(0, 200) + '...'
+              additionalInfo: textResponse.substring(0, 200) + '...'
             }
           };
         }
@@ -182,10 +227,11 @@ export class AutomationService {
           message: 'استجابة خادم الأتمتة غير صالحة، يرجى التحقق من سجلات الأخطاء',
           executionTime: Date.now() - startTime,
           timestamp: new Date().toISOString(),
+          automationType: config.automationType || 'server',
           error: {
             type: ErrorType.ServerError,
             message: 'استجابة غير صالحة من الخادم',
-            details: textResponse.substring(0, 500)
+            additionalInfo: textResponse.substring(0, 500)
           }
         };
       }
@@ -199,7 +245,8 @@ export class AutomationService {
         const result: AutomationResponse = {
           ...data,
           executionTime: data.executionTime || (Date.now() - startTime),
-          timestamp: data.timestamp || new Date().toISOString()
+          timestamp: data.timestamp || new Date().toISOString(),
+          automationType: data.automationType || config.automationType || 'server'
         };
         
         return result;
@@ -210,6 +257,7 @@ export class AutomationService {
           message: 'فشل في تحليل استجابة الخادم',
           executionTime: Date.now() - startTime,
           timestamp: new Date().toISOString(),
+          automationType: config.automationType || 'server',
           error: {
             type: ErrorType.ServerError,
             message: 'استجابة JSON غير صالحة',
@@ -239,6 +287,7 @@ export class AutomationService {
         message: errorMessage,
         executionTime: 0,
         timestamp: new Date().toISOString(),
+        automationType: (config && config.automationType) || 'server',
         error: {
           type: errorType,
           message: error instanceof Error ? error.message : 'خطأ غير معروف',

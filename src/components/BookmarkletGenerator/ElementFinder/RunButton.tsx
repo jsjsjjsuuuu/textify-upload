@@ -46,24 +46,26 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
       }
       
       // فحص سريع لوجود نقطة نهاية الأتمتة
-      const checkEndpoint = await fetch(`${serverUrl}/api/automation/execute`, {
-        method: 'HEAD',
-        headers: {
-          'X-Client-Id': 'web-client',
-          'Cache-Control': 'no-cache',
-        }
-      }).catch(err => {
-        console.log("⚠️ فحص نقطة النهاية غير متاح، سنستمر بالتنفيذ:", err.message);
-        return { ok: true }; // نفترض أنها متاحة ونستمر
-      });
-      
-      if (checkEndpoint && !checkEndpoint.ok) {
-        console.error("❌ نقطة نهاية الأتمتة غير متاحة:", checkEndpoint.status, checkEndpoint.statusText);
-        toast.error("نقطة نهاية الأتمتة غير متاحة", {
-          description: "تحقق من تكوين خادم الأتمتة وتأكد من دعمه لنقطة النهاية /api/automation/execute",
-          duration: 5000,
+      try {
+        const checkEndpoint = await fetch(`${serverUrl}/api/automation/execute`, {
+          method: 'HEAD',
+          headers: {
+            'X-Client-Id': 'web-client',
+            'Cache-Control': 'no-cache',
+          }
         });
-        return;
+        
+        if (!checkEndpoint.ok) {
+          console.error("❌ نقطة نهاية الأتمتة غير متاحة:", checkEndpoint.status, checkEndpoint.statusText);
+          toast.error("نقطة نهاية الأتمتة غير متاحة", {
+            description: "تحقق من تكوين خادم الأتمتة وتأكد من دعمه لنقطة النهاية /api/automation/execute",
+            duration: 5000,
+          });
+          return;
+        }
+      } catch (err) {
+        // إذا لم تكن طريقة HEAD مدعومة، سنستمر في المحاولة باستخدام POST
+        console.log("⚠️ فحص نقطة النهاية غير متاح، سنستمر بالتنفيذ:", err instanceof Error ? err.message : String(err));
       }
       
       console.log("✅ تم التحقق من اتصال الخادم بنجاح");

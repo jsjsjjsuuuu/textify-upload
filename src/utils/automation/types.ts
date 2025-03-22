@@ -61,6 +61,7 @@ export interface AutomationResponse {
     message: string;
     stack?: string;
     type: string; // تحديد نوع الخطأ لتوفير معلومات محددة للمستخدم
+    additionalInfo?: string; // إضافة حقل للمعلومات الإضافية
   };
 }
 
@@ -75,7 +76,8 @@ export enum ErrorType {
   EndpointNotFoundError = 'EndpointNotFoundError',
   AuthorizationError = 'AuthorizationError',
   ServerError = 'ServerError',
-  URLError = 'URLError'
+  URLError = 'URLError',
+  ValidationError = 'ValidationError' // إضافة نوع ValidationError
 }
 
 // إضافة واجهة للتعامل مع أخطاء عنوان URL
