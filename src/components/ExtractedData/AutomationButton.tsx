@@ -91,7 +91,7 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     
     try {
       // تحضير البيانات لصفحة الأتمتة
-      localStorage.setItem('automationData', JSON.stringify({
+      const automationData = {
         code: image.code,
         senderName: image.senderName,
         phoneNumber: image.phoneNumber,
@@ -101,7 +101,10 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
         address: image.address,
         notes: image.notes,
         sourceId: image.id
-      }));
+      };
+      
+      // حفظ البيانات في localStorage
+      localStorage.setItem('automationData', JSON.stringify(automationData));
       
       // الانتقال إلى صفحة الأتمتة
       navigate("/server-automation");

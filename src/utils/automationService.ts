@@ -1,337 +1,219 @@
 
-/**
- * خدمة الأتمتة - تقوم بالاتصال بخادم الأتمتة وإرسال طلبات الأتمتة
- */
-
-import { AutomationConfig, AutomationResponse, ErrorType } from "./automation/types";
-import { getAutomationServerUrl, updateConnectionStatus } from "./automationServerUrl";
+import { AutomationConfig, AutomationResponse } from "./automation/types";
+import { automationServerUrl, isPreviewEnvironment } from "./automationServerUrl";
 import { toast } from "sonner";
 
+// الخدمة المسؤولة عن إدارة عمليات الأتمتة
 export class AutomationService {
-  // سجل حالة التنفيذ الفعلي
-  private static _useRealExecution: boolean = true;
-
-  /**
-   * تبديل وضع التنفيذ الفعلي
-   */
-  static toggleRealExecution(value: boolean): void {
-    this._useRealExecution = value;
-    localStorage.setItem('useRealExecution', value ? 'true' : 'false');
-    console.log(`تم تبديل وضع التنفيذ الفعلي إلى: ${value ? 'مفعل' : 'معطل'}`);
-  }
-
-  /**
-   * التحقق مما إذا كان وضع التنفيذ الفعلي مفعلاً
-   */
-  static isRealExecutionEnabled(): boolean {
-    // استرجاع القيمة من التخزين المحلي أو استخدام القيمة الافتراضية
-    const storedValue = localStorage.getItem('useRealExecution');
-    return storedValue !== null ? storedValue === 'true' : this._useRealExecution;
-  }
-
-  /**
-   * إعادة الاتصال بالخادم بقوة وتحديث حالة الاتصال
-   */
+  
+  // إعادة محاولة الاتصال بالخادم
   static async forceReconnect(): Promise<boolean> {
     try {
-      // فحص حالة الخادم
-      const data = await this.checkServerStatus(false);
-      if (data && data.status === 'ok') {
-        updateConnectionStatus(true);
-        return true;
-      }
-      updateConnectionStatus(false);
-      return false;
-    } catch (error) {
-      console.error('خطأ في إعادة الاتصال بالخادم:', error);
-      updateConnectionStatus(false);
-      return false;
-    }
-  }
-
-  /**
-   * التحقق من حالة خادم الأتمتة
-   */
-  static async checkServerStatus(showToasts = true): Promise<any> {
-    try {
-      const serverUrl = getAutomationServerUrl();
-      console.log('التحقق من حالة الخادم:', serverUrl);
-      
-      const response = await fetch(`${serverUrl}/api/status`, {
+      const response = await fetch(`${automationServerUrl}/api/ping?force=true`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'X-Client-Id': 'web-client',
-        },
-        cache: 'no-store',
+          'Cache-Control': 'no-cache, no-store'
+        }
       });
       
       if (response.ok) {
-        try {
-          const data = await response.json();
-          console.log('استجابة الخادم:', data);
-          
-          if (showToasts) {
-            toast.success('خادم الأتمتة متصل ويعمل بشكل جيد');
-          }
-          
-          return data;
-        } catch (error) {
-          console.error('خطأ في تحليل استجابة الخادم:', error);
-          throw new Error('استجابة الخادم غير صالحة');
-        }
-      } else {
-        // استرجاع النص الأصلي للخطأ
-        const errorText = await response.text();
-        console.error('خطأ في حالة الخادم:', response.status, errorText);
-        
-        if (showToasts) {
-          toast.error(`فشل التحقق من حالة الخادم: ${response.status}`);
-        }
-        
-        throw new Error(`خطأ في حالة الخادم: ${response.status} - ${errorText}`);
+        console.log("تم إعادة الاتصال بالخادم بنجاح");
+        return true;
       }
+      
+      console.error("فشل إعادة الاتصال بالخادم:", response.statusText);
+      return false;
     } catch (error) {
-      console.error('خطأ في التحقق من حالة الخادم:', error);
-      
-      if (showToasts) {
-        toast.error(`فشل التحقق من حالة الخادم: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
-      }
-      
-      throw error;
+      console.error("خطأ في إعادة الاتصال بالخادم:", error);
+      return false;
     }
   }
   
-  /**
-   * التحقق من صحة الأتمتة وتنفيذها
-   */
-  static async validateAndRunAutomation(config: AutomationConfig): Promise<AutomationResponse> {
-    // التحقق من صحة التكوين
-    if (!config.projectUrl) {
-      return {
-        success: false,
-        message: 'يجب تحديد رابط المشروع',
-        automationType: config.automationType || 'server',
-        error: {
-          type: ErrorType.ValidationError,
-          message: 'يجب تحديد رابط المشروع',
-        }
-      };
-    }
-    
-    if (!config.actions || config.actions.length === 0) {
-      return {
-        success: false,
-        message: 'يجب تحديد إجراء واحد على الأقل',
-        automationType: config.automationType || 'server',
-        error: {
-          type: ErrorType.ValidationError,
-          message: 'يجب تحديد إجراء واحد على الأقل',
-        }
-      };
-    }
-    
+  // التحقق من حالة الخادم
+  static async checkServerStatus(showToast: boolean = true): Promise<boolean> {
     try {
-      const serverUrl = getAutomationServerUrl();
-      console.log(`🚀 بدء تنفيذ الأتمتة على ${serverUrl}/api/automate`);
+      const isPreviewMode = isPreviewEnvironment();
       
-      // تنفيذ الأتمتة
-      const startTime = Date.now();
+      // في بيئة المعاينة، نفترض أن الخادم متصل دائمًا
+      if (isPreviewMode) {
+        if (showToast) {
+          toast.success("وضع المعاينة: محاكاة اتصال الخادم");
+        }
+        return true;
+      }
       
-      // إضافة معلومات إضافية للتشخيص
-      const enhancedConfig = {
-        ...config,
-        clientInfo: {
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          origin: window.location.origin,
-          clientId: 'web-client-' + Date.now(),
-          version: '1.1.0'
-        },
-        debug: true
-      };
-      
-      console.log('🔧 تكوين الأتمتة:', JSON.stringify(enhancedConfig, null, 2));
-      
-      // استخدام نقطة النهاية /api/automate
-      const apiUrl = `${serverUrl}/api/automate`;
-      console.log(`📡 إرسال طلب إلى: ${apiUrl}`);
-      
-      // إجراء فحص مسبق للاتصال باستخدام GET
-      const pingResponse = await fetch(`${serverUrl}/api/ping`, {
+      const response = await fetch(`${automationServerUrl}/api/status`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'X-Client-Id': 'web-client',
-          'Cache-Control': 'no-cache, no-store',
-          'Pragma': 'no-cache'
+          'x-client-id': 'web-client'
         }
       });
       
-      if (!pingResponse.ok) {
-        console.error('❌ فشل فحص الاتصال بالخادم قبل إرسال الأتمتة');
+      if (response.ok) {
+        if (showToast) {
+          toast.success("خادم الأتمتة متصل");
+        }
+        return true;
+      } else {
+        if (showToast) {
+          toast.error("خادم الأتمتة غير متصل");
+        }
+        return false;
+      }
+    } catch (error) {
+      if (showToast) {
+        toast.error("تعذر الاتصال بخادم الأتمتة");
+      }
+      console.error("خطأ في التحقق من حالة الخادم:", error);
+      return false;
+    }
+  }
+  
+  // التحقق من الإعدادات وتنفيذ الأتمتة
+  static async validateAndRunAutomation(config: AutomationConfig): Promise<AutomationResponse> {
+    try {
+      // تحسين وتنقية البيانات قبل الإرسال
+      const cleanedConfig = this.sanitizeConfig(config);
+      
+      console.log("بدء تنفيذ الأتمتة:", cleanedConfig);
+      
+      const isPreviewMode = isPreviewEnvironment();
+      
+      // في بيئة المعاينة، نقوم بمحاكاة استجابة ناجحة
+      if (isPreviewMode) {
+        console.log("وضع المعاينة: محاكاة استجابة الأتمتة");
+        
+        // استجابة مزيفة للاختبار
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         return {
-          success: false,
-          message: 'فشل الاتصال بخادم الأتمتة. تأكد من إعدادات الخادم.',
-          executionTime: Date.now() - startTime,
-          timestamp: new Date().toISOString(),
-          automationType: config.automationType || 'server',
-          error: {
-            type: ErrorType.NetworkError,
-            message: 'تعذر الاتصال بخادم الأتمتة',
-          }
+          success: true,
+          message: "تم تنفيذ الأتمتة بنجاح (محاكاة)",
+          automationType: 'client',
+          results: cleanedConfig.actions.map((action, index) => ({
+            success: true,
+            actionName: action.name,
+            actionIndex: index,
+            message: `تم تنفيذ الإجراء "${action.description || action.name}" بنجاح`,
+            selector: action.finder,
+            value: action.value
+          })),
+          executionTime: 1500,
+          timestamp: new Date().toISOString()
         };
       }
       
-      // إضافة تأخير لإعطاء وقت كافٍ للخادم للاستجابة (خاصة إذا كان في وضع السكون)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // استخدام معلمات متعددة لتفادي مشاكل الذاكرة المخبأة
-      const response = await fetch(apiUrl + `?t=${Date.now()}&clientId=web-client`, {
+      // تنفيذ الأتمتة على الخادم
+      const response = await fetch(`${automationServerUrl}/api/automate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Client-Id': 'web-client',
-          'X-Request-Time': Date.now().toString(),
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Accept': '*/*',
-          'Origin': window.location.origin
+          'x-client-id': 'web-client'
         },
-        mode: 'cors',
-        credentials: 'omit',
-        body: JSON.stringify(enhancedConfig),
+        body: JSON.stringify(cleanedConfig)
       });
       
-      console.log(`⏱️ وقت الاستجابة: ${Date.now() - startTime}ms`);
-      console.log(`📊 حالة الاستجابة: ${response.status} ${response.statusText}`);
-      
-      // التحقق من نوع المحتوى للمساعدة في التشخيص
-      const contentType = response.headers.get('content-type');
-      console.log(`🔍 نوع المحتوى: ${contentType}`);
-      
-      if (!contentType || !contentType.includes('application/json')) {
-        // استخراج النص كاملاً للتشخيص
-        const textResponse = await response.text();
-        console.error('❌ استجابة غير صالحة (ليست JSON):', textResponse);
+      // إذا كان هناك خطأ في الاستجابة
+      if (!response.ok) {
+        const errorText = await response.text();
         
-        // تحقق إذا كانت الاستجابة هي HTML (خطأ في البرنامج الوسيط)
-        if (textResponse.includes('<!DOCTYPE html>') || textResponse.includes('<html>')) {
-          return {
-            success: false,
-            message: 'نقطة النهاية API غير موجودة، تأكد من تكوين خادم الأتمتة بشكل صحيح. يرجى استخدام نقطة نهاية API /api/automate',
-            executionTime: Date.now() - startTime,
-            timestamp: new Date().toISOString(),
-            automationType: config.automationType || 'server',
-            error: {
-              type: ErrorType.EndpointNotFoundError,
-              message: 'استجابة HTML بدلاً من JSON، مما يشير إلى أن نقطة النهاية API غير موجودة',
-              additionalInfo: textResponse.substring(0, 200) + '...'
-            }
-          };
+        // محاولة تحليل رسالة الخطأ إذا كانت بصيغة JSON
+        let errorMessage = `خطأ في الخادم: ${response.status} ${response.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+        } catch (e) {
+          // إذا لم تكن الاستجابة بصيغة JSON، استخدم النص كما هو
+          if (errorText) errorMessage = errorText;
         }
         
-        return {
-          success: false,
-          message: 'استجابة خادم الأتمتة غير صالحة، يرجى التحقق من سجلات الأخطاء',
-          executionTime: Date.now() - startTime,
-          timestamp: new Date().toISOString(),
-          automationType: config.automationType || 'server',
-          error: {
-            type: ErrorType.ServerError,
-            message: 'استجابة غير صالحة من الخادم',
-            additionalInfo: textResponse.substring(0, 500)
-          }
-        };
+        throw new Error(errorMessage);
       }
       
-      // محاولة تحليل JSON
-      try {
-        const data = await response.json();
-        console.log('📦 بيانات الاستجابة:', data);
-        
-        // إضافة وقت التنفيذ والطابع الزمني إذا لم يكن موجوداً
-        const result: AutomationResponse = {
-          ...data,
-          executionTime: data.executionTime || (Date.now() - startTime),
-          timestamp: data.timestamp || new Date().toISOString(),
-          automationType: data.automationType || config.automationType || 'server'
-        };
-        
-        return result;
-      } catch (error) {
-        console.error('❌ خطأ في تحليل استجابة JSON:', error);
-        return {
-          success: false,
-          message: 'فشل في تحليل استجابة الخادم',
-          executionTime: Date.now() - startTime,
-          timestamp: new Date().toISOString(),
-          automationType: config.automationType || 'server',
-          error: {
-            type: ErrorType.ServerError,
-            message: 'استجابة JSON غير صالحة',
-          }
-        };
-      }
+      // تحليل الاستجابة
+      const responseData = await response.json();
+      
+      // إعادة تنسيق البيانات لتتوافق مع تنسيق AutomationResponse
+      return {
+        success: responseData.success,
+        message: responseData.message,
+        results: responseData.results,
+        executionTime: responseData.executionTime,
+        automationType: 'server',
+        error: responseData.error,
+        timestamp: responseData.timestamp || new Date().toISOString(),
+        details: responseData.details
+      };
     } catch (error) {
-      console.error('❌ خطأ في تنفيذ الأتمتة:', error);
+      console.error("خطأ في تنفيذ الأتمتة:", error);
       
-      // تحديد نوع الخطأ للمساعدة في التشخيص
-      let errorType = ErrorType.ServerError;
-      let errorMessage = 'خطأ غير معروف أثناء تنفيذ الأتمتة';
+      // تحديد رسالة الخطأ
+      let errorMessage = error instanceof Error ? error.message : "حدث خطأ غير معروف أثناء تنفيذ الأتمتة";
       
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        errorType = ErrorType.NetworkError;
-        errorMessage = 'خطأ في الشبكة: تعذر الاتصال بخادم الأتمتة';
-      } else if (error instanceof TypeError && error.message.includes('JSON')) {
-        errorType = ErrorType.ServerError;
-        errorMessage = 'استجابة غير صالحة من الخادم';
-      } else if (error instanceof DOMException && error.name === 'AbortError') {
-        errorType = ErrorType.TimeoutError;
-        errorMessage = 'انتهت مهلة تنفيذ الأتمتة';
+      // التعامل بشكل خاص مع خطأ "require is not defined"
+      if (errorMessage.includes('require is not defined')) {
+        errorMessage = "خطأ في تنفيذ الأتمتة: مشكلة في تكوين الخادم. يرجى التحقق من إعدادات الخادم.";
       }
       
+      // إرجاع كائن استجابة يحتوي على معلومات الخطأ
       return {
         success: false,
         message: errorMessage,
-        executionTime: 0,
-        timestamp: new Date().toISOString(),
-        automationType: (config && config.automationType) || 'server',
+        automationType: 'server',
         error: {
-          type: errorType,
-          message: error instanceof Error ? error.message : 'خطأ غير معروف',
-        }
+          type: 'ExecutionError',
+          message: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined
+        },
+        timestamp: new Date().toISOString()
       };
     }
   }
   
-  /**
-   * تحويل البيانات إلى JSON
-   */
-  private static async parseJsonResponse(response: Response): Promise<any> {
-    try {
-      const text = await response.text();
-      
-      // فحص إذا كان النص فارغًا
-      if (!text || text.trim() === '') {
-        return null;
-      }
-      
-      try {
-        return JSON.parse(text);
-      } catch (error) {
-        console.error('❌ خطأ في تحليل JSON:', error, 'النص:', text);
-        
-        // إذا كان النص يحتوي على HTML، فمن المحتمل أنه صفحة خطأ
-        if (text.includes('<!DOCTYPE html>') || text.includes('<html>')) {
-          throw new Error('استجابة HTML بدلاً من JSON. نقطة النهاية API قد تكون غير صحيحة.');
-        }
-        
-        throw new Error(`فشل تحليل استجابة JSON: ${text.substring(0, 100)}...`);
-      }
-    } catch (error) {
-      console.error('❌ خطأ في قراءة نص الاستجابة:', error);
-      throw error;
+  // تنظيف وتحسين تكوين الأتمتة
+  private static sanitizeConfig(config: AutomationConfig): AutomationConfig {
+    // نسخة من التكوين للتعديل
+    const cleanedConfig = { ...config };
+    
+    // التأكد من وجود اسم للمشروع
+    if (!cleanedConfig.projectName) {
+      cleanedConfig.projectName = 'أتمتة بدون اسم';
     }
+    
+    // تعديل الإجراءات للتأكد من وجود جميع الحقول المطلوبة
+    cleanedConfig.actions = (cleanedConfig.actions || []).map(action => ({
+      name: action.name,
+      finder: action.finder,
+      value: action.value || '',
+      delay: typeof action.delay === 'number' ? action.delay : parseInt(action.delay?.toString() || '500', 10),
+      description: action.description || `إجراء ${action.name}`
+    }));
+    
+    // إضافة معلومات المتصفح والبيئة
+    cleanedConfig.browserInfo = {
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      platform: navigator.platform,
+      screenSize: `${window.screen.width}x${window.screen.height}`
+    };
+    
+    // إضافة خيارات إضافية للخادم
+    cleanedConfig.serverOptions = {
+      timeout: 60000, // مهلة 60 ثانية
+      maxRetries: 2, // عدد محاولات إعادة المحاولة
+      useHeadlessMode: true, // استخدام وضع العرض بدون واجهة
+      puppeteerOptions: {
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-web-security'
+        ]
+      }
+    };
+    
+    return cleanedConfig;
   }
 }
