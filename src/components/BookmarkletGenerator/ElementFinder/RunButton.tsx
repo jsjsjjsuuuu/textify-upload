@@ -50,10 +50,10 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
         return;
       }
       
-      // فحص سريع لوجود نقطة نهاية الأتمتة باستخدام OPTIONS بدلاً من HEAD
+      // استخدام نقطة النهاية /api/automate بدلاً من /api/automation/execute
       try {
-        const optionsRequest = await fetch(`${serverUrl}/api/automation/execute`, {
-          method: 'OPTIONS',
+        const endpointCheck = await fetch(`${serverUrl}/api/automate`, {
+          method: 'GET', // استخدام GET بدلاً من OPTIONS للتحقق
           headers: {
             'X-Client-Id': 'web-client',
             'Cache-Control': 'no-cache',
@@ -63,21 +63,18 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
           credentials: 'omit'
         });
         
-        // نعتبر أي استجابة كإشارة إلى أن النقطة موجودة، حتى لو كانت 405 Method Not Allowed
-        // لأن CORS preflight يمكن أن يعيد رموز استجابة مختلفة
-        console.log("✅ نقطة النهاية متاحة:", optionsRequest.status);
+        console.log("✅ التحقق من نقطة النهاية:", endpointCheck.status);
       } catch (err) {
-        // حتى لو فشل طلب OPTIONS، سنستمر وسنجرب POST لاحقًا
-        console.log("⚠️ تحذير: فشل طلب OPTIONS، سنستمر في المحاولة:", err instanceof Error ? err.message : String(err));
+        console.log("⚠️ تحذير: فشل التحقق من نقطة النهاية، سنستمر في المحاولة:", err instanceof Error ? err.message : String(err));
       }
       
       console.log("✅ تم التحقق من اتصال الخادم بنجاح");
-      console.log("🌐 جاري الاتصال بنقطة نهاية API: /api/automation/execute");
+      console.log("🌐 جاري الاتصال بنقطة نهاية API: /api/automate");
       
       // إظهار رسالة للمستخدم لتوضيح ما سيحدث
       if (!isRunning) {
         toast("بدء تنفيذ الأتمتة", {
-          description: "جاري تنفيذ الإجراءات على الموقع المستهدف من خلال خادم الأتمتة الحقيقي.",
+          description: "جاري تنفيذ الإجراءات على الموقع المستهدف من خلال خادم n8n.",
           icon: <Server className="h-5 w-5 text-blue-500" />,
           duration: 5000,
         });

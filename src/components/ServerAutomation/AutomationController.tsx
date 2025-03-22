@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PlayCircle, Plus, Trash2, XCircle, Save, Loader2, AlertCircle, Globe, ArrowRight } from "lucide-react";
+import { PlayCircle, Plus, Trash2, XCircle, Save, Loader2, AlertCircle, Globe, ArrowRight, Server, Database } from "lucide-react";
 import { AutomationService } from "@/utils/automationService";
 import { AutomationAction, AutomationConfig, AutomationResponse } from "@/utils/automation/types";
 import { toast } from "sonner";
 import ActionEditor from "./ActionEditor";
 import ActionResultsList from "./ActionResultsList";
 import { v4 as uuidv4 } from "uuid";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // وظيفة مساعدة للتحقق من صلاحية URL
 const validateURL = (url: string): boolean => {
@@ -45,7 +46,11 @@ const sanitizeURL = (url: string): string => {
   return url;
 };
 
-const AutomationController: React.FC = () => {
+interface AutomationControllerProps {
+  isN8NMode?: boolean;
+}
+
+const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode = false }) => {
   // استخراج البيانات من localStorage إذا كانت موجودة
   const extractDataFromLocalStorage = (): any => {
     try {
@@ -70,6 +75,19 @@ const AutomationController: React.FC = () => {
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [showResults, setShowResults] = useState<boolean>(false);
   const [automationResponse, setAutomationResponse] = useState<AutomationResponse | null>(null);
+  const [targetSite, setTargetSite] = useState<string>('default');
+  
+  // الإعدادات الخاصة بـ n8n
+  const [n8nWebhookUrl, setN8nWebhookUrl] = useState<string>(localStorage.getItem('n8n_webhook_url') || '');
+  const [n8nApiKey, setN8nApiKey] = useState<string>(localStorage.getItem('n8n_api_key') || '');
+  
+  // قائمة المواقع المستهدفة المتاحة
+  const [availableSites, setAvailableSites] = useState([
+    { id: 'default', name: 'الموقع الافتراضي' },
+    { id: 'site1', name: 'شركة النقل 1' },
+    { id: 'site2', name: 'شركة النقل 2' },
+    { id: 'site3', name: 'منصة التوصيل' }
+  ]);
 
   // استخراج البيانات عند تحميل المكون
   useEffect(() => {
@@ -154,6 +172,16 @@ const AutomationController: React.FC = () => {
     }
   }, []);
   
+  // حفظ إعدادات n8n عند تغييرها
+  useEffect(() => {
+    if (n8nWebhookUrl) {
+      localStorage.setItem('n8n_webhook_url', n8nWebhookUrl);
+    }
+    if (n8nApiKey) {
+      localStorage.setItem('n8n_api_key', n8nApiKey);
+    }
+  }, [n8nWebhookUrl, n8nApiKey]);
+  
   // إضافة إجراء جديد
   const addAction = () => {
     const newAction: AutomationAction = {
@@ -180,6 +208,136 @@ const AutomationController: React.FC = () => {
     setActions(newActions);
   };
   
+  // تشغيل الأتمتة باستخدام n8n
+  const runWithN8N = async () => {
+    if (!n8nWebhookUrl) {
+      toast.error("يرجى إدخال عنوان webhook لـ n8n");
+      return;
+    }
+    
+    setIsRunning(true);
+    toast.loading("جاري تنفيذ الأتمتة عبر n8n...", {
+      id: "n8n-automation-running",
+      duration: Infinity,
+    });
+    
+    try {
+      // إعداد البيانات لإرسالها إلى webhook
+      const webhookData = {
+        targetSite: targetSite,
+        extractedData: extractedData || {},
+        projectUrl: sanitizeURL(projectUrl),
+        projectName: projectName,
+        actions: actions.map(action => ({
+          type: action.name,
+          selector: action.finder,
+          value: action.value,
+          delay: parseInt(action.delay.toString()) || 0,
+          description: action.description
+        })),
+        apiKey: n8nApiKey, // إرسال مفتاح API إذا كان مطلوبًا للتحقق
+        timestamp: new Date().toISOString(),
+        clientInfo: {
+          userAgent: navigator.userAgent,
+          origin: window.location.origin
+        }
+      };
+      
+      console.log("إرسال بيانات إلى n8n:", webhookData);
+      
+      // إرسال البيانات إلى webhook
+      const response = await fetch(n8nWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookData)
+      });
+      
+      // التعامل مع الاستجابة
+      let result: AutomationResponse;
+      
+      if (response.ok) {
+        try {
+          const responseData = await response.json();
+          
+          console.log("استجابة n8n:", responseData);
+          
+          // تنسيق الاستجابة بنفس تنسيق AutomationResponse
+          result = {
+            success: responseData.success || true,
+            message: responseData.message || "تم تنفيذ الأتمتة بنجاح عبر n8n",
+            automationType: 'server',
+            results: responseData.results || [],
+            executionTime: responseData.executionTime || 0,
+            timestamp: responseData.timestamp || new Date().toISOString()
+          };
+        } catch (error) {
+          // إذا لم تكن الاستجابة JSON صالحة، فقد لا يكون webhook يعيد JSON
+          result = {
+            success: response.status < 400,
+            message: response.status < 400 
+              ? "تم تنفيذ الأتمتة بنجاح عبر n8n (بدون تفاصيل)" 
+              : `فشل تنفيذ الأتمتة: ${response.status} ${response.statusText}`,
+            automationType: 'server',
+            timestamp: new Date().toISOString()
+          };
+        }
+      } else {
+        // فشل الاستجابة
+        result = {
+          success: false,
+          message: `فشل تنفيذ الأتمتة: ${response.status} ${response.statusText}`,
+          automationType: 'server',
+          error: {
+            type: 'ServerError',
+            message: `فشل طلب webhook: ${response.status} ${response.statusText}`
+          },
+          timestamp: new Date().toISOString()
+        };
+      }
+      
+      // عرض نتائج الأتمتة
+      setAutomationResponse(result);
+      setShowResults(true);
+      
+      if (result.success) {
+        toast.success("تم تنفيذ الأتمتة بنجاح عبر n8n", {
+          id: "n8n-automation-running",
+        });
+      } else {
+        toast.error("فشل تنفيذ الأتمتة عبر n8n", {
+          id: "n8n-automation-running",
+          description: result.message,
+        });
+      }
+    } catch (error) {
+      console.error("خطأ في تنفيذ الأتمتة عبر n8n:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : "خطأ غير معروف أثناء تنفيذ الأتمتة";
+      
+      toast.error("خطأ في تنفيذ الأتمتة عبر n8n", {
+        id: "n8n-automation-running",
+        description: errorMessage,
+      });
+      
+      setAutomationResponse({
+        success: false,
+        message: errorMessage,
+        automationType: 'server',
+        error: {
+          message: errorMessage,
+          type: 'ExecutionError',
+          stack: error instanceof Error ? error.stack : undefined
+        },
+        timestamp: new Date().toISOString()
+      });
+      setShowResults(true);
+    } finally {
+      setIsRunning(false);
+    }
+  };
+  
   // تشغيل الأتمتة
   const runAutomation = async () => {
     // التحقق من الحقول المطلوبة
@@ -198,6 +356,12 @@ const AutomationController: React.FC = () => {
     
     if (actions.length === 0) {
       toast.error("يجب إضافة إجراء واحد على الأقل");
+      return;
+    }
+    
+    // إذا كنا في وضع n8n، استخدم دالة runWithN8N
+    if (isN8NMode) {
+      runWithN8N();
       return;
     }
     
@@ -294,6 +458,8 @@ const AutomationController: React.FC = () => {
         projectUrl,
         projectName: projectName || `أتمتة ${savedAutomations.length + 1}`,
         actions,
+        targetSite: targetSite,
+        n8nMode: isN8NMode,
         dateCreated: new Date().toISOString()
       };
       
@@ -312,6 +478,80 @@ const AutomationController: React.FC = () => {
   
   return (
     <div className="space-y-6">
+      {isN8NMode && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5 text-purple-500" />
+              إعدادات n8n
+            </CardTitle>
+            <CardDescription>
+              قم بإدخال عنوان webhook لخادم n8n ومفتاح API (إذا كان مطلوبًا) للاتصال بالخادم
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="n8nWebhookUrl">
+                  عنوان webhook لـ n8n <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="n8nWebhookUrl"
+                  placeholder="https://n8n.example.com/webhook/xyz123"
+                  value={n8nWebhookUrl}
+                  onChange={(e) => setN8nWebhookUrl(e.target.value)}
+                  className="font-mono text-sm"
+                  dir="ltr"
+                />
+                <p className="text-xs text-gray-500">
+                  عنوان webhook المستخدم للاتصال بسير العمل الخاص بك في n8n. يمكنك الحصول عليه من خلال إعداد عقدة "Webhook" في n8n.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="n8nApiKey">
+                  مفتاح API لـ n8n (اختياري)
+                </Label>
+                <Input
+                  id="n8nApiKey"
+                  type="password"
+                  placeholder="مفتاح API للتحقق من الطلبات"
+                  value={n8nApiKey}
+                  onChange={(e) => setN8nApiKey(e.target.value)}
+                  className="font-mono text-sm"
+                  dir="ltr"
+                />
+                <p className="text-xs text-gray-500">
+                  يستخدم للتحقق من الطلبات المرسلة إلى n8n. اتركه فارغًا إذا لم يكن التحقق مطلوبًا.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="targetSite">
+                  الموقع المستهدف
+                </Label>
+                <Select
+                  value={targetSite}
+                  onValueChange={setTargetSite}
+                >
+                  <SelectTrigger id="targetSite">
+                    <SelectValue placeholder="اختر الموقع المستهدف" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSites.map((site) => (
+                      <SelectItem key={site.id} value={site.id}>
+                        {site.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500">
+                  اختر الموقع المستهدف الذي ترغب في تنفيذ الأتمتة عليه. سيساعد هذا n8n في تحديد سير العمل المناسب.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -417,7 +657,7 @@ const AutomationController: React.FC = () => {
           </Button>
           <Button
             onClick={runAutomation}
-            disabled={isRunning || actions.length === 0}
+            disabled={isRunning || actions.length === 0 || (isN8NMode && !n8nWebhookUrl)}
             className="bg-purple-600 hover:bg-purple-700"
           >
             {isRunning ? (
@@ -428,7 +668,7 @@ const AutomationController: React.FC = () => {
             ) : (
               <>
                 <PlayCircle className="h-4 w-4 mr-2" />
-                تنفيذ الأتمتة
+                تنفيذ الأتمتة {isN8NMode ? " عبر n8n" : ""}
               </>
             )}
           </Button>

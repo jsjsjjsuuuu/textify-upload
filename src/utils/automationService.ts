@@ -133,7 +133,7 @@ export class AutomationService {
     
     try {
       const serverUrl = getAutomationServerUrl();
-      console.log(`🚀 بدء تنفيذ الأتمتة على ${serverUrl}/api/automation/execute`);
+      console.log(`🚀 بدء تنفيذ الأتمتة على ${serverUrl}/api/automate`);
       
       // تنفيذ الأتمتة
       const startTime = Date.now();
@@ -153,11 +153,11 @@ export class AutomationService {
       
       console.log('🔧 تكوين الأتمتة:', JSON.stringify(enhancedConfig, null, 2));
       
-      // تعديل هنا: نستخدم نقطة النهاية /api/automation/execute بشكل متسق
-      const apiUrl = `${serverUrl}/api/automation/execute`;
+      // استخدام نقطة النهاية /api/automate
+      const apiUrl = `${serverUrl}/api/automate`;
       console.log(`📡 إرسال طلب إلى: ${apiUrl}`);
       
-      // إجراء فحص مسبق للاتصال باستخدام GET بدلاً من HEAD
+      // إجراء فحص مسبق للاتصال باستخدام GET
       const pingResponse = await fetch(`${serverUrl}/api/ping`, {
         method: 'GET',
         headers: {
@@ -183,6 +183,9 @@ export class AutomationService {
         };
       }
       
+      // إضافة تأخير لإعطاء وقت كافٍ للخادم للاستجابة (خاصة إذا كان في وضع السكون)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // استخدام معلمات متعددة لتفادي مشاكل الذاكرة المخبأة
       const response = await fetch(apiUrl + `?t=${Date.now()}&clientId=web-client`, {
         method: 'POST',
@@ -192,7 +195,6 @@ export class AutomationService {
           'X-Request-Time': Date.now().toString(),
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
-          'Access-Control-Allow-Origin': '*',
           'Accept': '*/*',
           'Origin': window.location.origin
         },
@@ -217,7 +219,7 @@ export class AutomationService {
         if (textResponse.includes('<!DOCTYPE html>') || textResponse.includes('<html>')) {
           return {
             success: false,
-            message: 'نقطة النهاية API غير موجودة، تأكد من تكوين خادم الأتمتة بشكل صحيح. يرجى استخدام نقطة نهاية API أخرى مثل: /api/automation/execute',
+            message: 'نقطة النهاية API غير موجودة، تأكد من تكوين خادم الأتمتة بشكل صحيح. يرجى استخدام نقطة نهاية API /api/automate',
             executionTime: Date.now() - startTime,
             timestamp: new Date().toISOString(),
             automationType: config.automationType || 'server',

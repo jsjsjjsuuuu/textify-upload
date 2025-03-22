@@ -16,11 +16,16 @@ import { toast } from "sonner";
 const ServerAutomation = () => {
   const [serverConnected, setServerConnected] = useState(false);
   const [activeTab, setActiveTab] = useState('new');
+  const [isN8NMode, setIsN8NMode] = useState(false);
   const navigate = useNavigate();
   
   useEffect(() => {
     // التحقق من حالة الاتصال بالخادم
     checkServerConnection();
+    
+    // التحقق مما إذا كنا في وضع n8n
+    const n8nMode = localStorage.getItem('use_n8n_mode') === 'true';
+    setIsN8NMode(n8nMode);
   }, []);
   
   const checkServerConnection = async () => {
@@ -63,6 +68,17 @@ const ServerAutomation = () => {
     navigate("/server-settings");
   };
   
+  const toggleN8NMode = () => {
+    const newMode = !isN8NMode;
+    setIsN8NMode(newMode);
+    localStorage.setItem('use_n8n_mode', newMode ? 'true' : 'false');
+    
+    toast.success(newMode ? 
+      "تم تفعيل وضع n8n. سيتم توجيه الطلبات إلى خادم n8n." : 
+      "تم تعطيل وضع n8n. سيتم استخدام خادم الأتمتة العادي."
+    );
+  };
+  
   return (
     <div className="relative min-h-screen pb-20">
       <BackgroundPattern />
@@ -73,12 +89,32 @@ const ServerAutomation = () => {
         <div className="mt-8 mb-6">
           <div className="flex items-center gap-3 mb-4">
             <Server className="h-8 w-8 text-purple-500" />
-            <h1 className="text-3xl font-bold">الأتمتة عبر الخادم</h1>
+            <h1 className="text-3xl font-bold">
+              {isN8NMode ? "الأتمتة باستخدام n8n" : "الأتمتة عبر الخادم"}
+            </h1>
           </div>
           <p className="text-muted-foreground max-w-3xl">
-            قم بإنشاء وإدارة سيناريوهات الأتمتة التي يتم تنفيذها عبر خادم التحكم الآلي. 
-            يمكنك إنشاء سيناريوهات متعددة وحفظها لاستخدامها لاحقًا.
+            {isN8NMode ? 
+              "قم بإنشاء وإدارة سيناريوهات الأتمتة التي يتم تنفيذها عبر خادم n8n. يمكنك التعامل مع كميات كبيرة من البيانات وتحديد موقع الهدف بدقة." : 
+              "قم بإنشاء وإدارة سيناريوهات الأتمتة التي يتم تنفيذها عبر خادم التحكم الآلي. يمكنك إنشاء سيناريوهات متعددة وحفظها لاستخدامها لاحقًا."
+            }
           </p>
+          
+          <div className="mt-4 flex items-center gap-2">
+            <Button 
+              onClick={toggleN8NMode}
+              variant={isN8NMode ? "default" : "outline"}
+              className={isN8NMode ? "bg-green-600 hover:bg-green-700" : ""}
+            >
+              <Server className="h-4 w-4 mr-2" />
+              {isN8NMode ? "وضع n8n مفعّل" : "تفعيل وضع n8n"}
+            </Button>
+            {isN8NMode && (
+              <span className="text-xs text-green-600">
+                سيتم توجيه جميع طلبات الأتمتة إلى خادم n8n
+              </span>
+            )}
+          </div>
         </div>
         
         {!serverConnected && (
@@ -100,6 +136,16 @@ const ServerAutomation = () => {
           </Alert>
         )}
         
+        {isN8NMode && (
+          <Alert className="mb-6 border-green-200 bg-green-50">
+            <Server className="h-4 w-4 text-green-500" />
+            <AlertTitle className="text-green-800">وضع n8n مفعّل</AlertTitle>
+            <AlertDescription className="text-green-700">
+              أنت الآن تستخدم خادم n8n للأتمتة. يمكنك التعامل مع كميات كبيرة من البيانات (1000-2000 عملية يوميًا) والتعامل مع مواقع متعددة.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-2 w-[400px] mb-6">
             <TabsTrigger value="new" className="flex items-center gap-2">
@@ -113,11 +159,11 @@ const ServerAutomation = () => {
           </TabsList>
           
           <TabsContent value="new">
-            <AutomationController />
+            <AutomationController isN8NMode={isN8NMode} />
           </TabsContent>
           
           <TabsContent value="saved">
-            <SavedAutomations />
+            <SavedAutomations isN8NMode={isN8NMode} />
           </TabsContent>
         </Tabs>
       </div>
