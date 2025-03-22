@@ -7,10 +7,12 @@ export interface Action {
   value?: string;
   delay?: number;
   description?: string;
+  type?: string;  // جعل type اختياري في Action الأساسي
+  selector?: string;
 }
 
 export interface AutomationAction extends Action {
-  type: string;
+  type: string;  // مطلوب في AutomationAction
   selector?: string;
 }
 
@@ -55,7 +57,7 @@ export interface ActionResult {
   screenshots: string[];
 }
 
-export type ErrorType = 'ConnectionError' | 'ExecutionError' | 'ServerError' | 'TimeoutError' | 'ValidationError' | string;
+export type ErrorType = 'ConnectionError' | 'ExecutionError' | 'ServerError' | 'TimeoutError' | 'ValidationError' | 'ConfigurationError' | string;
 
 export interface AutomationError {
   type: ErrorType;
@@ -80,4 +82,11 @@ export interface ServerStatusResponse {
   time: string;
   uptime: number;
   environment: string;
+}
+
+// إضافة واجهة نتيجة التحقق من الاتصال
+export interface ConnectionCheckResult {
+  isConnected: boolean;
+  message: string;
+  details?: any;
 }

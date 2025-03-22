@@ -20,6 +20,20 @@ const ExecutionStatus: React.FC<ExecutionStatusProps> = ({
 }) => {
   // تحويل رسائل الخطأ المعروفة إلى رسائل أكثر وضوحاً
   const getEnhancedErrorMessage = (error: string): { message: string, suggestions: string[] } => {
+    // تحسين الكشف عن أنواع الأخطاء المختلفة
+    // أخطاء التكوين
+    if (error.includes("Configuration") || error.includes("config") || error.includes("settings") || error.includes("إعدادات") || error.includes("تكوين")) {
+      return {
+        message: "خطأ في تكوين الخادم: تأكد من صحة إعدادات الخادم وعنوان URL المستهدف.",
+        suggestions: [
+          "تحقق من إعدادات الخادم في صفحة إعدادات الخادم",
+          "تأكد من صحة عنوان URL المستهدف",
+          "تحقق مما إذا كان الموقع المستهدف يتطلب تسجيل الدخول أو له قيود",
+          "تأكد من عدم وجود أحرف خاصة في المحددات CSS"
+        ]
+      };
+    }
+    
     // الأخطاء المتعلقة بالشبكة
     if (error.includes("NetworkError") || error.includes("Failed to fetch") || error.includes("network") || error.includes("ERR_CONNECTION")) {
       return {
@@ -199,6 +213,16 @@ const ExecutionStatus: React.FC<ExecutionStatusProps> = ({
             )}
             
             <p className="text-xs mt-2 opacity-80 text-red-700">رمز الخطأ الأصلي: {serverError}</p>
+            
+            {/* إضافة اقتراح محدد للتحقق من إعدادات الخادم في حالة الأخطاء المتعلقة بالتكوين */}
+            {serverError.includes("Configuration") || serverError.includes("config") || 
+             serverError.includes("settings") || serverError.includes("تكوين") && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  <strong>نصيحة:</strong> يرجى زيارة صفحة إعدادات الخادم والتحقق من عنوان URL الخاص بخادم الأتمتة.
+                </p>
+              </div>
+            )}
           </AlertDescription>
         </Alert>
       )}

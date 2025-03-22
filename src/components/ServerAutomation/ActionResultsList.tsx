@@ -117,6 +117,59 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
     );
   };
 
+  // إضافة رسائل مساعدة إضافية بناءً على نوع الخطأ
+  const getErrorHelp = (errorType?: string) => {
+    if (!errorType) return null;
+
+    const helpMessages: Record<string, React.ReactNode> = {
+      'ConnectionError': (
+        <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
+          <h4 className="font-medium text-blue-800 mb-1">اقتراحات لحل مشكلة الاتصال:</h4>
+          <ul className="list-disc list-inside text-sm space-y-1 text-blue-700">
+            <li>تأكد من أن خادم الأتمتة يعمل ومتاح</li>
+            <li>تحقق من عنوان URL في إعدادات الخادم</li>
+            <li>قد يكون الخادم في وضع السكون، جرب زيارة عنوان الخادم مباشرة</li>
+            <li>تحقق من اتصال الإنترنت الخاص بك</li>
+          </ul>
+        </div>
+      ),
+      'TimeoutError': (
+        <div className="mt-3 p-3 bg-amber-50 rounded-md border border-amber-200">
+          <h4 className="font-medium text-amber-800 mb-1">اقتراحات لحل مشكلة انتهاء المهلة:</h4>
+          <ul className="list-disc list-inside text-sm space-y-1 text-amber-700">
+            <li>زيادة وقت المهلة في إعدادات الخادم</li>
+            <li>تقليل عدد الإجراءات</li>
+            <li>تبسيط محددات العناصر</li>
+            <li>تحقق من سرعة الاتصال بالإنترنت والتأخير</li>
+          </ul>
+        </div>
+      ),
+      'ConfigurationError': (
+        <div className="mt-3 p-3 bg-purple-50 rounded-md border border-purple-200">
+          <h4 className="font-medium text-purple-800 mb-1">اقتراحات لحل مشكلة التكوين:</h4>
+          <ul className="list-disc list-inside text-sm space-y-1 text-purple-700">
+            <li>تحقق من إعدادات الخادم</li>
+            <li>تأكد من صحة تكوين الإجراءات والمحددات</li>
+            <li>تأكد من أن رابط URL يبدأ بـ http:// أو https://</li>
+            <li>تحقق من وجود أي قيود على الخادم المستهدف</li>
+          </ul>
+        </div>
+      ),
+      'ValidationError': (
+        <div className="mt-3 p-3 bg-orange-50 rounded-md border border-orange-200">
+          <h4 className="font-medium text-orange-800 mb-1">اقتراحات لحل مشكلة التحقق:</h4>
+          <ul className="list-disc list-inside text-sm space-y-1 text-orange-700">
+            <li>تأكد من صحة بيانات الإدخال</li>
+            <li>تأكد من عدم وجود أحرف خاصة غير مسموح بها في المحددات</li>
+            <li>تأكد من تنسيق URL الصحيح</li>
+          </ul>
+        </div>
+      )
+    };
+
+    return helpMessages[errorType] || null;
+  };
+
   return (
     <Card className="mt-6">
       <CardHeader className={`pb-2 ${automationResponse.success ? 'bg-green-50' : 'bg-red-50'}`}>
@@ -169,6 +222,7 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
             )}
             
             {renderError(automationResponse.error)}
+            {automationResponse.error && getErrorHelp(automationResponse.error.type)}
             {renderActionResults(automationResponse.results)}
           </div>
         </ScrollArea>
