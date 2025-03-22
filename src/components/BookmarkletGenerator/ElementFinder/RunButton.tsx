@@ -1,8 +1,9 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { PlayCircle, Loader2 } from "lucide-react";
+import { PlayCircle, Loader2, Server } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 interface RunButtonProps {
   isRunning: boolean;
@@ -10,19 +11,21 @@ interface RunButtonProps {
 }
 
 const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
-  const { toast } = useToast();
+  const { toast: hookToast } = useToast();
   
   const handleRun = () => {
     // تحسين رسائل التشخيص
     console.log("🚀 زر التنفيذ: بدء تنفيذ الأتمتة");
     console.log("📃 تأكد من أن الإجراءات مكتملة وصحيحة");
     console.log("🔍 تأكد من صحة المحددات CSS");
+    console.log("🌐 جاري الاتصال بنقطة نهاية API: /api/automation/execute");
     
     // إظهار رسالة للمستخدم لتوضيح ما سيحدث
     if (!isRunning) {
-      toast({
-        title: "بدء تنفيذ الأتمتة",
-        description: "قد يستغرق هذا بضع ثوانٍ. سيتم تنفيذ الإجراءات على الموقع المستهدف من خلال خادم الأتمتة الحقيقي."
+      toast("بدء تنفيذ الأتمتة", {
+        description: "جاري تنفيذ الإجراءات على الموقع المستهدف من خلال خادم الأتمتة الحقيقي.",
+        icon: <Server className="h-5 w-5 text-blue-500" />,
+        duration: 5000,
       });
     }
     

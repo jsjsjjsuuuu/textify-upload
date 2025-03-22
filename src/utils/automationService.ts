@@ -114,7 +114,7 @@ export class AutomationService {
         throw new Error("لم يتم تكوين عنوان URL لخادم الأتمتة بشكل صحيح");
       }
       
-      // تعديل نقطة النهاية API لتتوافق مع الخادم الفعلي
+      // استخدام نقطة النهاية API الصحيحة: /api/automation/execute
       const apiEndpoint = `${serverUrl}/api/automation/execute`;
       console.log("نقطة نهاية API الكاملة:", apiEndpoint);
       

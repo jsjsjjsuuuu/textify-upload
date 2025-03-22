@@ -18,7 +18,8 @@ import {
   ExternalLink, 
   RefreshCw, 
   Clock, 
-  Globe 
+  Globe,
+  Server
 } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -69,8 +70,8 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
               <ol className="text-xs list-decimal list-inside space-y-1 mr-4">
                 <li>تحقق من إعدادات الخادم في صفحة إعدادات الخادم</li>
                 <li>تأكد من أن خادم الأتمتة يعمل ويستجيب</li>
-                <li>جرب استخدام نقطة نهاية API أخرى مثل <code className="bg-gray-100 px-1 rounded text-amber-700">/api/automation/execute</code></li>
-                <li>راجع مدير النظام للتأكد من صحة تكوين نقاط النهاية API</li>
+                <li>نقطة النهاية الصحيحة هي <code className="bg-gray-100 px-1 rounded text-amber-700">/api/automation/execute</code></li>
+                <li>قد يستغرق تشغيل خادم Render بضع دقائق إذا كان في وضع السكون</li>
               </ol>
             </div>
           </div>
@@ -97,6 +98,7 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
                 <li>تحقق من اتصالك بالإنترنت</li>
                 <li>تأكد من أن خادم الأتمتة يعمل</li>
                 <li>جرب زيارة الخادم مباشرة للتأكد من أنه متاح</li>
+                <li>قد يكون الخادم في وضع السكون، انتظر بضع دقائق وحاول مرة أخرى</li>
               </ol>
             </div>
           </div>
@@ -138,7 +140,30 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
               <ol className="text-xs list-decimal list-inside space-y-1 mr-4">
                 <li>حاول مرة أخرى، قد يكون الخادم مشغولاً</li>
                 <li>قلل عدد الإجراءات أو تعقيدها</li>
+                <li>إذا كان الخادم في وضع السكون، قد يستغرق وقتاً أطول في المرة الأولى</li>
                 <li>تحقق من حالة الخادم ومستوى الحمل عليه</li>
+              </ol>
+            </div>
+          </div>
+        );
+      
+      case ErrorType.ServerError:
+        return (
+          <div className="bg-red-50 p-4 rounded-md border border-red-200 mt-4">
+            <h4 className="font-medium mb-2 flex items-center">
+              <Server className="h-4 w-4 text-red-600 mr-2" />
+              خطأ في الخادم
+            </h4>
+            <p className="text-sm mb-2">
+              حدث خطأ داخلي في خادم الأتمتة.
+            </p>
+            <div className="mt-3 bg-white p-3 rounded border border-red-100">
+              <h5 className="text-sm font-medium mb-1">الحلول المقترحة:</h5>
+              <ol className="text-xs list-decimal list-inside space-y-1 mr-4">
+                <li>انتظر قليلاً وحاول مرة أخرى</li>
+                <li>تأكد من صحة البيانات المدخلة</li>
+                <li>تحقق من سجلات الخطأ في وحدة التحكم</li>
+                <li>قد تحتاج إلى إعادة تشغيل خادم الأتمتة</li>
               </ol>
             </div>
           </div>
