@@ -9,6 +9,7 @@ const DEFAULT_AUTOMATION_SERVER_URL = 'https://textify-upload.onrender.com';
 // مفتاح لتخزين عنوان الخادم في التخزين المحلي
 const SERVER_URL_STORAGE_KEY = 'automation_server_url';
 const CONNECTION_STATUS_KEY = 'automation_server_connection_status';
+const FORCE_RENDER_SERVER = true; // تعيين استخدام خادم Render الرسمي فقط
 
 // عناوين IP المسموح بها لخادم Render (استخدم للاتصال المتناوب)
 export const RENDER_ALLOWED_IPS = [
@@ -23,6 +24,17 @@ export const RENDER_ALLOWED_IPS = [
  * الحصول على عنوان خادم الأتمتة
  */
 export const getAutomationServerUrl = (): string => {
+  // دائماً استخدم خادم Render الرسمي
+  if (FORCE_RENDER_SERVER) {
+    try {
+      // تحديث القيمة في التخزين المحلي
+      localStorage.setItem(SERVER_URL_STORAGE_KEY, DEFAULT_AUTOMATION_SERVER_URL);
+    } catch (error) {
+      console.warn("خطأ في تحديث عنوان الخادم في التخزين المحلي:", error);
+    }
+    return DEFAULT_AUTOMATION_SERVER_URL;
+  }
+  
   try {
     // محاولة الحصول على عنوان الخادم المخزن
     const storedUrl = localStorage.getItem(SERVER_URL_STORAGE_KEY);
@@ -46,6 +58,17 @@ export const getAutomationServerUrl = (): string => {
  * تعيين عنوان خادم الأتمتة
  */
 export const setAutomationServerUrl = (url: string): void => {
+  // إذا كان استخدام خادم Render مفروضًا، أجبر استخدام القيمة الافتراضية
+  if (FORCE_RENDER_SERVER) {
+    try {
+      localStorage.setItem(SERVER_URL_STORAGE_KEY, DEFAULT_AUTOMATION_SERVER_URL);
+      console.log("تم تعيين عنوان خادم الأتمتة الافتراضي (Render):", DEFAULT_AUTOMATION_SERVER_URL);
+    } catch (error) {
+      console.error("خطأ في تعيين عنوان خادم الأتمتة:", error);
+    }
+    return;
+  }
+  
   try {
     localStorage.setItem(SERVER_URL_STORAGE_KEY, url);
     console.log("تم تعيين عنوان خادم الأتمتة:", url);

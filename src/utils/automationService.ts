@@ -153,16 +153,18 @@ export class AutomationService {
       
       console.log('🔧 تكوين الأتمتة:', JSON.stringify(enhancedConfig, null, 2));
       
-      // تعديل هنا: استخدام نقطة النهاية الصحيحة مع اختبار أولي
+      // تعديل هنا: نستخدم نقطة النهاية /api/automation/execute بشكل متسق
       const apiUrl = `${serverUrl}/api/automation/execute`;
       console.log(`📡 إرسال طلب إلى: ${apiUrl}`);
       
-      // إجراء فحص مسبق للاتصال
+      // إجراء فحص مسبق للاتصال باستخدام GET بدلاً من HEAD
       const pingResponse = await fetch(`${serverUrl}/api/ping`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'X-Client-Id': 'web-client',
+          'Cache-Control': 'no-cache, no-store',
+          'Pragma': 'no-cache'
         }
       });
       
@@ -190,7 +192,12 @@ export class AutomationService {
           'X-Request-Time': Date.now().toString(),
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
+          'Access-Control-Allow-Origin': '*',
+          'Accept': '*/*',
+          'Origin': window.location.origin
         },
+        mode: 'cors',
+        credentials: 'omit',
         body: JSON.stringify(enhancedConfig),
       });
       

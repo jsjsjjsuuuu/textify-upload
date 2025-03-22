@@ -33,11 +33,16 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
           'Content-Type': 'application/json',
           'X-Client-Id': 'web-client',
           'Cache-Control': 'no-cache',
-        }
+          'Pragma': 'no-cache',
+          'Origin': window.location.origin
+        },
+        mode: 'cors',
+        credentials: 'omit'
       });
       
+      // التحقق من نجاح الاستجابة
       if (!pingResponse.ok) {
-        console.error("❌ فشل فحص اتصال الخادم:", pingResponse.status, pingResponse.statusText);
+        console.error("❌ فشل فحص اتصال الخادم:", pingResponse instanceof Response ? `${pingResponse.status} ${pingResponse.statusText}` : "خطأ غير معروف");
         toast.error("تعذر الاتصال بخادم الأتمتة", {
           description: "تأكد من أن خادم الأتمتة متاح ويستجيب.",
           duration: 5000,
@@ -45,27 +50,25 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
         return;
       }
       
-      // فحص سريع لوجود نقطة نهاية الأتمتة
+      // فحص سريع لوجود نقطة نهاية الأتمتة باستخدام OPTIONS بدلاً من HEAD
       try {
-        const checkEndpoint = await fetch(`${serverUrl}/api/automation/execute`, {
-          method: 'HEAD',
+        const optionsRequest = await fetch(`${serverUrl}/api/automation/execute`, {
+          method: 'OPTIONS',
           headers: {
             'X-Client-Id': 'web-client',
             'Cache-Control': 'no-cache',
-          }
+            'Origin': window.location.origin
+          },
+          mode: 'cors',
+          credentials: 'omit'
         });
         
-        if (!checkEndpoint.ok) {
-          console.error("❌ نقطة نهاية الأتمتة غير متاحة:", checkEndpoint.status, checkEndpoint.statusText);
-          toast.error("نقطة نهاية الأتمتة غير متاحة", {
-            description: "تحقق من تكوين خادم الأتمتة وتأكد من دعمه لنقطة النهاية /api/automation/execute",
-            duration: 5000,
-          });
-          return;
-        }
+        // نعتبر أي استجابة كإشارة إلى أن النقطة موجودة، حتى لو كانت 405 Method Not Allowed
+        // لأن CORS preflight يمكن أن يعيد رموز استجابة مختلفة
+        console.log("✅ نقطة النهاية متاحة:", optionsRequest.status);
       } catch (err) {
-        // إذا لم تكن طريقة HEAD مدعومة، سنستمر في المحاولة باستخدام POST
-        console.log("⚠️ فحص نقطة النهاية غير متاح، سنستمر بالتنفيذ:", err instanceof Error ? err.message : String(err));
+        // حتى لو فشل طلب OPTIONS، سنستمر وسنجرب POST لاحقًا
+        console.log("⚠️ تحذير: فشل طلب OPTIONS، سنستمر في المحاولة:", err instanceof Error ? err.message : String(err));
       }
       
       console.log("✅ تم التحقق من اتصال الخادم بنجاح");

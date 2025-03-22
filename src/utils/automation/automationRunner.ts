@@ -131,12 +131,16 @@ export class AutomationRunner {
             ...headers,
             'X-Retry-Count': retries.toString(),
             'X-Debug-Mode': 'true',
-            'X-Client-Timestamp': new Date().toISOString()
+            'X-Client-Timestamp': new Date().toISOString(),
+            'Origin': window.location.origin,
+            'Access-Control-Allow-Origin': '*',
+            'Accept': '*/*'
           };
           
           console.log(`محاولة الاتصال #${retries + 1} بخادم الأتمتة...`);
           
-          const response = await fetch(`${serverUrl}/api/automate`, {
+          // تغيير نقطة النهاية من /api/automate إلى /api/automation/execute
+          const response = await fetch(`${serverUrl}/api/automation/execute`, {
             method: 'POST',
             headers: headersWithRetry,
             mode: 'cors',
@@ -306,4 +310,3 @@ export class AutomationRunner {
     }
   }
 }
-
