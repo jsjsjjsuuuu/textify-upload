@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
@@ -128,6 +127,7 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
             name: action.name === "click" ? "انقر" : 
                  action.name === "type" ? "أدخل نص" : 
                  action.name === "select" ? "اختر من قائمة" : action.name,
+            type: action.name, // إضافة خاصية type مطلوبة
             finder: action.finder,
             value: action.value || (action.name === "click" ? "click" : ""),
             delay: action.delay ? parseInt(action.delay, 10) : 500, // زيادة التأخير الافتراضي

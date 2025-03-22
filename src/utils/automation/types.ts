@@ -55,8 +55,10 @@ export interface ActionResult {
   screenshots: string[];
 }
 
+export type ErrorType = 'ConnectionError' | 'ExecutionError' | 'ServerError' | 'TimeoutError' | 'ValidationError' | string;
+
 export interface AutomationError {
-  type: string;
+  type: ErrorType;
   message: string;
   stack?: string;
 }

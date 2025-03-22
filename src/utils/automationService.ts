@@ -210,9 +210,10 @@ export class AutomationService {
     // تعديل الإجراءات للتأكد من وجود جميع الحقول المطلوبة
     cleanedConfig.actions = (cleanedConfig.actions || []).map(action => ({
       name: action.name,
+      type: action.name, // إضافة خاصية type لتكون مطابقة للاسم
       finder: action.finder,
       value: action.value || '',
-      delay: typeof action.delay === 'number' ? action.delay : parseInt(action.delay?.toString() || '500', 10),
+      delay: typeof action.delay === 'number' ? action.delay : parseInt(String(action.delay) || '500', 10),
       description: action.description || `إجراء ${action.name}`
     }));
     

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,26 +50,9 @@ interface AutomationControllerProps {
 }
 
 const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode = false }) => {
-  // استخراج البيانات من localStorage إذا كانت موجودة
-  const extractDataFromLocalStorage = (): any => {
-    try {
-      const automationData = localStorage.getItem('automationData');
-      if (automationData) {
-        const parsedData = JSON.parse(automationData);
-        localStorage.removeItem('automationData'); // مسح البيانات بعد استخدامها
-        return parsedData;
-      }
-    } catch (error) {
-      console.error("خطأ في استخراج البيانات من localStorage:", error);
-    }
-    return null;
-  };
-  
-  const extractedData = extractDataFromLocalStorage();
-  
   // حالة الحقول
-  const [projectUrl, setProjectUrl] = useState<string>(extractedData?.projectUrl || '');
-  const [projectName, setProjectName] = useState<string>(extractedData?.projectName || '');
+  const [projectUrl, setProjectUrl] = useState<string>('');
+  const [projectName, setProjectName] = useState<string>('');
   const [actions, setActions] = useState<AutomationAction[]>([]);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [showResults, setShowResults] = useState<boolean>(false);
@@ -89,6 +71,23 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
     { id: 'site3', name: 'منصة التوصيل' }
   ]);
 
+  // استخراج البيانات من localStorage إذا كانت موجودة
+  const extractDataFromLocalStorage = (): any => {
+    try {
+      const automationData = localStorage.getItem('automationData');
+      if (automationData) {
+        const parsedData = JSON.parse(automationData);
+        localStorage.removeItem('automationData'); // مسح البيانات بعد استخدامها
+        return parsedData;
+      }
+    } catch (error) {
+      console.error("خطأ في استخراج البيانات من localStorage:", error);
+    }
+    return null;
+  };
+  
+  const extractedData = extractDataFromLocalStorage();
+  
   // استخراج البيانات عند تحميل المكون
   useEffect(() => {
     if (extractedData) {
@@ -106,6 +105,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
       if (extractedData.code) {
         autoActions.push({
           name: 'type',
+          type: 'type',
           finder: '#code',
           value: extractedData.code,
           delay: 300,
@@ -116,6 +116,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
       if (extractedData.senderName) {
         autoActions.push({
           name: 'type',
+          type: 'type',
           finder: '#sender_name',
           value: extractedData.senderName,
           delay: 300,
@@ -126,6 +127,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
       if (extractedData.phoneNumber) {
         autoActions.push({
           name: 'type',
+          type: 'type',
           finder: '#phone',
           value: extractedData.phoneNumber,
           delay: 300,
@@ -136,6 +138,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
       if (extractedData.province) {
         autoActions.push({
           name: 'select',
+          type: 'select',
           finder: '#province',
           value: extractedData.province,
           delay: 300,
@@ -146,6 +149,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
       if (extractedData.price) {
         autoActions.push({
           name: 'type',
+          type: 'type',
           finder: '#price',
           value: extractedData.price,
           delay: 300,
@@ -156,6 +160,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
       // إضافة إجراء النقر على زر التأكيد
       autoActions.push({
         name: 'click',
+        type: 'click',
         finder: 'button[type="submit"]',
         value: '',
         delay: 500,
@@ -186,6 +191,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
   const addAction = () => {
     const newAction: AutomationAction = {
       name: 'click',
+      type: 'click', // إضافة خاصية type مطلوبة
       finder: '',
       value: '',
       delay: 500,
@@ -424,7 +430,8 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
           message: errorMessage,
           type: 'ExecutionError',
           stack: error instanceof Error ? error.stack : undefined
-        }
+        },
+        timestamp: new Date().toISOString() // إضافة الطابع الزمني
       });
       setShowResults(true);
     } finally {
