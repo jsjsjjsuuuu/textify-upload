@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { XCircle, CheckCircle, AlertCircle, Clock, XSquare, Camera } from "lucide-react";
-import { AutomationResponse, AutomationError, ActionResult } from "@/utils/automation/types";
+import { AutomationResponse, AutomationError, ActionResult, ErrorType } from "@/utils/automation/types";
 
 // مكون لعرض نتائج الأتمتة
 interface ActionResultsListProps {
@@ -35,6 +35,16 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
                 <summary className="cursor-pointer text-xs text-red-600">عرض معلومات التصحيح</summary>
                 <pre className="text-xs bg-red-50 p-2 mt-2 overflow-x-auto">{error.stack}</pre>
               </details>
+            )}
+            {error.details && error.details.length > 0 && (
+              <div className="mt-2 text-sm text-red-600">
+                <h5 className="font-medium">تفاصيل إضافية:</h5>
+                <ul className="list-disc list-inside mt-1">
+                  {error.details.map((detail, idx) => (
+                    <li key={idx}>{detail}</li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </div>
@@ -162,6 +172,39 @@ const ActionResultsList: React.FC<ActionResultsListProps> = ({
             <li>تأكد من صحة بيانات الإدخال</li>
             <li>تأكد من عدم وجود أحرف خاصة غير مسموح بها في المحددات</li>
             <li>تأكد من تنسيق URL الصحيح</li>
+          </ul>
+        </div>
+      ),
+      'PuppeteerError': (
+        <div className="mt-3 p-3 bg-red-50 rounded-md border border-red-200">
+          <h4 className="font-medium text-red-800 mb-1">اقتراحات لحل مشكلة المتصفح الآلي:</h4>
+          <ul className="list-disc list-inside text-sm space-y-1 text-red-700">
+            <li>يبدو أن هناك مشكلة في تشغيل المتصفح على الخادم</li>
+            <li>تأكد من تثبيت Chrome أو Chromium على الخادم</li>
+            <li>تحقق من إعدادات متغيرات البيئة للخادم</li>
+            <li>قد تحتاج إلى ضبط خيارات الأمان للمتصفح الآلي</li>
+          </ul>
+        </div>
+      ),
+      'ElementNotFoundError': (
+        <div className="mt-3 p-3 bg-yellow-50 rounded-md border border-yellow-200">
+          <h4 className="font-medium text-yellow-800 mb-1">اقتراحات لحل مشكلة عدم العثور على العناصر:</h4>
+          <ul className="list-disc list-inside text-sm space-y-1 text-yellow-700">
+            <li>تحقق من المحددات المستخدمة للعناصر (CSS selectors)</li>
+            <li>قد يكون هيكل الصفحة قد تغير منذ آخر تحديث للسيناريو</li>
+            <li>جرب استخدام محددات أكثر استقرارًا (مثل ID بدلاً من Class)</li>
+            <li>زيادة مهلة انتظار ظهور العناصر</li>
+          </ul>
+        </div>
+      ),
+      'BrowserError': (
+        <div className="mt-3 p-3 bg-indigo-50 rounded-md border border-indigo-200">
+          <h4 className="font-medium text-indigo-800 mb-1">اقتراحات لحل مشكلة المتصفح:</h4>
+          <ul className="list-disc list-inside text-sm space-y-1 text-indigo-700">
+            <li>قد تكون هناك مشكلة في تشغيل المتصفح أو التفاعل معه</li>
+            <li>حاول تشغيل المتصفح بوضع العرض (--headless)</li>
+            <li>تأكد من توفر ذاكرة كافية على الخادم</li>
+            <li>تحقق من وجود إصدار حديث من المتصفح</li>
           </ul>
         </div>
       )

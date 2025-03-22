@@ -57,12 +57,27 @@ export interface ActionResult {
   screenshots: string[];
 }
 
-export type ErrorType = 'ConnectionError' | 'ExecutionError' | 'ServerError' | 'TimeoutError' | 'ValidationError' | 'ConfigurationError' | string;
+// تحسين تعريف أنواع الأخطاء مع إضافة المزيد من التفاصيل
+export type ErrorType = 
+  | 'ConnectionError'    // خطأ في الاتصال بالخادم
+  | 'ExecutionError'     // خطأ في تنفيذ الإجراءات
+  | 'ServerError'        // خطأ في الخادم
+  | 'TimeoutError'       // تجاوز وقت العملية
+  | 'ValidationError'    // خطأ في التحقق من صحة البيانات
+  | 'ConfigurationError' // خطأ في الإعدادات
+  | 'BrowserError'       // خطأ متعلق بالمتصفح
+  | 'ElementNotFoundError' // لم يتم العثور على العنصر
+  | 'PuppeteerError'     // خطأ في محرك Puppeteer
+  | 'NetworkError'       // خطأ في الشبكة
+  | 'ClientError'        // خطأ في جانب العميل
+  | string;              // أي نوع آخر من الأخطاء
 
 export interface AutomationError {
   type: ErrorType;
   message: string;
   stack?: string;
+  code?: number;
+  details?: string[];
 }
 
 export interface AutomationResponse {
@@ -90,3 +105,4 @@ export interface ConnectionCheckResult {
   message: string;
   details?: any;
 }
+

@@ -1,5 +1,5 @@
 
-import { AutomationConfig, AutomationResponse, ActionResult } from "./automation/types";
+import { AutomationConfig, AutomationResponse, ActionResult, ErrorType } from "./automation/types";
 import { automationServerUrl, isPreviewEnvironment, checkConnection } from "./automationServerUrl";
 import { toast } from "sonner";
 
@@ -176,10 +176,30 @@ export class AutomationService {
       
       // تحديد رسالة الخطأ
       let errorMessage = error instanceof Error ? error.message : "حدث خطأ غير معروف أثناء تنفيذ الأتمتة";
+      let errorType: ErrorType = "ExecutionError";
       
-      // التعامل بشكل خاص مع خطأ "require is not defined"
-      if (errorMessage.includes('require is not defined')) {
-        errorMessage = "خطأ في تنفيذ الأتمتة: مشكلة في تكوين الخادم. يرجى التحقق من إعدادات الخادم.";
+      // تحليل نوع الخطأ بناءً على الرسالة
+      if (errorMessage.includes('Puppeteer') || errorMessage.includes('Chrome') || errorMessage.includes('browser')) {
+        errorType = "PuppeteerError";
+        errorMessage = "خطأ في تنفيذ الأتمتة: مشكلة في المتصفح الآلي على الخادم. يرجى التحقق من إعدادات الخادم.";
+      } else if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+        errorType = "TimeoutError";
+        errorMessage = "خطأ في تنفيذ الأتمتة: انتهت مهلة الاتصال بالخادم.";
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        errorType = "NetworkError";
+        errorMessage = "خطأ في تنفيذ الأتمتة: مشكلة في الاتصال بالشبكة.";
+      } else if (errorMessage.includes('validation') || errorMessage.includes('invalid')) {
+        errorType = "ValidationError";
+        errorMessage = "خطأ في تنفيذ الأتمتة: بيانات غير صالحة.";
+      } else if (errorMessage.includes('configuration') || errorMessage.includes('config')) {
+        errorType = "ConfigurationError";
+        errorMessage = "خطأ في تنفيذ الأتمتة: مشكلة في الإعدادات.";
+      } else if (errorMessage.includes('server')) {
+        errorType = "ServerError";
+        errorMessage = "خطأ في تنفيذ الأتمتة: مشكلة في الخادم.";
+      } else if (errorMessage.includes('not found') || errorMessage.includes('selector')) {
+        errorType = "ElementNotFoundError";
+        errorMessage = "خطأ في تنفيذ الأتمتة: لم يتم العثور على العنصر المحدد.";
       }
       
       // إرجاع كائن استجابة يحتوي على معلومات الخطأ
@@ -188,9 +208,13 @@ export class AutomationService {
         message: errorMessage,
         automationType: 'server',
         error: {
-          type: 'ExecutionError',
+          type: errorType,
           message: errorMessage,
-          stack: error instanceof Error ? error.stack : undefined
+          stack: error instanceof Error ? error.stack || "" : "",
+          details: [
+            "نوع الخطأ: " + errorType,
+            "وقت الخطأ: " + new Date().toLocaleString("ar-SA")
+          ]
         },
         timestamp: new Date().toISOString()
       };
