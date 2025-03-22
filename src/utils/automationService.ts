@@ -178,8 +178,13 @@ export class AutomationService {
       let errorMessage = error instanceof Error ? error.message : "حدث خطأ غير معروف أثناء تنفيذ الأتمتة";
       let errorType: ErrorType = "ExecutionError";
       
+      // التعامل مع خطأ require بشكل خاص
+      if (errorMessage.includes('require is not defined') || errorMessage.includes('require is not a function')) {
+        errorType = "RequireError";
+        errorMessage = "خطأ في تشغيل البرنامج: الدالة require غير متاحة في المتصفح. يجب استخدام آليات استيراد أخرى.";
+      }
       // تحليل نوع الخطأ بناءً على الرسالة
-      if (errorMessage.includes('Puppeteer') || errorMessage.includes('Chrome') || errorMessage.includes('browser')) {
+      else if (errorMessage.includes('Puppeteer') || errorMessage.includes('Chrome') || errorMessage.includes('browser')) {
         errorType = "PuppeteerError";
         errorMessage = "خطأ في تنفيذ الأتمتة: مشكلة في المتصفح الآلي على الخادم. يرجى التحقق من إعدادات الخادم.";
       } else if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
@@ -200,6 +205,9 @@ export class AutomationService {
       } else if (errorMessage.includes('not found') || errorMessage.includes('selector')) {
         errorType = "ElementNotFoundError";
         errorMessage = "خطأ في تنفيذ الأتمتة: لم يتم العثور على العنصر المحدد.";
+      } else if (errorMessage.includes('module')) {
+        errorType = "ModuleError";
+        errorMessage = "خطأ في تحميل الوحدات: قد تحتاج إلى تحديث النظام أو تثبيت المكتبات الضرورية.";
       }
       
       // إرجاع كائن استجابة يحتوي على معلومات الخطأ

@@ -27,7 +27,8 @@ export const isProduction = (): boolean => {
  * @returns {string|undefined} مسار Chrome المثبت
  */
 export const getChromePath = (): string | undefined => {
-  const chromePath = process.env.CHROME_BIN || '/usr/bin/google-chrome-stable';
+  // تجنب استخدام process.env مباشرة في الواجهة الأمامية
+  const chromePath = window.CHROME_BIN || '/usr/bin/google-chrome-stable';
   console.log(`استخدام مسار Chrome: ${chromePath}`);
   return chromePath;
 };

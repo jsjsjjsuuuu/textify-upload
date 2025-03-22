@@ -70,6 +70,8 @@ export type ErrorType =
   | 'PuppeteerError'     // خطأ في محرك Puppeteer
   | 'NetworkError'       // خطأ في الشبكة
   | 'ClientError'        // خطأ في جانب العميل
+  | 'RequireError'       // خطأ في استخدام require
+  | 'ModuleError'        // خطأ في تحميل الوحدات
   | string;              // أي نوع آخر من الأخطاء
 
 export interface AutomationError {
@@ -105,4 +107,3 @@ export interface ConnectionCheckResult {
   message: string;
   details?: any;
 }
-

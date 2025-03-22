@@ -21,8 +21,20 @@ const ExecutionStatus: React.FC<ExecutionStatusProps> = ({
   // تحويل رسائل الخطأ المعروفة إلى رسائل أكثر وضوحاً
   const getEnhancedErrorMessage = (error: string): { message: string, suggestions: string[] } => {
     // تحسين الكشف عن أنواع الأخطاء المختلفة
+    // خطأ require
+    if (error.includes("require is not defined") || error.includes("require is not a function") || error.includes("RequireError")) {
+      return {
+        message: "خطأ في النظام: المتصفح لا يدعم استخدام دالة 'require'",
+        suggestions: [
+          "هذا خطأ في النظام وليس في الإعدادات الخاصة بك",
+          "يرجى الانتظار قليلاً بينما نعمل على إصلاح المشكلة",
+          "حاول استخدام أسلوب آخر للأتمتة مثل البوكماركلت",
+          "إذا استمرت المشكلة، يرجى التواصل مع فريق الدعم"
+        ]
+      };
+    }
     // أخطاء التكوين
-    if (error.includes("Configuration") || error.includes("config") || error.includes("settings") || error.includes("إعدادات") || error.includes("تكوين")) {
+    else if (error.includes("Configuration") || error.includes("config") || error.includes("settings") || error.includes("إعدادات") || error.includes("تكوين")) {
       return {
         message: "خطأ في تكوين الخادم: تأكد من صحة إعدادات الخادم وعنوان URL المستهدف.",
         suggestions: [
@@ -35,7 +47,7 @@ const ExecutionStatus: React.FC<ExecutionStatusProps> = ({
     }
     
     // الأخطاء المتعلقة بالشبكة
-    if (error.includes("NetworkError") || error.includes("Failed to fetch") || error.includes("network") || error.includes("ERR_CONNECTION")) {
+    else if (error.includes("NetworkError") || error.includes("Failed to fetch") || error.includes("network") || error.includes("ERR_CONNECTION")) {
       return {
         message: "خطأ في الشبكة: تعذر الاتصال بالخادم. تأكد من اتصال الإنترنت الخاص بك.",
         suggestions: [
@@ -108,6 +120,17 @@ const ExecutionStatus: React.FC<ExecutionStatusProps> = ({
           "تأكد من صحة رابط URL وأنه يبدأ بـ http:// أو https://",
           "تأكد من أن الموقع المستهدف متاح ويمكن الوصول إليه",
           "جرب فتح الرابط في المتصفح للتأكد من عمله"
+        ]
+      };
+    }
+    // أخطاء الوحدات
+    else if (error.includes("module") || error.includes("ModuleError")) {
+      return {
+        message: "خطأ في تحميل الوحدات: لا يمكن تحميل بعض المكتبات اللازمة.",
+        suggestions: [
+          "هذا خطأ في النظام وليس في الإعدادات الخاصة بك",
+          "يرجى الانتظار قليلاً بينما نعمل على إصلاح المشكلة",
+          "حاول استخدام أسلوب آخر للأتمتة مثل البوكماركلت"
         ]
       };
     }
@@ -213,6 +236,15 @@ const ExecutionStatus: React.FC<ExecutionStatusProps> = ({
             )}
             
             <p className="text-xs mt-2 opacity-80 text-red-700">رمز الخطأ الأصلي: {serverError}</p>
+            
+            {/* رسالة دعم إضافية للأخطاء الخاصة بوظيفة require */}
+            {serverError.includes("require is not defined") || serverError.includes("RequireError") || serverError.includes("ModuleError") && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  <strong>ملاحظة مهمة:</strong> يحاول النظام استخدام دوال خاصة بالخادم في المتصفح، وهذا قد يؤدي إلى أخطاء. نحن نعمل على إصلاح هذه المشكلة.
+                </p>
+              </div>
+            )}
             
             {/* إضافة اقتراح محدد للتحقق من إعدادات الخادم في حالة الأخطاء المتعلقة بالتكوين */}
             {serverError.includes("Configuration") || serverError.includes("config") || 
