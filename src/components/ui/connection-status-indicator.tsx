@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from "react";
 import { Wifi, WifiOff, RefreshCw, Clock, AlertTriangle, Activity, ServerCrash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AutomationService } from "@/utils/automationService";
 import { 
+  automationServerUrl,
   getLastConnectionStatus, 
   resetAutomationServerUrl,
   checkConnection,
@@ -97,7 +97,9 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
           console.log('نتيجة AutomationService.checkServerStatus:', statusResult);
           
           if (statusResult) {
-            setServerInfo(statusResult);
+            // تصحيح السطر هنا - إذا كان النوع هو ServerStatusResponse فيجب التأكد من أنه يطابق الواجهة
+            // في هذه الحالة، نحن نستخدم Boolean لتحديد النجاح، لذلك سنترك setServerInfo لأنها تتعامل مع قيمة منفصلة
+            // وسنركز على تحديث حالة الاتصال
             setIsConnected(true);
             onStatusChange?.(true);
           }

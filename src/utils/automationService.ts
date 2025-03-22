@@ -1,10 +1,29 @@
 
-import { AutomationConfig, AutomationResponse } from "./automation/types";
-import { automationServerUrl, isPreviewEnvironment } from "./automationServerUrl";
+import { AutomationConfig, AutomationResponse, ActionResult } from "./automation/types";
+import { automationServerUrl, isPreviewEnvironment, checkConnection } from "./automationServerUrl";
 import { toast } from "sonner";
 
 // الخدمة المسؤولة عن إدارة عمليات الأتمتة
 export class AutomationService {
+  
+  // إضافة تبديل التنفيذ الفعلي
+  static toggleRealExecution(enable: boolean): void {
+    try {
+      localStorage.setItem('force_real_execution', enable ? 'true' : 'false');
+      console.log(`تم ${enable ? 'تفعيل' : 'تعطيل'} التنفيذ الفعلي للأتمتة`);
+    } catch (error) {
+      console.error("خطأ في تبديل وضع التنفيذ الفعلي:", error);
+    }
+  }
+  
+  // التحقق من حالة التنفيذ الفعلي
+  static isRealExecutionEnabled(): boolean {
+    try {
+      return localStorage.getItem('force_real_execution') === 'true';
+    } catch {
+      return false;
+    }
+  }
   
   // إعادة محاولة الاتصال بالخادم
   static async forceReconnect(): Promise<boolean> {
@@ -88,18 +107,24 @@ export class AutomationService {
         // استجابة مزيفة للاختبار
         await new Promise(resolve => setTimeout(resolve, 2000));
         
+        // إنشاء نتائج الإجراءات بتنسيق يتوافق مع ActionResult
+        const mockResults: ActionResult[] = cleanedConfig.actions.map((action, idx) => ({
+          index: idx,
+          action: action.name,
+          selector: action.finder || '',
+          value: action.value || '',
+          success: true,
+          error: null,
+          timestamp: new Date().toISOString(),
+          duration: 500,
+          screenshots: []
+        }));
+        
         return {
           success: true,
           message: "تم تنفيذ الأتمتة بنجاح (محاكاة)",
           automationType: 'client',
-          results: cleanedConfig.actions.map((action, index) => ({
-            success: true,
-            actionName: action.name,
-            actionIndex: index,
-            message: `تم تنفيذ الإجراء "${action.description || action.name}" بنجاح`,
-            selector: action.finder,
-            value: action.value
-          })),
+          results: mockResults,
           executionTime: 1500,
           timestamp: new Date().toISOString()
         };
@@ -175,7 +200,7 @@ export class AutomationService {
   // تنظيف وتحسين تكوين الأتمتة
   private static sanitizeConfig(config: AutomationConfig): AutomationConfig {
     // نسخة من التكوين للتعديل
-    const cleanedConfig = { ...config };
+    const cleanedConfig: AutomationConfig = { ...config };
     
     // التأكد من وجود اسم للمشروع
     if (!cleanedConfig.projectName) {
@@ -192,27 +217,31 @@ export class AutomationService {
     }));
     
     // إضافة معلومات المتصفح والبيئة
-    cleanedConfig.browserInfo = {
-      userAgent: navigator.userAgent,
-      language: navigator.language,
-      platform: navigator.platform,
-      screenSize: `${window.screen.width}x${window.screen.height}`
-    };
+    if (!cleanedConfig.browserInfo) {
+      cleanedConfig.browserInfo = {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        platform: navigator.platform,
+        screenSize: `${window.screen.width}x${window.screen.height}`
+      };
+    }
     
     // إضافة خيارات إضافية للخادم
-    cleanedConfig.serverOptions = {
-      timeout: 60000, // مهلة 60 ثانية
-      maxRetries: 2, // عدد محاولات إعادة المحاولة
-      useHeadlessMode: true, // استخدام وضع العرض بدون واجهة
-      puppeteerOptions: {
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-web-security'
-        ]
-      }
-    };
+    if (!cleanedConfig.serverOptions) {
+      cleanedConfig.serverOptions = {
+        timeout: 60000, // مهلة 60 ثانية
+        maxRetries: 2, // عدد محاولات إعادة المحاولة
+        useHeadlessMode: true, // استخدام وضع العرض بدون واجهة
+        puppeteerOptions: {
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-web-security'
+          ]
+        }
+      };
+    }
     
     return cleanedConfig;
   }

@@ -1,40 +1,46 @@
 
+// الأنواع المستخدمة في التطبيق للأتمتة
+
+export interface Action {
+  name: string;
+  finder: string;
+  value?: string;
+  delay?: number;
+  description?: string;
+}
+
+export interface AutomationAction extends Action {
+  type: string;
+  selector?: string;
+}
+
+export interface BrowserInfo {
+  userAgent: string;
+  language: string;
+  platform: string;
+  screenSize: string;
+}
+
+export interface ServerOptions {
+  timeout: number;
+  maxRetries: number;
+  useHeadlessMode: boolean;
+  puppeteerOptions: {
+    args: string[];
+  };
+}
+
 export interface AutomationConfig {
   projectUrl: string;
   projectName?: string;
   actions: Action[] | AutomationAction[];
   useBrowserData: boolean;
   automationType: 'server' | 'client';
-  forceRealExecution: boolean;
-  timeout?: number; // إضافة حقل مهلة اختياري
-  retries?: number; // إضافة حقل محاولات اختياري
-}
-
-export interface Action {
-  type: string;
-  selector?: string;
-  value?: string;
-  name?: string;
-  finder?: string;
-  delay?: number;
-  description?: string; // إضافة حقل الوصف
-}
-
-// إضافة واجهة AutomationAction لدعم المكونات الحالية
-export interface AutomationAction {
-  name: string;
-  finder: string;
-  value: string;
-  delay: number;
-  description?: string; // إضافة حقل الوصف
-}
-
-export interface ServerStatusResponse {
-  status: string;
-  message?: string; // إضافة حقل الرسالة
-  time: string;
-  uptime: number;
-  environment: string;
+  forceRealExecution?: boolean;
+  timeout?: number;
+  retries?: number;
+  browserInfo?: BrowserInfo;
+  serverOptions?: ServerOptions;
 }
 
 export interface ActionResult {
@@ -49,40 +55,27 @@ export interface ActionResult {
   screenshots: string[];
 }
 
+export interface AutomationError {
+  type: string;
+  message: string;
+  stack?: string;
+}
+
 export interface AutomationResponse {
   success: boolean;
   message: string;
-  automationType: 'server' | 'client';
-  details?: string[];
+  automationType: string;
   results?: ActionResult[];
   executionTime?: number;
-  timestamp?: string;
-  error?: {
-    message: string;
-    stack?: string;
-    type: string; // تحديد نوع الخطأ لتوفير معلومات محددة للمستخدم
-    additionalInfo?: string; // إضافة حقل للمعلومات الإضافية
-  };
+  timestamp: string;
+  details?: string[];
+  error?: AutomationError;
 }
 
-// إضافة أنواع الأخطاء الشائعة للتعامل معها بشكل أفضل
-export enum ErrorType {
-  NetworkError = 'NetworkError',
-  TimeoutError = 'TimeoutError',
-  CORSError = 'CORSError',
-  StreamReadError = 'StreamReadError',
-  ExecutionError = 'ExecutionError',
-  ResponseFormatError = 'ResponseFormatError',
-  EndpointNotFoundError = 'EndpointNotFoundError',
-  AuthorizationError = 'AuthorizationError',
-  ServerError = 'ServerError',
-  URLError = 'URLError',
-  ValidationError = 'ValidationError' // إضافة نوع ValidationError
-}
-
-// إضافة واجهة للتعامل مع أخطاء عنوان URL
-export interface URLValidationResult {
-  isValid: boolean;
-  correctedUrl?: string;
-  error?: string;
+export interface ServerStatusResponse {
+  status: string;
+  message: string;
+  time: string;
+  uptime: number;
+  environment: string;
 }
