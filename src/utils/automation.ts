@@ -1,4 +1,3 @@
-
 /**
  * وظائف مساعدة للتحقق من بيئة التطبيق
  */
@@ -27,8 +26,9 @@ export const isProduction = (): boolean => {
  * @returns {string|undefined} مسار Chrome المثبت
  */
 export const getChromePath = (): string | undefined => {
-  // تجنب استخدام process.env مباشرة في الواجهة الأمامية
-  const chromePath = window.CHROME_BIN || '/usr/bin/google-chrome-stable';
+  // تجنب استخدام window.CHROME_BIN لأنها غير موجودة على كائن window
+  // بدلاً من ذلك، استخدم المسار الافتراضي مباشرة
+  const chromePath = '/usr/bin/google-chrome-stable';
   console.log(`استخدام مسار Chrome: ${chromePath}`);
   return chromePath;
 };
