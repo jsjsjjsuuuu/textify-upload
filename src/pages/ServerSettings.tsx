@@ -158,7 +158,8 @@ const ServerSettings = () => {
       
       if (connectionCheck.isConnected) {
         // إذا نجح فحص الاتصال، استمر للحصول على معلومات الخادم
-        const result = await AutomationService.checkServerStatus(showToasts);
+        // تعديل هنا، حذف showToasts من المعلمات
+        const result = await AutomationService.checkServerStatus();
         setServerStatus('online');
         setServerInfo(result);
         

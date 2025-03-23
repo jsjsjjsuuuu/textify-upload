@@ -28,6 +28,7 @@ export interface AutomationAction {
   delay: number;
   description?: string;
   isXPath?: boolean; // إضافة دعم لتحديد نوع المحدد
+  selector?: string; // إضافة خاصية selector كبديل لـ finder للتوافق
 }
 
 /**
@@ -98,4 +99,33 @@ export interface ConnectionStatus {
   lastChecked: string;
   serverUrl?: string;
   error?: string;
+}
+
+/**
+ * نتيجة تنفيذ الإجراء (متوافق مع ActionResultsList)
+ */
+export interface ActionResult {
+  index: number;
+  action: string;
+  selector: string;
+  value: string;
+  success: boolean;
+  error: string | null;
+  timestamp: string;
+  duration: number;
+  screenshots: string[];
+}
+
+/**
+ * أنواع الأخطاء في نظام الأتمتة
+ */
+export enum ErrorType {
+  CONNECTION_ERROR = 'ConnectionError',
+  TIMEOUT_ERROR = 'TimeoutError',
+  VALIDATION_ERROR = 'ValidationError',
+  EXECUTION_ERROR = 'ExecutionError',
+  PUPPETEER_ERROR = 'PuppeteerError',
+  BROWSER_ERROR = 'BrowserError',
+  ELEMENT_NOT_FOUND = 'ElementNotFoundError',
+  CONFIGURATION_ERROR = 'ConfigurationError'
 }

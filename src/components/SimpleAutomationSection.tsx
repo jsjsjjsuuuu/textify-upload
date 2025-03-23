@@ -125,7 +125,7 @@ const SimpleAutomationSection = () => {
 
   const checkServerConnection = async () => {
     try {
-      await AutomationService.checkServerStatus(false);
+      await AutomationService.checkServerStatus();
       setServerConnected(true);
     } catch (error) {
       setServerConnected(false);

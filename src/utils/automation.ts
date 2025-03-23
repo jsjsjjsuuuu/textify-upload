@@ -1,4 +1,3 @@
-
 /**
  * وظائف مساعدة للتحقق من بيئة التطبيق
  */
@@ -314,9 +313,19 @@ export const fetchWithRetry = async (url: string, options: RequestInit = {}, max
   let lastError: Error | null = null;
   let retryDelay = 1000;
   
+  // إنشاء AbortController مع مهلة
+  const createTimeoutController = (ms: number) => {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), ms);
+    return controller;
+  };
+  
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       console.log(`محاولة الاتصال بـ ${url} (محاولة ${attempt + 1}/${maxRetries})`);
+      
+      // استخدام AbortController للتحكم في المهلة
+      const controller = createTimeoutController(30000);
       
       // إضافة رؤوس مخصصة لتجنب مشاكل CORS
       const headers = {
@@ -331,7 +340,8 @@ export const fetchWithRetry = async (url: string, options: RequestInit = {}, max
         headers,
         mode: 'cors',
         cache: 'no-cache',
-        credentials: 'omit'
+        credentials: 'omit',
+        signal: controller.signal
       });
       
       // إذا كانت الاستجابة ناجحة، إرجاعها
@@ -365,12 +375,12 @@ export const fetchWithRetry = async (url: string, options: RequestInit = {}, max
  */
 export const checkInternetConnection = async (): Promise<boolean> => {
   try {
-    // محاولة الاتصال بخدمة موثوقة
+    // محاولة الاتصال بخدمة موثوقة - إزالة خاصية timeout غير الصالحة
     const response = await fetch('https://www.google.com', {
       method: 'HEAD',
       mode: 'no-cors',
-      cache: 'no-cache',
-      timeout: 5000
+      cache: 'no-cache'
+      // حذف خاصية timeout لأنها غير موجودة في RequestInit
     });
     
     return true;
