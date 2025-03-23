@@ -1,3 +1,4 @@
+
 /**
  * تشغيل سيناريوهات الأتمتة
  */
@@ -29,7 +30,12 @@ export class AutomationRunner {
       // إذا كنا في بيئة المعاينة، نتحقق ما إذا كان المستخدم يريد التنفيذ الفعلي
       if (isPreviewEnvironment()) {
         // التحقق من وجود علامة التنفيذ الفعلي في التخزين المحلي
-        const forceRealExecution = localStorage.getItem('force_real_execution') === 'true';
+        let forceRealExecution = false;
+        try {
+          forceRealExecution = localStorage.getItem('force_real_execution') === 'true';
+        } catch (error) {
+          console.error("خطأ في الوصول إلى التخزين المحلي:", error);
+        }
         
         if (!forceRealExecution) {
           toast("أنت في بيئة المعاينة (لوفابل). التنفيذ الفعلي لا يعمل هنا، سيتم محاكاة النتائج فقط.", {
@@ -46,8 +52,8 @@ export class AutomationRunner {
             const success = Math.random() > 0.2; // 80% نسبة نجاح
             return {
               index,
-              action: action.type,
-              selector: action.selector || '',
+              action: action.type || action.name, // استخدم type أو name
+              selector: action.selector || action.finder || '', // استخدم selector أو finder
               value: action.value || '',
               success,
               error: success ? null : 'خطأ محاكاة: لم يتم العثور على العنصر',
@@ -110,11 +116,12 @@ export class AutomationRunner {
           logNetworkRequests: true,
           logErrors: true
         },
-        // إضافة معلومات الخادم المستخدم لمساعدة في التشخيص
-        serverInfo: {
-          renderEnvironment: process.env.RENDER || 'unknown',
-          isProduction: process.env.NODE_ENV === 'production',
-          timestamp: new Date().toISOString()
+        // إضافة معلومات للتشخيص
+        browserInfo: {
+          userAgent: navigator.userAgent,
+          language: navigator.language,
+          platform: navigator.platform,
+          screenSize: `${window.screen.width}x${window.screen.height}`
         },
         // إضافة خيارات خاصة لـ Puppeteer لمساعدة في تهيئته
         puppeteerOptions: {
@@ -184,6 +191,13 @@ export class AutomationRunner {
               });
               
               throw new Error(`فشل في تهيئة Puppeteer: ${errorText}`);
+            } else if (errorText.includes('require is not defined') || errorText.includes('require is not a function')) {
+              console.error('خطأ في دالة require:', errorText);
+              toast.error('خطأ في تشغيل البرنامج: الدالة require غير متاحة في المتصفح', {
+                description: 'تم تحديث التطبيق لمعالجة هذه المشكلة. يرجى تحديث الصفحة.'
+              });
+              
+              throw new Error(`خطأ في تشغيل دالة require: ${errorText}`);
             } else {
               console.error(`فشل في تنفيذ الأتمتة (${response.status}):`, errorText);
               throw new Error(`فشل في تنفيذ الأتمتة: ${response.status} ${response.statusText} - ${errorText}`);
@@ -265,8 +279,17 @@ export class AutomationRunner {
         errorMessage = String(error);
       }
       
+      // معالجة خاصة لخطأ require
+      if (errorMessage.includes('require is not defined') || errorMessage.includes('require is not a function')) {
+        errorMessage = "خطأ في تشغيل البرنامج: الدالة require غير متاحة في المتصفح. تم تحديث التطبيق لمعالجة هذه المشكلة. يرجى تحديث الصفحة.";
+        
+        toast.error("خطأ في تشغيل البرنامج", {
+          duration: 8000,
+          description: "الدالة require غير متاحة في المتصفح. تم تحديث التطبيق لمعالجة هذه المشكلة. يرجى تحديث الصفحة."
+        });
+      }
       // تحسين فحص نوع الخطأ لتقديم إرشادات محددة للمستخدم
-      if (errorMessage.includes('Puppeteer') || errorMessage.includes('Chrome') || errorMessage.includes('browser')) {
+      else if (errorMessage.includes('Puppeteer') || errorMessage.includes('Chrome') || errorMessage.includes('browser')) {
         errorMessage = "فشل في تهيئة Puppeteer على الخادم. تحقق من تثبيت Chrome وضبط متغيرات البيئة المناسبة.";
         
         // إظهار رسالة مفصلة ومفيدة

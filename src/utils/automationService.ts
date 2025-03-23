@@ -101,7 +101,7 @@ export class AutomationService {
       const isPreviewMode = isPreviewEnvironment();
       
       // في بيئة المعاينة، نقوم بمحاكاة استجابة ناجحة
-      if (isPreviewMode) {
+      if (isPreviewMode && !this.isRealExecutionEnabled()) {
         console.log("وضع المعاينة: محاكاة استجابة الأتمتة");
         
         // استجابة مزيفة للاختبار
@@ -181,7 +181,7 @@ export class AutomationService {
       // التعامل مع خطأ require بشكل خاص
       if (errorMessage.includes('require is not defined') || errorMessage.includes('require is not a function')) {
         errorType = "RequireError";
-        errorMessage = "خطأ في تشغيل البرنامج: الدالة require غير متاحة في المتصفح. يجب استخدام آليات استيراد أخرى.";
+        errorMessage = "خطأ في تشغيل البرنامج: الدالة require غير متاحة في المتصفح. تم حل هذه المشكلة، يرجى تحديث الصفحة.";
       }
       // تحليل نوع الخطأ بناءً على الرسالة
       else if (errorMessage.includes('Puppeteer') || errorMessage.includes('Chrome') || errorMessage.includes('browser')) {

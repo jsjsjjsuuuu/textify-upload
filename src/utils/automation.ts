@@ -1,3 +1,4 @@
+
 /**
  * وظائف مساعدة للتحقق من بيئة التطبيق
  */
@@ -59,13 +60,13 @@ export const getPuppeteerArgs = (): string[] => {
 };
 
 /**
- * التأكد من تكوين Puppeteer الصحيح
+ * التأكد من تكوين Puppeteer الصحيح - تم تحديث هذه الدالة لتجنب استخدام require
  * @returns {object} تكوين Puppeteer لبيئة Render
  */
 export const getPuppeteerConfig = () => {
   const config = {
     executablePath: getChromePath(),
-    headless: 'new',
+    headless: 'new', // استخدام وضع headless الجديد للأداء الأفضل
     args: getPuppeteerArgs(),
     defaultViewport: { width: 1366, height: 768 },
     ignoreHTTPSErrors: true, // تجاهل أخطاء HTTPS
@@ -83,10 +84,15 @@ export const getPuppeteerConfig = () => {
  * @returns {boolean} يجب استخدام بيانات المتصفح أم لا
  */
 export const shouldUseBrowserData = (): boolean => {
-  // دائمًا استخدام بيانات المتصفح للحصول على أفضل النتائج، خاصة للمواقع التي تتطلب تسجيل الدخول
-  const shouldUse = localStorage.getItem('use_browser_data') !== 'false';
-  console.log(`استخدام بيانات المتصفح: ${shouldUse}`);
-  return shouldUse;
+  try {
+    // دائمًا استخدام بيانات المتصفح للحصول على أفضل النتائج، خاصة للمواقع التي تتطلب تسجيل الدخول
+    const shouldUse = localStorage.getItem('use_browser_data') !== 'false';
+    console.log(`استخدام بيانات المتصفح: ${shouldUse}`);
+    return shouldUse;
+  } catch (error) {
+    console.error("خطأ في الوصول إلى التخزين المحلي:", error);
+    return true; // القيمة الافتراضية هي استخدام بيانات المتصفح
+  }
 };
 
 /**
@@ -94,8 +100,12 @@ export const shouldUseBrowserData = (): boolean => {
  * @param {boolean} value القيمة المراد ضبطها (true لاستخدام بيانات المتصفح، false لعدم استخدامها)
  */
 export const setUseBrowserData = (value: boolean): void => {
-  console.log(`تعيين استخدام بيانات المتصفح إلى: ${value}`);
-  localStorage.setItem('use_browser_data', value.toString());
+  try {
+    console.log(`تعيين استخدام بيانات المتصفح إلى: ${value}`);
+    localStorage.setItem('use_browser_data', value.toString());
+  } catch (error) {
+    console.error("خطأ في تعيين قيمة في التخزين المحلي:", error);
+  }
 };
 
 /**
@@ -178,6 +188,10 @@ export const getActionsLog = () => {
  * مسح سجل الإجراءات
  */
 export const clearActionsLog = () => {
-  localStorage.removeItem('actions_log');
-  console.log("تم مسح سجل الإجراءات");
+  try {
+    localStorage.removeItem('actions_log');
+    console.log("تم مسح سجل الإجراءات");
+  } catch (e) {
+    console.error("فشل في مسح سجل الإجراءات:", e);
+  }
 };
