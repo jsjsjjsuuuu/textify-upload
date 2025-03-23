@@ -1,14 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
+import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { isXPathSelector } from "@/utils/automation";
+import { Code, Info, Wand2 } from "lucide-react";
 import { AutomationAction } from "@/utils/automation/types";
-import { Info } from 'lucide-react';
+import { isXPathSelector } from "@/utils/automation";
 
 interface ActionEditorProps {
   action: AutomationAction;
@@ -17,166 +17,176 @@ interface ActionEditorProps {
   index: number;
 }
 
-const ActionEditor: React.FC<ActionEditorProps> = ({ 
-  action, 
-  onChange, 
-  disabled = false,
-  index
-}) => {
-  // تحديد ما إذا كان المحدد بصيغة XPath
-  const [isXPath, setIsXPath] = useState<boolean>(false);
-  
-  // التحقق من صيغة المحدد عند تحميل المكون أو تغيير المحدد
-  useEffect(() => {
-    if (action.finder) {
-      const isXPathFormat = isXPathSelector(action.finder);
-      setIsXPath(isXPathFormat);
-    } else {
-      setIsXPath(false);
-    }
-  }, [action.finder]);
-  
-  // أنواع الإجراءات المتاحة
-  const actionTypes = [
-    { value: 'click', label: 'نقر على عنصر' },
-    { value: 'type', label: 'كتابة نص' },
-    { value: 'select', label: 'اختيار من قائمة منسدلة' },
-    { value: 'wait', label: 'انتظار (مللي ثانية)' },
-    { value: 'screenshot', label: 'أخذ لقطة شاشة' },
-    { value: 'navigate', label: 'الانتقال إلى URL' },
-    { value: 'submit', label: 'إرسال نموذج' },
-    { value: 'eval', label: 'تنفيذ كود JavaScript' }
-  ];
-  
-  // تحديث قيمة الإجراء
-  const handleChange = (key: keyof AutomationAction, value: string | number) => {
-    const updatedAction: AutomationAction = { ...action, [key]: value };
-    
-    // إذا تم تغيير نوع الإجراء، قم بتحديث خاصية type أيضًا
-    if (key === 'name') {
-      updatedAction.type = value as string;
-    }
-    
-    onChange(updatedAction);
+const ActionEditor: React.FC<ActionEditorProps> = ({ action, onChange, disabled, index }) => {
+  // تحديث الإجراء مع القيم الجديدة
+  const updateAction = <K extends keyof AutomationAction>(key: K, value: AutomationAction[K]) => {
+    onChange({
+      ...action,
+      [key]: value
+    });
   };
+  
+  // التحقق مما إذا كان المحدد هو محدد XPath
+  const isXPath = isXPathSelector(action.finder);
   
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Badge variant="outline" className="bg-gray-100">
-          إجراء {index + 1}
-        </Badge>
-        {isXPath && (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            <Info className="w-3 h-3 mr-1" /> XPath
+        <div className="flex items-center gap-3">
+          <Badge variant={isXPath ? "default" : "outline"} className={isXPath ? "bg-purple-600" : ""}>
+            {`الإجراء ${index + 1}`}
           </Badge>
-        )}
+          {isXPath && (
+            <Badge variant="outline" className="border-purple-300 bg-purple-50 text-purple-700 text-xs">
+              <Code className="h-3 w-3 mr-1" />
+              XPath
+            </Badge>
+          )}
+        </div>
+        <div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  className="text-gray-500 hover:text-blue-600 transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // هنا يمكن إضافة وظيفة مساعدة لتحسين المحدد
+                  }}
+                >
+                  <Info className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="w-80">
+                <div className="space-y-2">
+                  <p className="font-medium">محددات XPath مدعومة</p>
+                  <p className="text-xs">يمكنك استخدام محددات CSS القياسية أو محددات XPath.</p>
+                  <p className="text-xs font-mono bg-gray-100 p-1 rounded">مثال: //input[@placeholder='القيمة']</p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
       
-      <div className="grid gap-2">
-        <Label htmlFor={`action-type-${index}`}>نوع الإجراء</Label>
+      <div>
+        <Label htmlFor={`action-type-${index}`}>
+          نوع الإجراء <span className="text-red-500">*</span>
+        </Label>
         <Select
-          value={action.name}
-          onValueChange={(value) => handleChange('name', value)}
           disabled={disabled}
+          value={action.name}
+          onValueChange={(value) => updateAction('name', value)}
         >
           <SelectTrigger id={`action-type-${index}`}>
             <SelectValue placeholder="اختر نوع الإجراء" />
           </SelectTrigger>
           <SelectContent>
-            {actionTypes.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
-            ))}
+            <SelectItem value="click">نقر (click)</SelectItem>
+            <SelectItem value="type">كتابة نص (type)</SelectItem>
+            <SelectItem value="select">اختيار من قائمة (select)</SelectItem>
+            <SelectItem value="wait">انتظار (wait)</SelectItem>
+            <SelectItem value="navigate">انتقال (navigate)</SelectItem>
           </SelectContent>
         </Select>
       </div>
       
-      {action.name !== 'wait' && action.name !== 'navigate' && action.name !== 'eval' && (
-        <div className="grid gap-2">
-          <Label htmlFor={`action-finder-${index}`} className="flex items-center justify-between">
-            <span>محدد العنصر {action.name === 'screenshot' ? '(اختياري)' : ''}</span>
-            {isXPath && (
-              <span className="text-xs text-blue-600">XPath</span>
-            )}
+      <div>
+        <div className="flex items-center justify-between">
+          <Label htmlFor={`action-finder-${index}`} className="mb-1">
+            محدد العنصر <span className="text-red-500">*</span>
           </Label>
-          <Input
-            id={`action-finder-${index}`}
-            placeholder={isXPath ? '//input[@id="username"]' : '#username, .input-class, [name="username"]'}
-            value={action.finder || ''}
-            onChange={(e) => handleChange('finder', e.target.value)}
-            disabled={disabled}
-            className={isXPath ? 'border-blue-300 bg-blue-50' : ''}
-            dir="ltr"
-          />
-          <p className="text-xs text-gray-500">
-            {isXPath 
-              ? 'تم اكتشاف صيغة XPath. يمكنك استخدام محددات XPath مثل //div[@class="example"]'
-              : 'استخدم محددات CSS مثل #id, .class, [attr=value], أو محددات XPath تبدأ بـ //'
-            }
-          </p>
-        </div>
-      )}
-      
-      {(action.name === 'type' || action.name === 'select' || action.name === 'navigate' || action.name === 'eval') && (
-        <div className="grid gap-2">
-          <Label htmlFor={`action-value-${index}`}>
-            {action.name === 'type' ? 'النص المراد كتابته' : 
-             action.name === 'select' ? 'القيمة المراد اختيارها' :
-             action.name === 'navigate' ? 'عنوان URL' : 'كود JavaScript'}
-          </Label>
-          {action.name === 'eval' ? (
-            <Textarea
-              id={`action-value-${index}`}
-              placeholder={action.name === 'eval' ? 'document.querySelector(".element").click();' : ''}
-              value={action.value || ''}
-              onChange={(e) => handleChange('value', e.target.value)}
-              disabled={disabled}
-              rows={3}
-              dir="ltr"
-            />
-          ) : (
-            <Input
-              id={`action-value-${index}`}
-              placeholder={
-                action.name === 'type' ? 'أدخل النص هنا' : 
-                action.name === 'select' ? 'قيمة الخيار' :
-                action.name === 'navigate' ? 'https://example.com' : ''
-              }
-              value={action.value || ''}
-              onChange={(e) => handleChange('value', e.target.value)}
-              disabled={disabled}
-              dir={action.name === 'navigate' ? 'ltr' : 'auto'}
-            />
+          {isXPath && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="border-purple-300 bg-purple-50 text-purple-700 text-xs cursor-help">
+                    <Wand2 className="h-3 w-3 mr-1" />
+                    تم اكتشاف XPath
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent className="w-80">
+                  <div className="space-y-2">
+                    <p className="font-medium">تم اكتشاف محدد XPath</p>
+                    <p className="text-xs">
+                      تم اكتشاف أن المحدد الذي أدخلته هو محدد XPath. سيتم استخدام محرك XPath لاستهداف العنصر.
+                    </p>
+                    <p className="text-xs font-mono bg-gray-100 p-1 rounded dir-ltr">{action.finder}</p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
+        <Textarea
+          id={`action-finder-${index}`}
+          placeholder="أدخل محدد CSS أو XPath مثل #id أو .class أو //input[@placeholder='القيمة']"
+          value={action.finder}
+          onChange={(e) => updateAction('finder', e.target.value)}
+          disabled={disabled}
+          className={`font-mono text-sm h-20 ${isXPath ? 'bg-purple-50 border-purple-200' : ''}`}
+          dir="ltr"
+        />
+        {isXPath && (
+          <p className="text-xs text-purple-700 mt-1">
+            <Code className="h-3 w-3 inline mr-1" />
+            تم اكتشاف صيغة XPath. سيتم استخدام محرك XPath للبحث عن العنصر.
+          </p>
+        )}
+      </div>
+      
+      {/* حقل قيمة الإجراء - يظهر فقط للإجراءات التي تحتاج إلى قيمة */}
+      {(action.name === 'type' || action.name === 'select' || action.name === 'navigate') && (
+        <div>
+          <Label htmlFor={`action-value-${index}`}>
+            قيمة الإجراء {(action.name === 'type' || action.name === 'navigate') && <span className="text-red-500">*</span>}
+          </Label>
+          <Input
+            id={`action-value-${index}`}
+            placeholder={
+              action.name === 'type' 
+                ? "النص المراد كتابته" 
+                : action.name === 'select' 
+                ? "القيمة المراد اختيارها" 
+                : "عنوان URL المراد الانتقال إليه"
+            }
+            value={action.value || ''}
+            onChange={(e) => updateAction('value', e.target.value)}
+            disabled={disabled}
+            dir={action.name === 'navigate' ? "ltr" : "auto"}
+          />
+        </div>
       )}
       
-      <div className="grid gap-2">
-        <Label htmlFor={`action-delay-${index}`}>التأخير (مللي ثانية)</Label>
+      <div>
+        <Label htmlFor={`action-delay-${index}`}>
+          تأخير (مللي ثانية)
+        </Label>
         <Input
           id={`action-delay-${index}`}
           type="number"
-          placeholder="500"
-          value={action.delay || 500}
-          onChange={(e) => handleChange('delay', parseInt(e.target.value) || 500)}
+          placeholder="تأخير بعد الإجراء (بالمللي ثانية)"
+          value={action.delay?.toString() || "500"}
+          onChange={(e) => updateAction('delay', parseInt(e.target.value) || 0)}
           disabled={disabled}
-          min="0"
-          max="10000"
+          min={0}
+          max={10000}
+          dir="ltr"
         />
-        <p className="text-xs text-gray-500">
-          {action.name === 'wait' ? 'مدة الانتظار بالمللي ثانية' : 'التأخير قبل تنفيذ الإجراء التالي'}
+        <p className="text-xs text-gray-500 mt-1">
+          التأخير بعد تنفيذ الإجراء (القيمة الافتراضية: 500 مللي ثانية)
         </p>
       </div>
       
-      <div className="grid gap-2">
-        <Label htmlFor={`action-description-${index}`}>وصف الإجراء (اختياري)</Label>
+      <div>
+        <Label htmlFor={`action-description-${index}`}>
+          وصف الإجراء (اختياري)
+        </Label>
         <Input
           id={`action-description-${index}`}
-          placeholder="وصف مختصر للإجراء"
+          placeholder="وصف موجز للإجراء"
           value={action.description || ''}
-          onChange={(e) => handleChange('description', e.target.value)}
+          onChange={(e) => updateAction('description', e.target.value)}
           disabled={disabled}
         />
       </div>

@@ -1,314 +1,208 @@
+import { AutomationConfig, AutomationResponse, ServerOptions } from "./automation/types";
+import { getAutomationServerUrl } from "./automationServerUrl";
+import { fetchWithRetry } from "./automation";
 
-import { AutomationConfig, AutomationResponse, ActionResult, ErrorType, ServerOptions } from "./automation/types";
-import { automationServerUrl, isPreviewEnvironment, checkConnection } from "./automationServerUrl";
-import { toast } from "sonner";
-import { isXPathSelector, isRequireError, xpathToCss } from "./automation";
-
-// الخدمة المسؤولة عن إدارة عمليات الأتمتة
-export class AutomationService {
-  
-  // إضافة تبديل التنفيذ الفعلي
-  static toggleRealExecution(enable: boolean): void {
-    try {
-      localStorage.setItem('force_real_execution', enable ? 'true' : 'false');
-      console.log(`تم ${enable ? 'تفعيل' : 'تعطيل'} التنفيذ الفعلي للأتمتة`);
-    } catch (error) {
-      console.error("خطأ في تبديل وضع التنفيذ الفعلي:", error);
-    }
-  }
-  
-  // التحقق من حالة التنفيذ الفعلي
-  static isRealExecutionEnabled(): boolean {
-    try {
-      return localStorage.getItem('force_real_execution') === 'true';
-    } catch {
-      return false;
-    }
-  }
-  
-  // إعادة محاولة الاتصال بالخادم
-  static async forceReconnect(): Promise<boolean> {
-    try {
-      const response = await fetch(`${automationServerUrl}/api/ping?force=true`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store'
-        }
-      });
-      
-      if (response.ok) {
-        console.log("تم إعادة الاتصال بالخادم بنجاح");
-        return true;
-      }
-      
-      console.error("فشل إعادة الاتصال بالخادم:", response.statusText);
-      return false;
-    } catch (error) {
-      console.error("خطأ في إعادة الاتصال بالخادم:", error);
-      return false;
-    }
-  }
-  
-  // التحقق من حالة الخادم
-  static async checkServerStatus(showToast: boolean = true): Promise<boolean> {
-    try {
-      const isPreviewMode = isPreviewEnvironment();
-      
-      // في بيئة المعاينة، نفترض أن الخادم متصل دائمًا
-      if (isPreviewMode) {
-        if (showToast) {
-          toast.success("وضع المعاينة: محاكاة اتصال الخادم");
-        }
-        return true;
-      }
-      
-      const response = await fetch(`${automationServerUrl}/api/status`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-client-id': 'web-client'
-        }
-      });
-      
-      if (response.ok) {
-        if (showToast) {
-          toast.success("خادم الأتمتة متصل");
-        }
-        return true;
-      } else {
-        if (showToast) {
-          toast.error("خادم الأتمتة غير متصل");
-        }
-        return false;
-      }
-    } catch (error) {
-      if (showToast) {
-        toast.error("تعذر الاتصال بخادم الأتمتة");
-      }
-      console.error("خطأ في التحقق من حالة الخادم:", error);
-      return false;
-    }
-  }
-  
-  // التحقق من الإعدادات وتنفيذ الأتمتة
-  static async validateAndRunAutomation(config: AutomationConfig): Promise<AutomationResponse> {
-    try {
-      // تحسين وتنقية البيانات قبل الإرسال
-      const cleanedConfig = this.sanitizeConfig(config);
-      
-      console.log("بدء تنفيذ الأتمتة:", cleanedConfig);
-      
-      const isPreviewMode = isPreviewEnvironment();
-      
-      // في بيئة المعاينة، نقوم بمحاكاة استجابة ناجحة
-      if (isPreviewMode && !this.isRealExecutionEnabled()) {
-        console.log("وضع المعاينة: محاكاة استجابة الأتمتة");
-        
-        // استجابة مزيفة للاختبار
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // إنشاء نتائج الإجراءات بتنسيق يتوافق مع ActionResult
-        const mockResults: ActionResult[] = cleanedConfig.actions.map((action, idx) => ({
-          index: idx,
-          action: action.name,
-          selector: action.finder || '',
-          value: action.value || '',
-          success: true,
-          error: null,
-          timestamp: new Date().toISOString(),
-          duration: 500,
-          screenshots: []
-        }));
-        
-        return {
-          success: true,
-          message: "تم تنفيذ الأتمتة بنجاح (محاكاة)",
-          automationType: 'client',
-          results: mockResults,
-          executionTime: 1500,
-          timestamp: new Date().toISOString()
-        };
-      }
-      
-      // إضافة معلومات إضافية لمساعدة التصحيح
-      console.log("إرسال طلب الأتمتة إلى:", `${automationServerUrl}/api/automate`);
-      console.log("تهيئة متغيرات البرنامج لمعالجة الأخطاء المحتملة");
-      
-      // تنفيذ الأتمتة على الخادم
-      const response = await fetch(`${automationServerUrl}/api/automate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-client-id': 'web-client',
-          'x-support-xpath': 'true', // إرسال معلومات عن دعم XPath
-          'x-automation-client': 'web-lovable'
-        },
-        body: JSON.stringify(cleanedConfig)
-      });
-      
-      // إذا كان هناك خطأ في الاستجابة
-      if (!response.ok) {
-        const errorText = await response.text();
-        
-        // محاولة تحليل رسالة الخطأ إذا كانت بصيغة JSON
-        let errorMessage = `خطأ في الخادم: ${response.status} ${response.statusText}`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.message || errorJson.error || errorMessage;
-        } catch (e) {
-          // إذا لم تكن الاستجابة بصيغة JSON، استخدم النص كما هو
-          if (errorText) errorMessage = errorText;
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      // تحليل الاستجابة
-      const responseData = await response.json();
-      
-      // إعادة تنسيق البيانات لتتوافق مع تنسيق AutomationResponse
-      return {
-        success: responseData.success,
-        message: responseData.message,
-        results: responseData.results,
-        executionTime: responseData.executionTime,
-        automationType: 'server',
-        error: responseData.error,
-        timestamp: responseData.timestamp || new Date().toISOString(),
-        details: responseData.details
-      };
-    } catch (error) {
-      console.error("خطأ في تنفيذ الأتمتة:", error);
-      
-      // تحديد رسالة الخطأ
-      let errorMessage = error instanceof Error ? error.message : "حدث خطأ غير معروف أثناء تنفيذ الأتمتة";
-      let errorType: ErrorType = "ExecutionError";
-      
-      // استخدام دالة التحقق من نوع خطأ require
-      if (isRequireError(errorMessage)) {
-        errorType = "RequireError";
-        errorMessage = "خطأ في تشغيل البرنامج: الدالة require غير متاحة في المتصفح. يرجى تحديث الصفحة أو استخدام طريقة البوكماركلت.";
-      }
-      // تحليل نوع الخطأ بناءً على الرسالة
-      else if (errorMessage.includes('Puppeteer') || errorMessage.includes('Chrome') || errorMessage.includes('browser')) {
-        errorType = "PuppeteerError";
-        errorMessage = "خطأ في تنفيذ الأتمتة: مشكلة في المتصفح الآلي على الخادم. يرجى التحقق من إعدادات الخادم.";
-      } else if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
-        errorType = "TimeoutError";
-        errorMessage = "خطأ في تنفيذ الأتمتة: انتهت مهلة الاتصال بالخادم.";
-      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
-        errorType = "NetworkError";
-        errorMessage = "خطأ في تنفيذ الأتمتة: مشكلة في الاتصال بالشبكة.";
-      } else if (errorMessage.includes('validation') || errorMessage.includes('invalid')) {
-        errorType = "ValidationError";
-        errorMessage = "خطأ في تنفيذ الأتمتة: بيانات غير صالحة.";
-      } else if (errorMessage.includes('configuration') || errorMessage.includes('config')) {
-        errorType = "ConfigurationError";
-        errorMessage = "خطأ في تنفيذ الأتمتة: مشكلة في الإعدادات.";
-      } else if (errorMessage.includes('server')) {
-        errorType = "ServerError";
-        errorMessage = "خطأ في تنفيذ الأتمتة: مشكلة في الخادم.";
-      } else if (errorMessage.includes('not found') || errorMessage.includes('selector')) {
-        errorType = "ElementNotFoundError";
-        errorMessage = "خطأ في تنفيذ الأتمتة: لم يتم العثور على العنصر المحدد.";
-      } else if (errorMessage.includes('module')) {
-        errorType = "ModuleError";
-        errorMessage = "خطأ في تحميل الوحدات: قد تحتاج إلى تحديث النظام أو تثبيت المكتبات الضرورية.";
-      } else if (errorMessage.includes('XPath') || errorMessage.includes('xpath')) {
-        errorType = "XPathError";
-        errorMessage = "خطأ في تنفيذ محدد XPath. يرجى التحقق من صياغة المحدد.";
-      }
-      
-      // إرجاع كائن استجابة يحتوي على معلومات الخطأ
-      return {
-        success: false,
-        message: errorMessage,
-        automationType: 'server',
-        error: {
-          type: errorType,
-          message: errorMessage,
-          stack: error instanceof Error ? error.stack || "" : "",
-          details: [
-            "نوع الخطأ: " + errorType,
-            "وقت الخطأ: " + new Date().toLocaleString("ar-SA")
-          ]
-        },
-        timestamp: new Date().toISOString()
-      };
-    }
-  }
-  
-  // تنظيف وتحسين تكوين الأتمتة
-  private static sanitizeConfig(config: AutomationConfig): AutomationConfig {
-    // نسخة من التكوين للتعديل
-    const cleanedConfig: AutomationConfig = { ...config };
-    
-    // التأكد من وجود اسم للمشروع
-    if (!cleanedConfig.projectName) {
-      cleanedConfig.projectName = 'أتمتة بدون اسم';
-    }
-    
-    // تعديل الإجراءات للتأكد من وجود جميع الحقول المطلوبة وتحسين المحددات
-    cleanedConfig.actions = (cleanedConfig.actions || []).map(action => {
-      // فحص ما إذا كان المحدد بصيغة XPath
-      const isXPath = action.finder ? isXPathSelector(action.finder) : false;
-      
-      // تكوين الإجراء المحسن
-      const enhancedAction = {
-        name: action.name,
-        type: action.name, // إضافة خاصية type لتكون مطابقة للاسم
-        finder: action.finder,
-        value: action.value || '',
-        delay: typeof action.delay === 'number' ? action.delay : parseInt(String(action.delay) || '500', 10),
-        description: action.description || `إجراء ${action.name}`,
-        isXPath, // إضافة علامة إذا كان المحدد بصيغة XPath
-        selectorType: isXPath ? 'xpath' : 'css' // تحديد نوع المحدد بوضوح
-      };
-      
-      // طباعة معلومات تصحيح محسنة
-      if (isXPath) {
-        console.log(`تم اكتشاف محدد XPath: ${action.finder}`);
-        const cssEquivalent = xpathToCss(action.finder || '');
-        if (cssEquivalent) {
-          console.log(`المكافئ CSS المقترح: ${cssEquivalent}`);
-        }
-      }
-      
-      return enhancedAction;
+/**
+ * فحص حالة خادم الأتمتة
+ */
+const checkServerStatus = async (): Promise<boolean> => {
+  try {
+    const serverUrl = getAutomationServerUrl();
+    const response = await fetch(`${serverUrl}/api/status`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Id': 'web-client'
+      },
+      mode: 'cors'
     });
     
-    // إضافة معلومات المتصفح والبيئة
-    if (!cleanedConfig.browserInfo) {
-      cleanedConfig.browserInfo = {
+    return response.ok;
+  } catch (error) {
+    console.error("فشل في التحقق من حالة الخادم:", error);
+    return false;
+  }
+};
+
+/**
+ * محاولة إعادة الاتصال بالخادم
+ */
+const forceReconnect = async (): Promise<boolean> => {
+  try {
+    const serverUrl = getAutomationServerUrl();
+    const response = await fetch(`${serverUrl}/api/reconnect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Id': 'web-client'
+      },
+      mode: 'cors'
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error("فشل في محاولة إعادة الاتصال:", error);
+    return false;
+  }
+};
+
+/**
+ * إرسال طلب تنفيذ الأتمتة إلى الخادم
+ * @param config تكوين الأتمتة
+ */
+const executeAutomation = async (config: AutomationConfig): Promise<AutomationResponse> => {
+  try {
+    // تعديل الإجراءات لإضافة معلومات XPath
+    const enhancedActions = config.actions.map(action => {
+      // التحقق مما إذا كان المحدد هو محدد XPath
+      const isXPathSelector = action.finder && (
+        action.finder.startsWith('//') || 
+        action.finder.startsWith('/') || 
+        action.finder.includes('@') && action.finder.includes('[') && action.finder.includes(']')
+      );
+      
+      return {
+        ...action,
+        // إضافة خاصية لتحديد ما إذا كان المحدد هو XPath
+        isXPath: isXPathSelector
+      };
+    });
+    
+    const serverUrl = getAutomationServerUrl();
+    const requestData = {
+      ...config,
+      actions: enhancedActions,
+      timestamp: new Date().toISOString(),
+      clientInfo: {
         userAgent: navigator.userAgent,
         language: navigator.language,
         platform: navigator.platform,
-        screenSize: `${window.screen.width}x${window.screen.height}`
-      };
-    }
+        viewportSize: {
+          width: window.innerWidth,
+          height: window.innerHeight
+        }
+      }
+    };
     
-    // إضافة خيارات إضافية للخادم
-    if (!cleanedConfig.serverOptions) {
-      cleanedConfig.serverOptions = {
-        timeout: 60000, // مهلة 60 ثانية
-        maxRetries: 2, // عدد محاولات إعادة المحاولة
-        useHeadlessMode: true, // استخدام وضع العرض بدون واجهة
-        puppeteerOptions: {
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-web-security'
-          ]
-        },
-        supportXPath: true // إضافة دعم محددات XPath
-      };
-    } else if (cleanedConfig.serverOptions) {
-      // ضمان وجود الإعداد supportXPath
-      cleanedConfig.serverOptions.supportXPath = true;
-    }
+    // إعداد خيارات الطلب
+    const options: RequestInit = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Id': 'web-client'
+      },
+      body: JSON.stringify(requestData)
+    };
     
-    return cleanedConfig;
+    // استخدام وظيفة fetchWithRetry لتجنب أخطاء الشبكة
+    const response = await fetchWithRetry(`${serverUrl}/api/automate`, options, 3);
+    const result = await response.json();
+    
+    return result;
+  } catch (error) {
+    // تحسين معالجة الأخطاء
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : typeof error === 'string' 
+        ? error 
+        : 'حدث خطأ غير معروف';
+    
+    // التحقق مما إذا كان الخطأ متعلقًا بالشبكة
+    const isNetworkError = 
+      errorMessage.includes('fetch') ||
+      errorMessage.includes('network') ||
+      errorMessage.includes('Failed to fetch') ||
+      errorMessage.includes('NetworkError') ||
+      errorMessage.includes('CORS');
+    
+    console.error('خطأ في تنفيذ الأتمتة:', error);
+    
+    return {
+      success: false,
+      message: isNetworkError 
+        ? 'تعذر الاتصال بخادم الأتمتة. تحقق من اتصالك بالإنترنت وتأكد من أن الخادم متاح.' 
+        : `فشل تنفيذ الأتمتة: ${errorMessage}`,
+      automationType: 'server',
+      error: {
+        message: errorMessage,
+        type: isNetworkError ? 'NetworkError' : 'ExecutionError',
+        stack: error instanceof Error ? error.stack : undefined
+      },
+      timestamp: new Date().toISOString()
+    };
   }
-}
+};
+
+/**
+ * التحقق من تكوين الأتمتة وتنفيذها
+ * @param config تكوين الأتمتة
+ */
+const validateAndRunAutomation = async (config: AutomationConfig): Promise<AutomationResponse> => {
+  try {
+    // التحقق من وجود المعلومات الأساسية
+    if (!config.projectUrl) {
+      throw new Error('يجب توفير عنوان URL للمشروع');
+    }
+    
+    if (!config.actions || config.actions.length === 0) {
+      throw new Error('يجب توفير إجراء واحد على الأقل');
+    }
+    
+    // التحقق من صحة URL
+    if (!config.projectUrl.startsWith('http://') && !config.projectUrl.startsWith('https://')) {
+      config.projectUrl = `https://${config.projectUrl}`;
+    }
+    
+    // تحسين تكوين الأتمتة
+    const enhancedConfig: AutomationConfig = {
+      ...config,
+      automationType: config.automationType || 'server',
+      useBrowserData: config.useBrowserData !== undefined ? config.useBrowserData : true,
+      forceRealExecution: config.forceRealExecution !== undefined ? config.forceRealExecution : true
+    };
+    
+    // تعزيز خيارات الخادم
+    const serverOptions: ServerOptions = {
+      timeout: 60000, // زيادة المهلة إلى 60 ثانية
+      navigationTimeout: 30000,
+      retries: config.forceRealExecution ? 2 : 0,
+      useCache: false,
+      disableCors: true,
+      supportXPath: true // إضافة دعم XPath
+    };
+    
+    console.log('تنفيذ الأتمتة مع الإعدادات:', enhancedConfig);
+    console.log('خيارات الخادم:', serverOptions);
+    
+    // تنفيذ الأتمتة على الخادم
+    return await executeAutomation(enhancedConfig);
+  } catch (error) {
+    console.error('خطأ في التحقق من تكوين الأتمتة:', error);
+    
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : typeof error === 'string' 
+        ? error 
+        : 'حدث خطأ غير معروف';
+    
+    return {
+      success: false,
+      message: `فشل في التحقق من تكوين الأتمتة: ${errorMessage}`,
+      automationType: 'server',
+      error: {
+        message: errorMessage,
+        type: 'ValidationError',
+        stack: error instanceof Error ? error.stack : undefined
+      },
+      timestamp: new Date().toISOString()
+    };
+  }
+};
+
+// تصدير الوظائف العامة
+export const AutomationService = {
+  validateAndRunAutomation,
+  executeAutomation,
+  checkServerStatus,
+  forceReconnect,
+};

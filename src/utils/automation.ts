@@ -74,7 +74,6 @@ export const getPuppeteerConfig = () => {
       timeout: 60000, // زيادة مهلة الاتصال إلى دقيقة واحدة
       waitForInitialPage: true, // انتظار تحميل الصفحة الأولى
       dumpio: true, // طباعة stdout و stderr من المستعرض للمساعدة في التصحيح
-      // دعم xPath
       handleSIGINT: false,
       handleSIGTERM: false,
       handleSIGHUP: false
@@ -292,10 +291,146 @@ export const xpathToCss = (xpathSelector: string): string | null => {
       return xpathSelector.replace(/^\/\/input\[@placeholder=['"]([^'"]+)['"]\]$/i, 'input[placeholder="$1"]');
     }
     
+    // التعامل مع //input[@placeholder='value'][@value='value']
+    if (/^\/\/input\[@placeholder=['"]([^'"]+)['"]\]\[@value=['"]([^'"]+)['"]\]$/i.test(xpathSelector)) {
+      return xpathSelector.replace(/^\/\/input\[@placeholder=['"]([^'"]+)['"]\]\[@value=['"]([^'"]+)['"]\]$/i, 'input[placeholder="$1"][value="$2"]');
+    }
+    
     // لا يمكن التحويل
     return null;
   } catch (error) {
     console.error("خطأ في تحويل محدد XPath إلى CSS:", error);
     return null;
+  }
+};
+
+/**
+ * إصلاح أخطاء الشبكة في الاتصال بالخادم
+ * @param {string} url عنوان URL الذي يتم الاتصال به
+ * @param {object} options خيارات الطلب
+ * @returns {Promise<Response>} استجابة الطلب مع إعادة المحاولة التلقائية
+ */
+export const fetchWithRetry = async (url: string, options: RequestInit = {}, maxRetries = 3): Promise<Response> => {
+  let lastError: Error | null = null;
+  let retryDelay = 1000;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      console.log(`محاولة الاتصال بـ ${url} (محاولة ${attempt + 1}/${maxRetries})`);
+      
+      // إضافة رؤوس مخصصة لتجنب مشاكل CORS
+      const headers = {
+        ...options.headers,
+        'Cache-Control': 'no-cache, no-store',
+        'Pragma': 'no-cache',
+        'X-Request-Time': Date.now().toString()
+      };
+      
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        mode: 'cors',
+        cache: 'no-cache',
+        credentials: 'omit'
+      });
+      
+      // إذا كانت الاستجابة ناجحة، إرجاعها
+      if (response.ok) {
+        console.log(`تم الاتصال بنجاح بـ ${url}`);
+        return response;
+      }
+      
+      // إذا كانت الاستجابة غير ناجحة، رمي خطأ
+      throw new Error(`فشل الاتصال: ${response.status} ${response.statusText}`);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.error(`فشل في المحاولة ${attempt + 1}/${maxRetries}:`, lastError.message);
+      
+      // انتظار قبل إعادة المحاولة
+      if (attempt < maxRetries - 1) {
+        console.log(`انتظار ${retryDelay}ms قبل إعادة المحاولة...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        retryDelay *= 1.5; // زيادة وقت الانتظار تدريجيًا
+      }
+    }
+  }
+  
+  // إذا وصلنا إلى هنا، فقد فشلت جميع المحاولات
+  throw lastError || new Error(`فشلت جميع محاولات الاتصال بـ ${url}`);
+};
+
+/**
+ * التحقق من توفر الاتصال بالإنترنت
+ * @returns {Promise<boolean>} ما إذا كان الاتصال بالإنترنت متوفرًا
+ */
+export const checkInternetConnection = async (): Promise<boolean> => {
+  try {
+    // محاولة الاتصال بخدمة موثوقة
+    const response = await fetch('https://www.google.com', {
+      method: 'HEAD',
+      mode: 'no-cors',
+      cache: 'no-cache',
+      timeout: 5000
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("فشل في التحقق من اتصال الإنترنت:", error);
+    return false;
+  }
+};
+
+/**
+ * توفير معلومات تشخيصية للمستخدم حول مشاكل الأتمتة
+ * @param {string} errorCode كود الخطأ
+ * @returns {object} معلومات تشخيصية للمساعدة في حل المشكلة
+ */
+export const getDiagnosticInfo = (errorCode: string) => {
+  switch (errorCode) {
+    case 'CONNECTION_ERROR':
+      return {
+        title: "خطأ في الاتصال بالشبكة",
+        description: "تعذر الاتصال بالخادم المطلوب. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.",
+        solutions: [
+          "تأكد من اتصالك بالإنترنت",
+          "تحقق من صحة عنوان URL",
+          "تأكد من أن الخادم المستهدف متاح وقيد التشغيل",
+          "تحقق من إعدادات جدار الحماية أو الوكيل (proxy)"
+        ]
+      };
+    
+    case 'XPATH_ERROR':
+      return {
+        title: "خطأ في محدد XPath",
+        description: "تعذر العثور على العنصر باستخدام محدد XPath المحدد.",
+        solutions: [
+          "تأكد من صحة بناء محدد XPath",
+          "تحقق من أن العنصر المستهدف موجود في الصفحة",
+          "جرب استخدام محدد أكثر تحديدًا أو أكثر مرونة",
+          "يمكنك استخدام أدوات المطور في المتصفح للتحقق من محدد XPath"
+        ]
+      };
+    
+    case 'TIMEOUT_ERROR':
+      return {
+        title: "خطأ انتهاء المهلة",
+        description: "استغرقت العملية وقتًا أطول من المتوقع وتم إلغاؤها.",
+        solutions: [
+          "زيادة مهلة الانتظار",
+          "التحقق من أداء الشبكة",
+          "تقسيم العملية إلى خطوات أصغر"
+        ]
+      };
+    
+    default:
+      return {
+        title: "خطأ غير معروف",
+        description: `حدث خطأ غير متوقع (${errorCode}).`,
+        solutions: [
+          "تحقق من سجلات الأخطاء لمزيد من المعلومات",
+          "إعادة تحميل الصفحة وتجربة العملية مرة أخرى",
+          "التحقق من إعدادات المتصفح والشبكة"
+        ]
+      };
   }
 };
