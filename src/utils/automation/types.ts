@@ -30,6 +30,7 @@ export interface ServerOptions {
   puppeteerOptions: {
     args: string[];
   };
+  supportXPath?: boolean; // إضافة خاصية دعم XPath
 }
 
 export interface AutomationConfig {
@@ -72,6 +73,7 @@ export type ErrorType =
   | 'ClientError'        // خطأ في جانب العميل
   | 'RequireError'       // خطأ في استخدام require
   | 'ModuleError'        // خطأ في تحميل الوحدات
+  | 'XPathError'         // خطأ في محدد XPath
   | string;              // أي نوع آخر من الأخطاء
 
 export interface AutomationError {
