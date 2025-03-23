@@ -52,7 +52,8 @@ export const getPuppeteerArgs = (): string[] => {
     '--enable-features=NetworkService,NetworkServiceInProcess', // تحسين أداء الشبكة
     '--ignore-certificate-errors', // تجاهل أخطاء الشهادات
     '--disable-features=IsolateOrigins,site-per-process', // تعطيل عزل الأصول
-    '--disable-site-isolation-trials' // تعطيل تجارب عزل المواقع
+    '--disable-site-isolation-trials', // تعطيل تجارب عزل المواقع
+    '--enable-automation' // تمكين وضع الأتمتة لدعم العديد من المحددات
   ];
   
   console.log("استخدام وسائط Chrome التالية:", args);
@@ -60,7 +61,7 @@ export const getPuppeteerArgs = (): string[] => {
 };
 
 /**
- * التأكد من تكوين Puppeteer الصحيح - تم تحديث هذه الدالة لتجنب استخدام require
+ * التأكد من تكوين Puppeteer الصحيح - تم تعديله للعمل في المتصفح دون dالة require
  * @returns {object} تكوين Puppeteer لبيئة Render
  */
 export const getPuppeteerConfig = () => {
@@ -72,7 +73,11 @@ export const getPuppeteerConfig = () => {
     ignoreHTTPSErrors: true, // تجاهل أخطاء HTTPS
     timeout: 60000, // زيادة مهلة الاتصال إلى دقيقة واحدة
     waitForInitialPage: true, // انتظار تحميل الصفحة الأولى
-    dumpio: true // طباعة stdout و stderr من المستعرض للمساعدة في التصحيح
+    dumpio: true, // طباعة stdout و stderr من المستعرض للمساعدة في التصحيح
+    // إضافة جديدة لدعم xPath
+    handleSIGINT: false,
+    handleSIGTERM: false,
+    handleSIGHUP: false
   };
   
   console.log("تكوين Puppeteer الكامل:", JSON.stringify(config, null, 2));
@@ -120,7 +125,8 @@ export const getDefaultSettings = () => {
     verboseLogging: true, // تفعيل التسجيل المفصل
     retryFailedActions: true, // إعادة محاولة الإجراءات الفاشلة
     maxRetries: 3, // الحد الأقصى لعدد إعادة المحاولات
-    waitAfterAction: 1000 // انتظار بعد كل إجراء (بالمللي ثانية)
+    waitAfterAction: 1000, // انتظار بعد كل إجراء (بالمللي ثانية)
+    supportXPath: true // دعم محددات XPath
   };
   
   console.log("استخدام الإعدادات الافتراضية:", settings);
@@ -194,4 +200,49 @@ export const clearActionsLog = () => {
   } catch (e) {
     console.error("فشل في مسح سجل الإجراءات:", e);
   }
+};
+
+/**
+ * التحقق مما إذا كان محدد العنصر هو محدد XPath
+ * @param {string} selector محدد العنصر
+ * @returns {boolean} هل هذا محدد XPath
+ */
+export const isXPathSelector = (selector: string): boolean => {
+  if (!selector) return false;
+  
+  // التحقق من أنماط شائعة لمحددات XPath
+  const xpathPatterns = [
+    /^\/\//,                  // يبدأ بـ //
+    /^\/[a-z]/i,              // يبدأ بـ / ثم حرف
+    /^id\(.+\)/,              // يبدأ بـ id(...)
+    /^\(.+\)/,                // يبدأ بقوس (...)
+    /contains\(.+\)/,         // يحتوي على دالة contains()
+    /\[@.+\]/,                // يحتوي على سمة [@...]
+    /\[\d+\]/,                // يحتوي على مؤشر رقمي [1]
+    /^[a-z]+::[a-z]+/i,       // يحتوي على محور مثل ancestor::div
+    /text\(\)/,               // يحتوي على دالة text()
+    /node\(\)/                // يحتوي على دالة node()
+  ];
+  
+  return xpathPatterns.some(pattern => pattern.test(selector));
+};
+
+/**
+ * التحقق مما إذا كان نص الخطأ متعلق بدالة require
+ * @param {string} errorMessage نص رسالة الخطأ
+ * @returns {boolean} هل الخطأ متعلق بدالة require
+ */
+export const isRequireError = (errorMessage: string): boolean => {
+  if (!errorMessage) return false;
+  
+  const requireErrorPatterns = [
+    /require is not defined/i,
+    /require is not a function/i,
+    /Cannot find module/i,
+    /Module not found/i,
+    /الدالة require غير متاحة/,
+    /خطأ في تشغيل البرنامج/
+  ];
+  
+  return requireErrorPatterns.some(pattern => pattern.test(errorMessage));
 };

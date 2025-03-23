@@ -2,6 +2,7 @@
 import { AutomationConfig, AutomationResponse, ActionResult, ErrorType } from "./automation/types";
 import { automationServerUrl, isPreviewEnvironment, checkConnection } from "./automationServerUrl";
 import { toast } from "sonner";
+import { isXPathSelector, isRequireError } from "./automation";
 
 // الخدمة المسؤولة عن إدارة عمليات الأتمتة
 export class AutomationService {
@@ -178,8 +179,8 @@ export class AutomationService {
       let errorMessage = error instanceof Error ? error.message : "حدث خطأ غير معروف أثناء تنفيذ الأتمتة";
       let errorType: ErrorType = "ExecutionError";
       
-      // التعامل مع خطأ require بشكل خاص
-      if (errorMessage.includes('require is not defined') || errorMessage.includes('require is not a function')) {
+      // استخدام دالة التحقق من نوع خطأ require
+      if (isRequireError(errorMessage)) {
         errorType = "RequireError";
         errorMessage = "خطأ في تشغيل البرنامج: الدالة require غير متاحة في المتصفح. تم حل هذه المشكلة، يرجى تحديث الصفحة.";
       }
@@ -208,6 +209,9 @@ export class AutomationService {
       } else if (errorMessage.includes('module')) {
         errorType = "ModuleError";
         errorMessage = "خطأ في تحميل الوحدات: قد تحتاج إلى تحديث النظام أو تثبيت المكتبات الضرورية.";
+      } else if (errorMessage.includes('XPath') || errorMessage.includes('xpath')) {
+        errorType = "XPathError";
+        errorMessage = "خطأ في تنفيذ محدد XPath. يرجى التحقق من صياغة المحدد.";
       }
       
       // إرجاع كائن استجابة يحتوي على معلومات الخطأ
@@ -239,15 +243,21 @@ export class AutomationService {
       cleanedConfig.projectName = 'أتمتة بدون اسم';
     }
     
-    // تعديل الإجراءات للتأكد من وجود جميع الحقول المطلوبة
-    cleanedConfig.actions = (cleanedConfig.actions || []).map(action => ({
-      name: action.name,
-      type: action.name, // إضافة خاصية type لتكون مطابقة للاسم
-      finder: action.finder,
-      value: action.value || '',
-      delay: typeof action.delay === 'number' ? action.delay : parseInt(String(action.delay) || '500', 10),
-      description: action.description || `إجراء ${action.name}`
-    }));
+    // تعديل الإجراءات للتأكد من وجود جميع الحقول المطلوبة وتحسين المحددات
+    cleanedConfig.actions = (cleanedConfig.actions || []).map(action => {
+      // فحص ما إذا كان المحدد بصيغة XPath
+      const isXPath = action.finder ? isXPathSelector(action.finder) : false;
+      
+      return {
+        name: action.name,
+        type: action.name, // إضافة خاصية type لتكون مطابقة للاسم
+        finder: action.finder,
+        value: action.value || '',
+        delay: typeof action.delay === 'number' ? action.delay : parseInt(String(action.delay) || '500', 10),
+        description: action.description || `إجراء ${action.name}`,
+        isXPath: isXPath // إضافة علامة إذا كان المحدد بصيغة XPath
+      };
+    });
     
     // إضافة معلومات المتصفح والبيئة
     if (!cleanedConfig.browserInfo) {
@@ -272,8 +282,13 @@ export class AutomationService {
             '--disable-dev-shm-usage',
             '--disable-web-security'
           ]
-        }
+        },
+        // إضافة دعم محددات XPath
+        supportXPath: true
       };
+    } else {
+      // ضمان وجود الإعداد supportXPath
+      cleanedConfig.serverOptions.supportXPath = true;
     }
     
     return cleanedConfig;
