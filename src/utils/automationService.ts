@@ -1,8 +1,8 @@
 
-import { AutomationConfig, AutomationResponse, ActionResult, ErrorType } from "./automation/types";
+import { AutomationConfig, AutomationResponse, ActionResult, ErrorType, ServerOptions } from "./automation/types";
 import { automationServerUrl, isPreviewEnvironment, checkConnection } from "./automationServerUrl";
 import { toast } from "sonner";
-import { isXPathSelector, isRequireError } from "./automation";
+import { isXPathSelector, isRequireError, xpathToCss } from "./automation";
 
 // الخدمة المسؤولة عن إدارة عمليات الأتمتة
 export class AutomationService {
@@ -131,12 +131,18 @@ export class AutomationService {
         };
       }
       
+      // إضافة معلومات إضافية لمساعدة التصحيح
+      console.log("إرسال طلب الأتمتة إلى:", `${automationServerUrl}/api/automate`);
+      console.log("تهيئة متغيرات البرنامج لمعالجة الأخطاء المحتملة");
+      
       // تنفيذ الأتمتة على الخادم
       const response = await fetch(`${automationServerUrl}/api/automate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-client-id': 'web-client'
+          'x-client-id': 'web-client',
+          'x-support-xpath': 'true', // إرسال معلومات عن دعم XPath
+          'x-automation-client': 'web-lovable'
         },
         body: JSON.stringify(cleanedConfig)
       });
@@ -182,7 +188,7 @@ export class AutomationService {
       // استخدام دالة التحقق من نوع خطأ require
       if (isRequireError(errorMessage)) {
         errorType = "RequireError";
-        errorMessage = "خطأ في تشغيل البرنامج: الدالة require غير متاحة في المتصفح. تم حل هذه المشكلة، يرجى تحديث الصفحة.";
+        errorMessage = "خطأ في تشغيل البرنامج: الدالة require غير متاحة في المتصفح. يرجى تحديث الصفحة أو استخدام طريقة البوكماركلت.";
       }
       // تحليل نوع الخطأ بناءً على الرسالة
       else if (errorMessage.includes('Puppeteer') || errorMessage.includes('Chrome') || errorMessage.includes('browser')) {
@@ -248,15 +254,28 @@ export class AutomationService {
       // فحص ما إذا كان المحدد بصيغة XPath
       const isXPath = action.finder ? isXPathSelector(action.finder) : false;
       
-      return {
+      // تكوين الإجراء المحسن
+      const enhancedAction = {
         name: action.name,
         type: action.name, // إضافة خاصية type لتكون مطابقة للاسم
         finder: action.finder,
         value: action.value || '',
         delay: typeof action.delay === 'number' ? action.delay : parseInt(String(action.delay) || '500', 10),
         description: action.description || `إجراء ${action.name}`,
-        isXPath: isXPath // إضافة علامة إذا كان المحدد بصيغة XPath
+        isXPath, // إضافة علامة إذا كان المحدد بصيغة XPath
+        selectorType: isXPath ? 'xpath' : 'css' // تحديد نوع المحدد بوضوح
       };
+      
+      // طباعة معلومات تصحيح محسنة
+      if (isXPath) {
+        console.log(`تم اكتشاف محدد XPath: ${action.finder}`);
+        const cssEquivalent = xpathToCss(action.finder || '');
+        if (cssEquivalent) {
+          console.log(`المكافئ CSS المقترح: ${cssEquivalent}`);
+        }
+      }
+      
+      return enhancedAction;
     });
     
     // إضافة معلومات المتصفح والبيئة
@@ -283,10 +302,9 @@ export class AutomationService {
             '--disable-web-security'
           ]
         },
-        // إضافة دعم محددات XPath
-        supportXPath: true
+        supportXPath: true // إضافة دعم محددات XPath
       };
-    } else {
+    } else if (cleanedConfig.serverOptions) {
       // ضمان وجود الإعداد supportXPath
       cleanedConfig.serverOptions.supportXPath = true;
     }

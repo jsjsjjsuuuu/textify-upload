@@ -4,6 +4,8 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, InfoIcon, CheckCircle, XCircle, Server, Wifi, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import RequireErrorFix from "@/components/ServerAutomation/RequireErrorFix";
+import { isRequireError } from "@/utils/automation";
 
 interface ExecutionStatusProps {
   isRunning: boolean;
@@ -18,15 +20,18 @@ const ExecutionStatus: React.FC<ExecutionStatusProps> = ({
   automationStatus,
   serverError,
 }) => {
+  // التحقق مما إذا كان الخطأ متعلق بدالة require
+  const isRequireErrorDetected = serverError && isRequireError(serverError);
+  
   // تحويل رسائل الخطأ المعروفة إلى رسائل أكثر وضوحاً
   const getEnhancedErrorMessage = (error: string): { message: string, suggestions: string[] } => {
     // تحسين الكشف عن أنواع الأخطاء المختلفة
     // خطأ require
-    if (error.includes("require is not defined") || error.includes("require is not a function") || error.includes("RequireError")) {
+    if (isRequireErrorDetected) {
       return {
         message: "خطأ في النظام: المتصفح لا يدعم استخدام دالة 'require'",
         suggestions: [
-          "هذا خطأ في النظام وليس في الإعدادات الخاصة بك",
+          "قم بتحديث الصفحة لتطبيق الإصلاح الجديد",
           "يرجى الانتظار قليلاً بينما نعمل على إصلاح المشكلة",
           "حاول استخدام أسلوب آخر للأتمتة مثل البوكماركلت",
           "إذا استمرت المشكلة، يرجى التواصل مع فريق الدعم"
@@ -68,14 +73,15 @@ const ExecutionStatus: React.FC<ExecutionStatusProps> = ({
         ]
       };
     } 
-    // الأخطاء المتعلقة بمحددات العناصر
-    else if (error.includes("selector") || error.includes("element not found") || error.includes("عنصر") || error.includes("Element")) {
+    // الأخطاء المتعلقة بمحددات العناصر أو XPath
+    else if (error.includes("selector") || error.includes("element not found") || error.includes("عنصر") || error.includes("Element") || error.includes("XPath") || error.includes("xpath")) {
       return {
-        message: "خطأ في المحدد: تعذر العثور على العنصر في الصفحة. تأكد من صحة المحدد CSS.",
+        message: "خطأ في المحدد: تعذر العثور على العنصر في الصفحة. تأكد من صحة المحدد CSS أو XPath.",
         suggestions: [
-          "راجع محددات CSS وتأكد من دقتها",
-          "جرب محددات أكثر عمومية مثل '.class' بدلاً من محددات معقدة",
-          "تأكد من أن العنصر موجود فعلاً على الصفحة المستهدفة وليس مخفياً"
+          "راجع محددات CSS أو XPath وتأكد من دقتها",
+          "إذا كنت تستخدم XPath، تأكد من صياغته بشكل صحيح مثل //input[@name='username']",
+          "تأكد من أن العنصر موجود فعلاً على الصفحة المستهدفة وليس مخفياً",
+          "قد تحتاج إلى انتظار تحميل العنصر قبل التفاعل معه، أضف تأخيراً أطول"
         ]
       };
     } 
@@ -163,6 +169,9 @@ const ExecutionStatus: React.FC<ExecutionStatusProps> = ({
   
   return (
     <div className="space-y-4">
+      {/* عرض مكون إصلاح خطأ require إذا تم اكتشافه */}
+      {isRequireErrorDetected && <RequireErrorFix />}
+      
       {isRunning && (
         <div className="space-y-2">
           <div className="flex justify-between items-center text-sm">
@@ -216,7 +225,7 @@ const ExecutionStatus: React.FC<ExecutionStatusProps> = ({
         </div>
       )}
       
-      {serverError && (
+      {serverError && !isRequireErrorDetected && (
         <Alert variant="destructive" className="bg-red-50 border-red-300">
           <XCircle className="h-4 w-4 text-red-600" />
           <AlertTitle className="text-red-800 mb-2 font-medium">فشل تنفيذ الأتمتة</AlertTitle>
@@ -236,25 +245,6 @@ const ExecutionStatus: React.FC<ExecutionStatusProps> = ({
             )}
             
             <p className="text-xs mt-2 opacity-80 text-red-700">رمز الخطأ الأصلي: {serverError}</p>
-            
-            {/* رسالة دعم إضافية للأخطاء الخاصة بوظيفة require */}
-            {serverError.includes("require is not defined") || serverError.includes("RequireError") || serverError.includes("ModuleError") && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
-                <p className="text-sm text-blue-800">
-                  <strong>ملاحظة مهمة:</strong> يحاول النظام استخدام دوال خاصة بالخادم في المتصفح، وهذا قد يؤدي إلى أخطاء. نحن نعمل على إصلاح هذه المشكلة.
-                </p>
-              </div>
-            )}
-            
-            {/* إضافة اقتراح محدد للتحقق من إعدادات الخادم في حالة الأخطاء المتعلقة بالتكوين */}
-            {serverError.includes("Configuration") || serverError.includes("config") || 
-             serverError.includes("settings") || serverError.includes("تكوين") && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
-                <p className="text-sm text-blue-800">
-                  <strong>نصيحة:</strong> يرجى زيارة صفحة إعدادات الخادم والتحقق من عنوان URL الخاص بخادم الأتمتة.
-                </p>
-              </div>
-            )}
           </AlertDescription>
         </Alert>
       )}
