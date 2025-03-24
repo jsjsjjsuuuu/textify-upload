@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { Button } from './button';
@@ -54,6 +55,7 @@ export function ConnectionStatusIndicator({
     setStatus('checking');
     
     try {
+      // تعديل هنا، لا تمرير أي معلمات لـ checkServerStatus
       await AutomationService.checkServerStatus();
       setStatus('connected');
       

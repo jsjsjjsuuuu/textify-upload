@@ -1,5 +1,4 @@
-
-import { AutomationConfig, AutomationResponse, ServerStatusResponse, GoogleSheetsConfig, GoogleSheetsResponse } from "./automation/types";
+import { AutomationConfig, AutomationResponse, ServerStatusResponse } from "./automation/types";
 import { getAutomationServerUrl, createBaseHeaders } from "./automationServerUrl";
 import { fetchWithRetry } from "./automation";
 
@@ -88,51 +87,6 @@ export const AutomationService = {
       localStorage.setItem('force_real_execution', enable.toString());
     } catch (error) {
       console.error("خطأ في تعيين وضع التنفيذ الفعلي:", error);
-    }
-  },
-
-  /**
-   * تصدير البيانات إلى Google Sheets
-   * @param {any[]} data البيانات المراد تصديرها
-   * @param {GoogleSheetsConfig} config إعدادات Google Sheets
-   */
-  exportToGoogleSheets: async (data: any[], config: GoogleSheetsConfig): Promise<GoogleSheetsResponse> => {
-    const serverUrl = getAutomationServerUrl();
-    try {
-      const response = await fetchWithRetry(`${serverUrl}/api/googlesheets/export`, {
-        method: 'POST',
-        headers: createBaseHeaders(),
-        body: JSON.stringify({ data, config }),
-      });
-      return await response.json() as GoogleSheetsResponse;
-    } catch (error) {
-      console.error("Error exporting to Google Sheets:", error);
-      return {
-        success: false,
-        message: `خطأ في تصدير البيانات: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`,
-        timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'خطأ غير معروف'
-      };
-    }
-  },
-
-  /**
-   * التحقق من صحة بيانات الوصول إلى Google Sheets
-   * @param {GoogleSheetsConfig} config إعدادات Google Sheets
-   */
-  validateGoogleSheetsCredentials: async (config: GoogleSheetsConfig): Promise<boolean> => {
-    const serverUrl = getAutomationServerUrl();
-    try {
-      const response = await fetchWithRetry(`${serverUrl}/api/googlesheets/validate`, {
-        method: 'POST',
-        headers: createBaseHeaders(),
-        body: JSON.stringify(config),
-      });
-      const result = await response.json();
-      return result.success === true;
-    } catch (error) {
-      console.error("Error validating Google Sheets credentials:", error);
-      return false;
     }
   }
 };
