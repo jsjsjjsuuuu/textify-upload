@@ -6,6 +6,23 @@ export interface AutomationConfig {
   actions: any[];
   useBrowserData: boolean;
   automationType: 'server' | 'client';
+  // إضافة الخصائص المفقودة
+  forceRealExecution?: boolean;
+  browserInfo?: {
+    userAgent: string;
+    language: string;
+    platform: string;
+    screenSize: string;
+  };
+  serverOptions?: {
+    timeout: number;
+    maxRetries: number;
+    useHeadlessMode: boolean;
+    puppeteerOptions: {
+      args: string[];
+    };
+    supportXPath?: boolean;
+  };
 }
 
 export interface AutomationResponse {
@@ -30,6 +47,10 @@ export interface Action {
 export interface AutomationAction extends Action {
   type: string;
   selector: string;
+  // جعل selector اختيارية وتوفير بديل لها
+  selector?: string;
+  finder: string; // استخدام finder بدلاً من selector في الكود الحالي
+  isXPath?: boolean;
 }
 
 export interface ServerOptions {
@@ -65,6 +86,9 @@ export type ErrorType =
   | 'PuppeteerError'
   | 'NetworkError'
   | 'ClientError'
+  | 'RequireError'
+  | 'ModuleError'
+  | 'XPathError'
   | string;
 
 export interface ServerStatusResponse {
