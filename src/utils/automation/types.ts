@@ -129,3 +129,32 @@ export enum ErrorType {
   ELEMENT_NOT_FOUND = 'ElementNotFoundError',
   CONFIGURATION_ERROR = 'ConfigurationError'
 }
+
+/**
+ * واجهة إعدادات Google Sheets
+ */
+export interface GoogleSheetsConfig {
+  spreadsheetId: string;
+  sheetName?: string;
+  apiKey?: string;
+  clientId?: string;
+  clientSecret?: string;
+  redirectUri?: string;
+  scope?: string[];
+  accessToken?: string;
+  refreshToken?: string;
+}
+
+/**
+ * واجهة استجابة Google Sheets
+ */
+export interface GoogleSheetsResponse {
+  success: boolean;
+  message: string;
+  spreadsheetUrl?: string;
+  sheetId?: string;
+  updatedRange?: string;
+  updatedRows?: number;
+  error?: string;
+  timestamp: string;
+}
