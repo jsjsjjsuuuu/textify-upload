@@ -1,9 +1,10 @@
+
 /**
  * تشغيل سيناريوهات الأتمتة
  */
 import { getAutomationServerUrl, updateConnectionStatus, createBaseHeaders, getNextIp, isPreviewEnvironment, createTimeoutSignal } from "../automationServerUrl";
 import { toast } from "sonner";
-import { AutomationConfig, AutomationResponse, AutomationActionResult } from "./types";
+import { AutomationConfig, AutomationResponse, ActionResult } from "./types";
 import { ConnectionManager } from "./connectionManager";
 import { logActionExecution } from "../automation";
 
@@ -47,17 +48,18 @@ export class AutomationRunner {
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           // محاكاة تنفيذ الإجراءات وتسجيلها
-          const mockResults: AutomationActionResult[] = config.actions.map((action, index) => {
+          const mockResults: ActionResult[] = config.actions.map((action, index) => {
             const success = Math.random() > 0.2; // 80% نسبة نجاح
             return {
+              index,
+              action: action.type || action.name, // استخدم type أو name
+              selector: action.selector || action.finder || '', // استخدم selector أو finder
+              value: action.value || '',
               success,
-              action: action,
-              message: success ? 'تم التنفيذ بنجاح' : 'فشل التنفيذ',
-              error: success ? undefined : {
-                message: 'خطأ محاكاة: لم يتم العثور على العنصر',
-                type: 'ElementNotFound'
-              },
-              timestamp: new Date().toISOString()
+              error: success ? null : 'خطأ محاكاة: لم يتم العثور على العنصر',
+              timestamp: new Date().toISOString(),
+              duration: Math.floor(Math.random() * 500) + 100,
+              screenshots: []
             };
           });
           
@@ -210,15 +212,13 @@ export class AutomationRunner {
           
           // تسجيل نتائج الإجراءات
           if (result.results && Array.isArray(result.results)) {
-            result.results.forEach((actionResult: AutomationActionResult) => {
-              // تعديل هنا للحصول على finder أو selector
-              const selector = actionResult.action.finder || actionResult.action.selector || '';
+            result.results.forEach((actionResult: ActionResult) => {
               logActionExecution(
-                actionResult.action.name,
-                selector,
-                actionResult.action.value,
+                actionResult.action,
+                actionResult.selector,
+                actionResult.value,
                 actionResult.success,
-                actionResult.error?.message || null
+                actionResult.error
               );
             });
           }

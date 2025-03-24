@@ -1,109 +1,51 @@
 
-/**
- * تعريفات الأنواع لوحدة الأتمتة
- */
+// الأنواع المستخدمة في التطبيق للأتمتة
 
-/**
- * تكوين الأتمتة المستخدم في طلب الأتمتة
- */
+export interface Action {
+  name: string;
+  finder: string;
+  value?: string;
+  delay?: number;
+  description?: string;
+  type?: string;  // جعل type اختياري في Action الأساسي
+  selector?: string;
+}
+
+export interface AutomationAction extends Action {
+  type: string;  // مطلوب في AutomationAction
+  selector?: string;
+}
+
+export interface BrowserInfo {
+  userAgent: string;
+  language: string;
+  platform: string;
+  screenSize: string;
+}
+
+export interface ServerOptions {
+  timeout: number;
+  maxRetries: number;
+  useHeadlessMode: boolean;
+  puppeteerOptions: {
+    args: string[];
+  };
+  supportXPath?: boolean; // إضافة خاصية دعم XPath
+}
+
 export interface AutomationConfig {
-  projectName?: string;
   projectUrl: string;
-  actions: AutomationAction[];
-  automationType?: 'server' | 'client';
-  useBrowserData?: boolean;
+  projectName?: string;
+  actions: Action[] | AutomationAction[];
+  useBrowserData: boolean;
+  automationType: 'server' | 'client';
   forceRealExecution?: boolean;
   timeout?: number;
   retries?: number;
+  browserInfo?: BrowserInfo;
+  serverOptions?: ServerOptions;
 }
 
-/**
- * تمثيل إجراء الأتمتة الفردي
- */
-export interface AutomationAction {
-  name: string;
-  type?: string;
-  finder: string;
-  value: string;
-  delay: number;
-  description?: string;
-  isXPath?: boolean; // إضافة دعم لتحديد نوع المحدد
-  selector?: string; // إضافة خاصية selector كبديل لـ finder للتوافق
-}
-
-/**
- * نتيجة تنفيذ الأتمتة
- */
-export interface AutomationResponse {
-  success: boolean;
-  message: string;
-  automationType: 'server' | 'client';
-  results?: AutomationActionResult[];
-  executionTime?: number;
-  error?: AutomationError;
-  timestamp: string;
-  details?: string[];
-}
-
-/**
- * نتيجة تنفيذ إجراء فردي
- */
-export interface AutomationActionResult {
-  success: boolean;
-  action: AutomationAction;
-  message?: string;
-  error?: AutomationError;
-  timestamp?: string;
-  screenshot?: string;
-}
-
-/**
- * تمثيل خطأ الأتمتة
- */
-export interface AutomationError {
-  message: string;
-  type?: string;
-  stack?: string;
-  code?: string;
-  details?: any;
-}
-
-/**
- * خيارات الخادم لتنفيذ الأتمتة
- */
-export interface ServerOptions {
-  timeout?: number;
-  navigationTimeout?: number;
-  retries?: number;
-  useCache?: boolean;
-  disableCors?: boolean;
-  supportXPath?: boolean; // إضافة دعم XPath
-}
-
-/**
- * استجابة حالة الخادم
- */
-export interface ServerStatusResponse {
-  status: string;
-  message: string;
-  time: string;
-  uptime?: number;
-  environment?: string;
-}
-
-/**
- * معلومات حالة الاتصال
- */
-export interface ConnectionStatus {
-  isConnected: boolean;
-  lastChecked: string;
-  serverUrl?: string;
-  error?: string;
-}
-
-/**
- * نتيجة تنفيذ الإجراء (متوافق مع ActionResultsList)
- */
 export interface ActionResult {
   index: number;
   action: string;
@@ -116,16 +58,54 @@ export interface ActionResult {
   screenshots: string[];
 }
 
-/**
- * أنواع الأخطاء في نظام الأتمتة
- */
-export enum ErrorType {
-  CONNECTION_ERROR = 'ConnectionError',
-  TIMEOUT_ERROR = 'TimeoutError',
-  VALIDATION_ERROR = 'ValidationError',
-  EXECUTION_ERROR = 'ExecutionError',
-  PUPPETEER_ERROR = 'PuppeteerError',
-  BROWSER_ERROR = 'BrowserError',
-  ELEMENT_NOT_FOUND = 'ElementNotFoundError',
-  CONFIGURATION_ERROR = 'ConfigurationError'
+// تحسين تعريف أنواع الأخطاء مع إضافة المزيد من التفاصيل
+export type ErrorType = 
+  | 'ConnectionError'    // خطأ في الاتصال بالخادم
+  | 'ExecutionError'     // خطأ في تنفيذ الإجراءات
+  | 'ServerError'        // خطأ في الخادم
+  | 'TimeoutError'       // تجاوز وقت العملية
+  | 'ValidationError'    // خطأ في التحقق من صحة البيانات
+  | 'ConfigurationError' // خطأ في الإعدادات
+  | 'BrowserError'       // خطأ متعلق بالمتصفح
+  | 'ElementNotFoundError' // لم يتم العثور على العنصر
+  | 'PuppeteerError'     // خطأ في محرك Puppeteer
+  | 'NetworkError'       // خطأ في الشبكة
+  | 'ClientError'        // خطأ في جانب العميل
+  | 'RequireError'       // خطأ في استخدام require
+  | 'ModuleError'        // خطأ في تحميل الوحدات
+  | 'XPathError'         // خطأ في محدد XPath
+  | string;              // أي نوع آخر من الأخطاء
+
+export interface AutomationError {
+  type: ErrorType;
+  message: string;
+  stack?: string;
+  code?: number;
+  details?: string[];
+}
+
+export interface AutomationResponse {
+  success: boolean;
+  message: string;
+  automationType: string;
+  results?: ActionResult[];
+  executionTime?: number;
+  timestamp: string;
+  details?: string[];
+  error?: AutomationError;
+}
+
+export interface ServerStatusResponse {
+  status: string;
+  message: string;
+  time: string;
+  uptime: number;
+  environment: string;
+}
+
+// إضافة واجهة نتيجة التحقق من الاتصال
+export interface ConnectionCheckResult {
+  isConnected: boolean;
+  message: string;
+  details?: any;
 }
