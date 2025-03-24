@@ -1,8 +1,7 @@
 
 import React, { useState } from 'react';
 import { Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -11,6 +10,8 @@ import { useDataFormatting } from '@/hooks/useDataFormatting';
 import { motion } from 'framer-motion';
 import { formatDate } from '@/utils/dateFormatter';
 import { ImageData } from '@/types/ImageData';
+import DirectExportTools from '@/components/DataExport/DirectExportTools';
+import GoogleSheetsExport from '@/components/DataExport/GoogleSheetsExport';
 
 const Index = () => {
   const { 
@@ -44,8 +45,8 @@ const Index = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 gap-8">
-          <div className="space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
             <div className="bg-gradient-to-b from-muted/50 to-muted pb-8 pt-6 rounded-lg">
               <ImageUploader
                 isProcessing={isProcessing}
@@ -81,6 +82,11 @@ const Index = () => {
               />
             )}
           </div>
+          
+          <div className="space-y-6">
+            <GoogleSheetsExport images={images} />
+            <DirectExportTools images={images} />
+          </div>
         </div>
       </div>
       
@@ -98,3 +104,4 @@ const Index = () => {
 };
 
 export default Index;
+

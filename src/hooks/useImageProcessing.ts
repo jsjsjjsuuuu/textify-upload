@@ -1,6 +1,11 @@
 
 import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
+import { formatDate } from "@/utils/dateFormatter";
 
 export const useImageProcessing = () => {
-  return useImageProcessingCore();
+  return {
+    ...useImageProcessingCore(),
+    formatDate
+  };
 };
+
