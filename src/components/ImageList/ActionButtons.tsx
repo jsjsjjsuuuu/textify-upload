@@ -1,5 +1,7 @@
+
 import { Button } from "@/components/ui/button";
-import { Trash, Send } from "lucide-react";
+import { Trash } from "lucide-react";
+
 interface ActionButtonsProps {
   imageId: string;
   isSubmitting: boolean;
@@ -9,6 +11,7 @@ interface ActionButtonsProps {
   onDelete: (id: string) => void;
   onSubmit: (id: string) => void;
 }
+
 const ActionButtons = ({
   imageId,
   isSubmitting,
@@ -23,8 +26,7 @@ const ActionButtons = ({
         <Trash size={14} className="ml-1 opacity-70" />
         حذف
       </Button>
-      
-      
     </div>;
 };
+
 export default ActionButtons;
