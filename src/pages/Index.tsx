@@ -10,6 +10,8 @@ import ImageUploader from '@/components/ImageUploader';
 import ImageList from '@/components/ImageList';
 import { useDataFormatting } from '@/hooks/useDataFormatting';
 import { motion } from 'framer-motion';
+import { formatDate } from '@/utils/dateFormatter';
+import { ImageData } from '@/types/ImageData';
 
 const Index = () => {
   const [selectedTab, setSelectedTab] = useState<'upload' | 'records' | 'automation'>('upload');
@@ -27,9 +29,9 @@ const Index = () => {
     handleSubmitToApi 
   } = useImageProcessing();
   
-  const { formatDate } = useDataFormatting();
+  const { formatPhoneNumber, formatPrice, formatProvinceName } = useDataFormatting();
   
-  const handleImageClick = (image) => {
+  const handleImageClick = (image: ImageData) => {
     console.log('صورة تم النقر عليها:', image.id);
   };
 
@@ -101,7 +103,7 @@ const Index = () => {
                 onImageClick={handleImageClick}
                 onTextChange={handleTextChange}
                 onDelete={handleDelete}
-                onSubmit={handleSubmitToApi}
+                onSubmit={(id) => handleSubmitToApi(id, images.find(img => img.id === id)!)}
                 formatDate={formatDate}
               />
             )}
