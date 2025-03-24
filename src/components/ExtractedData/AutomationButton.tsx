@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { PlayCircle, Loader2, Send, AlertTriangle, Server, RefreshCw } from "lucide-react";
@@ -8,26 +7,19 @@ import { AutomationService } from "@/utils/automationService";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { checkConnection } from "@/utils/automationServerUrl";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 interface AutomationButtonProps {
   image: ImageData;
 }
-
-const AutomationButton = ({ image }: AutomationButtonProps) => {
+const AutomationButton = ({
+  image
+}: AutomationButtonProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'success' | 'error'>('unknown');
   const navigate = useNavigate();
-  
+
   // التحقق مما إذا كانت البيانات مكتملة بما يكفي لإرسالها إلى الأتمتة
   const hasRequiredData = !!image.code && !!image.senderName && !!image.phoneNumber;
 
@@ -36,14 +28,12 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
     // التحقق من وجود الاتصال بالخادم
     checkConnectionStatus();
   }, []);
-  
   const checkConnectionStatus = async () => {
     setIsTestingConnection(true);
     try {
       // محاولة التحقق من الاتصال بالخادم
       const result = await checkConnection();
       setConnectionStatus(result.isConnected ? 'success' : 'error');
-      
       if (result.isConnected) {
         toast.success("تم الاتصال بخادم الأتمتة بنجاح", {
           id: "connection-success",
@@ -57,7 +47,6 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
       setIsTestingConnection(false);
     }
   };
-  
   const handleAutomation = async () => {
     if (!hasRequiredData) {
       toast.error("بيانات غير مكتملة", {
@@ -65,13 +54,12 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
       });
       return;
     }
-    
+
     // التحقق من حالة الاتصال بالخادم أولاً
     setIsTestingConnection(true);
     try {
       const result = await checkConnection();
       setConnectionStatus(result.isConnected ? 'success' : 'error');
-      
       if (!result.isConnected) {
         // إظهار نافذة الاتصال إذا كان غير متصل
         setShowConnectionDialog(true);
@@ -86,9 +74,7 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
       return;
     }
     setIsTestingConnection(false);
-    
     setIsLoading(true);
-    
     try {
       // تحضير البيانات لصفحة الأتمتة
       const automationData = {
@@ -102,13 +88,12 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
         notes: image.notes,
         sourceId: image.id
       };
-      
+
       // حفظ البيانات في localStorage
       localStorage.setItem('automationData', JSON.stringify(automationData));
-      
+
       // الانتقال إلى صفحة الأتمتة
       navigate("/server-automation");
-      
       toast.success("تم إرسال البيانات بنجاح", {
         description: "تم إرسال البيانات المستخرجة إلى صفحة الأتمتة، يمكنك الآن تكوين سيناريو الأتمتة"
       });
@@ -121,14 +106,12 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
       setIsLoading(false);
     }
   };
-  
   const retryConnection = async () => {
     setIsTestingConnection(true);
     try {
       // إعادة محاولة الاتصال بالخادم
       const result = await AutomationService.forceReconnect();
       setConnectionStatus(result ? 'success' : 'error');
-      
       if (result) {
         // إغلاق النافذة إذا كان الاتصال ناجحًا
         setShowConnectionDialog(false);
@@ -145,70 +128,28 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
       setIsTestingConnection(false);
     }
   };
-  
   const navigateToSettings = () => {
     navigate("/server-settings");
     setShowConnectionDialog(false);
   };
-  
-  return (
-    <>
+  return <>
       <div className="flex flex-col gap-2 items-center">
-        <motion.div 
-          whileHover={{ scale: 1.05 }} 
-          whileTap={{ scale: 0.95 }}
-          className="inline-block"
-        >
-          <Button
-            onClick={handleAutomation}
-            disabled={isLoading || !hasRequiredData || isTestingConnection}
-            className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
-            size="lg"
-          >
-            {isLoading || isTestingConnection ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>{isTestingConnection ? "جاري التحقق من الاتصال..." : "جاري الإعداد..."}</span>
-              </>
-            ) : (
-              <>
-                <Send className="w-5 h-5" />
-                <span>تعبئة البيانات تلقائيًا</span>
-              </>
-            )}
-          </Button>
+        <motion.div whileHover={{
+        scale: 1.05
+      }} whileTap={{
+        scale: 0.95
+      }} className="inline-block">
+          
         </motion.div>
         
         {/* عرض حالة الاتصال بالخادم فقط */}
         <div className="flex items-center gap-2 mt-1 text-xs">
-          <button
-            onClick={checkConnectionStatus}
-            disabled={isTestingConnection}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
-              connectionStatus === 'success' 
-                ? 'text-green-600 hover:text-green-700' 
-                : connectionStatus === 'error'
-                ? 'text-red-600 hover:text-red-700'
-                : 'text-gray-600 hover:text-gray-700'
-            }`}
-          >
-            {isTestingConnection ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : connectionStatus === 'success' ? (
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-            ) : connectionStatus === 'error' ? (
-              <div className="w-2 h-2 rounded-full bg-red-500"></div>
-            ) : (
-              <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-            )}
-            <span>حالة الاتصال بالخادم</span>
-            <RefreshCw className="w-3 h-3 ml-1" />
-          </button>
+          
           
           {/* إزالة زر تبديل وضع التنفيذ الفعلي واستبداله بنص بسيط */}
           <div className="flex items-center gap-1 px-2 py-1 rounded text-xs text-purple-600">
-            <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-            <span>وضع التنفيذ الفعلي مفعل</span>
+            
+            
           </div>
         </div>
       </div>
@@ -237,31 +178,18 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
           </div>
           
           <DialogFooter className="flex flex-row justify-between sm:justify-between gap-2">
-            <Button
-              variant="outline"
-              onClick={navigateToSettings}
-            >
+            <Button variant="outline" onClick={navigateToSettings}>
               <Server className="mr-2 h-4 w-4" />
               تكوين إعدادات الخادم
             </Button>
             
-            <Button 
-              onClick={retryConnection} 
-              disabled={isTestingConnection}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              {isTestingConnection ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
+            <Button onClick={retryConnection} disabled={isTestingConnection} className="bg-amber-600 hover:bg-amber-700 text-white">
+              {isTestingConnection ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               إعادة المحاولة
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
-  );
+    </>;
 };
-
 export default AutomationButton;
