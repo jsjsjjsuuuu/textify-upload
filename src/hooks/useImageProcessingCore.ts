@@ -1,10 +1,9 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { useImageState } from "@/hooks/useImageState";
 import { useFileUpload } from "@/hooks/useFileUpload";
-import { saveToLocalStorage, getStorageStats } from "@/utils/bookmarklet";
 
 export const useImageProcessingCore = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
@@ -31,98 +30,37 @@ export const useImageProcessingCore = () => {
     setProcessingProgress
   });
 
-  // حفظ البيانات المكتملة في localStorage وتحديث الإحصائيات
-  useEffect(() => {
-    // استخراج الصور المكتملة فقط
-    const completedImages = images.filter(img => 
-      img.status === "completed" && img.code && img.senderName && img.phoneNumber
-    );
-    
-    // حفظ البيانات فقط إذا كان هناك صور مكتملة
-    if (completedImages.length > 0) {
-      console.log("حفظ البيانات المكتملة في localStorage:", completedImages.length, "صورة");
-      saveToLocalStorage(completedImages);
-      
-      // تحديث الإحصائيات بعد الحفظ
-      updateBookmarkletStats();
-    }
-  }, [images]);
-  
-  // تحديث إحصائيات البوكماركلت بشكل دوري
-  useEffect(() => {
-    // تحديث الإحصائيات عند التحميل الأولي
-    updateBookmarkletStats();
-    
-    // إعداد مؤقت لتحديث الإحصائيات كل دقيقة
-    const intervalId = setInterval(updateBookmarkletStats, 60000);
-    
-    // تنظيف المؤقت عند إزالة المكون
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, []);
-  
-  // وظيفة تحديث إحصائيات البوكماركلت
-  const updateBookmarkletStats = () => {
-    try {
-      const stats = getStorageStats();
-      setBookmarkletStats({
-        total: stats.total || 0,
-        ready: stats.ready || 0,
-        success: stats.success || 0,
-        error: stats.error || 0
-      });
-    } catch (e) {
-      console.error("خطأ في تحديث إحصائيات البوكماركلت:", e);
-    }
-  };
-
-  // وظيفة إرسال البيانات إلى API
+  // وظيفة إرسال البيانات إلى API (محاكاة)
   const handleSubmitToApi = async (id: string, image: ImageData) => {
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/submit-data", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: id,
-          extractedText: image.extractedText,
-          // تصحيح: إزالة extractedData لأنها غير موجودة في نوع ImageData
-          // استبدالها بإرسال البيانات المستخرجة بشكل مباشر
-          code: image.code,
-          senderName: image.senderName,
-          phoneNumber: image.phoneNumber,
-          province: image.province,
-          price: image.price,
-          companyName: image.companyName
-        }),
+      // محاكاة طلب API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log("تم إرسال البيانات:", {
+        id: id,
+        code: image.code,
+        senderName: image.senderName,
+        phoneNumber: image.phoneNumber,
+        province: image.province,
+        price: image.price,
+        companyName: image.companyName
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log("API Response:", result);
-
-      // تصحيح: تغيير "success" إلى "completed" لتتوافق مع النوع المحدد
+      // تحديث حالة الصورة
       updateImage(id, { status: "completed" });
       
       toast({
         title: "نجاح",
-        description: `تم إرسال البيانات بنجاح لـ ${image.file.name}!`,
+        description: `تم معالجة البيانات بنجاح لـ ${image.file.name}!`,
       });
-      
-      await updateBookmarkletStats();
     } catch (error: any) {
       console.error("خطأ في إرسال البيانات:", error);
       updateImage(id, { status: "error" });
       
       toast({
         title: "خطأ",
-        description: `فشل إرسال البيانات لـ ${image.file.name}: ${error.message}`,
+        description: `فشل معالجة البيانات لـ ${image.file.name}: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -140,7 +78,6 @@ export const useImageProcessingCore = () => {
     handleFileChange,
     handleTextChange,
     handleDelete: deleteImage,
-    handleSubmitToApi,
-    updateBookmarkletStats
+    handleSubmitToApi
   };
 };
