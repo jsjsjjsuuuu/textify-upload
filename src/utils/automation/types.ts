@@ -8,6 +8,7 @@ export interface AutomationConfig {
   automationType: 'server' | 'client';
   // إضافة الخصائص المفقودة
   forceRealExecution?: boolean;
+  timeout?: number; // إضافة خاصية timeout
   browserInfo?: {
     userAgent: string;
     language: string;
@@ -46,10 +47,8 @@ export interface Action {
 
 export interface AutomationAction extends Action {
   type: string;
-  selector: string;
-  // جعل selector اختيارية وتوفير بديل لها
-  selector?: string;
   finder: string; // استخدام finder بدلاً من selector في الكود الحالي
+  selector?: string; // جعل selector اختيارية
   isXPath?: boolean;
 }
 

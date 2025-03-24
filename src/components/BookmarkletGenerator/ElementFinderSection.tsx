@@ -129,17 +129,24 @@ const ElementFinderSection: React.FC<ElementFinderProps> = ({ onBookmarkletGener
                  action.name === "select" ? "اختر من قائمة" : action.name,
             type: action.name, // إضافة خاصية type مطلوبة
             finder: action.finder,
+            selector: action.finder, // تعيين selector لتكون نفس finder
             value: action.value || (action.name === "click" ? "click" : ""),
             delay: action.delay ? parseInt(action.delay, 10) : 500, // زيادة التأخير الافتراضي
             description: `${action.name} - ${action.finder}`
           };
           return serverAction;
         }),
-        automationType: 'server' as 'server' | 'client',
+        automationType: 'server',
         useBrowserData: true,
         forceRealExecution: true, // تأكيد أن التنفيذ يجب أن يكون حقيقياً
-        timeout: 60000, // زيادة مهلة التنفيذ إلى 60 ثانية
-        retries: 2, // إضافة محاولات إعادة المحاولة
+        serverOptions: {
+          timeout: 60000, // تعيين المهلة في كائن serverOptions بدلاً من المستوى الأعلى
+          maxRetries: 2, // إضافة عدد المحاولات
+          useHeadlessMode: false,
+          puppeteerOptions: {
+            args: []
+          }
+        }
       };
       
       console.log("بدء تنفيذ الأتمتة بالإعدادات:", config);

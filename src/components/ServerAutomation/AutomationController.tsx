@@ -101,12 +101,13 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
       // إنشاء الإجراءات التلقائية بناءً على البيانات المستخرجة
       const autoActions: AutomationAction[] = [];
       
-      // إنشاء إجراءات تلقائية مثل إدخال الكود أو اسم المرسل أو رقم الهاتف...إلخ
+      // إنشاء إجراءات تلقائية
       if (extractedData.code) {
         autoActions.push({
           name: 'type',
           type: 'type',
           finder: '#code',
+          selector: '#code', // إضافة selector
           value: extractedData.code,
           delay: 300,
           description: 'إدخال الكود'
@@ -118,6 +119,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
           name: 'type',
           type: 'type',
           finder: '#sender_name',
+          selector: '#sender_name', // إضافة selector
           value: extractedData.senderName,
           delay: 300,
           description: 'إدخال اسم المرسل'
@@ -129,6 +131,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
           name: 'type',
           type: 'type',
           finder: '#phone',
+          selector: '#phone', // إضافة selector
           value: extractedData.phoneNumber,
           delay: 300,
           description: 'إدخال رقم الهاتف'
@@ -140,6 +143,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
           name: 'select',
           type: 'select',
           finder: '#province',
+          selector: '#province', // إضافة selector
           value: extractedData.province,
           delay: 300,
           description: 'اختيار المحافظة'
@@ -151,6 +155,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
           name: 'type',
           type: 'type',
           finder: '#price',
+          selector: '#price', // إضافة selector
           value: extractedData.price,
           delay: 300,
           description: 'إدخال السعر'
@@ -162,6 +167,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
         name: 'click',
         type: 'click',
         finder: 'button[type="submit"]',
+        selector: 'button[type="submit"]', // إضافة selector
         value: '',
         delay: 500,
         description: 'النقر على زر التأكيد'
@@ -191,8 +197,9 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
   const addAction = () => {
     const newAction: AutomationAction = {
       name: 'click',
-      type: 'click', // إضافة خاصية type مطلوبة
+      type: 'click',
       finder: '',
+      selector: '', // إضافة selector
       value: '',
       delay: 500,
       description: 'إجراء جديد'
@@ -352,7 +359,7 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
       return;
     }
     
-    // التحقق من صلاحية URL
+    // التحقق من صحة URL
     if (!validateURL(projectUrl)) {
       toast.error("عنوان URL غير صالح", {
         description: "يجب أن يكون عنوان URL صالحًا مثل https://example.com"
@@ -384,7 +391,15 @@ const AutomationController: React.FC<AutomationControllerProps> = ({ isN8NMode =
       actions: actions,
       useBrowserData: true,
       automationType: 'server',
-      forceRealExecution: true
+      forceRealExecution: true,
+      serverOptions: {
+        timeout: 60000,
+        maxRetries: 3,
+        useHeadlessMode: false,
+        puppeteerOptions: {
+          args: []
+        }
+      }
     };
     
     try {
