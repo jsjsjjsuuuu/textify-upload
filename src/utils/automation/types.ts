@@ -1,14 +1,13 @@
 
-// الأنواع المستخدمة في الأتمتة - ملف فارغ (سيتم إزالته لاحقاً)
+// الأنواع المستخدمة في الأتمتة
 export interface AutomationConfig {
   projectUrl: string;
   projectName?: string;
   actions: any[];
   useBrowserData: boolean;
   automationType: 'server' | 'client';
-  // إضافة الخصائص المفقودة
   forceRealExecution?: boolean;
-  timeout?: number; // إضافة خاصية timeout
+  timeout?: number;
   browserInfo?: {
     userAgent: string;
     language: string;
@@ -47,8 +46,8 @@ export interface Action {
 
 export interface AutomationAction extends Action {
   type: string;
-  finder: string; // استخدام finder بدلاً من selector في الكود الحالي
-  selector?: string; // جعل selector اختيارية
+  finder: string;
+  selector?: string;
   isXPath?: boolean;
 }
 
