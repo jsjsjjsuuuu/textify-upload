@@ -15,7 +15,10 @@ export const SHEET_COLUMNS = [
 ];
 
 // تم إزالة بيانات حساب الخدمة
-export const SERVICE_ACCOUNT = {};
+export const SERVICE_ACCOUNT = {
+  private_key_id: "",
+  client_email: ""
+};
 
 // إعدادات التصدير التلقائي - معطلة
 export const AUTO_EXPORT_CONFIG = {

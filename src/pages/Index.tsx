@@ -81,7 +81,6 @@ const Index = () => {
           </div>
           
           <div className="space-y-6">
-            {/* تم إزالة مكون GoogleSheetsExport */}
             <DirectExportTools images={images} />
           </div>
         </div>

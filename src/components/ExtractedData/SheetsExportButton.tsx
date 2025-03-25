@@ -9,7 +9,7 @@ interface SheetsExportButtonProps {
   images: ImageData[];
 }
 
-const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
+const SheetsExportButton: React.FC<SheetsExportButtonProps> = () => {
   const { toast } = useToast();
 
   const handleClick = () => {
