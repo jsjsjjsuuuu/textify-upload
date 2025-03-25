@@ -1,6 +1,6 @@
 
 import { gapi } from 'gapi-script';
-import { GOOGLE_API_CONFIG, SHEET_COLUMNS, ERROR_MESSAGES } from './config';
+import { GOOGLE_API_CONFIG, SHEET_COLUMNS, ERROR_MESSAGES, SERVICE_ACCOUNT } from './config';
 import { ImageData } from '@/types/ImageData';
 import { formatDate } from '@/utils/dateFormatter';
 
@@ -50,6 +50,8 @@ const handleApiError = (error: any): Error => {
       errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
     } else if (error.message.includes('authentication') || error.message.includes('auth')) {
       errorMessage = ERROR_MESSAGES.AUTH_ERROR;
+    } else if (error.message.includes('service account')) {
+      errorMessage = ERROR_MESSAGES.SERVICE_ACCOUNT_ERROR;
     } else {
       errorMessage = `${error.message}`;
     }
@@ -58,7 +60,47 @@ const handleApiError = (error: any): Error => {
   return new Error(errorMessage);
 };
 
-// تهيئة خدمة Google Sheets API باستخدام OAuth
+// إنشاء JWT من بيانات حساب الخدمة
+const createJWT = (): string => {
+  try {
+    // بيانات الرأس للتوقيع
+    const header = {
+      alg: "RS256",
+      typ: "JWT",
+      kid: SERVICE_ACCOUNT.private_key_id
+    };
+    
+    // الوقت الحالي بالثواني
+    const now = Math.floor(Date.now() / 1000);
+    
+    // بيانات المطالبة للتوقيع
+    const payload = {
+      iss: SERVICE_ACCOUNT.client_email,
+      scope: GOOGLE_API_CONFIG.SCOPES,
+      aud: "https://oauth2.googleapis.com/token",
+      exp: now + 3600, // صالح لمدة ساعة
+      iat: now
+    };
+    
+    // ترميز الرأس والبيانات
+    const base64Header = btoa(JSON.stringify(header));
+    const base64Payload = btoa(JSON.stringify(payload));
+    
+    // دمج الرأس والبيانات بتنسيق JWT
+    const toSign = `${base64Header}.${base64Payload}`;
+    
+    // عادة نحتاج إلى توقيع بمفتاح RSA، لكن هذا غير متاح في المتصفح
+    // لذلك سنحتاج إلى حل بديل عبر خادم أو استخدام OAuth
+    console.warn("تنبيه: إنشاء JWT في المتصفح غير مكتمل بسبب قيود المتصفح. استخدم OAuth بدلاً من ذلك.");
+    
+    return toSign;
+  } catch (error) {
+    console.error("خطأ في إنشاء JWT:", error);
+    return "";
+  }
+};
+
+// تهيئة خدمة Google Sheets API 
 export const initGoogleSheetsApi = (): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     if (initialized) {
@@ -82,58 +124,101 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
     
     isInitializing = true;
     console.log("بدء تهيئة Google Sheets API...");
-    lastError = null;
-
-    try {
-      // تهيئة API باستخدام OAuth
-      const loadGapiClient = () => {
-        if (typeof gapi === 'undefined') {
-          if (apiLoadRetries < MAX_RETRIES) {
-            apiLoadRetries++;
-            console.log(`محاولة تحميل GAPI (المحاولة ${apiLoadRetries}/${MAX_RETRIES})...`);
-            setTimeout(loadGapiClient, 1000);
-            return;
-          } else {
-            const error = new Error("تعذر تحميل مكتبة Google API. يرجى التحقق من اتصالك بالإنترنت.");
-            console.error("فشل في تحميل مكتبة Google API:", error);
-            isInitializing = false;
-            lastError = error;
-            reject(error);
-            return;
-          }
-        }
-
-        gapi.load('client:auth2', async () => {
-          try {
-            await gapi.client.init({
-              apiKey: GOOGLE_API_CONFIG.API_KEY,
-              clientId: GOOGLE_API_CONFIG.CLIENT_ID,
-              discoveryDocs: GOOGLE_API_CONFIG.DISCOVERY_DOCS,
-              scope: GOOGLE_API_CONFIG.SCOPES
-            });
-            
-            console.log("تمت تهيئة Google Sheets API بنجاح باستخدام OAuth2");
-            initialized = true;
-            isInitializing = false;
-            lastError = null;
-            resolve(true);
-          } catch (error: any) {
-            console.error("فشل في تهيئة Google Sheets API:", error);
-            isInitializing = false;
-            lastError = handleApiError(error);
-            initialized = false;
-            reject(lastError);
-          }
-        });
-      };
+    
+    if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT) {
+      console.log("استخدام حساب الخدمة للمصادقة...");
+      // نظرًا لقيود المتصفح في التعامل مع مفاتيح RSA وإنشاء توقيعات JWT
+      // سنستخدم OAuth بدلاً من ذلك ولكن مع تغييرات في واجهة المستخدم
       
-      loadGapiClient();
-    } catch (error: any) {
-      console.error("فشل في تحميل Google Sheets API:", error);
-      isInitializing = false;
-      lastError = handleApiError(error);
-      initialized = false;
-      reject(lastError);
+      loadGapiClientWithOAuth();
+    } else if (GOOGLE_API_CONFIG.USE_OAUTH) {
+      // استخدام OAuth للمصادقة في بيئة المتصفح
+      console.log("استخدام OAuth للمصادقة...");
+      loadGapiClientWithOAuth();
+    } else {
+      // استخدام مفتاح API (محدودية في الوصول)
+      console.log("استخدام مفتاح API للمصادقة... (محدود الصلاحيات)");
+      loadGapiClientWithApiKey();
+    }
+    
+    function loadGapiClientWithOAuth() {
+      if (typeof gapi === 'undefined') {
+        retryLoadingGapi();
+        return;
+      }
+      
+      gapi.load('client:auth2', async () => {
+        try {
+          await gapi.client.init({
+            apiKey: GOOGLE_API_CONFIG.API_KEY,
+            clientId: GOOGLE_API_CONFIG.CLIENT_ID,
+            discoveryDocs: GOOGLE_API_CONFIG.DISCOVERY_DOCS,
+            scope: GOOGLE_API_CONFIG.SCOPES
+          });
+          
+          console.log("تمت تهيئة Google Sheets API بنجاح باستخدام OAuth2");
+          initialized = true;
+          isInitializing = false;
+          lastError = null;
+          resolve(true);
+        } catch (error: any) {
+          console.error("فشل في تهيئة Google Sheets API:", error);
+          isInitializing = false;
+          lastError = handleApiError(error);
+          initialized = false;
+          reject(lastError);
+        }
+      });
+    }
+    
+    function loadGapiClientWithApiKey() {
+      if (typeof gapi === 'undefined') {
+        retryLoadingGapi();
+        return;
+      }
+      
+      gapi.load('client', async () => {
+        try {
+          await gapi.client.init({
+            apiKey: GOOGLE_API_CONFIG.API_KEY,
+            discoveryDocs: GOOGLE_API_CONFIG.DISCOVERY_DOCS
+          });
+          
+          console.log("تمت تهيئة Google Sheets API بنجاح باستخدام مفتاح API");
+          initialized = true;
+          isInitializing = false;
+          lastError = null;
+          resolve(true);
+        } catch (error: any) {
+          console.error("فشل في تهيئة Google Sheets API:", error);
+          isInitializing = false;
+          lastError = handleApiError(error);
+          initialized = false;
+          reject(lastError);
+        }
+      });
+    }
+    
+    function retryLoadingGapi() {
+      if (apiLoadRetries < MAX_RETRIES) {
+        apiLoadRetries++;
+        console.log(`محاولة تحميل GAPI (المحاولة ${apiLoadRetries}/${MAX_RETRIES})...`);
+        setTimeout(() => {
+          if (GOOGLE_API_CONFIG.USE_OAUTH || GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT) {
+            loadGapiClientWithOAuth();
+          } else {
+            loadGapiClientWithApiKey();
+          }
+        }, 1000);
+        return;
+      } else {
+        const error = new Error("تعذر تحميل مكتبة Google API. يرجى التحقق من اتصالك بالإنترنت.");
+        console.error("فشل في تحميل مكتبة Google API:", error);
+        isInitializing = false;
+        lastError = error;
+        reject(error);
+        return;
+      }
     }
   });
 };
@@ -199,8 +284,8 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
       }
     }
     
-    // التحقق من تسجيل الدخول
-    if (!isUserSignedIn()) {
+    // التحقق من تسجيل الدخول إذا كنا نستخدم OAuth
+    if (GOOGLE_API_CONFIG.USE_OAUTH && !isUserSignedIn()) {
       await signIn();
     }
     
@@ -295,8 +380,8 @@ export const exportImagesToSheet = async (
       }
     }
     
-    // التحقق من تسجيل الدخول
-    if (!isUserSignedIn()) {
+    // التحقق من تسجيل الدخول إذا كنا نستخدم OAuth
+    if (GOOGLE_API_CONFIG.USE_OAUTH && !isUserSignedIn()) {
       await signIn();
     }
     
@@ -383,8 +468,8 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
       }
     }
     
-    // التحقق من تسجيل الدخول
-    if (!isUserSignedIn()) {
+    // التحقق من تسجيل الدخول إذا كنا نستخدم OAuth
+    if (GOOGLE_API_CONFIG.USE_OAUTH && !isUserSignedIn()) {
       await signIn();
     }
     

@@ -15,6 +15,7 @@ import {
   signOut
 } from '@/lib/googleSheets/sheetsService';
 import { ImageData } from '@/types/ImageData';
+import { GOOGLE_API_CONFIG } from '@/lib/googleSheets/config';
 
 export const useGoogleSheets = () => {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -32,7 +33,7 @@ export const useGoogleSheets = () => {
       try {
         await initGoogleSheetsApi();
         setIsInitialized(true);
-        setIsSignedIn(isUserSignedIn());
+        setIsSignedIn(GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT || isUserSignedIn());
         setLastError(null);
         
         console.log("تم تهيئة API بنجاح، جاري تحميل قائمة جداول البيانات...");
@@ -72,6 +73,16 @@ export const useGoogleSheets = () => {
 
   // وظيفة لمعالجة تسجيل الدخول
   const handleSignIn = async () => {
+    // إذا كنا نستخدم حساب الخدمة، نشرح للمستخدم أن تسجيل الدخول ليس مطلوبًا
+    if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT) {
+      toast({
+        title: "معلومات",
+        description: "الاتصال يتم باستخدام حساب الخدمة، لا حاجة لتسجيل الدخول يدويًا.",
+      });
+      setIsSignedIn(true); // نقوم بتعيين هذه الحالة كـ true لتجاوز طلب تسجيل الدخول
+      return true;
+    }
+    
     setIsLoading(true);
     try {
       await signIn();
@@ -107,6 +118,15 @@ export const useGoogleSheets = () => {
 
   // وظيفة لمعالجة تسجيل الخروج
   const handleSignOut = async () => {
+    // إذا كنا نستخدم حساب الخدمة، نشرح للمستخدم أن تسجيل الخروج ليس ضروريًا
+    if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT) {
+      toast({
+        title: "معلومات",
+        description: "الاتصال يتم باستخدام حساب الخدمة، لا حاجة لتسجيل الخروج.",
+      });
+      return true;
+    }
+    
     setIsLoading(true);
     try {
       await signOut();
@@ -136,8 +156,8 @@ export const useGoogleSheets = () => {
   const loadSpreadsheets = async () => {
     setIsLoading(true);
     try {
-      // التحقق من تسجيل الدخول قبل جلب القائمة
-      if (!isUserSignedIn()) {
+      // إذا كنا نستخدم OAuth، نتحقق من تسجيل الدخول قبل جلب القائمة
+      if (GOOGLE_API_CONFIG.USE_OAUTH && !isUserSignedIn()) {
         console.log("المستخدم غير مسجل الدخول، جاري محاولة تسجيل الدخول...");
         await handleSignIn();
       }

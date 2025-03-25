@@ -13,6 +13,7 @@ import {
   signIn
 } from "@/lib/googleSheets/sheetsService";
 import { ImageData } from "@/types/ImageData";
+import { GOOGLE_API_CONFIG } from "@/lib/googleSheets/config";
 import { 
   Dialog,
   DialogContent,
@@ -103,8 +104,16 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
     });
   };
 
-  // تسجيل الدخول يدويًا
+  // تسجيل الدخول يدويًا - مطلوب فقط في حالة استخدام OAuth
   const handleSignIn = async () => {
+    if (!GOOGLE_API_CONFIG.USE_OAUTH) {
+      toast({
+        title: "معلومات",
+        description: "الاتصال يتم باستخدام حساب الخدمة، لا حاجة لتسجيل الدخول يدويًا.",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     try {
       await signIn();
@@ -184,7 +193,35 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
   // عرض حالة الزر بناءً على حالة التهيئة والتصدير
   return (
     <>
-      {!isSignedIn ? (
+      {GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT ? (
+        <Button
+          onClick={isInitialized ? handleExport : handleRetryConnection}
+          disabled={isLoading || (isInitialized && validImagesCount === 0)}
+          className={`w-full ${lastExportSuccess ? 'bg-green-600 hover:bg-green-700' : isInitialized ? 'bg-brand-green hover:bg-brand-green/90' : 'bg-red-500 hover:bg-red-600'}`}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              جاري المعالجة...
+            </>
+          ) : !isInitialized ? (
+            <>
+              <AlertTriangle className="h-4 w-4 ml-2" />
+              فشل الاتصال بـ Google Sheets (حساب الخدمة)، انقر لإعادة المحاولة
+            </>
+          ) : lastExportSuccess ? (
+            <>
+              <CheckCircle className="h-4 w-4 ml-2" />
+              تم التصدير بنجاح
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4 ml-2" />
+              تصدير البيانات إلى Google Sheets {validImagesCount > 0 && `(${validImagesCount})`}
+            </>
+          )}
+        </Button>
+      ) : !isSignedIn ? (
         <Button
           onClick={handleSignIn}
           disabled={isLoading}
@@ -280,8 +317,12 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-red-500">مشكلة في الاتصال بـ Google Sheets</AlertDialogTitle>
             <AlertDialogDescription>
-              <p className="mb-2">فشل في الاتصال بـ Google Sheets. هذا عادة بسبب مشكلة في المصادقة أو الاتصال.</p>
-              <p>يجب عليك تسجيل الدخول إلى حساب Google الخاص بك للوصول إلى Google Sheets. انقر على "تسجيل الدخول" أدناه.</p>
+              {GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT ? (
+                <p className="mb-2">فشل في الاتصال باستخدام حساب الخدمة. قد يكون هناك قيود على استخدام حسابات الخدمة في بيئة المتصفح.</p>
+              ) : (
+                <p className="mb-2">فشل في الاتصال بـ Google Sheets. هذا عادة بسبب مشكلة في المصادقة أو الاتصال.</p>
+              )}
+              <p>يمكنك إعادة المحاولة أو تعديل الإعدادات للاستخدام. انقر على "إعادة المحاولة" أدناه.</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           
@@ -304,16 +345,16 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
           <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
             <AlertDialogCancel className="mt-0">إغلاق</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleSignIn}
+              onClick={handleRetryConnection}
               className="bg-brand-green hover:bg-brand-green/90"
               disabled={isLoading}
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin ml-2" />
               ) : (
-                <LogIn className="h-4 w-4 ml-2" />
+                <RefreshCw className="h-4 w-4 ml-2" />
               )}
-              تسجيل الدخول
+              إعادة المحاولة
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -6,15 +6,15 @@ export const GOOGLE_API_CONFIG = {
   CLIENT_ID: "599832546977-oc48ji7men0gnf5cpbrpmjuqapbjqdf9.apps.googleusercontent.com", // معرف عميل OAuth الجديد
   DISCOVERY_DOCS: ["https://sheets.googleapis.com/$discovery/rest?version=v4", "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
   SCOPES: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file",
-  USE_OAUTH: true, // استخدام OAuth للمصادقة في بيئة المتصفح
-  USE_SERVICE_ACCOUNT: false // تعطيل استخدام حساب الخدمة في بيئة المتصفح
+  USE_OAUTH: false, // تعطيل استخدام OAuth
+  USE_SERVICE_ACCOUNT: true // تفعيل استخدام حساب الخدمة
 };
 
 export const SHEET_COLUMNS = [
   "الكود", "اسم المرسل", "رقم الهاتف", "المحافظة", "السعر", "اسم الشركة", "التاريخ"
 ];
 
-// بيانات حساب الخدمة (محتفظ بها للمرجع ولكن غير مستخدمة في بيئة المتصفح)
+// بيانات حساب الخدمة
 export const SERVICE_ACCOUNT = {
   "type": "service_account",
   "project_id": "vaulted-copilot-454811-b8",
@@ -42,6 +42,6 @@ export const ERROR_MESSAGES = {
   API_KEY_ERROR: "مفتاح API غير صالح أو غير مدعوم.",
   NETWORK_ERROR: "خطأ في الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.",
   GENERAL_ERROR: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى لاحقاً.",
-  SERVICE_ACCOUNT_ERROR: "حساب الخدمة غير مدعوم في بيئة المتصفح، يرجى استخدام OAuth للمصادقة.",
-  BROWSER_SUPPORT_ERROR: "يرجى ملاحظة أن حسابات الخدمة غير مدعومة في بيئة المتصفح. سيتم استخدام OAuth للمصادقة."
+  SERVICE_ACCOUNT_ERROR: "حدث خطأ في استخدام حساب الخدمة. تأكد من صحة بيانات حساب الخدمة.",
+  BROWSER_SUPPORT_ERROR: "تم تفعيل حساب الخدمة، ولكن قد تكون هناك قيود في بيئة المتصفح."
 };
