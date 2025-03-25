@@ -9,7 +9,6 @@ import { useDataFormatting } from '@/hooks/useDataFormatting';
 import { motion } from 'framer-motion';
 import { ImageData } from '@/types/ImageData';
 import DirectExportTools from '@/components/DataExport/DirectExportTools';
-import GoogleSheetsExport from '@/components/DataExport/GoogleSheetsExport';
 
 const Index = () => {
   const { 
@@ -82,7 +81,7 @@ const Index = () => {
           </div>
           
           <div className="space-y-6">
-            <GoogleSheetsExport images={images} />
+            {/* تم إزالة مكون GoogleSheetsExport */}
             <DirectExportTools images={images} />
           </div>
         </div>

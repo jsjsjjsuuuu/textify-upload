@@ -1,4 +1,3 @@
-
 import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
 import { formatDate } from "@/utils/dateFormatter";
 import { useState, useEffect } from "react";
