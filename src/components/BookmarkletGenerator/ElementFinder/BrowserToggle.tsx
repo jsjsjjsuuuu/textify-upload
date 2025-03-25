@@ -27,7 +27,7 @@ const BrowserToggle: React.FC<BrowserToggleProps> = ({
         description: "هذا ضروري لتنفيذ الأتمتة بشكل صحيح على مواقع الويب الحديثة"
       });
     }
-  }, []);
+  }, [useRealBrowser, onToggle]);
 
   const handleToggle = (value: boolean) => {
     // دائمًا نبقي على وضع المتصفح الحقيقي مفعل
