@@ -1,7 +1,16 @@
 
-export { default as ExtractedDataEditor } from './ExtractedDataEditor';
-export { default as ExtractedDataField } from './ExtractedDataField';
-export { default as ExtractedDataActions } from './ExtractedDataActions';
-export { default as RawTextViewer } from './RawTextViewer';
-export { default as ExtractedDataFields } from './ExtractedDataFields';
-export { default as AutomationButton } from './AutomationButton';
+import ExtractedDataEditor from './ExtractedDataEditor';
+import ExtractedDataActions from './ExtractedDataActions';
+import ExtractedDataFields from './ExtractedDataFields';
+import LearningNotifications from './LearningNotifications';
+import RawTextViewer from './RawTextViewer';
+import AutomationButton from './AutomationButton';
+
+export {
+  ExtractedDataEditor,
+  ExtractedDataActions,
+  ExtractedDataFields,
+  LearningNotifications,
+  RawTextViewer,
+  AutomationButton
+};
