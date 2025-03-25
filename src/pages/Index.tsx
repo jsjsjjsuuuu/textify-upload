@@ -1,14 +1,12 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Upload } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
 import ImageList from '@/components/ImageList';
 import { useDataFormatting } from '@/hooks/useDataFormatting';
 import { motion } from 'framer-motion';
-import { formatDate } from '@/utils/dateFormatter';
 import { ImageData } from '@/types/ImageData';
 import DirectExportTools from '@/components/DataExport/DirectExportTools';
 import GoogleSheetsExport from '@/components/DataExport/GoogleSheetsExport';
@@ -78,7 +76,7 @@ const Index = () => {
                 onTextChange={handleTextChange}
                 onDelete={handleDelete}
                 onSubmit={(id) => handleSubmitToApi(id, images.find(img => img.id === id)!)}
-                formatDate={formatDate}
+                formatDate={useImageProcessing().formatDate}
               />
             )}
           </div>
@@ -104,4 +102,3 @@ const Index = () => {
 };
 
 export default Index;
-

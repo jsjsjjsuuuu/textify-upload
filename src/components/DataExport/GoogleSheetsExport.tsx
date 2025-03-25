@@ -5,11 +5,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { FileSpreadsheet, LogIn, LogOut, Plus, RefreshCw, Send } from "lucide-react";
+import { FileSpreadsheet, LogIn, LogOut, Plus, RefreshCw, Send, CheckCircle } from "lucide-react";
 import { useGoogleSheets } from "@/hooks/useGoogleSheets";
 import { ImageData } from "@/types/ImageData";
 import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { useImageProcessing } from "@/hooks/useImageProcessing";
 
 interface GoogleSheetsExportProps {
   images: ImageData[];
@@ -28,6 +30,13 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
     exportToSheet 
   } = useGoogleSheets();
   
+  const {
+    autoExportEnabled,
+    defaultSheetId,
+    toggleAutoExport,
+    setDefaultSheet
+  } = useImageProcessing();
+  
   const [selectedSheetId, setSelectedSheetId] = useState<string>("");
   const [newSheetName, setNewSheetName] = useState<string>(`بيانات الشحنات ${new Date().toLocaleDateString('ar-EG')}`);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -42,6 +51,13 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
       loadSpreadsheets();
     }
   }, [isSignedIn]);
+  
+  // تحديث المعرف المحدد عندما يتغير المعرف الافتراضي
+  useEffect(() => {
+    if (defaultSheetId && !selectedSheetId) {
+      setSelectedSheetId(defaultSheetId);
+    }
+  }, [defaultSheetId]);
   
   const handleCreateSheet = async () => {
     if (!newSheetName.trim()) {
@@ -61,6 +77,13 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
     }
     
     await exportToSheet(selectedSheetId, images);
+  };
+  
+  // تعيين الجدول المختار كجدول افتراضي للتصدير التلقائي
+  const handleSetDefaultSheet = () => {
+    if (selectedSheetId) {
+      setDefaultSheet(selectedSheetId);
+    }
   };
   
   return (
@@ -101,6 +124,62 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
           </div>
         ) : isSignedIn ? (
           <div className="space-y-4">
+            {/* إعدادات التصدير التلقائي */}
+            <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800/60 rounded-md p-3 mb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-green-800 dark:text-green-300 flex items-center">
+                    التصدير التلقائي
+                    {autoExportEnabled && defaultSheetId && (
+                      <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                    )}
+                  </h4>
+                  <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+                    {autoExportEnabled 
+                      ? "سيتم تصدير البيانات تلقائياً إلى Google Sheets عند الانتهاء من المعالجة"
+                      : "قم بتفعيل هذا الخيار لتصدير البيانات تلقائياً عند الانتهاء من المعالجة"
+                    }
+                  </p>
+                </div>
+                <Switch 
+                  checked={autoExportEnabled}
+                  onCheckedChange={toggleAutoExport}
+                  disabled={!isSignedIn}
+                />
+              </div>
+              
+              {autoExportEnabled && (
+                <div className="mt-3 pt-2 border-t border-green-200 dark:border-green-800/60">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-green-700">
+                      {defaultSheetId 
+                        ? "جدول البيانات الافتراضي للتصدير التلقائي:" 
+                        : "لم يتم تعيين جدول بيانات افتراضي بعد"
+                      }
+                    </span>
+                    {selectedSheetId && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleSetDefaultSheet}
+                        className="text-xs h-7 bg-green-100 hover:bg-green-200 border-green-300"
+                        disabled={selectedSheetId === defaultSheetId}
+                      >
+                        تعيين كافتراضي
+                      </Button>
+                    )}
+                  </div>
+                  {defaultSheetId && (
+                    <div className="mt-1">
+                      <span className="text-xs bg-green-100 dark:bg-green-800/40 px-2 py-1 rounded">
+                        {spreadsheets.find(s => s.id === defaultSheetId)?.name || defaultSheetId}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
             <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-md p-3 mb-2">
               <div className="flex items-start">
                 <div>
@@ -133,6 +212,7 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
                         spreadsheets.map(sheet => (
                           <SelectItem key={sheet.id} value={sheet.id}>
                             {sheet.name}
+                            {sheet.id === defaultSheetId ? " (الافتراضي)" : ""}
                           </SelectItem>
                         ))
                       )}
@@ -237,4 +317,3 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
 };
 
 export default GoogleSheetsExport;
-

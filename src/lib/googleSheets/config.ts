@@ -12,3 +12,9 @@ export const SHEET_COLUMNS = [
   "الكود", "اسم المرسل", "رقم الهاتف", "المحافظة", "السعر", "اسم الشركة", "التاريخ"
 ];
 
+// إعدادات التصدير التلقائي
+export const AUTO_EXPORT_CONFIG = {
+  ENABLED: true,
+  DEFAULT_SHEET_NAME: `بيانات الشحنات ${new Date().toLocaleDateString('ar-EG')}`,
+  AUTO_CREATE_IF_MISSING: true
+};
