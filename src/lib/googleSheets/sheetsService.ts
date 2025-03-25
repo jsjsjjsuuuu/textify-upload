@@ -31,21 +31,28 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
     console.log("بدء تهيئة Google Sheets API مع حساب الخدمة...");
 
     try {
-      // في بيئة الإنتاج، نقوم بالاتصال الفعلي بـ API
-      // نظرًا لعدم إمكانية استخدام حساب الخدمة مباشرةً في المتصفح، نستخدم محاكاة ناجحة هنا
-      // في حالة التطبيق الحقيقي، سيكون هذا عن طريق خادم Node.js
-      
-      // نضبط حالة التهيئة
-      console.log("تمت تهيئة Google Sheets API بنجاح");
-      initialized = true;
-      isInitializing = false;
-      
-      // نؤخر الاستجابة قليلاً لمحاكاة طلب شبكة
-      setTimeout(() => {
-        resolve(true);
-      }, 500);
+      // تهيئة API الفعلي
+      gapi.load('client:auth2', async () => {
+        try {
+          await gapi.client.init({
+            apiKey: GOOGLE_API_CONFIG.API_KEY,
+            clientId: GOOGLE_API_CONFIG.CLIENT_ID,
+            discoveryDocs: GOOGLE_API_CONFIG.DISCOVERY_DOCS,
+            scope: GOOGLE_API_CONFIG.SCOPES
+          });
+          
+          console.log("تمت تهيئة Google Sheets API بنجاح");
+          initialized = true;
+          isInitializing = false;
+          resolve(true);
+        } catch (error) {
+          console.error("فشل في تهيئة Google Sheets API:", error);
+          isInitializing = false;
+          reject(error);
+        }
+      });
     } catch (error) {
-      console.error("فشل في تهيئة Google Sheets API:", error);
+      console.error("فشل في تحميل Google Sheets API:", error);
       isInitializing = false;
       reject(error);
     }
@@ -63,8 +70,13 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
     console.log(`إنشاء جدول بيانات جديد: ${title}`);
     
     // الاتصال الفعلي بـ API لإنشاء جدول بيانات جديد
-    // توليد معرف للجدول الجديد
-    const spreadsheetId = `real_sheet_${Date.now()}`;
+    const response = await gapi.client.sheets.spreadsheets.create({
+      properties: {
+        title: title
+      }
+    });
+    
+    const spreadsheetId = response.result.spreadsheetId;
     
     // إضافة عنوان الأعمدة كصف أول
     await addHeaderRow(spreadsheetId);
@@ -82,7 +94,16 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
 const addHeaderRow = async (spreadsheetId: string): Promise<boolean> => {
   try {
     console.log("إضافة صف العنوان...");
-    // إضافة صف العنوان باستخدام SHEET_COLUMNS
+    
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: spreadsheetId,
+      range: 'Sheet1!A1:G1',
+      valueInputOption: 'RAW',
+      resource: {
+        values: [SHEET_COLUMNS]
+      }
+    });
+    
     return true;
   } catch (error) {
     console.error("فشل في إضافة صف العنوان:", error);
@@ -116,6 +137,17 @@ export const exportImagesToSheet = async (
       return false;
     }
     
+    // إرسال البيانات إلى جدول البيانات
+    await gapi.client.sheets.spreadsheets.values.append({
+      spreadsheetId: spreadsheetId,
+      range: 'Sheet1!A2',
+      valueInputOption: 'RAW',
+      insertDataOption: 'INSERT_ROWS',
+      resource: {
+        values: values
+      }
+    });
+    
     console.log(`تم تصدير ${values.length} سجل بنجاح إلى جدول البيانات`);
     
     return true;
@@ -130,13 +162,15 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
   try {
     console.log("الحصول على قائمة جداول البيانات");
     
-    // استرجاع قائمة فعلية من جداول البيانات المتاحة
-    // للأغراض التجريبية، نعيد قائمة ثابتة
-    const sheets = [
-      { id: 'real_sheet_1', name: 'بيانات الشحنات الشهرية' },
-      { id: 'real_sheet_2', name: 'بيانات الشحنات اليومية' },
-      { id: 'real_sheet_3', name: 'تقارير الشحنات' },
-    ];
+    const response = await gapi.client.drive.files.list({
+      q: "mimeType='application/vnd.google-apps.spreadsheet'",
+      fields: "files(id, name)"
+    });
+    
+    const sheets = response.result.files.map(file => ({
+      id: file.id,
+      name: file.name
+    }));
     
     console.log(`تم الحصول على ${sheets.length} جدول بيانات`);
     

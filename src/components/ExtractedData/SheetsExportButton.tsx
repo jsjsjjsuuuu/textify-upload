@@ -32,11 +32,10 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
         console.error("فشل في تهيئة API الخاص بجداول البيانات:", error);
         toast({
           title: "خطأ في الاتصال",
-          description: "فشل في تهيئة الاتصال بـ Google Sheets، سيتم استخدام وضع المحاكاة",
+          description: "فشل في تهيئة الاتصال بـ Google Sheets، يرجى المحاولة مرة أخرى",
           variant: "destructive"
         });
-        // حتى مع وجود خطأ، نضبط حالة التهيئة على true لتمكين المستخدم من استخدام الوظائف
-        setIsInitialized(true);
+        setIsInitialized(false);
       }
     };
     

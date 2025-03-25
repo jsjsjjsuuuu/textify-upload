@@ -14,7 +14,7 @@ import { ImageData } from '@/types/ImageData';
 export const useGoogleSheets = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignedIn, setIsSignedIn] = useState(false); // إضافة حالة لتتبع حالة تسجيل الدخول
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const [spreadsheets, setSpreadsheets] = useState<Array<{id: string, name: string}>>([]);
   const { toast } = useToast();
 
@@ -24,22 +24,21 @@ export const useGoogleSheets = () => {
       try {
         await initGoogleSheetsApi();
         setIsInitialized(true);
-        setIsSignedIn(true); // مع حساب الخدمة، نعتبر المستخدم "مسجل الدخول" تلقائيًا
+        setIsSignedIn(true);
         
         // تحميل قائمة جداول البيانات مباشرة بعد التهيئة
         await loadSpreadsheets();
       } catch (error) {
         console.error("فشل في تهيئة Google Sheets:", error);
         
-        // على الرغم من الخطأ، نعتبر API مهيأ لأغراض المحاكاة
-        setIsInitialized(true);
-        setIsSignedIn(true);
+        toast({
+          title: "خطأ في الاتصال",
+          description: "فشل في الاتصال بـ Google Sheets، يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى",
+          variant: "destructive"
+        });
         
-        // تحميل بيانات افتراضية للمحاكاة
-        setSpreadsheets([
-          { id: 'mock1', name: 'جدول بيانات محاكاة 1' },
-          { id: 'mock2', name: 'جدول بيانات محاكاة 2' }
-        ]);
+        setIsInitialized(false);
+        setIsSignedIn(false);
       }
     };
     
@@ -55,7 +54,7 @@ export const useGoogleSheets = () => {
       setIsSignedIn(true);
       toast({
         title: "تم تسجيل الدخول",
-        description: "تم تسجيل الدخول بنجاح إلى Google Sheets (وضع المحاكاة)",
+        description: "تم تسجيل الدخول بنجاح إلى Google Sheets",
       });
       return true;
     } catch (error) {
@@ -66,10 +65,9 @@ export const useGoogleSheets = () => {
         variant: "destructive"
       });
       
-      // على الرغم من الخطأ، نعتبر المستخدم مسجل الدخول في وضع المحاكاة
-      setIsInitialized(true);
-      setIsSignedIn(true);
-      return true;
+      setIsInitialized(false);
+      setIsSignedIn(false);
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -85,15 +83,11 @@ export const useGoogleSheets = () => {
       console.error("فشل في تحميل جداول البيانات:", error);
       toast({
         title: "خطأ",
-        description: "فشل في تحميل قائمة جداول البيانات، سيتم استخدام بيانات افتراضية",
+        description: "فشل في تحميل قائمة جداول البيانات",
         variant: "destructive"
       });
       
-      // استخدام بيانات افتراضية في حالة الفشل
-      setSpreadsheets([
-        { id: 'mock1', name: 'جدول بيانات افتراضي 1' },
-        { id: 'mock2', name: 'جدول بيانات افتراضي 2' }
-      ]);
+      setSpreadsheets([]);
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +101,7 @@ export const useGoogleSheets = () => {
       if (spreadsheetId) {
         toast({
           title: "تم الإنشاء",
-          description: `تم إنشاء جدول بيانات "${title}" بنجاح (وضع المحاكاة)`,
+          description: `تم إنشاء جدول بيانات "${title}" بنجاح`,
         });
         await loadSpreadsheets();
         return spreadsheetId;
@@ -140,7 +134,7 @@ export const useGoogleSheets = () => {
       if (success) {
         toast({
           title: "تم التصدير",
-          description: "تم تصدير البيانات إلى Google Sheets بنجاح (وضع المحاكاة)",
+          description: "تم تصدير البيانات إلى Google Sheets بنجاح",
         });
         return true;
       } else {
@@ -172,7 +166,7 @@ export const useGoogleSheets = () => {
       if (success) {
         toast({
           title: "تم التصدير",
-          description: "تم تصدير البيانات إلى Google Sheets بنجاح (وضع المحاكاة)",
+          description: "تم تصدير البيانات إلى Google Sheets بنجاح",
         });
         return true;
       } else {
@@ -209,10 +203,10 @@ export const useGoogleSheets = () => {
 
   return {
     isInitialized,
-    isSignedIn, // إضافة حالة تسجيل الدخول للإرجاع
+    isSignedIn,
     isLoading,
     spreadsheets,
-    handleSignIn, // إضافة وظيفة تسجيل الدخول للإرجاع
+    handleSignIn,
     loadSpreadsheets,
     createSheet,
     exportToSheet,
