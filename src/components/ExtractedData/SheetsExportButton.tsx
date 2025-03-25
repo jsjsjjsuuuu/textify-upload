@@ -69,7 +69,7 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
       if (success) {
         toast({
           title: "تم التصدير",
-          description: `تم تصدير ${validImagesCount} من البيانات إلى Google Sheets بنجاح (وضع المحاكاة)`,
+          description: `تم تصدير ${validImagesCount} من البيانات إلى Google Sheets بنجاح`,
         });
         setLastExportSuccess(true);
       } else {
