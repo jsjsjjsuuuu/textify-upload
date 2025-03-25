@@ -234,4 +234,3 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
     return [];
   }
 };
-

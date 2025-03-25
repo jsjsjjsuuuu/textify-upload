@@ -116,7 +116,7 @@ export const useImageProcessingCore = () => {
         companyName: image.companyName
       });
 
-      // تحديث حالة الصورة - هنا كان الخطأ حيث يتوقع ImageData.status أن تكون إحدى القيم المحددة
+      // تحديث حالة الصورة
       updateImage(id, { status: "completed" });
       
       toast({

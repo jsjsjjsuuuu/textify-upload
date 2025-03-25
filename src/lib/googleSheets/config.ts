@@ -2,10 +2,10 @@
 // تكوين Google Sheets API
 
 export const GOOGLE_API_CONFIG = {
-  API_KEY: "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8", // نفس مفتاح Gemini API للتبسيط
-  CLIENT_ID: "687152002001-e26gfdstki29pl4jqq1i9vb3dme6p6f9.apps.googleusercontent.com", // مفتاح عميل عام للاختبار
-  DISCOVERY_DOCS: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
-  SCOPES: "https://www.googleapis.com/auth/spreadsheets",
+  API_KEY: "AIzaSyCFDqYxuOd8Usj0HOID-TfcFbWU8vwB2qI", // مفتاح API الجديد
+  CLIENT_ID: "599832546977-oc48ji7men0gnf5cpbrpmjuqapbjqdf9.apps.googleusercontent.com", // معرف عميل OAuth الجديد
+  DISCOVERY_DOCS: ["https://sheets.googleapis.com/$discovery/rest?version=v4", "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
+  SCOPES: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file"
 };
 
 export const SHEET_COLUMNS = [
