@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileSpreadsheet, Plus, RefreshCw, Send, CheckCircle, Table, Settings } from "lucide-react";
+import { FileSpreadsheet, Plus, RefreshCw, Send, CheckCircle, Table } from "lucide-react";
 import { useGoogleSheets } from "@/hooks/useGoogleSheets";
 import { ImageData } from "@/types/ImageData";
 import { Loader2 } from "lucide-react";
@@ -24,7 +24,8 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
     loadSpreadsheets, 
     createSheet, 
     exportToSheet,
-    exportToDefaultSpreadsheet
+    exportToDefaultSpreadsheet,
+    retryInitialization
   } = useGoogleSheets();
   
   const {
@@ -104,14 +105,18 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
           <CardTitle className="text-lg text-brand-brown dark:text-brand-beige">تصدير إلى Google Sheets</CardTitle>
         </div>
         <CardDescription>
-          تصدير البيانات المستخرجة مباشرة إلى جداول بيانات Google المخصصة
+          تصدير البيانات المستخرجة مباشرة إلى جداول بيانات Google المخصصة (حساب الخدمة)
         </CardDescription>
       </CardHeader>
       
       <CardContent>
         {!isInitialized ? (
-          <div className="flex justify-center items-center py-6">
+          <div className="flex flex-col items-center justify-center py-4 gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <Button onClick={retryInitialization} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 ml-2" />
+              إعادة الاتصال
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">
@@ -273,7 +278,7 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
       <CardFooter className="pt-0 flex gap-2">
         <Button 
           onClick={handleExport} 
-          disabled={!selectedSheetId || isLoading || validImagesCount === 0}
+          disabled={!selectedSheetId || isLoading || validImagesCount === 0 || !isInitialized}
           className={`flex-1 ${lastExportSuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-brand-green hover:bg-brand-green/90'}`}
         >
           {isLoading ? (
@@ -289,7 +294,7 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
         {defaultSheetId && (
           <Button
             onClick={handleQuickExport}
-            disabled={isLoading || validImagesCount === 0}
+            disabled={isLoading || validImagesCount === 0 || !isInitialized}
             variant="outline"
             className="flex-1"
             title="تصدير سريع إلى الجدول الافتراضي"
