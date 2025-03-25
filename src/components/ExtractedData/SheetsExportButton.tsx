@@ -2,11 +2,10 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Loader2, CheckCircle } from "lucide-react";
-import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { useToast } from "@/hooks/use-toast";
 import { 
   isApiInitialized, 
-  initGoogleSheetsApi, 
+  initGoogleSheetsApi,
   exportToDefaultSheet 
 } from "@/lib/googleSheets/sheetsService";
 import { ImageData } from "@/types/ImageData";
@@ -25,17 +24,19 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
   useEffect(() => {
     const initApi = async () => {
       try {
-        if (!isApiInitialized()) {
-          await initGoogleSheetsApi();
-        }
+        // محاولة تهيئة API
+        await initGoogleSheetsApi();
         setIsInitialized(true);
+        console.log("تم تهيئة Google Sheets API بنجاح");
       } catch (error) {
         console.error("فشل في تهيئة API الخاص بجداول البيانات:", error);
         toast({
           title: "خطأ في الاتصال",
-          description: "فشل في تهيئة الاتصال بـ Google Sheets",
+          description: "فشل في تهيئة الاتصال بـ Google Sheets، سيتم استخدام وضع المحاكاة",
           variant: "destructive"
         });
+        // حتى مع وجود خطأ، نضبط حالة التهيئة على true لتمكين المستخدم من استخدام الوظائف
+        setIsInitialized(true);
       }
     };
     
@@ -68,7 +69,7 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
       if (success) {
         toast({
           title: "تم التصدير",
-          description: `تم تصدير ${validImagesCount} من البيانات إلى Google Sheets بنجاح`,
+          description: `تم تصدير ${validImagesCount} من البيانات إلى Google Sheets بنجاح (وضع المحاكاة)`,
         });
         setLastExportSuccess(true);
       } else {

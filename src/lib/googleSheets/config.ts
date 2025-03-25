@@ -12,7 +12,7 @@ export const SHEET_COLUMNS = [
   "الكود", "اسم المرسل", "رقم الهاتف", "المحافظة", "السعر", "اسم الشركة", "التاريخ"
 ];
 
-// بيانات حساب الخدمة
+// بيانات حساب الخدمة (تم تحديثها بناءً على الصورة)
 export const SERVICE_ACCOUNT = {
   "type": "service_account",
   "project_id": "vaulted-copilot-454811-b8",
