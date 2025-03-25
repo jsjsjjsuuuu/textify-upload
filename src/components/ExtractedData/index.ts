@@ -5,6 +5,7 @@ import ExtractedDataFields from './ExtractedDataFields';
 import LearningNotifications from './LearningNotifications';
 import RawTextViewer from './RawTextViewer';
 import AutomationButton from './AutomationButton';
+import SheetsExportButton from './SheetsExportButton';
 
 export {
   ExtractedDataEditor,
@@ -12,5 +13,6 @@ export {
   ExtractedDataFields,
   LearningNotifications,
   RawTextViewer,
-  AutomationButton
+  AutomationButton,
+  SheetsExportButton
 };

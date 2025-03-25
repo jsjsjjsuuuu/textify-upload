@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { FileSpreadsheet, LogIn, LogOut, Plus, RefreshCw, Send, CheckCircle } from "lucide-react";
+import { FileSpreadsheet, Plus, RefreshCw, Send, CheckCircle, Table, Settings } from "lucide-react";
 import { useGoogleSheets } from "@/hooks/useGoogleSheets";
 import { ImageData } from "@/types/ImageData";
 import { Loader2 } from "lucide-react";
@@ -19,14 +19,12 @@ interface GoogleSheetsExportProps {
 const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
   const { 
     isInitialized, 
-    isSignedIn, 
     isLoading, 
     spreadsheets, 
-    handleSignIn, 
-    handleSignOut, 
     loadSpreadsheets, 
     createSheet, 
-    exportToSheet 
+    exportToSheet,
+    exportToDefaultSpreadsheet
   } = useGoogleSheets();
   
   const {
@@ -39,17 +37,18 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
   const [selectedSheetId, setSelectedSheetId] = useState<string>("");
   const [newSheetName, setNewSheetName] = useState<string>(`بيانات الشحنات ${new Date().toLocaleDateString('ar-EG')}`);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [lastExportSuccess, setLastExportSuccess] = useState(false);
   
   const validImagesCount = images.filter(img => 
     img.status === "completed" && img.code && img.senderName && img.phoneNumber
   ).length;
   
-  // تحديث قائمة جداول البيانات عند تسجيل الدخول
+  // تحديث قائمة جداول البيانات عند التهيئة
   useEffect(() => {
-    if (isSignedIn) {
+    if (isInitialized) {
       loadSpreadsheets();
     }
-  }, [isSignedIn]);
+  }, [isInitialized]);
   
   // تحديث المعرف المحدد عندما يتغير المعرف الافتراضي
   useEffect(() => {
@@ -57,13 +56,6 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
       setSelectedSheetId(defaultSheetId);
     }
   }, [defaultSheetId]);
-  
-  useEffect(() => {
-    // محاولة تسجيل الدخول تلقائيًا عند تحميل المكون إذا كانت عملية التهيئة قد اكتملت
-    if (isInitialized && !isSignedIn && !isLoading) {
-      handleSignIn();
-    }
-  }, [isInitialized]);
   
   const handleCreateSheet = async () => {
     if (!newSheetName.trim()) {
@@ -82,7 +74,19 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
       return;
     }
     
-    await exportToSheet(selectedSheetId, images);
+    setLastExportSuccess(false);
+    const success = await exportToSheet(selectedSheetId, images);
+    if (success) {
+      setLastExportSuccess(true);
+    }
+  };
+  
+  const handleQuickExport = async () => {
+    setLastExportSuccess(false);
+    const success = await exportToDefaultSpreadsheet(images);
+    if (success) {
+      setLastExportSuccess(true);
+    }
   };
   
   // تعيين الجدول المختار كجدول افتراضي للتصدير التلقائي
@@ -95,31 +99,12 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
   return (
     <Card className="bg-secondary/30 dark:bg-secondary/20 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <FileSpreadsheet className="h-5 w-5 ml-2 text-brand-green" />
-            <CardTitle className="text-lg text-brand-brown dark:text-brand-beige">تصدير إلى Google Sheets</CardTitle>
-          </div>
-          
-          {isInitialized && (
-            <Button 
-              variant={isSignedIn ? "outline" : "default"} 
-              size="sm" 
-              onClick={isSignedIn ? handleSignOut : handleSignIn}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin ml-2" />
-              ) : isSignedIn ? (
-                <><LogOut className="h-4 w-4 ml-2" /> تسجيل الخروج</>
-              ) : (
-                <><LogIn className="h-4 w-4 ml-2" /> تسجيل الدخول إلى Google</>
-              )}
-            </Button>
-          )}
+        <div className="flex items-center">
+          <FileSpreadsheet className="h-5 w-5 ml-2 text-brand-green" />
+          <CardTitle className="text-lg text-brand-brown dark:text-brand-beige">تصدير إلى Google Sheets</CardTitle>
         </div>
         <CardDescription>
-          قم بتصدير البيانات المستخرجة مباشرة إلى Google Sheets
+          تصدير البيانات المستخرجة مباشرة إلى جداول بيانات Google المخصصة
         </CardDescription>
       </CardHeader>
       
@@ -128,7 +113,7 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
           <div className="flex justify-center items-center py-6">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : isSignedIn ? (
+        ) : (
           <div className="space-y-4">
             {/* إعدادات التصدير التلقائي */}
             <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800/60 rounded-md p-3 mb-2">
@@ -150,7 +135,6 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
                 <Switch 
                   checked={autoExportEnabled}
                   onCheckedChange={toggleAutoExport}
-                  disabled={!isSignedIn}
                 />
               </div>
               
@@ -238,7 +222,7 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
                     <DialogHeader>
                       <DialogTitle>إنشاء جدول بيانات جديد</DialogTitle>
                       <DialogDescription>
-                        أدخل اسمًا لجدول البيانات الجديد الذي سيتم إنشاؤه في حساب Google الخاص بك
+                        أدخل اسمًا لجدول البيانات الجديد الذي سيتم إنشاؤه
                       </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
@@ -283,41 +267,42 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
               </div>
             </div>
           </div>
-        ) : (
-          <div className="text-center py-6">
-            <FileSpreadsheet className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-            <h3 className="text-lg font-medium text-foreground mb-1">تسجيل الدخول لبدء التصدير</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              قم بتسجيل الدخول إلى حساب Google الخاص بك للوصول إلى جداول البيانات
-            </p>
-            <Button onClick={handleSignIn} disabled={isLoading}>
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin ml-2" />
-              ) : (
-                <LogIn className="h-4 w-4 ml-2" />
-              )}
-              تسجيل الدخول إلى Google
-            </Button>
-          </div>
         )}
       </CardContent>
       
-      {isSignedIn && (
-        <CardFooter className="pt-0">
-          <Button 
-            onClick={handleExport} 
-            disabled={!selectedSheetId || isLoading || validImagesCount === 0}
-            className="w-full bg-brand-green hover:bg-brand-green/90"
+      <CardFooter className="pt-0 flex gap-2">
+        <Button 
+          onClick={handleExport} 
+          disabled={!selectedSheetId || isLoading || validImagesCount === 0}
+          className={`flex-1 ${lastExportSuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-brand-green hover:bg-brand-green/90'}`}
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin ml-2" />
+          ) : lastExportSuccess ? (
+            <CheckCircle className="h-4 w-4 ml-2" />
+          ) : (
+            <Table className="h-4 w-4 ml-2" />
+          )}
+          تصدير إلى الجدول المحدد
+        </Button>
+        
+        {defaultSheetId && (
+          <Button
+            onClick={handleQuickExport}
+            disabled={isLoading || validImagesCount === 0}
+            variant="outline"
+            className="flex-1"
+            title="تصدير سريع إلى الجدول الافتراضي"
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin ml-2" />
             ) : (
               <Send className="h-4 w-4 ml-2" />
             )}
-            تصدير البيانات ({validImagesCount})
+            تصدير سريع
           </Button>
-        </CardFooter>
-      )}
+        )}
+      </CardFooter>
     </Card>
   );
 };

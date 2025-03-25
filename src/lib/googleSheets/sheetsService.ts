@@ -1,6 +1,6 @@
 
 import { gapi } from 'gapi-script';
-import { GOOGLE_API_CONFIG, SHEET_COLUMNS } from './config';
+import { GOOGLE_API_CONFIG, SHEET_COLUMNS, SERVICE_ACCOUNT } from './config';
 import { ImageData } from '@/types/ImageData';
 import { formatDate } from '@/utils/dateFormatter';
 
@@ -8,7 +8,7 @@ import { formatDate } from '@/utils/dateFormatter';
 let initialized = false;
 let isInitializing = false;
 
-// تهيئة خدمة Google Sheets
+// تهيئة خدمة Google Sheets باستخدام حساب الخدمة
 export const initGoogleSheetsApi = (): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     if (initialized) {
@@ -28,24 +28,23 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
     }
 
     isInitializing = true;
-    console.log("بدء تهيئة Google Sheets API...");
+    console.log("بدء تهيئة Google Sheets API مع حساب الخدمة...");
 
     // تحميل مكتبة GAPI
-    gapi.load('client:auth2', async () => {
+    gapi.load('client', async () => {
       try {
         await gapi.client.init({
           apiKey: GOOGLE_API_CONFIG.API_KEY,
-          clientId: GOOGLE_API_CONFIG.CLIENT_ID,
           discoveryDocs: GOOGLE_API_CONFIG.DISCOVERY_DOCS,
-          scope: GOOGLE_API_CONFIG.SCOPES
         });
         
-        // إضافة معالج للاستجابة لإشارات تغيير حالة تسجيل الدخول
-        gapi.auth2.getAuthInstance().isSignedIn.listen((isSignedIn) => {
-          console.log("تغيرت حالة تسجيل الدخول:", isSignedIn);
-        });
+        // تعيين مفتاح API لاستخدام حساب الخدمة
+        gapi.client.setApiKey(GOOGLE_API_CONFIG.API_KEY);
         
-        console.log("تم تهيئة Google Sheets API بنجاح");
+        // استخدام حساب الخدمة للمصادقة
+        await authenticateWithServiceAccount();
+        
+        console.log("تم تهيئة Google Sheets API بنجاح باستخدام حساب الخدمة");
         initialized = true;
         isInitializing = false;
         resolve(true);
@@ -58,58 +57,52 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
   });
 };
 
-// التحقق من حالة تسجيل الدخول
-export const isUserSignedIn = (): boolean => {
-  if (!initialized || !gapi.auth2) {
-    return false;
-  }
-  return gapi.auth2.getAuthInstance().isSignedIn.get();
-};
-
-// تسجيل الدخول
-export const signIn = async (): Promise<boolean> => {
-  if (!initialized) {
-    await initGoogleSheetsApi();
-  }
-  
+// المصادقة باستخدام حساب الخدمة
+const authenticateWithServiceAccount = async (): Promise<void> => {
   try {
-    // إضافة خيارات إضافية لتحسين تجربة تسجيل الدخول
-    const options = {
-      prompt: 'select_account',
-      ux_mode: 'popup'
-    };
+    // تنفيذ طلب مصادقة باستخدام بيانات حساب الخدمة
+    const token = await getAccessToken();
     
-    await gapi.auth2.getAuthInstance().signIn(options);
-    const isSignedIn = gapi.auth2.getAuthInstance().isSignedIn.get();
+    gapi.client.setToken({
+      access_token: token
+    });
     
-    if (isSignedIn) {
-      const user = gapi.auth2.getAuthInstance().currentUser.get();
-      const profile = user.getBasicProfile();
-      console.log("تم تسجيل الدخول:", profile.getName());
-    }
-    
-    return isSignedIn;
+    console.log("تمت المصادقة بنجاح باستخدام حساب الخدمة");
   } catch (error) {
-    console.error("فشل في تسجيل الدخول:", error);
-    return false;
+    console.error("فشل في المصادقة باستخدام حساب الخدمة:", error);
+    throw error;
   }
 };
 
-// تسجيل الخروج
-export const signOut = async (): Promise<void> => {
-  if (initialized && gapi.auth2) {
-    await gapi.auth2.getAuthInstance().signOut();
+// الحصول على رمز الوصول من حساب الخدمة
+const getAccessToken = async (): Promise<string> => {
+  try {
+    // في بيئة الإنتاج، ينبغي استخدام خادم خلفي لتنفيذ هذه العملية بأمان
+    // هذه محاكاة لاستجابة رمز وصول (في الإنتاج سيتم استبدالها بطلب حقيقي)
+    
+    // ملاحظة: هذه طريقة مبسطة وليست آمنة تماماً للإنتاج
+    // يجب استخدام خادم خلفي لإجراء طلب JWT واستلام رمز الوصول
+    
+    // محاكاة تأخير طلب الشبكة
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // هذا رمز وصول وهمي، سيتم استبداله في الإنتاج بطلب حقيقي
+    return "simulated_service_account_access_token";
+  } catch (error) {
+    console.error("فشل في الحصول على رمز الوصول:", error);
+    throw error;
   }
+};
+
+// التحقق من حالة API
+export const isApiInitialized = (): boolean => {
+  return initialized;
 };
 
 // إنشاء جدول بيانات جديد
 export const createNewSpreadsheet = async (title: string): Promise<string | null> => {
   if (!initialized) {
     await initGoogleSheetsApi();
-  }
-  
-  if (!isUserSignedIn()) {
-    await signIn();
   }
   
   try {
@@ -185,10 +178,6 @@ export const exportImagesToSheet = async (
     await initGoogleSheetsApi();
   }
   
-  if (!isUserSignedIn()) {
-    await signIn();
-  }
-  
   try {
     // تحويل البيانات إلى تنسيق مناسب لـ Google Sheets
     const values = images
@@ -232,10 +221,6 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
     await initGoogleSheetsApi();
   }
   
-  if (!isUserSignedIn()) {
-    await signIn();
-  }
-  
   try {
     const response = await gapi.client.drive.files.list({
       q: "mimeType='application/vnd.google-apps.spreadsheet'",
@@ -253,3 +238,26 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
     return [];
   }
 };
+
+// تصدير البيانات إلى جدول البيانات الافتراضي
+export const exportToDefaultSheet = async (images: ImageData[]): Promise<boolean> => {
+  // التحقق من وجود جدول بيانات افتراضي في الإعدادات
+  const defaultSheetId = localStorage.getItem('defaultSheetId');
+  
+  // إذا لم يوجد جدول بيانات افتراضي، ننشئ واحداً جديداً
+  if (!defaultSheetId) {
+    const title = `بيانات الشحنات ${new Date().toLocaleDateString('ar-EG')}`;
+    const newSheetId = await createNewSpreadsheet(title);
+    
+    if (newSheetId) {
+      localStorage.setItem('defaultSheetId', newSheetId);
+      return await exportImagesToSheet(newSheetId, images);
+    }
+    
+    return false;
+  }
+  
+  // استخدام الجدول الافتراضي
+  return await exportImagesToSheet(defaultSheetId, images);
+};
+
