@@ -1,7 +1,11 @@
+
 import { gapi } from 'gapi-script';
 import { GOOGLE_API_CONFIG, SHEET_COLUMNS, SERVICE_ACCOUNT, ERROR_MESSAGES } from './config';
 import { ImageData } from '@/types/ImageData';
 import { formatDate } from '@/utils/dateFormatter';
+
+// تكاملات إضافية للتعامل مع حساب الخدمة
+import { GoogleAuth } from 'google-auth-library';
 
 // حالة تهيئة API
 let initialized = false;
@@ -9,6 +13,9 @@ let isInitializing = false;
 let lastError = null;
 let apiLoadRetries = 0;
 const MAX_RETRIES = 3;
+
+// عميل المصادقة باستخدام حساب الخدمة
+let serviceAuthClient = null;
 
 // الحصول على آخر خطأ
 export const getLastError = () => {
@@ -26,6 +33,7 @@ export const resetInitialization = () => {
   isInitializing = false;
   lastError = null;
   apiLoadRetries = 0;
+  serviceAuthClient = null;
 };
 
 // دالة للتعامل مع أخطاء الاتصال وتصنيفها
@@ -49,6 +57,8 @@ const handleApiError = (error: any): Error => {
       errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
     } else if (error.message.includes('authentication') || error.message.includes('auth')) {
       errorMessage = ERROR_MESSAGES.AUTH_ERROR;
+    } else if (error.message.includes('service account')) {
+      errorMessage = ERROR_MESSAGES.SERVICE_ACCOUNT_ERROR;
     } else {
       errorMessage = `${error.message}`;
     }
@@ -57,7 +67,7 @@ const handleApiError = (error: any): Error => {
   return new Error(errorMessage);
 };
 
-// تهيئة خدمة Google Sheets باستخدام OAuth2
+// تهيئة خدمة Google Sheets API مع دعم حساب الخدمة
 export const initGoogleSheetsApi = (): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     if (initialized) {
@@ -78,79 +88,125 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
       }, 100);
       return;
     }
-
+    
     isInitializing = true;
-    console.log("بدء تهيئة Google Sheets API باستخدام OAuth2...");
+    console.log("بدء تهيئة Google Sheets API...");
     lastError = null;
-
-    try {
-      // تهيئة API الفعلي
-      const loadGapiClient = () => {
-        if (typeof gapi === 'undefined') {
-          if (apiLoadRetries < MAX_RETRIES) {
-            apiLoadRetries++;
-            console.log(`محاولة تحميل GAPI (المحاولة ${apiLoadRetries}/${MAX_RETRIES})...`);
-            setTimeout(loadGapiClient, 1000);
-            return;
-          } else {
-            const error = new Error("تعذر تحميل مكتبة Google API. يرجى التحقق من اتصالك بالإنترنت.");
-            console.error("فشل في تحميل مكتبة Google API:", error);
-            isInitializing = false;
-            lastError = error;
-            reject(error);
-            return;
-          }
-        }
-
-        gapi.load('client:auth2', async () => {
-          try {
-            // تهيئة العميل باستخدام OAuth2
-            await gapi.client.init({
-              apiKey: GOOGLE_API_CONFIG.API_KEY,
-              clientId: GOOGLE_API_CONFIG.CLIENT_ID,
-              discoveryDocs: GOOGLE_API_CONFIG.DISCOVERY_DOCS,
-              scope: GOOGLE_API_CONFIG.SCOPES
-            });
-            
-            // التحقق من حالة تسجيل الدخول والطلب من المستخدم تسجيل الدخول إذا لم يكن مسجلاً
-            if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
-              try {
-                // هذا سيفتح نافذة منبثقة لتسجيل دخول المستخدم
-                await gapi.auth2.getAuthInstance().signIn();
-                console.log("تم تسجيل الدخول بنجاح باستخدام OAuth2");
-              } catch (signInError) {
-                console.error("فشل في تسجيل الدخول:", signInError);
-                isInitializing = false;
-                lastError = handleApiError(signInError);
-                reject(lastError);
-                return;
-              }
-            }
-            
-            console.log("تمت تهيئة Google Sheets API بنجاح باستخدام OAuth2");
-            initialized = true;
-            isInitializing = false;
-            lastError = null;
-            resolve(true);
-          } catch (error: any) {
-            console.error("فشل في تهيئة Google Sheets API:", error);
-            isInitializing = false;
-            lastError = handleApiError(error);
-            initialized = false;
-            reject(lastError);
-          }
+    
+    if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT) {
+      console.log("استخدام حساب الخدمة للمصادقة...");
+      initializeWithServiceAccount()
+        .then(() => {
+          console.log("تمت تهيئة Google Sheets API بنجاح باستخدام حساب الخدمة");
+          initialized = true;
+          isInitializing = false;
+          lastError = null;
+          resolve(true);
+        })
+        .catch((error) => {
+          console.error("فشل في تهيئة Google Sheets API باستخدام حساب الخدمة:", error);
+          isInitializing = false;
+          lastError = handleApiError(error);
+          initialized = false;
+          reject(lastError);
         });
-      };
-      
-      loadGapiClient();
-    } catch (error: any) {
-      console.error("فشل في تحميل Google Sheets API:", error);
+    } else if (GOOGLE_API_CONFIG.USE_OAUTH) {
+      console.log("استخدام OAuth للمصادقة...");
+      try {
+        // تهيئة API الفعلي باستخدام OAuth
+        const loadGapiClient = () => {
+          if (typeof gapi === 'undefined') {
+            if (apiLoadRetries < MAX_RETRIES) {
+              apiLoadRetries++;
+              console.log(`محاولة تحميل GAPI (المحاولة ${apiLoadRetries}/${MAX_RETRIES})...`);
+              setTimeout(loadGapiClient, 1000);
+              return;
+            } else {
+              const error = new Error("تعذر تحميل مكتبة Google API. يرجى التحقق من اتصالك بالإنترنت.");
+              console.error("فشل في تحميل مكتبة Google API:", error);
+              isInitializing = false;
+              lastError = error;
+              reject(error);
+              return;
+            }
+          }
+
+          gapi.load('client:auth2', async () => {
+            try {
+              await gapi.client.init({
+                apiKey: GOOGLE_API_CONFIG.API_KEY,
+                clientId: GOOGLE_API_CONFIG.CLIENT_ID,
+                discoveryDocs: GOOGLE_API_CONFIG.DISCOVERY_DOCS,
+                scope: GOOGLE_API_CONFIG.SCOPES
+              });
+              
+              // التحقق من حالة تسجيل الدخول والطلب من المستخدم تسجيل الدخول إذا لم يكن مسجلاً
+              if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
+                try {
+                  await gapi.auth2.getAuthInstance().signIn();
+                  console.log("تم تسجيل الدخول بنجاح باستخدام OAuth2");
+                } catch (signInError) {
+                  console.error("فشل في تسجيل الدخول:", signInError);
+                  isInitializing = false;
+                  lastError = handleApiError(signInError);
+                  reject(lastError);
+                  return;
+                }
+              }
+              
+              console.log("تمت تهيئة Google Sheets API بنجاح باستخدام OAuth2");
+              initialized = true;
+              isInitializing = false;
+              lastError = null;
+              resolve(true);
+            } catch (error: any) {
+              console.error("فشل في تهيئة Google Sheets API:", error);
+              isInitializing = false;
+              lastError = handleApiError(error);
+              initialized = false;
+              reject(lastError);
+            }
+          });
+        };
+        
+        loadGapiClient();
+      } catch (error: any) {
+        console.error("فشل في تحميل Google Sheets API:", error);
+        isInitializing = false;
+        lastError = handleApiError(error);
+        initialized = false;
+        reject(lastError);
+      }
+    } else {
+      // استخدام مفتاح API فقط (محدود للغاية)
+      const error = new Error("يجب تفعيل إما حساب الخدمة أو OAuth للمصادقة");
       isInitializing = false;
-      lastError = handleApiError(error);
+      lastError = error;
       initialized = false;
-      reject(lastError);
+      reject(error);
     }
   });
+};
+
+// تهيئة Google Sheets API باستخدام حساب الخدمة
+const initializeWithServiceAccount = async (): Promise<void> => {
+  try {
+    console.log("جاري تهيئة المصادقة باستخدام حساب الخدمة...");
+    
+    // إنشاء عميل المصادقة باستخدام بيانات حساب الخدمة
+    const auth = new GoogleAuth({
+      credentials: SERVICE_ACCOUNT,
+      scopes: GOOGLE_API_CONFIG.SCOPES.split(' ')
+    });
+    
+    // حفظ عميل المصادقة لاستخدامه لاحقاً
+    serviceAuthClient = await auth.getClient();
+    
+    console.log("تم إنشاء عميل المصادقة باستخدام حساب الخدمة بنجاح");
+  } catch (error) {
+    console.error("فشل في إنشاء عميل المصادقة باستخدام حساب الخدمة:", error);
+    throw new Error(`فشل في المصادقة باستخدام حساب الخدمة: ${error.message || 'خطأ غير معروف'}`);
+  }
 };
 
 // إذا كان API مهيأ
@@ -158,8 +214,13 @@ export const isApiInitialized = (): boolean => {
   return initialized;
 };
 
-// تسجيل الدخول يدوياً
+// تسجيل الدخول يدوياً (فقط في حالة OAuth)
 export const signIn = async (): Promise<boolean> => {
+  if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT) {
+    // في حالة استخدام حساب الخدمة، لا يوجد تسجيل دخول يدوي
+    return true;
+  }
+  
   try {
     if (!gapi.auth2) {
       await initGoogleSheetsApi();
@@ -173,8 +234,13 @@ export const signIn = async (): Promise<boolean> => {
   }
 };
 
-// تسجيل الخروج
+// تسجيل الخروج (فقط في حالة OAuth)
 export const signOut = async (): Promise<boolean> => {
+  if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT) {
+    // في حالة استخدام حساب الخدمة، لا يوجد تسجيل خروج
+    return true;
+  }
+  
   try {
     if (!gapi.auth2) {
       return false;
@@ -190,6 +256,11 @@ export const signOut = async (): Promise<boolean> => {
 
 // التحقق مما إذا كان المستخدم مسجل الدخول
 export const isUserSignedIn = (): boolean => {
+  // في حالة استخدام حساب الخدمة، المستخدم دائماً "مسجل الدخول"
+  if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT && serviceAuthClient) {
+    return true;
+  }
+  
   try {
     return gapi.auth2 && gapi.auth2.getAuthInstance().isSignedIn.get();
   } catch (error) {
@@ -204,7 +275,7 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
     resetLastError();
     
     // التأكد من تهيئة API قبل الاستمرار
-    if (!initialized || !isUserSignedIn()) {
+    if (!initialized) {
       try {
         await initGoogleSheetsApi();
       } catch (error) {
@@ -214,14 +285,18 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
       }
     }
     
-    // الاتصال الفعلي بـ API لإنشاء جدول بيانات جديد
-    const response = await gapi.client.sheets.spreadsheets.create({
-      properties: {
-        title: title
-      }
-    });
+    // إنشاء جدول البيانات باستخدام الطريقة المناسبة
+    let spreadsheetId;
     
-    const spreadsheetId = response.result.spreadsheetId;
+    if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT && serviceAuthClient) {
+      spreadsheetId = await createSpreadsheetWithServiceAccount(title);
+    } else {
+      spreadsheetId = await createSpreadsheetWithOAuth(title);
+    }
+    
+    if (!spreadsheetId) {
+      throw new Error("فشل في إنشاء جدول البيانات - لم يتم إرجاع معرف");
+    }
     
     // إضافة عنوان الأعمدة كصف أول
     await addHeaderRow(spreadsheetId);
@@ -234,7 +309,7 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
     lastError = handleApiError(error);
     
     // التحقق مما إذا كانت المشكلة في التهيئة وإعادة المحاولة
-    if (!initialized || !isUserSignedIn()) {
+    if (!initialized) {
       resetInitialization();
       try {
         await initGoogleSheetsApi();
@@ -251,19 +326,71 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
   }
 };
 
+// إنشاء جدول بيانات باستخدام حساب الخدمة
+const createSpreadsheetWithServiceAccount = async (title: string): Promise<string> => {
+  try {
+    // استخدام وحدة googleapis عبر API fetch بدلاً من gapi
+    const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${await serviceAuthClient.getAccessToken()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        properties: {
+          title: title
+        }
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API error: ${JSON.stringify(errorData)}`);
+    }
+    
+    const data = await response.json();
+    return data.spreadsheetId;
+  } catch (error) {
+    console.error("فشل في إنشاء جدول بيانات باستخدام حساب الخدمة:", error);
+    throw error;
+  }
+};
+
+// إنشاء جدول بيانات باستخدام OAuth
+const createSpreadsheetWithOAuth = async (title: string): Promise<string> => {
+  try {
+    const response = await gapi.client.sheets.spreadsheets.create({
+      properties: {
+        title: title
+      }
+    });
+    
+    return response.result.spreadsheetId;
+  } catch (error) {
+    console.error("فشل في إنشاء جدول بيانات باستخدام OAuth:", error);
+    throw error;
+  }
+};
+
 // إضافة صف العنوان (الأعمدة)
 const addHeaderRow = async (spreadsheetId: string): Promise<boolean> => {
   try {
     console.log("إضافة صف العنوان...");
     
-    await gapi.client.sheets.spreadsheets.values.update({
-      spreadsheetId: spreadsheetId,
-      range: 'Sheet1!A1:G1',
-      valueInputOption: 'RAW',
-      resource: {
-        values: [SHEET_COLUMNS]
-      }
-    });
+    if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT && serviceAuthClient) {
+      // استخدام حساب الخدمة
+      await addHeaderRowWithServiceAccount(spreadsheetId);
+    } else {
+      // استخدام OAuth
+      await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: spreadsheetId,
+        range: 'Sheet1!A1:G1',
+        valueInputOption: 'RAW',
+        resource: {
+          values: [SHEET_COLUMNS]
+        }
+      });
+    }
     
     return true;
   } catch (error: any) {
@@ -278,6 +405,30 @@ const addHeaderRow = async (spreadsheetId: string): Promise<boolean> => {
     }
     
     throw lastError;
+  }
+};
+
+// إضافة صف العنوان باستخدام حساب الخدمة
+const addHeaderRowWithServiceAccount = async (spreadsheetId: string): Promise<void> => {
+  try {
+    const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A1:G1?valueInputOption=RAW`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${await serviceAuthClient.getAccessToken()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        values: [SHEET_COLUMNS]
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API error: ${JSON.stringify(errorData)}`);
+    }
+  } catch (error) {
+    console.error("فشل في إضافة صف العنوان باستخدام حساب الخدمة:", error);
+    throw error;
   }
 };
 
@@ -320,16 +471,22 @@ export const exportImagesToSheet = async (
       return false;
     }
     
-    // إرسال البيانات إلى جدول البيانات
-    await gapi.client.sheets.spreadsheets.values.append({
-      spreadsheetId: spreadsheetId,
-      range: 'Sheet1!A2',
-      valueInputOption: 'RAW',
-      insertDataOption: 'INSERT_ROWS',
-      resource: {
-        values: values
-      }
-    });
+    // إرسال البيانات إلى جدول البيانات باستخدام الطريقة المناسبة
+    if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT && serviceAuthClient) {
+      // استخدام حساب الخدمة
+      await exportDataWithServiceAccount(spreadsheetId, values);
+    } else {
+      // استخدام OAuth
+      await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: spreadsheetId,
+        range: 'Sheet1!A2',
+        valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
+        resource: {
+          values: values
+        }
+      });
+    }
     
     console.log(`تم تصدير ${values.length} سجل بنجاح إلى جدول البيانات`);
     
@@ -367,6 +524,30 @@ export const exportImagesToSheet = async (
   }
 };
 
+// تصدير البيانات باستخدام حساب الخدمة
+const exportDataWithServiceAccount = async (spreadsheetId: string, values: any[][]): Promise<void> => {
+  try {
+    const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A2:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${await serviceAuthClient.getAccessToken()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        values: values
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API error: ${JSON.stringify(errorData)}`);
+    }
+  } catch (error) {
+    console.error("فشل في تصدير البيانات باستخدام حساب الخدمة:", error);
+    throw error;
+  }
+};
+
 // الحصول على قائمة جداول البيانات المتاحة
 export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: string}>> => {
   try {
@@ -384,15 +565,23 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
       }
     }
     
-    const response = await gapi.client.drive.files.list({
-      q: "mimeType='application/vnd.google-apps.spreadsheet'",
-      fields: "files(id, name)"
-    });
+    let sheets = [];
     
-    const sheets = response.result.files.map(file => ({
-      id: file.id,
-      name: file.name
-    }));
+    if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT && serviceAuthClient) {
+      // استخدام حساب الخدمة
+      sheets = await getSpreadshetsListWithServiceAccount();
+    } else {
+      // استخدام OAuth
+      const response = await gapi.client.drive.files.list({
+        q: "mimeType='application/vnd.google-apps.spreadsheet'",
+        fields: "files(id, name)"
+      });
+      
+      sheets = response.result.files.map(file => ({
+        id: file.id,
+        name: file.name
+      }));
+    }
     
     console.log(`تم الحصول على ${sheets.length} جدول بيانات`);
     
@@ -427,6 +616,32 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
     }
     
     throw lastError;
+  }
+};
+
+// الحصول على قائمة جداول البيانات باستخدام حساب الخدمة
+const getSpreadshetsListWithServiceAccount = async (): Promise<Array<{id: string, name: string}>> => {
+  try {
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=mimeType='application/vnd.google-apps.spreadsheet'&fields=files(id,name)`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${await serviceAuthClient.getAccessToken()}`,
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API error: ${JSON.stringify(errorData)}`);
+    }
+    
+    const data = await response.json();
+    return data.files.map(file => ({
+      id: file.id,
+      name: file.name
+    }));
+  } catch (error) {
+    console.error("فشل في الحصول على قائمة جداول البيانات باستخدام حساب الخدمة:", error);
+    throw error;
   }
 };
 
