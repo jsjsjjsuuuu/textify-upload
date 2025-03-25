@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Upload } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -9,29 +8,28 @@ import { useDataFormatting } from '@/hooks/useDataFormatting';
 import { motion } from 'framer-motion';
 import { ImageData } from '@/types/ImageData';
 import DirectExportTools from '@/components/DataExport/DirectExportTools';
-
 const Index = () => {
-  const { 
-    images, 
-    isProcessing, 
-    processingProgress, 
-    isSubmitting, 
+  const {
+    images,
+    isProcessing,
+    processingProgress,
+    isSubmitting,
     useGemini,
     bookmarkletStats,
-    handleFileChange, 
-    handleTextChange, 
-    handleDelete, 
-    handleSubmitToApi 
+    handleFileChange,
+    handleTextChange,
+    handleDelete,
+    handleSubmitToApi
   } = useImageProcessing();
-  
-  const { formatPhoneNumber, formatPrice, formatProvinceName } = useDataFormatting();
-  
+  const {
+    formatPhoneNumber,
+    formatPrice,
+    formatProvinceName
+  } = useDataFormatting();
   const handleImageClick = (image: ImageData) => {
     console.log('صورة تم النقر عليها:', image.id);
   };
-
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
+  return <div className="min-h-screen bg-background flex flex-col">
       <AppHeader />
       
       <div className="container mx-auto p-4 flex-1">
@@ -44,21 +42,15 @@ const Index = () => {
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            <div className="bg-gradient-to-b from-muted/50 to-muted pb-8 pt-6 rounded-lg">
-              <ImageUploader
-                isProcessing={isProcessing}
-                processingProgress={processingProgress}
-                useGemini={useGemini}
-                onFileChange={handleFileChange}
-              />
+            <div className="bg-gradient-to-b from-muted/50 to-muted pb-8 pt-6 rounded-lg px-[6px] py-[19px] my-0 mx-[28px]">
+              <ImageUploader isProcessing={isProcessing} processingProgress={processingProgress} useGemini={useGemini} onFileChange={handleFileChange} />
             </div>
             
-            {images.length === 0 ? (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-10"
-              >
+            {images.length === 0 ? <motion.div initial={{
+            opacity: 0
+          }} animate={{
+            opacity: 1
+          }} className="text-center py-10">
                 <div className="bg-muted-foreground/10 inline-flex items-center justify-center p-6 rounded-full mb-4">
                   <Upload className="h-10 w-10 text-muted-foreground" />
                 </div>
@@ -66,23 +58,10 @@ const Index = () => {
                 <p className="text-muted-foreground max-w-md mx-auto">
                   قم بتحميل صور الإيصالات أو الفواتير وسيتم استخراج البيانات منها تلقائيًا
                 </p>
-              </motion.div>
-            ) : (
-              <ImageList 
-                images={images}
-                isSubmitting={isSubmitting}
-                onImageClick={handleImageClick}
-                onTextChange={handleTextChange}
-                onDelete={handleDelete}
-                onSubmit={(id) => handleSubmitToApi(id, images.find(img => img.id === id)!)}
-                formatDate={useImageProcessing().formatDate}
-              />
-            )}
+              </motion.div> : <ImageList images={images} isSubmitting={isSubmitting} onImageClick={handleImageClick} onTextChange={handleTextChange} onDelete={handleDelete} onSubmit={id => handleSubmitToApi(id, images.find(img => img.id === id)!)} formatDate={useImageProcessing().formatDate} />}
           </div>
           
-          <div className="space-y-6">
-            <DirectExportTools images={images} />
-          </div>
+          
         </div>
       </div>
       
@@ -95,8 +74,6 @@ const Index = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
