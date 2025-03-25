@@ -5,6 +5,7 @@ import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 import ServicePage from './pages/ServicePage';
 import PolicyPage from './pages/PolicyPage';
+import AutomationPage from './pages/AutomationPage';
 
 /**
  * تكوين مسارات التطبيق
@@ -16,6 +17,7 @@ export const AppRoutes = () => {
       <Route path="/" element={<Index />} />
       <Route path="/services" element={<ServicePage />} />
       <Route path="/policy" element={<PolicyPage />} />
+      <Route path="/automation/:imageId" element={<AutomationPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
