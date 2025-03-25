@@ -40,6 +40,11 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
           scope: GOOGLE_API_CONFIG.SCOPES
         });
         
+        // إضافة معالج للاستجابة لإشارات تغيير حالة تسجيل الدخول
+        gapi.auth2.getAuthInstance().isSignedIn.listen((isSignedIn) => {
+          console.log("تغيرت حالة تسجيل الدخول:", isSignedIn);
+        });
+        
         console.log("تم تهيئة Google Sheets API بنجاح");
         initialized = true;
         isInitializing = false;
@@ -68,8 +73,22 @@ export const signIn = async (): Promise<boolean> => {
   }
   
   try {
-    await gapi.auth2.getAuthInstance().signIn();
-    return true;
+    // إضافة خيارات إضافية لتحسين تجربة تسجيل الدخول
+    const options = {
+      prompt: 'select_account',
+      ux_mode: 'popup'
+    };
+    
+    await gapi.auth2.getAuthInstance().signIn(options);
+    const isSignedIn = gapi.auth2.getAuthInstance().isSignedIn.get();
+    
+    if (isSignedIn) {
+      const user = gapi.auth2.getAuthInstance().currentUser.get();
+      const profile = user.getBasicProfile();
+      console.log("تم تسجيل الدخول:", profile.getName());
+    }
+    
+    return isSignedIn;
   } catch (error) {
     console.error("فشل في تسجيل الدخول:", error);
     return false;

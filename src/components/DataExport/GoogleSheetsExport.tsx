@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,6 +57,13 @@ const GoogleSheetsExport: React.FC<GoogleSheetsExportProps> = ({ images }) => {
       setSelectedSheetId(defaultSheetId);
     }
   }, [defaultSheetId]);
+  
+  useEffect(() => {
+    // محاولة تسجيل الدخول تلقائيًا عند تحميل المكون إذا كانت عملية التهيئة قد اكتملت
+    if (isInitialized && !isSignedIn && !isLoading) {
+      handleSignIn();
+    }
+  }, [isInitialized]);
   
   const handleCreateSheet = async () => {
     if (!newSheetName.trim()) {
