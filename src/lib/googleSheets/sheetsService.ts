@@ -1,6 +1,5 @@
-
 import { gapi } from 'gapi-script';
-import { GOOGLE_API_CONFIG, SHEET_COLUMNS, SERVICE_ACCOUNT } from './config';
+import { GOOGLE_API_CONFIG, SHEET_COLUMNS, SERVICE_ACCOUNT, ERROR_MESSAGES } from './config';
 import { ImageData } from '@/types/ImageData';
 import { formatDate } from '@/utils/dateFormatter';
 
@@ -29,7 +28,36 @@ export const resetInitialization = () => {
   apiLoadRetries = 0;
 };
 
-// تهيئة خدمة Google Sheets باستخدام حساب الخدمة
+// دالة للتعامل مع أخطاء الاتصال وتصنيفها
+const handleApiError = (error: any): Error => {
+  console.error("خطأ في واجهة برمجة التطبيقات:", error);
+  
+  // إعدادات افتراضية للخطأ
+  let errorMessage = ERROR_MESSAGES.GENERAL_ERROR;
+  
+  // فحص نوع الخطأ
+  if (typeof error === 'string' && error.includes('API keys are not supported')) {
+    errorMessage = ERROR_MESSAGES.API_KEY_ERROR;
+  } else if (error?.result?.error?.message) {
+    if (error.result.error.message.includes('authentication')) {
+      errorMessage = ERROR_MESSAGES.AUTH_ERROR;
+    } else {
+      errorMessage = `${error.result.error.message}`;
+    }
+  } else if (error?.message) {
+    if (error.message.includes('network') || error.message.includes('connection')) {
+      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+    } else if (error.message.includes('authentication') || error.message.includes('auth')) {
+      errorMessage = ERROR_MESSAGES.AUTH_ERROR;
+    } else {
+      errorMessage = `${error.message}`;
+    }
+  }
+  
+  return new Error(errorMessage);
+};
+
+// تهيئة خدمة Google Sheets باستخدام OAuth2
 export const initGoogleSheetsApi = (): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     if (initialized) {
@@ -52,7 +80,7 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
     }
 
     isInitializing = true;
-    console.log("بدء تهيئة Google Sheets API...");
+    console.log("بدء تهيئة Google Sheets API باستخدام OAuth2...");
     lastError = null;
 
     try {
@@ -76,6 +104,7 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
 
         gapi.load('client:auth2', async () => {
           try {
+            // تهيئة العميل باستخدام OAuth2
             await gapi.client.init({
               apiKey: GOOGLE_API_CONFIG.API_KEY,
               clientId: GOOGLE_API_CONFIG.CLIENT_ID,
@@ -83,7 +112,22 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
               scope: GOOGLE_API_CONFIG.SCOPES
             });
             
-            console.log("تمت تهيئة Google Sheets API بنجاح");
+            // التحقق من حالة تسجيل الدخول والطلب من المستخدم تسجيل الدخول إذا لم يكن مسجلاً
+            if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
+              try {
+                // هذا سيفتح نافذة منبثقة لتسجيل دخول المستخدم
+                await gapi.auth2.getAuthInstance().signIn();
+                console.log("تم تسجيل الدخول بنجاح باستخدام OAuth2");
+              } catch (signInError) {
+                console.error("فشل في تسجيل الدخول:", signInError);
+                isInitializing = false;
+                lastError = handleApiError(signInError);
+                reject(lastError);
+                return;
+              }
+            }
+            
+            console.log("تمت تهيئة Google Sheets API بنجاح باستخدام OAuth2");
             initialized = true;
             isInitializing = false;
             lastError = null;
@@ -91,18 +135,9 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
           } catch (error: any) {
             console.error("فشل في تهيئة Google Sheets API:", error);
             isInitializing = false;
-            lastError = error;
+            lastError = handleApiError(error);
             initialized = false;
-            
-            if (typeof error === 'string') {
-              reject(new Error(error));
-            } else if (error?.message) {
-              reject(new Error(`${error.message}`));
-            } else if (error?.error) {
-              reject(new Error(`${error.error}`));
-            } else {
-              reject(new Error("حدث خطأ غير معروف أثناء تهيئة Google Sheets API"));
-            }
+            reject(lastError);
           }
         });
       };
@@ -111,16 +146,9 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
     } catch (error: any) {
       console.error("فشل في تحميل Google Sheets API:", error);
       isInitializing = false;
-      lastError = error;
+      lastError = handleApiError(error);
       initialized = false;
-      
-      if (typeof error === 'string') {
-        reject(new Error(error));
-      } else if (error?.message) {
-        reject(new Error(`${error.message}`));
-      } else {
-        reject(new Error("حدث خطأ غير معروف أثناء تحميل Google Sheets API"));
-      }
+      reject(lastError);
     }
   });
 };
@@ -130,6 +158,45 @@ export const isApiInitialized = (): boolean => {
   return initialized;
 };
 
+// تسجيل الدخول يدوياً
+export const signIn = async (): Promise<boolean> => {
+  try {
+    if (!gapi.auth2) {
+      await initGoogleSheetsApi();
+    }
+    
+    await gapi.auth2.getAuthInstance().signIn();
+    return true;
+  } catch (error) {
+    lastError = handleApiError(error);
+    throw lastError;
+  }
+};
+
+// تسجيل الخروج
+export const signOut = async (): Promise<boolean> => {
+  try {
+    if (!gapi.auth2) {
+      return false;
+    }
+    
+    await gapi.auth2.getAuthInstance().signOut();
+    return true;
+  } catch (error) {
+    lastError = handleApiError(error);
+    throw lastError;
+  }
+};
+
+// التحقق مما إذا كان المستخدم مسجل الدخول
+export const isUserSignedIn = (): boolean => {
+  try {
+    return gapi.auth2 && gapi.auth2.getAuthInstance().isSignedIn.get();
+  } catch (error) {
+    return false;
+  }
+};
+
 // إنشاء جدول بيانات جديد مع إعادة المحاولة
 export const createNewSpreadsheet = async (title: string): Promise<string | null> => {
   try {
@@ -137,13 +204,13 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
     resetLastError();
     
     // التأكد من تهيئة API قبل الاستمرار
-    if (!initialized) {
+    if (!initialized || !isUserSignedIn()) {
       try {
         await initGoogleSheetsApi();
       } catch (error) {
         console.error("فشل في تهيئة API قبل إنشاء جدول بيانات:", error);
-        lastError = error;
-        throw error;
+        lastError = handleApiError(error);
+        throw lastError;
       }
     }
     
@@ -164,17 +231,10 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
     return spreadsheetId;
   } catch (error: any) {
     console.error("فشل في إنشاء جدول بيانات:", error);
-    
-    if (error?.result?.error?.message) {
-      lastError = new Error(`فشل في إنشاء جدول بيانات: ${error.result.error.message}`);
-    } else if (error?.message) {
-      lastError = new Error(`فشل في إنشاء جدول بيانات: ${error.message}`);
-    } else {
-      lastError = new Error("فشل في إنشاء جدول بيانات لسبب غير معروف");
-    }
+    lastError = handleApiError(error);
     
     // التحقق مما إذا كانت المشكلة في التهيئة وإعادة المحاولة
-    if (!initialized) {
+    if (!initialized || !isUserSignedIn()) {
       resetInitialization();
       try {
         await initGoogleSheetsApi();
@@ -182,11 +242,7 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
         return await createNewSpreadsheet(title);
       } catch (retryError) {
         console.error("فشل في إعادة المحاولة:", retryError);
-        if (retryError instanceof Error) {
-          lastError = retryError;
-        } else {
-          lastError = new Error("فشل في إعادة المحاولة لإنشاء جدول بيانات");
-        }
+        lastError = handleApiError(retryError);
         throw lastError;
       }
     }

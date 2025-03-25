@@ -1,14 +1,16 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Loader2, CheckCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { Send, Loader2, CheckCircle, AlertTriangle, RefreshCw, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   isApiInitialized, 
   initGoogleSheetsApi,
   exportToDefaultSheet,
   resetInitialization, 
-  getLastError 
+  getLastError,
+  isUserSignedIn,
+  signIn
 } from "@/lib/googleSheets/sheetsService";
 import { ImageData } from "@/types/ImageData";
 import { 
@@ -38,10 +40,12 @@ interface SheetsExportButtonProps {
 const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const [lastExportSuccess, setLastExportSuccess] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [showConnectionAlert, setShowConnectionAlert] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [errorDetails, setErrorDetails] = useState("");
   const [initAttempts, setInitAttempts] = useState(0);
   const { toast } = useToast();
 
@@ -53,12 +57,15 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
         // محاولة تهيئة API
         await initGoogleSheetsApi();
         setIsInitialized(true);
+        setIsSignedIn(isUserSignedIn());
         setShowConnectionAlert(false);
         console.log("تم تهيئة Google Sheets API بنجاح");
       } catch (error: any) {
         console.error("فشل في تهيئة API الخاص بجداول البيانات:", error);
         setErrorMessage(error?.message || "خطأ غير معروف في الاتصال");
+        setErrorDetails(getErrorDetails(error));
         setIsInitialized(false);
+        setIsSignedIn(false);
         setShowConnectionAlert(true);
       } finally {
         setIsLoading(false);
@@ -73,6 +80,16 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
     img.status === "completed" && img.code && img.senderName && img.phoneNumber
   ).length;
 
+  // استخراج تفاصيل الخطأ
+  const getErrorDetails = (error: any): string => {
+    if (error?.result?.error) {
+      return JSON.stringify(error.result.error, null, 2);
+    } else if (error?.stack) {
+      return error.stack;
+    }
+    return error?.toString() || "لا توجد تفاصيل إضافية";
+  };
+
   // إعادة محاولة الاتصال
   const handleRetryConnection = () => {
     setShowErrorDialog(false);
@@ -85,6 +102,32 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
       title: "إعادة الاتصال",
       description: "جاري محاولة الاتصال بـ Google Sheets مرة أخرى...",
     });
+  };
+
+  // تسجيل الدخول يدويًا
+  const handleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signIn();
+      setIsSignedIn(true);
+      toast({
+        title: "تم تسجيل الدخول",
+        description: "تم تسجيل الدخول بنجاح إلى Google Sheets",
+      });
+    } catch (error: any) {
+      console.error("فشل في تسجيل الدخول:", error);
+      setErrorMessage(error?.message || "فشل في تسجيل الدخول لسبب غير معروف");
+      setErrorDetails(getErrorDetails(error));
+      setShowErrorDialog(true);
+      
+      toast({
+        title: "فشل تسجيل الدخول",
+        description: "فشل في تسجيل الدخول إلى Google Sheets، انقر على الزر لمزيد من التفاصيل",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // معالج التصدير
@@ -114,6 +157,7 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
       } else {
         const error = getLastError() as any;
         setErrorMessage(error?.message || "فشل في تصدير البيانات، يرجى المحاولة مرة أخرى");
+        setErrorDetails(getErrorDetails(error));
         setShowErrorDialog(true);
         
         toast({
@@ -125,6 +169,7 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
     } catch (error: any) {
       console.error("خطأ أثناء التصدير:", error);
       setErrorMessage(error?.message || "حدث خطأ غير متوقع");
+      setErrorDetails(getErrorDetails(error));
       setShowErrorDialog(true);
       
       toast({
@@ -140,40 +185,60 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
   // عرض حالة الزر بناءً على حالة التهيئة والتصدير
   return (
     <>
-      <Button
-        onClick={isInitialized ? handleExport : handleRetryConnection}
-        disabled={isLoading || (isInitialized && validImagesCount === 0)}
-        className={`w-full ${lastExportSuccess ? 'bg-green-600 hover:bg-green-700' : isInitialized ? 'bg-brand-green hover:bg-brand-green/90' : 'bg-red-500 hover:bg-red-600'}`}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin ml-2" />
-            جاري المعالجة...
-          </>
-        ) : !isInitialized ? (
-          <>
-            <AlertTriangle className="h-4 w-4 ml-2" />
-            فشل الاتصال بـ Google Sheets، انقر لإعادة المحاولة
-          </>
-        ) : lastExportSuccess ? (
-          <>
-            <CheckCircle className="h-4 w-4 ml-2" />
-            تم التصدير بنجاح
-          </>
-        ) : (
-          <>
-            <Send className="h-4 w-4 ml-2" />
-            تصدير البيانات إلى Google Sheets {validImagesCount > 0 && `(${validImagesCount})`}
-          </>
-        )}
-      </Button>
+      {!isSignedIn ? (
+        <Button
+          onClick={handleSignIn}
+          disabled={isLoading}
+          className="w-full bg-brand-green hover:bg-brand-green/90"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              جاري تسجيل الدخول...
+            </>
+          ) : (
+            <>
+              <LogIn className="h-4 w-4 ml-2" />
+              تسجيل الدخول إلى Google Sheets
+            </>
+          )}
+        </Button>
+      ) : (
+        <Button
+          onClick={isInitialized ? handleExport : handleRetryConnection}
+          disabled={isLoading || (isInitialized && validImagesCount === 0)}
+          className={`w-full ${lastExportSuccess ? 'bg-green-600 hover:bg-green-700' : isInitialized ? 'bg-brand-green hover:bg-brand-green/90' : 'bg-red-500 hover:bg-red-600'}`}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              جاري المعالجة...
+            </>
+          ) : !isInitialized ? (
+            <>
+              <AlertTriangle className="h-4 w-4 ml-2" />
+              فشل الاتصال بـ Google Sheets، انقر لإعادة المحاولة
+            </>
+          ) : lastExportSuccess ? (
+            <>
+              <CheckCircle className="h-4 w-4 ml-2" />
+              تم التصدير بنجاح
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4 ml-2" />
+              تصدير البيانات إلى Google Sheets {validImagesCount > 0 && `(${validImagesCount})`}
+            </>
+          )}
+        </Button>
+      )}
 
       <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-red-500">فشل في الاتصال بـ Google Sheets</DialogTitle>
+            <DialogTitle className="text-red-500">خطأ في Google Sheets</DialogTitle>
             <DialogDescription>
-              حدث خطأ أثناء محاولة الاتصال بخدمة Google Sheets. يرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى.
+              حدث خطأ أثناء العملية. يرجى الاطلاع على التفاصيل أدناه.
             </DialogDescription>
           </DialogHeader>
           
@@ -182,6 +247,15 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
             <p className="text-sm text-red-700 dark:text-red-400 mt-1 overflow-auto max-h-28">
               {errorMessage || "حدث خطأ غير متوقع أثناء الاتصال بالخدمة"}
             </p>
+            
+            {errorDetails && (
+              <>
+                <p className="text-sm font-semibold text-red-800 dark:text-red-300 mt-3">تفاصيل إضافية:</p>
+                <div className="text-xs text-red-700 dark:text-red-400 mt-1 overflow-auto max-h-28 bg-red-100 dark:bg-red-900/40 p-2 rounded whitespace-pre">
+                  {errorDetails}
+                </div>
+              </>
+            )}
           </div>
           
           <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between mt-4">
@@ -205,9 +279,10 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
       <AlertDialog open={showConnectionAlert} onOpenChange={setShowConnectionAlert}>
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-500">خطأ في الاتصال</AlertDialogTitle>
+            <AlertDialogTitle className="text-red-500">مشكلة في الاتصال بـ Google Sheets</AlertDialogTitle>
             <AlertDialogDescription>
-              فشل في الاتصال بـ Google Sheets. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى
+              <p className="mb-2">فشل في الاتصال بـ Google Sheets. هذا عادة بسبب مشكلة في المصادقة أو الاتصال.</p>
+              <p>يجب عليك تسجيل الدخول إلى حساب Google الخاص بك للوصول إلى Google Sheets. انقر على "تسجيل الدخول" أدناه.</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           
@@ -216,16 +291,30 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
             <p className="text-sm text-red-700 dark:text-red-400 mt-1 overflow-auto max-h-28">
               {errorMessage || "حدث خطأ غير متوقع أثناء الاتصال بالخدمة"}
             </p>
+            
+            {errorDetails && (
+              <>
+                <p className="text-sm font-semibold text-red-800 dark:text-red-300 mt-3">تفاصيل إضافية:</p>
+                <div className="text-xs text-red-700 dark:text-red-400 mt-1 overflow-auto max-h-28 bg-red-100 dark:bg-red-900/40 p-2 rounded whitespace-pre">
+                  {errorDetails}
+                </div>
+              </>
+            )}
           </div>
           
           <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
             <AlertDialogCancel className="mt-0">إغلاق</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleRetryConnection}
+              onClick={handleSignIn}
               className="bg-brand-green hover:bg-brand-green/90"
+              disabled={isLoading}
             >
-              <RefreshCw className="h-4 w-4 ml-2" />
-              إعادة المحاولة
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              ) : (
+                <LogIn className="h-4 w-4 ml-2" />
+              )}
+              تسجيل الدخول
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

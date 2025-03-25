@@ -9,7 +9,10 @@ import {
   getSpreadsheetsList,
   exportToDefaultSheet,
   resetInitialization,
-  getLastError
+  getLastError,
+  isUserSignedIn,
+  signIn,
+  signOut
 } from '@/lib/googleSheets/sheetsService';
 import { ImageData } from '@/types/ImageData';
 
@@ -29,7 +32,7 @@ export const useGoogleSheets = () => {
       try {
         await initGoogleSheetsApi();
         setIsInitialized(true);
-        setIsSignedIn(true);
+        setIsSignedIn(isUserSignedIn());
         setLastError(null);
         
         console.log("تم تهيئة API بنجاح، جاري تحميل قائمة جداول البيانات...");
@@ -42,7 +45,7 @@ export const useGoogleSheets = () => {
         
         toast({
           title: "خطأ في الاتصال",
-          description: "فشل في الاتصال بـ Google Sheets، يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى",
+          description: error instanceof Error ? error.message : "فشل في الاتصال بـ Google Sheets",
           variant: "destructive"
         });
         
@@ -71,7 +74,7 @@ export const useGoogleSheets = () => {
   const handleSignIn = async () => {
     setIsLoading(true);
     try {
-      await initGoogleSheetsApi();
+      await signIn();
       setIsInitialized(true);
       setIsSignedIn(true);
       setLastError(null);
@@ -80,6 +83,9 @@ export const useGoogleSheets = () => {
         title: "تم تسجيل الدخول",
         description: "تم تسجيل الدخول بنجاح إلى Google Sheets",
       });
+      
+      // تحميل قائمة جداول البيانات بعد تسجيل الدخول
+      await loadSpreadsheets();
       return true;
     } catch (error) {
       console.error("فشل في تسجيل الدخول:", error);
@@ -87,7 +93,7 @@ export const useGoogleSheets = () => {
       
       toast({
         title: "فشل تسجيل الدخول",
-        description: "فشل في تسجيل الدخول إلى Google Sheets، يرجى المحاولة مرة أخرى",
+        description: error instanceof Error ? error.message : "فشل في تسجيل الدخول إلى Google Sheets، يرجى المحاولة مرة أخرى",
         variant: "destructive"
       });
       
@@ -99,10 +105,43 @@ export const useGoogleSheets = () => {
     }
   };
 
+  // وظيفة لمعالجة تسجيل الخروج
+  const handleSignOut = async () => {
+    setIsLoading(true);
+    try {
+      await signOut();
+      setIsSignedIn(false);
+      
+      toast({
+        title: "تم تسجيل الخروج",
+        description: "تم تسجيل الخروج بنجاح من Google Sheets",
+      });
+      return true;
+    } catch (error) {
+      console.error("فشل في تسجيل الخروج:", error);
+      setLastError(error);
+      
+      toast({
+        title: "خطأ",
+        description: "فشل في تسجيل الخروج",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // تحميل قائمة جداول البيانات
   const loadSpreadsheets = async () => {
     setIsLoading(true);
     try {
+      // التحقق من تسجيل الدخول قبل جلب القائمة
+      if (!isUserSignedIn()) {
+        console.log("المستخدم غير مسجل الدخول، جاري محاولة تسجيل الدخول...");
+        await handleSignIn();
+      }
+      
       const sheets = await getSpreadsheetsList();
       setSpreadsheets(sheets);
       setLastError(null);
@@ -237,6 +276,7 @@ export const useGoogleSheets = () => {
     spreadsheets,
     lastError,
     handleSignIn,
+    handleSignOut,
     loadSpreadsheets,
     createSheet,
     exportToSheet,
