@@ -11,6 +11,7 @@ import { ImageData } from '@/types/ImageData';
 import DirectExportTools from '@/components/DataExport/DirectExportTools';
 
 const Index = () => {
+  // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
     images,
     isProcessing,
@@ -21,7 +22,8 @@ const Index = () => {
     handleFileChange,
     handleTextChange,
     handleDelete,
-    handleSubmitToApi
+    handleSubmitToApi,
+    formatDate
   } = useImageProcessing();
 
   const {
@@ -80,7 +82,7 @@ const Index = () => {
               onTextChange={handleTextChange} 
               onDelete={handleDelete} 
               onSubmit={id => handleSubmitToApi(id, images.find(img => img.id === id)!)} 
-              formatDate={useImageProcessing().formatDate} 
+              formatDate={formatDate} 
             />
           )}
         </div>

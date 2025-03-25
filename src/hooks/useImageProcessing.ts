@@ -1,8 +1,12 @@
-import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
+
 import { formatDate } from "@/utils/dateFormatter";
+import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
 import { useState, useEffect } from "react";
 
 export const useImageProcessing = () => {
+  const coreProcessing = useImageProcessingCore();
+
+  // يجب أن تكون جميع hooks مستدعاة في كل مرة يتم فيها استدعاء الـ hook بنفس الترتيب
   const [autoExportEnabled, setAutoExportEnabled] = useState<boolean>(
     localStorage.getItem('autoExportEnabled') === 'true'
   );
@@ -34,7 +38,7 @@ export const useImageProcessing = () => {
   };
   
   return {
-    ...useImageProcessingCore(),
+    ...coreProcessing,
     formatDate,
     autoExportEnabled,
     defaultSheetId,
