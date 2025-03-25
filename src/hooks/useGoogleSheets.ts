@@ -14,6 +14,7 @@ import { ImageData } from '@/types/ImageData';
 export const useGoogleSheets = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false); // إضافة حالة لتتبع حالة تسجيل الدخول
   const [spreadsheets, setSpreadsheets] = useState<Array<{id: string, name: string}>>([]);
   const { toast } = useToast();
 
@@ -23,6 +24,7 @@ export const useGoogleSheets = () => {
       try {
         await initGoogleSheetsApi();
         setIsInitialized(true);
+        setIsSignedIn(true); // مع حساب الخدمة، نعتبر المستخدم "مسجل الدخول" تلقائيًا
       } catch (error) {
         console.error("فشل في تهيئة Google Sheets:", error);
       }
@@ -30,6 +32,31 @@ export const useGoogleSheets = () => {
     
     initAPI();
   }, []);
+
+  // وظيفة لمعالجة تسجيل الدخول
+  const handleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await initGoogleSheetsApi();
+      setIsInitialized(true);
+      setIsSignedIn(true);
+      toast({
+        title: "تم تسجيل الدخول",
+        description: "تم تسجيل الدخول بنجاح إلى Google Sheets",
+      });
+      return true;
+    } catch (error) {
+      console.error("فشل في تسجيل الدخول:", error);
+      toast({
+        title: "فشل تسجيل الدخول",
+        description: "فشل في تسجيل الدخول إلى Google Sheets، يرجى المحاولة مرة أخرى",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // تحميل قائمة جداول البيانات
   const loadSpreadsheets = async () => {
@@ -159,8 +186,10 @@ export const useGoogleSheets = () => {
 
   return {
     isInitialized,
+    isSignedIn, // إضافة حالة تسجيل الدخول للإرجاع
     isLoading,
     spreadsheets,
+    handleSignIn, // إضافة وظيفة تسجيل الدخول للإرجاع
     loadSpreadsheets,
     createSheet,
     exportToSheet,

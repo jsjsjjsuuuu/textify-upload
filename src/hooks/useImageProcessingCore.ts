@@ -39,10 +39,10 @@ export const useImageProcessingCore = () => {
   
   const { 
     isInitialized,
-    isSignedIn,
+    isSignedIn, // الآن هذه الخاصية متاحة
     isLoading,
     spreadsheets,
-    handleSignIn,
+    handleSignIn, // الآن هذه الخاصية متاحة
     createSheet,
     exportToSheet
   } = useGoogleSheets();
