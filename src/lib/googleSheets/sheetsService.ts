@@ -7,6 +7,17 @@ import { formatDate } from '@/utils/dateFormatter';
 // حالة تهيئة API
 let initialized = false;
 let isInitializing = false;
+let lastError = null;
+
+// الحصول على آخر خطأ
+export const getLastError = () => {
+  return lastError;
+};
+
+// إعادة تعيين حالة الخطأ
+export const resetLastError = () => {
+  lastError = null;
+};
 
 // تهيئة خدمة Google Sheets باستخدام حساب الخدمة
 export const initGoogleSheetsApi = (): Promise<boolean> => {
@@ -29,6 +40,7 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
 
     isInitializing = true;
     console.log("بدء تهيئة Google Sheets API مع حساب الخدمة...");
+    lastError = null;
 
     try {
       // تهيئة API الفعلي
@@ -44,16 +56,21 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
           console.log("تمت تهيئة Google Sheets API بنجاح");
           initialized = true;
           isInitializing = false;
+          lastError = null;
           resolve(true);
         } catch (error) {
           console.error("فشل في تهيئة Google Sheets API:", error);
           isInitializing = false;
+          lastError = error;
+          initialized = false;
           reject(error);
         }
       });
     } catch (error) {
       console.error("فشل في تحميل Google Sheets API:", error);
       isInitializing = false;
+      lastError = error;
+      initialized = false;
       reject(error);
     }
   });
@@ -64,10 +81,29 @@ export const isApiInitialized = (): boolean => {
   return initialized;
 };
 
-// إنشاء جدول بيانات جديد
+// إعادة ضبط حالة الاتصال
+export const resetInitialization = () => {
+  initialized = false;
+  isInitializing = false;
+  lastError = null;
+};
+
+// إنشاء جدول بيانات جديد مع إعادة المحاولة
 export const createNewSpreadsheet = async (title: string): Promise<string | null> => {
   try {
     console.log(`إنشاء جدول بيانات جديد: ${title}`);
+    resetLastError();
+    
+    // التأكد من تهيئة API قبل الاستمرار
+    if (!initialized) {
+      try {
+        await initGoogleSheetsApi();
+      } catch (error) {
+        console.error("فشل في تهيئة API قبل إنشاء جدول بيانات:", error);
+        lastError = error;
+        return null;
+      }
+    }
     
     // الاتصال الفعلي بـ API لإنشاء جدول بيانات جديد
     const response = await gapi.client.sheets.spreadsheets.create({
@@ -86,6 +122,22 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
     return spreadsheetId;
   } catch (error) {
     console.error("فشل في إنشاء جدول بيانات:", error);
+    lastError = error;
+    
+    // التحقق مما إذا كانت المشكلة في التهيئة وإعادة المحاولة
+    if (!initialized) {
+      resetInitialization();
+      try {
+        await initGoogleSheetsApi();
+        // محاولة إنشاء جدول البيانات مرة أخرى بعد إعادة التهيئة
+        return await createNewSpreadsheet(title);
+      } catch (retryError) {
+        console.error("فشل في إعادة المحاولة:", retryError);
+        lastError = retryError;
+        return null;
+      }
+    }
+    
     return null;
   }
 };
@@ -107,6 +159,7 @@ const addHeaderRow = async (spreadsheetId: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("فشل في إضافة صف العنوان:", error);
+    lastError = error;
     return false;
   }
 };
@@ -118,6 +171,18 @@ export const exportImagesToSheet = async (
 ): Promise<boolean> => {
   try {
     console.log(`تصدير البيانات إلى جدول البيانات: ${spreadsheetId}`);
+    resetLastError();
+    
+    // التأكد من تهيئة API قبل الاستمرار
+    if (!initialized) {
+      try {
+        await initGoogleSheetsApi();
+      } catch (error) {
+        console.error("فشل في تهيئة API قبل تصدير البيانات:", error);
+        lastError = error;
+        return false;
+      }
+    }
     
     // تحويل البيانات إلى تنسيق مناسب لـ Google Sheets
     const values = images
@@ -153,6 +218,22 @@ export const exportImagesToSheet = async (
     return true;
   } catch (error) {
     console.error("فشل في تصدير البيانات:", error);
+    lastError = error;
+    
+    // التحقق مما إذا كانت المشكلة في التهيئة وإعادة المحاولة
+    if (!initialized) {
+      resetInitialization();
+      try {
+        await initGoogleSheetsApi();
+        // محاولة تصدير البيانات مرة أخرى بعد إعادة التهيئة
+        return await exportImagesToSheet(spreadsheetId, images);
+      } catch (retryError) {
+        console.error("فشل في إعادة المحاولة للتصدير:", retryError);
+        lastError = retryError;
+        return false;
+      }
+    }
+    
     return false;
   }
 };
@@ -161,6 +242,18 @@ export const exportImagesToSheet = async (
 export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: string}>> => {
   try {
     console.log("الحصول على قائمة جداول البيانات");
+    resetLastError();
+    
+    // التأكد من تهيئة API قبل الاستمرار
+    if (!initialized) {
+      try {
+        await initGoogleSheetsApi();
+      } catch (error) {
+        console.error("فشل في تهيئة API قبل جلب القائمة:", error);
+        lastError = error;
+        return [];
+      }
+    }
     
     const response = await gapi.client.drive.files.list({
       q: "mimeType='application/vnd.google-apps.spreadsheet'",
@@ -177,12 +270,30 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
     return sheets;
   } catch (error) {
     console.error("فشل في الحصول على قائمة جداول البيانات:", error);
+    lastError = error;
+    
+    // التحقق مما إذا كانت المشكلة في التهيئة وإعادة المحاولة
+    if (!initialized) {
+      resetInitialization();
+      try {
+        await initGoogleSheetsApi();
+        // محاولة جلب القائمة مرة أخرى بعد إعادة التهيئة
+        return await getSpreadsheetsList();
+      } catch (retryError) {
+        console.error("فشل في إعادة المحاولة لجلب القائمة:", retryError);
+        lastError = retryError;
+        return [];
+      }
+    }
+    
     return [];
   }
 };
 
 // تصدير البيانات إلى جدول البيانات الافتراضي
 export const exportToDefaultSheet = async (images: ImageData[]): Promise<boolean> => {
+  resetLastError();
+  
   // التحقق من وجود جدول بيانات افتراضي في الإعدادات
   const defaultSheetId = localStorage.getItem('defaultSheetId');
   
@@ -202,3 +313,4 @@ export const exportToDefaultSheet = async (images: ImageData[]): Promise<boolean
   // استخدام الجدول الافتراضي
   return await exportImagesToSheet(defaultSheetId, images);
 };
+
