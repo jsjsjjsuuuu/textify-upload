@@ -126,7 +126,11 @@ export const useImageProcessingCore = () => {
       
       // تصدير تلقائي إلى Google Sheets إذا كانت الميزة مفعلة وتم تسجيل الدخول
       if (autoExportEnabled && isSignedIn && defaultSheetId) {
-        const updatedImage = { ...image, status: "completed" };
+        // هنا كانت المشكلة - تم تعديل صياغة الحالة في الكائن المحدّث لتكون قيمة محددة وليست نصاً عاماً
+        const updatedImage: ImageData = { 
+          ...image, 
+          status: "completed" 
+        };
         await autoExportToSheets(updatedImage);
       }
     } catch (error: any) {
