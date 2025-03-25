@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { PlayCircle, Loader2, Send, AlertTriangle, Server, RefreshCw } from "lucide-react";
@@ -14,20 +13,23 @@ interface AutomationButtonProps {
 const AutomationButton = ({
   image
 }: AutomationButtonProps) => {
-  // حذف كل الحالات والوظائف المتعلقة بالاتصال بالخادم
   const navigate = useNavigate();
 
-  return <>
-      <div className="flex flex-col gap-2 items-center">
-        <motion.div whileHover={{
-        scale: 1.05
-      }} whileTap={{
-        scale: 0.95
-      }} className="inline-block">
+  return (
+    <div className="flex flex-col gap-2 items-center">
+      <motion.div 
+        whileHover={{
+          scale: 1.05
+        }} 
+        whileTap={{
+          scale: 0.95
+        }} 
+        className="inline-block"
+      >
           
-        </motion.div>
-      </div>
-    </>;
+      </motion.div>
+    </div>
+  );
 };
 
 export default AutomationButton;
