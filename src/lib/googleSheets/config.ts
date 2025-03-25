@@ -3,9 +3,11 @@
 
 export const GOOGLE_API_CONFIG = {
   API_KEY: "AIzaSyCFDqYxuOd8Usj0HOID-TfcFbWU8vwB2qI", // مفتاح API الجديد
+  CLIENT_ID: "599832546977-oc48ji7men0gnf5cpbrpmjuqapbjqdf9.apps.googleusercontent.com", // معرف عميل OAuth الجديد
   DISCOVERY_DOCS: ["https://sheets.googleapis.com/$discovery/rest?version=v4", "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
   SCOPES: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file",
-  USE_SERVICE_ACCOUNT: true // تفعيل استخدام حساب الخدمة فقط
+  USE_OAUTH: false, // تعطيل استخدام OAuth
+  USE_SERVICE_ACCOUNT: true // تفعيل استخدام حساب الخدمة
 };
 
 export const SHEET_COLUMNS = [
@@ -41,5 +43,5 @@ export const ERROR_MESSAGES = {
   NETWORK_ERROR: "خطأ في الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.",
   GENERAL_ERROR: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى لاحقاً.",
   SERVICE_ACCOUNT_ERROR: "حدث خطأ في استخدام حساب الخدمة. تأكد من صحة بيانات حساب الخدمة.",
-  BROWSER_SUPPORT_ERROR: "تم استخدام حساب الخدمة، ولكن بسبب قيود المتصفح، قد يكون هناك بعض المشاكل."
+  BROWSER_SUPPORT_ERROR: "تم تفعيل حساب الخدمة، ولكن قد تكون هناك قيود في بيئة المتصفح."
 };

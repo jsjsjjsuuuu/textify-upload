@@ -10,7 +10,9 @@ import {
   exportToDefaultSheet,
   resetInitialization,
   getLastError,
-  isUserSignedIn
+  isUserSignedIn,
+  signIn,
+  signOut
 } from '@/lib/googleSheets/sheetsService';
 import { ImageData } from '@/types/ImageData';
 import { GOOGLE_API_CONFIG } from '@/lib/googleSheets/config';
@@ -18,7 +20,7 @@ import { GOOGLE_API_CONFIG } from '@/lib/googleSheets/config';
 export const useGoogleSheets = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignedIn, setIsSignedIn] = useState(true); // دائماً true لأننا نستخدم حساب خدمة
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const [spreadsheets, setSpreadsheets] = useState<Array<{id: string, name: string}>>([]);
   const [lastError, setLastError] = useState<any>(null);
   const [initAttempts, setInitAttempts] = useState(0);
@@ -31,7 +33,7 @@ export const useGoogleSheets = () => {
       try {
         await initGoogleSheetsApi();
         setIsInitialized(true);
-        setIsSignedIn(true); // دائماً true مع حساب الخدمة
+        setIsSignedIn(GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT || isUserSignedIn());
         setLastError(null);
         
         console.log("تم تهيئة API بنجاح، جاري تحميل قائمة جداول البيانات...");
@@ -69,10 +71,97 @@ export const useGoogleSheets = () => {
     });
   }, [toast]);
 
+  // وظيفة لمعالجة تسجيل الدخول
+  const handleSignIn = async () => {
+    // إذا كنا نستخدم حساب الخدمة، نشرح للمستخدم أن تسجيل الدخول ليس مطلوبًا
+    if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT) {
+      toast({
+        title: "معلومات",
+        description: "الاتصال يتم باستخدام حساب الخدمة، لا حاجة لتسجيل الدخول يدويًا.",
+      });
+      setIsSignedIn(true); // نقوم بتعيين هذه الحالة كـ true لتجاوز طلب تسجيل الدخول
+      return true;
+    }
+    
+    setIsLoading(true);
+    try {
+      await signIn();
+      setIsInitialized(true);
+      setIsSignedIn(true);
+      setLastError(null);
+      
+      toast({
+        title: "تم تسجيل الدخول",
+        description: "تم تسجيل الدخول بنجاح إلى Google Sheets",
+      });
+      
+      // تحميل قائمة جداول البيانات بعد تسجيل الدخول
+      await loadSpreadsheets();
+      return true;
+    } catch (error) {
+      console.error("فشل في تسجيل الدخول:", error);
+      setLastError(error);
+      
+      toast({
+        title: "فشل تسجيل الدخول",
+        description: error instanceof Error ? error.message : "فشل في تسجيل الدخول إلى Google Sheets، يرجى المحاولة مرة أخرى",
+        variant: "destructive"
+      });
+      
+      setIsInitialized(false);
+      setIsSignedIn(false);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // وظيفة لمعالجة تسجيل الخروج
+  const handleSignOut = async () => {
+    // إذا كنا نستخدم حساب الخدمة، نشرح للمستخدم أن تسجيل الخروج ليس ضروريًا
+    if (GOOGLE_API_CONFIG.USE_SERVICE_ACCOUNT) {
+      toast({
+        title: "معلومات",
+        description: "الاتصال يتم باستخدام حساب الخدمة، لا حاجة لتسجيل الخروج.",
+      });
+      return true;
+    }
+    
+    setIsLoading(true);
+    try {
+      await signOut();
+      setIsSignedIn(false);
+      
+      toast({
+        title: "تم تسجيل الخروج",
+        description: "تم تسجيل الخروج بنجاح من Google Sheets",
+      });
+      return true;
+    } catch (error) {
+      console.error("فشل في تسجيل الخروج:", error);
+      setLastError(error);
+      
+      toast({
+        title: "خطأ",
+        description: "فشل في تسجيل الخروج",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // تحميل قائمة جداول البيانات
   const loadSpreadsheets = async () => {
     setIsLoading(true);
     try {
+      // إذا كنا نستخدم OAuth، نتحقق من تسجيل الدخول قبل جلب القائمة
+      if (GOOGLE_API_CONFIG.USE_OAUTH && !isUserSignedIn()) {
+        console.log("المستخدم غير مسجل الدخول، جاري محاولة تسجيل الدخول...");
+        await handleSignIn();
+      }
+      
       const sheets = await getSpreadsheetsList();
       setSpreadsheets(sheets);
       setLastError(null);
@@ -200,14 +289,14 @@ export const useGoogleSheets = () => {
     });
   };
 
-  // نحن لا نحتاج لوظائف تسجيل الدخول/الخروج لأننا نستخدم حساب خدمة
-
   return {
     isInitialized,
     isSignedIn,
     isLoading,
     spreadsheets,
     lastError,
+    handleSignIn,
+    handleSignOut,
     loadSpreadsheets,
     createSheet,
     exportToSheet,
