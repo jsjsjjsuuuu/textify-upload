@@ -8,6 +8,8 @@ import { formatDate } from '@/utils/dateFormatter';
 let initialized = false;
 let isInitializing = false;
 let lastError = null;
+let apiLoadRetries = 0;
+const MAX_RETRIES = 3;
 
 // الحصول على آخر خطأ
 export const getLastError = () => {
@@ -17,6 +19,14 @@ export const getLastError = () => {
 // إعادة تعيين حالة الخطأ
 export const resetLastError = () => {
   lastError = null;
+};
+
+// إعادة ضبط حالة الاتصال
+export const resetInitialization = () => {
+  initialized = false;
+  isInitializing = false;
+  lastError = null;
+  apiLoadRetries = 0;
 };
 
 // تهيئة خدمة Google Sheets باستخدام حساب الخدمة
@@ -33,45 +43,84 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
         if (initialized) {
           clearInterval(checkInterval);
           resolve(true);
+        } else if (lastError) {
+          clearInterval(checkInterval);
+          reject(lastError);
         }
       }, 100);
       return;
     }
 
     isInitializing = true;
-    console.log("بدء تهيئة Google Sheets API مع حساب الخدمة...");
+    console.log("بدء تهيئة Google Sheets API...");
     lastError = null;
 
     try {
       // تهيئة API الفعلي
-      gapi.load('client:auth2', async () => {
-        try {
-          await gapi.client.init({
-            apiKey: GOOGLE_API_CONFIG.API_KEY,
-            clientId: GOOGLE_API_CONFIG.CLIENT_ID,
-            discoveryDocs: GOOGLE_API_CONFIG.DISCOVERY_DOCS,
-            scope: GOOGLE_API_CONFIG.SCOPES
-          });
-          
-          console.log("تمت تهيئة Google Sheets API بنجاح");
-          initialized = true;
-          isInitializing = false;
-          lastError = null;
-          resolve(true);
-        } catch (error) {
-          console.error("فشل في تهيئة Google Sheets API:", error);
-          isInitializing = false;
-          lastError = error;
-          initialized = false;
-          reject(error);
+      const loadGapiClient = () => {
+        if (typeof gapi === 'undefined') {
+          if (apiLoadRetries < MAX_RETRIES) {
+            apiLoadRetries++;
+            console.log(`محاولة تحميل GAPI (المحاولة ${apiLoadRetries}/${MAX_RETRIES})...`);
+            setTimeout(loadGapiClient, 1000);
+            return;
+          } else {
+            const error = new Error("تعذر تحميل مكتبة Google API. يرجى التحقق من اتصالك بالإنترنت.");
+            console.error("فشل في تحميل مكتبة Google API:", error);
+            isInitializing = false;
+            lastError = error;
+            reject(error);
+            return;
+          }
         }
-      });
-    } catch (error) {
+
+        gapi.load('client:auth2', async () => {
+          try {
+            await gapi.client.init({
+              apiKey: GOOGLE_API_CONFIG.API_KEY,
+              clientId: GOOGLE_API_CONFIG.CLIENT_ID,
+              discoveryDocs: GOOGLE_API_CONFIG.DISCOVERY_DOCS,
+              scope: GOOGLE_API_CONFIG.SCOPES
+            });
+            
+            console.log("تمت تهيئة Google Sheets API بنجاح");
+            initialized = true;
+            isInitializing = false;
+            lastError = null;
+            resolve(true);
+          } catch (error: any) {
+            console.error("فشل في تهيئة Google Sheets API:", error);
+            isInitializing = false;
+            lastError = error;
+            initialized = false;
+            
+            if (typeof error === 'string') {
+              reject(new Error(error));
+            } else if (error?.message) {
+              reject(new Error(`${error.message}`));
+            } else if (error?.error) {
+              reject(new Error(`${error.error}`));
+            } else {
+              reject(new Error("حدث خطأ غير معروف أثناء تهيئة Google Sheets API"));
+            }
+          }
+        });
+      };
+      
+      loadGapiClient();
+    } catch (error: any) {
       console.error("فشل في تحميل Google Sheets API:", error);
       isInitializing = false;
       lastError = error;
       initialized = false;
-      reject(error);
+      
+      if (typeof error === 'string') {
+        reject(new Error(error));
+      } else if (error?.message) {
+        reject(new Error(`${error.message}`));
+      } else {
+        reject(new Error("حدث خطأ غير معروف أثناء تحميل Google Sheets API"));
+      }
     }
   });
 };
@@ -79,13 +128,6 @@ export const initGoogleSheetsApi = (): Promise<boolean> => {
 // إذا كان API مهيأ
 export const isApiInitialized = (): boolean => {
   return initialized;
-};
-
-// إعادة ضبط حالة الاتصال
-export const resetInitialization = () => {
-  initialized = false;
-  isInitializing = false;
-  lastError = null;
 };
 
 // إنشاء جدول بيانات جديد مع إعادة المحاولة
@@ -101,7 +143,7 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
       } catch (error) {
         console.error("فشل في تهيئة API قبل إنشاء جدول بيانات:", error);
         lastError = error;
-        return null;
+        throw error;
       }
     }
     
@@ -120,9 +162,16 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
     console.log(`تم إنشاء جدول بيانات جديد بنجاح، المعرف: ${spreadsheetId}`);
     
     return spreadsheetId;
-  } catch (error) {
+  } catch (error: any) {
     console.error("فشل في إنشاء جدول بيانات:", error);
-    lastError = error;
+    
+    if (error?.result?.error?.message) {
+      lastError = new Error(`فشل في إنشاء جدول بيانات: ${error.result.error.message}`);
+    } else if (error?.message) {
+      lastError = new Error(`فشل في إنشاء جدول بيانات: ${error.message}`);
+    } else {
+      lastError = new Error("فشل في إنشاء جدول بيانات لسبب غير معروف");
+    }
     
     // التحقق مما إذا كانت المشكلة في التهيئة وإعادة المحاولة
     if (!initialized) {
@@ -133,12 +182,16 @@ export const createNewSpreadsheet = async (title: string): Promise<string | null
         return await createNewSpreadsheet(title);
       } catch (retryError) {
         console.error("فشل في إعادة المحاولة:", retryError);
-        lastError = retryError;
-        return null;
+        if (retryError instanceof Error) {
+          lastError = retryError;
+        } else {
+          lastError = new Error("فشل في إعادة المحاولة لإنشاء جدول بيانات");
+        }
+        throw lastError;
       }
     }
     
-    return null;
+    throw lastError;
   }
 };
 
@@ -157,10 +210,18 @@ const addHeaderRow = async (spreadsheetId: string): Promise<boolean> => {
     });
     
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("فشل في إضافة صف العنوان:", error);
-    lastError = error;
-    return false;
+    
+    if (error?.result?.error?.message) {
+      lastError = new Error(`فشل في إضافة صف العنوان: ${error.result.error.message}`);
+    } else if (error?.message) {
+      lastError = new Error(`فشل في إضافة صف العنوان: ${error.message}`);
+    } else {
+      lastError = new Error("فشل في إضافة صف العنوان لسبب غير معروف");
+    }
+    
+    throw lastError;
   }
 };
 
@@ -180,7 +241,7 @@ export const exportImagesToSheet = async (
       } catch (error) {
         console.error("فشل في تهيئة API قبل تصدير البيانات:", error);
         lastError = error;
-        return false;
+        throw error;
       }
     }
     
@@ -199,6 +260,7 @@ export const exportImagesToSheet = async (
     
     if (values.length === 0) {
       console.log("لا توجد بيانات صالحة للتصدير");
+      lastError = new Error("لا توجد بيانات صالحة للتصدير");
       return false;
     }
     
@@ -216,9 +278,16 @@ export const exportImagesToSheet = async (
     console.log(`تم تصدير ${values.length} سجل بنجاح إلى جدول البيانات`);
     
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("فشل في تصدير البيانات:", error);
-    lastError = error;
+    
+    if (error?.result?.error?.message) {
+      lastError = new Error(`فشل في تصدير البيانات: ${error.result.error.message}`);
+    } else if (error?.message) {
+      lastError = new Error(`فشل في تصدير البيانات: ${error.message}`);
+    } else {
+      lastError = new Error("فشل في تصدير البيانات لسبب غير معروف");
+    }
     
     // التحقق مما إذا كانت المشكلة في التهيئة وإعادة المحاولة
     if (!initialized) {
@@ -229,12 +298,16 @@ export const exportImagesToSheet = async (
         return await exportImagesToSheet(spreadsheetId, images);
       } catch (retryError) {
         console.error("فشل في إعادة المحاولة للتصدير:", retryError);
-        lastError = retryError;
-        return false;
+        if (retryError instanceof Error) {
+          lastError = retryError;
+        } else {
+          lastError = new Error("فشل في إعادة المحاولة لتصدير البيانات");
+        }
+        throw lastError;
       }
     }
     
-    return false;
+    throw lastError;
   }
 };
 
@@ -251,7 +324,7 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
       } catch (error) {
         console.error("فشل في تهيئة API قبل جلب القائمة:", error);
         lastError = error;
-        return [];
+        throw error;
       }
     }
     
@@ -268,9 +341,16 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
     console.log(`تم الحصول على ${sheets.length} جدول بيانات`);
     
     return sheets;
-  } catch (error) {
+  } catch (error: any) {
     console.error("فشل في الحصول على قائمة جداول البيانات:", error);
-    lastError = error;
+    
+    if (error?.result?.error?.message) {
+      lastError = new Error(`فشل في الحصول على قائمة جداول البيانات: ${error.result.error.message}`);
+    } else if (error?.message) {
+      lastError = new Error(`فشل في الحصول على قائمة جداول البيانات: ${error.message}`);
+    } else {
+      lastError = new Error("فشل في الحصول على قائمة جداول البيانات لسبب غير معروف");
+    }
     
     // التحقق مما إذا كانت المشكلة في التهيئة وإعادة المحاولة
     if (!initialized) {
@@ -281,12 +361,16 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
         return await getSpreadsheetsList();
       } catch (retryError) {
         console.error("فشل في إعادة المحاولة لجلب القائمة:", retryError);
-        lastError = retryError;
-        return [];
+        if (retryError instanceof Error) {
+          lastError = retryError;
+        } else {
+          lastError = new Error("فشل في إعادة المحاولة للحصول على قائمة جداول البيانات");
+        }
+        throw lastError;
       }
     }
     
-    return [];
+    throw lastError;
   }
 };
 
@@ -294,23 +378,34 @@ export const getSpreadsheetsList = async (): Promise<Array<{id: string, name: st
 export const exportToDefaultSheet = async (images: ImageData[]): Promise<boolean> => {
   resetLastError();
   
-  // التحقق من وجود جدول بيانات افتراضي في الإعدادات
-  const defaultSheetId = localStorage.getItem('defaultSheetId');
-  
-  // إذا لم يوجد جدول بيانات افتراضي، ننشئ واحداً جديداً
-  if (!defaultSheetId) {
-    const title = `بيانات الشحنات ${new Date().toLocaleDateString('ar-EG')}`;
-    const newSheetId = await createNewSpreadsheet(title);
+  try {
+    // التحقق من وجود جدول بيانات افتراضي في الإعدادات
+    const defaultSheetId = localStorage.getItem('defaultSheetId');
     
-    if (newSheetId) {
-      localStorage.setItem('defaultSheetId', newSheetId);
-      return await exportImagesToSheet(newSheetId, images);
+    // إذا لم يوجد جدول بيانات افتراضي، ننشئ واحداً جديداً
+    if (!defaultSheetId) {
+      const title = `بيانات الشحنات ${new Date().toLocaleDateString('ar-EG')}`;
+      const newSheetId = await createNewSpreadsheet(title);
+      
+      if (newSheetId) {
+        localStorage.setItem('defaultSheetId', newSheetId);
+        return await exportImagesToSheet(newSheetId, images);
+      }
+      
+      throw new Error("فشل في إنشاء جدول بيانات افتراضي");
     }
     
-    return false;
+    // استخدام الجدول الافتراضي
+    return await exportImagesToSheet(defaultSheetId, images);
+  } catch (error) {
+    console.error("فشل في التصدير إلى الجدول الافتراضي:", error);
+    
+    if (error instanceof Error) {
+      lastError = error;
+    } else {
+      lastError = new Error("فشل في التصدير إلى الجدول الافتراضي لسبب غير معروف");
+    }
+    
+    throw lastError;
   }
-  
-  // استخدام الجدول الافتراضي
-  return await exportImagesToSheet(defaultSheetId, images);
 };
-

@@ -32,6 +32,8 @@ export const useGoogleSheets = () => {
         setIsSignedIn(true);
         setLastError(null);
         
+        console.log("تم تهيئة API بنجاح، جاري تحميل قائمة جداول البيانات...");
+        
         // تحميل قائمة جداول البيانات مباشرة بعد التهيئة
         await loadSpreadsheets();
       } catch (error) {
@@ -58,7 +60,12 @@ export const useGoogleSheets = () => {
   const retryInitialization = useCallback(() => {
     resetInitialization();
     setInitAttempts(prev => prev + 1);
-  }, []);
+    
+    toast({
+      title: "إعادة الاتصال",
+      description: "جاري محاولة الاتصال بـ Google Sheets مرة أخرى...",
+    });
+  }, [toast]);
 
   // وظيفة لمعالجة تسجيل الدخول
   const handleSignIn = async () => {
@@ -99,6 +106,8 @@ export const useGoogleSheets = () => {
       const sheets = await getSpreadsheetsList();
       setSpreadsheets(sheets);
       setLastError(null);
+      console.log(`تم تحميل ${sheets.length} جدول بيانات`);
+      return sheets;
     } catch (error) {
       console.error("فشل في تحميل جداول البيانات:", error);
       setLastError(error);
@@ -110,6 +119,7 @@ export const useGoogleSheets = () => {
       });
       
       setSpreadsheets([]);
+      return [];
     } finally {
       setIsLoading(false);
     }
@@ -119,6 +129,7 @@ export const useGoogleSheets = () => {
   const createSheet = async (title: string): Promise<string | null> => {
     setIsLoading(true);
     try {
+      console.log(`بدء إنشاء جدول بيانات جديد: ${title}`);
       const spreadsheetId = await createNewSpreadsheet(title);
       if (spreadsheetId) {
         setLastError(null);
@@ -129,15 +140,7 @@ export const useGoogleSheets = () => {
         await loadSpreadsheets();
         return spreadsheetId;
       } else {
-        const apiError = getLastError();
-        setLastError(apiError);
-        
-        toast({
-          title: "فشل الإنشاء",
-          description: "فشل في إنشاء جدول البيانات",
-          variant: "destructive"
-        });
-        return null;
+        throw new Error("فشل في إنشاء جدول البيانات - لم يتم إرجاع معرف");
       }
     } catch (error) {
       console.error("خطأ في إنشاء جدول البيانات:", error);
@@ -145,7 +148,7 @@ export const useGoogleSheets = () => {
       
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء محاولة إنشاء جدول البيانات",
+        description: error instanceof Error ? error.message : "حدث خطأ أثناء محاولة إنشاء جدول البيانات",
         variant: "destructive"
       });
       return null;
@@ -158,6 +161,7 @@ export const useGoogleSheets = () => {
   const exportToSheet = async (spreadsheetId: string, images: ImageData[]): Promise<boolean> => {
     setIsLoading(true);
     try {
+      console.log(`بدء تصدير البيانات إلى جدول البيانات: ${spreadsheetId}`);
       const success = await exportImagesToSheet(spreadsheetId, images);
       if (success) {
         setLastError(null);
@@ -167,15 +171,7 @@ export const useGoogleSheets = () => {
         });
         return true;
       } else {
-        const apiError = getLastError();
-        setLastError(apiError);
-        
-        toast({
-          title: "فشل التصدير",
-          description: "فشل في تصدير البيانات، تأكد من وجود بيانات صالحة للتصدير",
-          variant: "destructive"
-        });
-        return false;
+        throw new Error("فشل في تصدير البيانات، تأكد من وجود بيانات صالحة للتصدير");
       }
     } catch (error) {
       console.error("خطأ في تصدير البيانات:", error);
@@ -183,7 +179,7 @@ export const useGoogleSheets = () => {
       
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء محاولة تصدير البيانات",
+        description: error instanceof Error ? error.message : "حدث خطأ أثناء محاولة تصدير البيانات",
         variant: "destructive"
       });
       return false;
@@ -196,6 +192,7 @@ export const useGoogleSheets = () => {
   const exportToDefaultSpreadsheet = async (images: ImageData[]): Promise<boolean> => {
     setIsLoading(true);
     try {
+      console.log("بدء تصدير البيانات إلى جدول البيانات الافتراضي");
       const success = await exportToDefaultSheet(images);
       if (success) {
         setLastError(null);
@@ -205,15 +202,7 @@ export const useGoogleSheets = () => {
         });
         return true;
       } else {
-        const apiError = getLastError();
-        setLastError(apiError);
-        
-        toast({
-          title: "فشل التصدير",
-          description: "فشل في تصدير البيانات، تأكد من وجود بيانات صالحة للتصدير",
-          variant: "destructive"
-        });
-        return false;
+        throw new Error("فشل في تصدير البيانات، تأكد من وجود بيانات صالحة للتصدير");
       }
     } catch (error) {
       console.error("خطأ في تصدير البيانات:", error);
@@ -221,7 +210,7 @@ export const useGoogleSheets = () => {
       
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء محاولة تصدير البيانات",
+        description: error instanceof Error ? error.message : "حدث خطأ أثناء محاولة تصدير البيانات",
         variant: "destructive"
       });
       return false;

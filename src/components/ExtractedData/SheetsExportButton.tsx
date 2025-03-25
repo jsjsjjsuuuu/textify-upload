@@ -20,6 +20,16 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SheetsExportButtonProps {
   images: ImageData[];
@@ -30,6 +40,7 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [lastExportSuccess, setLastExportSuccess] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [showConnectionAlert, setShowConnectionAlert] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [initAttempts, setInitAttempts] = useState(0);
   const { toast } = useToast();
@@ -42,11 +53,13 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
         // محاولة تهيئة API
         await initGoogleSheetsApi();
         setIsInitialized(true);
+        setShowConnectionAlert(false);
         console.log("تم تهيئة Google Sheets API بنجاح");
       } catch (error: any) {
         console.error("فشل في تهيئة API الخاص بجداول البيانات:", error);
         setErrorMessage(error?.message || "خطأ غير معروف في الاتصال");
         setIsInitialized(false);
+        setShowConnectionAlert(true);
       } finally {
         setIsLoading(false);
       }
@@ -63,9 +76,15 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
   // إعادة محاولة الاتصال
   const handleRetryConnection = () => {
     setShowErrorDialog(false);
+    setShowConnectionAlert(false);
     setErrorMessage("");
     resetInitialization();
     setInitAttempts(prev => prev + 1);
+    
+    toast({
+      title: "إعادة الاتصال",
+      description: "جاري محاولة الاتصال بـ Google Sheets مرة أخرى...",
+    });
   };
 
   // معالج التصدير
@@ -122,7 +141,7 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
   return (
     <>
       <Button
-        onClick={isInitialized ? handleExport : () => setShowErrorDialog(true)}
+        onClick={isInitialized ? handleExport : handleRetryConnection}
         disabled={isLoading || (isInitialized && validImagesCount === 0)}
         className={`w-full ${lastExportSuccess ? 'bg-green-600 hover:bg-green-700' : isInitialized ? 'bg-brand-green hover:bg-brand-green/90' : 'bg-red-500 hover:bg-red-600'}`}
       >
@@ -134,7 +153,7 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
         ) : !isInitialized ? (
           <>
             <AlertTriangle className="h-4 w-4 ml-2" />
-            فشل الاتصال بـ Google Sheets
+            فشل الاتصال بـ Google Sheets، انقر لإعادة المحاولة
           </>
         ) : lastExportSuccess ? (
           <>
@@ -182,6 +201,35 @@ const SheetsExportButton: React.FC<SheetsExportButtonProps> = ({ images }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showConnectionAlert} onOpenChange={setShowConnectionAlert}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-500">خطأ في الاتصال</AlertDialogTitle>
+            <AlertDialogDescription>
+              فشل في الاتصال بـ Google Sheets. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3 mt-2">
+            <p className="text-sm font-semibold text-red-800 dark:text-red-300">رسالة الخطأ:</p>
+            <p className="text-sm text-red-700 dark:text-red-400 mt-1 overflow-auto max-h-28">
+              {errorMessage || "حدث خطأ غير متوقع أثناء الاتصال بالخدمة"}
+            </p>
+          </div>
+          
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="mt-0">إغلاق</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleRetryConnection}
+              className="bg-brand-green hover:bg-brand-green/90"
+            >
+              <RefreshCw className="h-4 w-4 ml-2" />
+              إعادة المحاولة
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
