@@ -45,6 +45,8 @@ export const useImageProcessingCore = () => {
       return null;
     }
 
+    console.log("جاري حفظ البيانات في قاعدة البيانات...", image);
+
     try {
       const { data, error } = await supabase
         .from('images')
@@ -78,6 +80,7 @@ export const useImageProcessingCore = () => {
         description: `تم حفظ البيانات في قاعدة البيانات`,
       });
 
+      console.log("تم حفظ البيانات بنجاح:", data[0]);
       return data[0];
     } catch (error: any) {
       console.error("خطأ في حفظ البيانات:", error);
@@ -90,7 +93,7 @@ export const useImageProcessingCore = () => {
     }
   };
 
-  // وظيفة إرسال البيانات إلى API (تم تحديثها لدعم ويب هوك n8n وحفظ البيانات في قاعدة البيانات)
+  // وظيفة إرسال البيانات إلى API وحفظها في قاعدة البيانات
   const handleSubmitToApi = async (id: string, image: ImageData) => {
     setIsSubmitting(true);
     try {
@@ -104,6 +107,8 @@ export const useImageProcessingCore = () => {
         province: image.province || ""
       };
       
+      console.log("جاري إرسال البيانات إلى API...", extractedData);
+      
       // إرسال البيانات إلى ويب هوك n8n
       const response = await fetch("https://ahmed0770.app.n8n.cloud/webhook-test/a9ee", {
         method: "POST",
@@ -115,8 +120,8 @@ export const useImageProcessingCore = () => {
       console.log("تم إرسال البيانات بنجاح:", data);
 
       // حفظ البيانات في قاعدة البيانات Supabase
-      await saveImageToDatabase(image);
-
+      const savedData = await saveImageToDatabase(image);
+      
       // تحديث حالة الصورة
       updateImage(id, { status: "completed", submitted: true });
       
@@ -139,6 +144,16 @@ export const useImageProcessingCore = () => {
     }
   };
 
+  // حفظ الصورة المعالجة في قاعدة البيانات تلقائياً عند الانتهاء من المعالجة
+  const saveProcessedImage = async (image: ImageData) => {
+    // التحقق من أن الصورة مكتملة المعالجة وتحتوي على البيانات الأساسية
+    if (image.status === "completed" && image.code && image.senderName && image.phoneNumber) {
+      console.log("حفظ الصورة المعالجة تلقائياً:", image.id);
+      // حفظ البيانات في قاعدة البيانات
+      await saveImageToDatabase(image);
+    }
+  };
+
   return {
     images,
     isProcessing,
@@ -150,6 +165,7 @@ export const useImageProcessingCore = () => {
     handleTextChange,
     handleDelete: deleteImage,
     handleSubmitToApi,
-    saveImageToDatabase
+    saveImageToDatabase,
+    saveProcessedImage
   };
 };

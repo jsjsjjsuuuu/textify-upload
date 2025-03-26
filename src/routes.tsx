@@ -43,7 +43,7 @@ export const AppRoutes = () => {
         } />
         <Route path="/records" element={
           <ProtectedRoute>
-            <Records />
+            <Navigate to="/" replace />
           </ProtectedRoute>
         } />
         <Route path="/automation/:imageId" element={

@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { ArrowRight } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
@@ -9,8 +10,11 @@ import { motion } from 'framer-motion';
 import { ImageData } from '@/types/ImageData';
 import DirectExportTools from '@/components/DataExport/DirectExportTools';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+
 const Index = () => {
+  const navigate = useNavigate();
+  
   // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
     images,
@@ -23,17 +27,42 @@ const Index = () => {
     handleTextChange,
     handleDelete,
     handleSubmitToApi,
+    saveImageToDatabase,
     formatDate
   } = useImageProcessing();
+  
   const {
     formatPhoneNumber,
     formatPrice,
     formatProvinceName
   } = useDataFormatting();
+  
+  // عند اكتمال معالجة الصور، حفظها في قاعدة البيانات
+  useEffect(() => {
+    const completedImages = images.filter(img => 
+      img.status === "completed" && img.code && img.senderName && img.phoneNumber && !img.submitted
+    );
+    
+    if (completedImages.length > 0) {
+      completedImages.forEach(async (image) => {
+        // حفظ الصور المكتملة في قاعدة البيانات
+        await saveImageToDatabase(image);
+        console.log("تم حفظ الصورة في قاعدة البيانات:", image.id);
+      });
+    }
+  }, [images]);
+  
   const handleImageClick = (image: ImageData) => {
     console.log('صورة تم النقر عليها:', image.id);
   };
-  return <div className="min-h-screen bg-background">
+  
+  // التوجه إلى صفحة السجلات بعد اكتمال المعالجة
+  const handleGoToRecords = () => {
+    navigate('/');
+  };
+  
+  return (
+    <div className="min-h-screen bg-background">
       <AppHeader />
       
       <main className="pt-10 pb-20">
@@ -56,8 +85,8 @@ const Index = () => {
                 <Button className="apple-button bg-primary text-primary-foreground" size="lg">
                   ابدأ الآن
                 </Button>
-                <Button variant="outline" className="apple-button" size="lg" asChild>
-                  <Link to="/records">
+                <Button variant="outline" className="apple-button" size="lg" asChild onClick={handleGoToRecords}>
+                  <Link to="/">
                     استعراض السجلات
                     <ArrowRight className="mr-2 h-4 w-4" />
                   </Link>
@@ -88,6 +117,19 @@ const Index = () => {
               </div>
             </div>
           </section>}
+          
+        {images.length > 0 && images.some(img => img.status === "completed") && (
+          <div className="flex justify-center mt-8 mb-16">
+            <Button 
+              size="lg" 
+              onClick={handleGoToRecords}
+              className="bg-brand-green text-white hover:bg-brand-green/90"
+            >
+              الانتقال إلى السجلات لعرض البيانات المستخرجة
+              <ArrowRight className="mr-2 h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </main>
       
       <footer className="border-t py-8 bg-transparent">
@@ -97,7 +139,7 @@ const Index = () => {
               نظام استخراج البيانات - &copy; {new Date().getFullYear()}
             </p>
             <div className="flex gap-4">
-              <Link to="/records" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 السجلات
               </Link>
               <Link to="/profile" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -107,6 +149,8 @@ const Index = () => {
           </div>
         </div>
       </footer>
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
