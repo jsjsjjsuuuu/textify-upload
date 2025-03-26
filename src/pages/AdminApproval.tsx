@@ -1,472 +1,575 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AppHeader from '@/components/AppHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { CheckCircle, XCircle, User, Crown, Shield } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import AppHeader from '@/components/AppHeader';
+import { format } from 'date-fns';
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { formatDate } from '@/utils/dateFormatter';
-import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
+import { Check, X, RotateCcw, AlertCircle, User, Shield } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-interface UserProfile {
+// تعريف تنسيق التاريخ 
+const DATE_FORMAT = 'yyyy-MM-dd HH:mm';
+
+// تعريف نوع المستخدم
+interface UserWithProfile {
   id: string;
   email: string;
-  full_name: string;
   created_at: string;
-  subscription_plan: 'standard' | 'vip' | 'pro';
-  is_approved: boolean;
-  avatar_url: string | null;
+  profile?: {
+    id: string;
+    user_id: string;
+    full_name: string;
+    avatar_url?: string;
+    is_approved: boolean;
+    is_admin: boolean;
+    subscription_plan: string;
+    updated_at: string;
+  }
 }
 
 const AdminApproval = () => {
+  const { userProfile } = useAuth();
   const navigate = useNavigate();
-  const { user, userProfile } = useAuth();
-  const { toast } = useToast();
-  const [pendingUsers, setPendingUsers] = useState<UserProfile[]>([]);
-  const [approvedUsers, setApprovedUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
-  const [isAdmin, setIsAdmin] = useState(false);
-  
-  // التحقق مما إذا كان المستخدم الحالي هو المسؤول
+  const [users, setUsers] = useState<UserWithProfile[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<UserWithProfile[]>([]);
+  const [approvedUsers, setApprovedUsers] = useState<UserWithProfile[]>([]);
+  const [activeTab, setActiveTab] = useState('pending');
+
+  // إعادة التوجيه إذا لم يكن المستخدم مسؤولاً
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!user) {
-        navigate('/login');
-        return;
-      }
+    if (userProfile && !userProfile.isApproved) {
+      navigate('/');
+    }
+  }, [userProfile, navigate]);
+
+  // جلب بيانات المستخدمين
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
       
-      // في الوضع الحالي، سنجعل أول مستخدم في النظام هو المسؤول
-      // في تطبيق حقيقي، يجب أن يكون هناك جدول خاص للأدوار
+      // جلب جميع المستخدمين مع ملفاتهم الشخصية
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .single();
-      
+        .select(`
+          id,
+          user_id,
+          full_name,
+          avatar_url,
+          is_approved,
+          is_admin,
+          subscription_plan,
+          updated_at,
+          users:user_id (
+            id,
+            email,
+            created_at
+          )
+        `);
+
       if (error) {
+        console.error('Error fetching users:', error);
         toast({
-          title: "خطأ",
-          description: "فشل في التحقق من حالة المسؤول",
+          title: "خطأ في جلب بيانات المستخدمين",
+          description: error.message,
           variant: "destructive",
         });
-        navigate('/');
         return;
       }
-      
-      // إذا كان المستخدم الحالي هو أول مستخدم، فهو المسؤول
-      if (data.id === user.id) {
-        setIsAdmin(true);
-        fetchUsers();
-      } else {
-        toast({
-          title: "غير مصرح",
-          description: "ليس لديك صلاحية الوصول إلى هذه الصفحة",
-          variant: "destructive",
-        });
-        navigate('/');
-      }
-    };
-    
-    checkAdminStatus();
-  }, [user, navigate, toast]);
-  
-  const fetchUsers = async () => {
-    setIsLoading(true);
-    try {
-      // استدعاء المستخدمين المعلقين
-      const { data: pendingData, error: pendingError } = await supabase
-        .from('profiles')
-        .select('*, auth_users:id(email)')
-        .eq('is_approved', false)
-        .order('created_at', { ascending: false });
-      
-      if (pendingError) throw pendingError;
-      
-      // استدعاء المستخدمين المعتمدين
-      const { data: approvedData, error: approvedError } = await supabase
-        .from('profiles')
-        .select('*, auth_users:id(email)')
-        .eq('is_approved', true)
-        .order('created_at', { ascending: false });
-      
-      if (approvedError) throw approvedError;
-      
+
       // تحويل البيانات إلى الشكل المطلوب
-      const formatProfileData = (data: any[]): UserProfile[] => {
-        return data.map(item => ({
-          id: item.id,
-          email: item.auth_users?.email || 'غير متوفر',
-          full_name: item.full_name || 'غير متوفر',
-          created_at: item.created_at,
-          subscription_plan: item.subscription_plan || 'standard',
-          is_approved: item.is_approved,
-          avatar_url: item.avatar_url
-        }));
-      };
+      const formattedUsers: UserWithProfile[] = data.map((profile: any) => {
+        const user = profile.users;
+        return {
+          id: user.id,
+          email: user.email,
+          created_at: user.created_at,
+          profile: {
+            id: profile.id,
+            user_id: profile.user_id,
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
+            is_approved: profile.is_approved,
+            is_admin: profile.is_admin,
+            subscription_plan: profile.subscription_plan,
+            updated_at: profile.updated_at,
+          }
+        };
+      });
+
+      setUsers(formattedUsers);
       
-      setPendingUsers(formatProfileData(pendingData || []));
-      setApprovedUsers(formatProfileData(approvedData || []));
+      // فصل المستخدمين حسب حالة الموافقة
+      const pending = formattedUsers.filter(user => !user.profile?.is_approved);
+      const approved = formattedUsers.filter(user => user.profile?.is_approved);
+      
+      setPendingUsers(pending);
+      setApprovedUsers(approved);
     } catch (error) {
-      console.error('خطأ في جلب بيانات المستخدمين:', error);
+      console.error('Error:', error);
       toast({
         title: "خطأ",
-        description: "فشل في جلب قائمة المستخدمين",
+        description: "حدث خطأ أثناء جلب بيانات المستخدمين",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
-  const handleApproveUser = async (userId: string) => {
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  // تحديث حالة الموافقة للمستخدم
+  const updateApprovalStatus = async (userId: string, approve: boolean) => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ is_approved: true })
-        .eq('id', userId);
-      
-      if (error) throw error;
-      
-      // تحديث القوائم
-      const updatedUser = pendingUsers.find(user => user.id === userId);
-      if (updatedUser) {
-        setPendingUsers(pendingUsers.filter(user => user.id !== userId));
-        setApprovedUsers([{ ...updatedUser, is_approved: true }, ...approvedUsers]);
+        .update({ is_approved: approve })
+        .eq('user_id', userId);
+
+      if (error) {
+        throw error;
       }
-      
-      toast({
-        title: "تمت الموافقة",
-        description: "تمت الموافقة على المستخدم بنجاح",
-      });
-    } catch (error) {
-      console.error('خطأ في الموافقة على المستخدم:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في الموافقة على المستخدم",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const handleRejectUser = async (userId: string) => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_approved: false })
-        .eq('id', userId);
-      
-      if (error) throw error;
-      
-      // تحديث القوائم
-      const updatedUser = approvedUsers.find(user => user.id === userId);
-      if (updatedUser) {
-        setApprovedUsers(approvedUsers.filter(user => user.id !== userId));
-        setPendingUsers([{ ...updatedUser, is_approved: false }, ...pendingUsers]);
-      }
-      
-      toast({
-        title: "تم الرفض",
-        description: "تم رفض المستخدم بنجاح",
-      });
-    } catch (error) {
-      console.error('خطأ في رفض المستخدم:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في رفض المستخدم",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const handleUpdateSubscription = async (userId: string, plan: 'standard' | 'vip' | 'pro') => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ subscription_plan: plan })
-        .eq('id', userId);
-      
-      if (error) throw error;
-      
-      // تحديث القوائم
-      if (activeTab === 'pending') {
-        setPendingUsers(pendingUsers.map(user => 
-          user.id === userId ? { ...user, subscription_plan: plan } : user
-        ));
+
+      // تحديث القائمة المحلية
+      setUsers(prevUsers => 
+        prevUsers.map(user => {
+          if (user.id === userId && user.profile) {
+            return {
+              ...user,
+              profile: {
+                ...user.profile,
+                is_approved: approve
+              }
+            };
+          }
+          return user;
+        })
+      );
+
+      // تحديث قوائم المستخدمين المعلقين والموافق عليهم
+      if (approve) {
+        setPendingUsers(prev => prev.filter(user => user.id !== userId));
+        setApprovedUsers(prev => [
+          ...prev, 
+          ...users.filter(user => user.id === userId)
+        ]);
       } else {
-        setApprovedUsers(approvedUsers.map(user => 
-          user.id === userId ? { ...user, subscription_plan: plan } : user
-        ));
+        setApprovedUsers(prev => prev.filter(user => user.id !== userId));
+        setPendingUsers(prev => [
+          ...prev, 
+          ...users.filter(user => user.id === userId)
+        ]);
       }
-      
+
       toast({
-        title: "تم التحديث",
-        description: "تم تحديث باقة المستخدم بنجاح",
+        title: approve ? "تمت الموافقة على المستخدم" : "تم رفض المستخدم",
+        description: approve ? "يمكن للمستخدم الآن تسجيل الدخول واستخدام النظام" : "تم إلغاء وصول المستخدم إلى النظام",
+        variant: approve ? "default" : "destructive",
       });
-    } catch (error) {
-      console.error('خطأ في تحديث باقة المستخدم:', error);
+    } catch (error: any) {
+      console.error('Error updating user status:', error);
       toast({
         title: "خطأ",
-        description: "فشل في تحديث باقة المستخدم",
+        description: error.message || "حدث خطأ أثناء تحديث حالة المستخدم",
         variant: "destructive",
       });
     }
   };
-  
-  const getSubscriptionBadge = (plan: string) => {
-    switch (plan) {
-      case 'standard':
-        return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            <User className="mr-1 h-3 w-3" />
-            عادية
-          </Badge>
-        );
-      case 'vip':
-        return (
-          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-            <Crown className="mr-1 h-3 w-3" />
-            VIP
-          </Badge>
-        );
-      case 'pro':
-        return (
-          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-            <Shield className="mr-1 h-3 w-3" />
-            PRO
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline">
-            <User className="mr-1 h-3 w-3" />
-            {plan}
-          </Badge>
-        );
+
+  // ترقية مستخدم إلى مسؤول
+  const promoteToAdmin = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_admin: true })
+        .eq('user_id', userId);
+
+      if (error) {
+        throw error;
+      }
+
+      // تحديث القائمة المحلية
+      setUsers(prevUsers => 
+        prevUsers.map(user => {
+          if (user.id === userId && user.profile) {
+            return {
+              ...user,
+              profile: {
+                ...user.profile,
+                is_admin: true
+              }
+            };
+          }
+          return user;
+        })
+      );
+
+      // تحديث قائمة المستخدمين الموافق عليهم
+      setApprovedUsers(prev => 
+        prev.map(user => {
+          if (user.id === userId && user.profile) {
+            return {
+              ...user,
+              profile: {
+                ...user.profile,
+                is_admin: true
+              }
+            };
+          }
+          return user;
+        })
+      );
+
+      toast({
+        title: "تمت ترقية المستخدم",
+        description: "تم منح المستخدم صلاحيات المسؤول",
+        variant: "default",
+      });
+    } catch (error: any) {
+      console.error('Error promoting user to admin:', error);
+      toast({
+        title: "خطأ",
+        description: error.message || "حدث خطأ أثناء ترقية المستخدم",
+        variant: "destructive",
+      });
     }
   };
-  
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-background">
-        <AppHeader />
-        <div className="container max-w-3xl mx-auto p-6 mt-10">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">جاري التحميل...</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-  
+
+  // تنسيق التاريخ
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, DATE_FORMAT);
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
+      return dateString;
+    }
+  };
+
+  // تحويل خطة الاشتراك إلى نص عربي
+  const getSubscriptionPlanText = (plan: string) => {
+    switch(plan) {
+      case 'standard':
+        return 'الباقة العادية';
+      case 'vip':
+        return 'باقة VIP';
+      case 'pro':
+        return 'باقة PRO';
+      default:
+        return 'غير معروفة';
+    }
+  };
+
+  // الحصول على لون الباقة
+  const getSubscriptionPlanColor = (plan: string) => {
+    switch(plan) {
+      case 'standard':
+        return 'bg-blue-100 text-blue-800';
+      case 'vip':
+        return 'bg-purple-100 text-purple-800';
+      case 'pro':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
-      <div className="container max-w-6xl mx-auto p-6 mt-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-2xl">إدارة المستخدمين</CardTitle>
-            <CardDescription>
-              قم بمراجعة والموافقة على طلبات المستخدمين الجدد وإدارة الباقات
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex space-x-2 mb-6 border-b">
-              <Button
-                variant={activeTab === 'pending' ? 'default' : 'ghost'}
-                className="relative rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary px-4"
-                onClick={() => setActiveTab('pending')}
-              >
-                قيد الانتظار
-                {pendingUsers.length > 0 && (
-                  <Badge className="mr-2 bg-primary">{pendingUsers.length}</Badge>
-                )}
-              </Button>
-              <Button
-                variant={activeTab === 'approved' ? 'default' : 'ghost'}
-                className="relative rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary px-4"
-                onClick={() => setActiveTab('approved')}
-              >
-                المعتمدين
-              </Button>
-            </div>
-            
-            {isLoading ? (
-              <div className="flex justify-center items-center py-10">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      
+      <div className="container mx-auto p-4 pt-6">
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-2xl">إدارة المستخدمين</CardTitle>
+                  <CardDescription>
+                    مراجعة وإدارة طلبات التسجيل والمستخدمين في النظام
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchUsers}
+                  className="flex items-center gap-1"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  تحديث
+                </Button>
               </div>
-            ) : (
-              <div>
-                {activeTab === 'pending' ? (
-                  pendingUsers.length === 0 ? (
-                    <div className="text-center py-10 text-muted-foreground">
+            </CardHeader>
+            <CardContent>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="pending" className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    الطلبات المعلقة ({pendingUsers.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="approved" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    المستخدمون المعتمدون ({approvedUsers.length})
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="pending">
+                  {isLoading ? (
+                    <div className="flex justify-center p-8">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    </div>
+                  ) : pendingUsers.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
                       لا توجد طلبات معلقة في الوقت الحالي
                     </div>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[250px]">المستخدم</TableHead>
-                          <TableHead>البريد الإلكتروني</TableHead>
-                          <TableHead>تاريخ التسجيل</TableHead>
-                          <TableHead>الباقة</TableHead>
-                          <TableHead className="text-left">الإجراءات</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {pendingUsers.map((user) => (
-                          <TableRow key={user.id}>
-                            <TableCell className="font-medium">{user.full_name}</TableCell>
-                            <TableCell>{user.email}</TableCell>
-                            <TableCell>{formatDate(user.created_at)}</TableCell>
-                            <TableCell>
-                              <Select
-                                defaultValue={user.subscription_plan}
-                                onValueChange={(value) => handleUpdateSubscription(user.id, value as any)}
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue>
-                                    {getSubscriptionBadge(user.subscription_plan)}
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="standard">
-                                    <div className="flex items-center">
-                                      <User className="mr-2 h-4 w-4" />
-                                      <span>عادية</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="vip">
-                                    <div className="flex items-center">
-                                      <Crown className="mr-2 h-4 w-4" />
-                                      <span>VIP</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="pro">
-                                    <div className="flex items-center">
-                                      <Shield className="mr-2 h-4 w-4" />
-                                      <span>PRO</span>
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100 hover:text-green-700"
-                                  onClick={() => handleApproveUser(user.id)}
-                                >
-                                  <CheckCircle className="mr-1 h-4 w-4" />
-                                  موافقة
-                                </Button>
-                              </div>
-                            </TableCell>
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableCaption>قائمة بطلبات التسجيل المعلقة</TableCaption>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>المستخدم</TableHead>
+                            <TableHead>البريد الإلكتروني</TableHead>
+                            <TableHead>الباقة</TableHead>
+                            <TableHead>تاريخ التسجيل</TableHead>
+                            <TableHead>الإجراءات</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )
-                ) : (
-                  approvedUsers.length === 0 ? (
-                    <div className="text-center py-10 text-muted-foreground">
-                      لا يوجد مستخدمين معتمدين في الوقت الحالي
+                        </TableHeader>
+                        <TableBody>
+                          {pendingUsers.map((user) => (
+                            <TableRow key={user.id}>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center space-x-2">
+                                  <Avatar className="h-8 w-8 ml-2">
+                                    <AvatarImage src={user.profile?.avatar_url || `https://avatar.iran.liara.run/public/${user.email}`} />
+                                    <AvatarFallback>{user.profile?.full_name?.charAt(0) || user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="font-medium">{user.profile?.full_name || 'غير محدد'}</div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>{user.email}</TableCell>
+                              <TableCell>
+                                {user.profile?.subscription_plan && (
+                                  <span className={`px-2 py-1 rounded-full text-xs ${getSubscriptionPlanColor(user.profile.subscription_plan)}`}>
+                                    {getSubscriptionPlanText(user.profile.subscription_plan)}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>{formatDate(user.created_at)}</TableCell>
+                              <TableCell>
+                                <div className="flex space-x-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateApprovalStatus(user.id, true)}
+                                    className="flex items-center gap-1 text-green-600"
+                                  >
+                                    <Check className="h-4 w-4" />
+                                    قبول
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex items-center gap-1 text-red-600"
+                                      >
+                                        <X className="h-4 w-4" />
+                                        رفض
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>هل أنت متأكد من رفض هذا المستخدم؟</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          سيتم منع المستخدم من الوصول إلى النظام. يمكنك إلغاء هذا الإجراء لاحقًا.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => updateApprovalStatus(user.id, false)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          تأكيد الرفض
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="approved">
+                  {isLoading ? (
+                    <div className="flex justify-center p-8">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    </div>
+                  ) : approvedUsers.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      لا يوجد مستخدمين معتمدين في النظام
                     </div>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[250px]">المستخدم</TableHead>
-                          <TableHead>البريد الإلكتروني</TableHead>
-                          <TableHead>تاريخ التسجيل</TableHead>
-                          <TableHead>الباقة</TableHead>
-                          <TableHead className="text-left">الإجراءات</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {approvedUsers.map((user) => (
-                          <TableRow key={user.id}>
-                            <TableCell className="font-medium">{user.full_name}</TableCell>
-                            <TableCell>{user.email}</TableCell>
-                            <TableCell>{formatDate(user.created_at)}</TableCell>
-                            <TableCell>
-                              <Select
-                                defaultValue={user.subscription_plan}
-                                onValueChange={(value) => handleUpdateSubscription(user.id, value as any)}
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue>
-                                    {getSubscriptionBadge(user.subscription_plan)}
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="standard">
-                                    <div className="flex items-center">
-                                      <User className="mr-2 h-4 w-4" />
-                                      <span>عادية</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="vip">
-                                    <div className="flex items-center">
-                                      <Crown className="mr-2 h-4 w-4" />
-                                      <span>VIP</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="pro">
-                                    <div className="flex items-center">
-                                      <Shield className="mr-2 h-4 w-4" />
-                                      <span>PRO</span>
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100 hover:text-red-700"
-                                  onClick={() => handleRejectUser(user.id)}
-                                >
-                                  <XCircle className="mr-1 h-4 w-4" />
-                                  إلغاء الاعتماد
-                                </Button>
-                              </div>
-                            </TableCell>
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableCaption>قائمة المستخدمين المعتمدين في النظام</TableCaption>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>المستخدم</TableHead>
+                            <TableHead>البريد الإلكتروني</TableHead>
+                            <TableHead>الباقة</TableHead>
+                            <TableHead>تاريخ التسجيل</TableHead>
+                            <TableHead>الصلاحية</TableHead>
+                            <TableHead>الإجراءات</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {approvedUsers.map((user) => (
+                            <TableRow key={user.id}>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center space-x-2">
+                                  <Avatar className="h-8 w-8 ml-2">
+                                    <AvatarImage src={user.profile?.avatar_url || `https://avatar.iran.liara.run/public/${user.email}`} />
+                                    <AvatarFallback>{user.profile?.full_name?.charAt(0) || user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="font-medium">{user.profile?.full_name || 'غير محدد'}</div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>{user.email}</TableCell>
+                              <TableCell>
+                                {user.profile?.subscription_plan && (
+                                  <span className={`px-2 py-1 rounded-full text-xs ${getSubscriptionPlanColor(user.profile.subscription_plan)}`}>
+                                    {getSubscriptionPlanText(user.profile.subscription_plan)}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>{formatDate(user.created_at)}</TableCell>
+                              <TableCell>
+                                {user.profile?.is_admin ? (
+                                  <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                                    <Shield className="h-3 w-3 mr-1" /> مسؤول
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">
+                                    مستخدم
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex space-x-2">
+                                  {!user.profile?.is_admin && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="flex items-center gap-1 text-yellow-600"
+                                        >
+                                          <Shield className="h-4 w-4" />
+                                          ترقية لمسؤول
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>ترقية المستخدم إلى مسؤول</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            هذا سيمنح المستخدم صلاحيات كاملة للوصول إلى كافة أجزاء النظام بما في ذلك إدارة المستخدمين. هل أنت متأكد؟
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => promoteToAdmin(user.id)}
+                                            className="bg-yellow-600 hover:bg-yellow-700"
+                                          >
+                                            تأكيد الترقية
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex items-center gap-1 text-red-600"
+                                      >
+                                        <X className="h-4 w-4" />
+                                        تعليق
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>تعليق حساب المستخدم</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          سيتم منع المستخدم من الوصول إلى النظام. هل أنت متأكد من هذا الإجراء؟
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => updateApprovalStatus(user.id, false)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          تأكيد التعليق
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
