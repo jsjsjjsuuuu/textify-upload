@@ -134,7 +134,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('profiles')
         .select('is_approved')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();  // استخدام maybeSingle بدلاً من single لتجنب الأخطاء إذا لم يتم العثور على الملف الشخصي
       
       if (profileError) {
         console.error("خطأ في التحقق من حالة الحساب:", profileError.message);
@@ -147,9 +147,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error: profileError, user: null };
       }
       
-      console.log("حالة اعتماد الحساب:", profileData.is_approved);
+      // إذا لم يتم العثور على ملف شخصي، فسنفترض أن الحساب معتمد
+      const isApproved = profileData ? profileData.is_approved : true;
       
-      if (!profileData.is_approved) {
+      console.log("حالة اعتماد الحساب:", isApproved);
+      
+      if (!isApproved) {
         // تسجيل الخروج تلقائياً إذا لم يتم اعتماد الحساب
         await supabase.auth.signOut();
         
@@ -253,7 +256,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const forgotPassword = async (email: string) => {
     try {
       // استخدام URL مطلق للتوجيه
-      const redirectTo = `${window.location.origin}/reset-password`;
+      const redirectTo = window.location.origin + "/reset-password";
       console.log("URL إعادة التوجيه لإعادة تعيين كلمة المرور:", redirectTo);
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
