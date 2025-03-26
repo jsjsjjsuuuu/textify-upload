@@ -36,11 +36,14 @@ const ForgotPassword = () => {
     setError(null);
     
     try {
+      console.log("إرسال طلب استعادة كلمة المرور للبريد:", data.email);
       const { error, sent } = await forgotPassword(data.email);
       
       if (error) {
+        console.error("خطأ في إرسال طلب استعادة كلمة المرور:", error.message);
         setError(error.message);
       } else if (sent) {
+        console.log("تم إرسال رابط استعادة كلمة المرور بنجاح");
         setEmailSent(true);
       }
     } finally {

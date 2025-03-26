@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +17,7 @@ type AuthContextType = {
   } | null;
   loading: boolean;
   emailConfirmationSent: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any, user?: User | null }>;
   signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any, emailConfirmationSent?: boolean }>;
   signOut: () => Promise<void>;
   forgotPassword: (email: string) => Promise<{ error: any, sent: boolean }>;
@@ -71,17 +72,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
+    // تعيين مستمع لتغييرات حالة المصادقة
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_, session) => {
-        console.log("تغيير حالة المصادقة:", session ? "مسجل الدخول" : "غير مسجل الدخول");
+      async (event, newSession) => {
+        console.log("تغيير حالة المصادقة:", event, newSession ? "مسجل الدخول" : "غير مسجل الدخول");
         
-        setSession(session);
-        setUser(session?.user ?? null);
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
         
-        if (session?.user) {
+        if (newSession?.user) {
           // تأخير استدعاء Supabase مرة أخرى لتجنب التعارض
           setTimeout(() => {
-            fetchUserProfile(session.user.id);
+            fetchUserProfile(newSession.user.id);
           }, 0);
         } else {
           setUserProfile(null);
@@ -91,14 +93,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("التحقق من جلسة المستخدم:", session ? "موجودة" : "غير موجودة");
+    // التحقق من الجلسة الحالية عند تحميل الصفحة
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("التحقق من جلسة المستخدم:", currentSession ? "موجودة" : "غير موجودة");
       
-      setSession(session);
-      setUser(session?.user ?? null);
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
       
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
+      if (currentSession?.user) {
+        fetchUserProfile(currentSession.user.id);
       }
       
       setLoading(false);
@@ -141,7 +144,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           description: "لا يمكن التحقق من حالة الحساب",
           variant: "destructive",
         });
-        return { error: profileError };
+        return { error: profileError, user: null };
       }
       
       console.log("حالة اعتماد الحساب:", profileData.is_approved);
@@ -156,7 +159,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           variant: "destructive",
         });
         
-        return { error: { message: "الحساب قيد المراجعة" } };
+        return { error: { message: "الحساب قيد المراجعة" }, user: null };
       }
       
       toast({
@@ -164,7 +167,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "مرحبًا بك مجددًا!",
       });
       
-      return { error: null };
+      return { error: null, user: data.user };
     } catch (error: any) {
       console.error("خطأ غير متوقع أثناء تسجيل الدخول:", error);
       
@@ -173,7 +176,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: error.message,
         variant: "destructive",
       });
-      return { error };
+      return { error, user: null };
     }
   };
 
@@ -183,7 +186,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         email, 
         password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: `${window.location.origin}/login`,
           data: {
             ...metadata,
             subscription_plan: metadata?.subscription_plan || 'standard',
@@ -249,11 +252,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const forgotPassword = async (email: string) => {
     try {
+      // استخدام URL مطلق للتوجيه
+      const redirectTo = `${window.location.origin}/reset-password`;
+      console.log("URL إعادة التوجيه لإعادة تعيين كلمة المرور:", redirectTo);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo
       });
 
       if (error) {
+        console.error("خطأ في إرسال رابط إعادة تعيين كلمة المرور:", error.message);
         toast({
           title: "خطأ",
           description: error.message,
@@ -262,6 +270,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error, sent: false };
       }
 
+      console.log("تم إرسال رابط إعادة تعيين كلمة المرور بنجاح");
       toast({
         title: "تم إرسال رابط إعادة تعيين كلمة المرور",
         description: "يرجى التحقق من بريدك الإلكتروني واتباع التعليمات لإعادة تعيين كلمة المرور الخاصة بك",
@@ -269,6 +278,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       return { error: null, sent: true };
     } catch (error: any) {
+      console.error("خطأ غير متوقع:", error);
       toast({
         title: "خطأ",
         description: error.message,
@@ -280,11 +290,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const resetPassword = async (newPassword: string) => {
     try {
+      console.log("محاولة إعادة تعيين كلمة المرور");
+      
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
       if (error) {
+        console.error("خطأ في إعادة تعيين كلمة المرور:", error.message);
         toast({
           title: "خطأ",
           description: error.message,
@@ -293,6 +306,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error, success: false };
       }
 
+      console.log("تم إعادة تعيين كلمة المرور بنجاح");
       toast({
         title: "تم تغيير كلمة المرور بنجاح",
         description: "يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة",
@@ -300,6 +314,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       return { error: null, success: true };
     } catch (error: any) {
+      console.error("خطأ غير متوقع:", error);
       toast({
         title: "خطأ",
         description: error.message,

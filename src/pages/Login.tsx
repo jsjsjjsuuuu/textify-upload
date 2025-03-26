@@ -47,9 +47,11 @@ const Login = () => {
     setHasLoginError(false);
     
     try {
-      console.log("بيانات تسجيل الدخول:", { email: data.email }); // تسجيل معلومات الدخول للتصحيح
+      console.log("محاولة تسجيل الدخول للمستخدم:", data.email); // تسجيل معلومات الدخول للتصحيح
       
-      const { error } = await signIn(data.email, data.password);
+      const { error, user: authUser } = await signIn(data.email, data.password);
+      
+      console.log("نتيجة تسجيل الدخول:", error ? "فشل" : "نجاح", "المستخدم:", authUser || "لا يوجد");
       
       if (error) {
         console.error("خطأ تسجيل الدخول:", error.message);
@@ -67,7 +69,7 @@ const Login = () => {
         }
       } else {
         // نجاح تسجيل الدخول، سيتم التوجيه في الـ useEffect
-        console.log("تم تسجيل الدخول بنجاح");
+        console.log("تم تسجيل الدخول بنجاح، جاري التحقق من حالة الاعتماد");
       }
     } catch (error: any) {
       console.error("خطأ غير متوقع:", error);

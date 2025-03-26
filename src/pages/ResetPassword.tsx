@@ -34,9 +34,13 @@ const ResetPassword = () => {
   useEffect(() => {
     // التحقق مما إذا كان المستخدم قد وصل من خلال رابط إعادة تعيين كلمة المرور
     const checkResetSession = async () => {
+      console.log("التحقق من صلاحية جلسة إعادة تعيين كلمة المرور");
       const { data, error } = await supabase.auth.getSession();
       
+      console.log("نتيجة فحص الجلسة:", data.session ? "صالحة" : "غير صالحة", error ? `خطأ: ${error.message}` : "");
+      
       if (error || !data.session) {
+        console.error("رابط إعادة تعيين كلمة المرور غير صالح:", error?.message || "لا توجد جلسة");
         setIsValidResetLink(false);
       }
     };
@@ -44,24 +48,19 @@ const ResetPassword = () => {
     checkResetSession();
   }, []);
 
-  const form = useForm<ResetPasswordFormValues>({
-    resolver: zodResolver(resetPasswordSchema),
-    defaultValues: {
-      password: '',
-      confirmPassword: '',
-    },
-  });
-
   const onSubmit = async (data: ResetPasswordFormValues) => {
     setIsLoading(true);
     setError(null);
     
     try {
+      console.log("محاولة إعادة تعيين كلمة المرور");
       const { error, success } = await resetPassword(data.password);
       
       if (error) {
+        console.error("فشل إعادة تعيين كلمة المرور:", error.message);
         setError(error.message);
       } else if (success) {
+        console.log("تم إعادة تعيين كلمة المرور بنجاح");
         setResetSuccess(true);
         
         // بعد 3 ثواني، التوجيه إلى صفحة تسجيل الدخول
