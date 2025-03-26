@@ -89,31 +89,37 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: string | null
           avatar_url: string | null
           created_at: string
           full_name: string | null
           id: string
           is_approved: boolean | null
+          subscription_end_date: string | null
           subscription_plan: string | null
           updated_at: string
           username: string | null
         }
         Insert: {
+          account_status?: string | null
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
           id: string
           is_approved?: boolean | null
+          subscription_end_date?: string | null
           subscription_plan?: string | null
           updated_at?: string
           username?: string | null
         }
         Update: {
+          account_status?: string | null
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           is_approved?: boolean | null
+          subscription_end_date?: string | null
           subscription_plan?: string | null
           updated_at?: string
           username?: string | null
@@ -125,7 +131,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_update_user_password: {
+        Args: {
+          user_id: string
+          new_password: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
