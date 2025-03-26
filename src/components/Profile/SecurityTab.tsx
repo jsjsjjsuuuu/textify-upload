@@ -103,6 +103,7 @@ const SecurityTab: React.FC = () => {
                       type="button"
                       className="absolute left-3 top-3 text-muted-foreground"
                       onClick={() => togglePasswordVisibility('current')}
+                      tabIndex={-1}
                     >
                       {showPassword.current ? (
                         <EyeOff className="h-4 w-4" />
@@ -136,6 +137,7 @@ const SecurityTab: React.FC = () => {
                       type="button"
                       className="absolute left-3 top-3 text-muted-foreground"
                       onClick={() => togglePasswordVisibility('new')}
+                      tabIndex={-1}
                     >
                       {showPassword.new ? (
                         <EyeOff className="h-4 w-4" />
@@ -169,6 +171,7 @@ const SecurityTab: React.FC = () => {
                       type="button"
                       className="absolute left-3 top-3 text-muted-foreground"
                       onClick={() => togglePasswordVisibility('confirm')}
+                      tabIndex={-1}
                     >
                       {showPassword.confirm ? (
                         <EyeOff className="h-4 w-4" />
