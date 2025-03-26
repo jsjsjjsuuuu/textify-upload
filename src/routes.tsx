@@ -28,6 +28,11 @@ export const AppRoutes = () => {
         {/* الصفحات المحمية */}
         <Route path="/" element={
           <ProtectedRoute>
+            <Records />
+          </ProtectedRoute>
+        } />
+        <Route path="/upload" element={
+          <ProtectedRoute>
             <Index />
           </ProtectedRoute>
         } />
