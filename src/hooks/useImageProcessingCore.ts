@@ -75,6 +75,9 @@ export const useImageProcessingCore = () => {
         return null;
       }
 
+      // تحديث حالة الصورة ليشير إلى أنها تم حفظها
+      updateImage(image.id, { submitted: true });
+
       toast({
         title: "نجاح",
         description: `تم حفظ البيانات في قاعدة البيانات`,

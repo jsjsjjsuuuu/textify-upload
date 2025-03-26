@@ -119,9 +119,6 @@ export const useFileUpload = ({
         
         updateImage(newImage.id, processedImage);
         console.log("تم تحديث الصورة بالبيانات المستخرجة:", newImage.id);
-
-        // يمكن إضافة حفظ البيانات هنا إذا كان هناك hook لذلك
-        // saveProcessedImage(processedImage);
       } catch (error) {
         console.error("خطأ عام في معالجة الصورة:", error);
         updateImage(newImage.id, { status: "error" });
