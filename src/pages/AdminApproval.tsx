@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import ar from 'date-fns/locale/ar-SA';
+import { arSA } from 'date-fns/locale';
 import { CheckCircle, XCircle, User, Calendar, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,6 +24,16 @@ interface UserProfile {
   is_approved?: boolean;
   created_at?: string;
   subscription_plan?: string;
+}
+
+// نوع البيانات من جدول profiles
+interface ProfileData {
+  id: string;
+  full_name?: string | null;
+  avatar_url?: string | null;
+  is_approved?: boolean | null;
+  subscription_plan?: string | null;
+  [key: string]: any;
 }
 
 const AdminApproval = () => {
@@ -67,7 +77,7 @@ const AdminApproval = () => {
       
       // دمج بيانات المستخدمين مع ملفاتهم الشخصية
       const combinedUsers = authUsers.users.map(authUser => {
-        const profile = profilesData.find(p => p.id === authUser.id) || {};
+        const profile = profilesData?.find(p => p.id === authUser.id) as ProfileData || {} as ProfileData;
         return {
           id: authUser.id,
           email: authUser.email || '',
@@ -147,7 +157,7 @@ const AdminApproval = () => {
   // تنسيق التاريخ بالعربية
   const formatDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'PPP', { locale: ar });
+      return format(new Date(dateString), 'PPP', { locale: arSA });
     } catch (error) {
       return 'تاريخ غير صالح';
     }
