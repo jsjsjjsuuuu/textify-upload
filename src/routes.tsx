@@ -10,6 +10,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Records from './pages/Records';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import AdminApproval from './pages/AdminApproval';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -24,6 +27,8 @@ export const AppRoutes = () => {
         {/* صفحات المصادقة */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         
         {/* الصفحات المحمية */}
         <Route path="/" element={
@@ -39,6 +44,11 @@ export const AppRoutes = () => {
         <Route path="/profile" element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/approvals" element={
+          <ProtectedRoute>
+            <AdminApproval />
           </ProtectedRoute>
         } />
         <Route path="/records" element={

@@ -60,12 +60,41 @@ export type Database = {
         }
         Relationships: []
       }
+      password_reset_requests: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_used: boolean | null
+          reset_token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_used?: boolean | null
+          reset_token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_used?: boolean | null
+          reset_token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
           full_name: string | null
           id: string
+          is_approved: boolean | null
+          subscription_plan: string | null
           updated_at: string
           username: string | null
         }
@@ -74,6 +103,8 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          is_approved?: boolean | null
+          subscription_plan?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -82,6 +113,8 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_approved?: boolean | null
+          subscription_plan?: string | null
           updated_at?: string
           username?: string | null
         }

@@ -6,13 +6,15 @@ import { useAuth } from '@/contexts/AuthContext';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   redirectTo?: string;
+  requireApproval?: boolean;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  redirectTo = '/login' 
+  redirectTo = '/login',
+  requireApproval = true
 }) => {
-  const { user, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
 
   if (loading) {
     return (
@@ -24,6 +26,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (!user) {
     return <Navigate to={redirectTo} />;
+  }
+
+  // التحقق من حالة الموافقة إذا كان مطلوبًا
+  if (requireApproval && userProfile && !userProfile.isApproved) {
+    return <Navigate to="/login" />;
   }
 
   return <>{children}</>;

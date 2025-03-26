@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
-import { Mail, UserPlus } from 'lucide-react';
+import { Mail, UserPlus, KeyRound } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'يرجى إدخال بريد إلكتروني صحيح' }),
@@ -21,16 +22,16 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, user } = useAuth();
+  const { signIn, user, userProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoginError, setHasLoginError] = useState(false);
   const [loginErrorMessage, setLoginErrorMessage] = useState('');
 
   useEffect(() => {
-    if (user) {
+    if (user && userProfile?.isApproved) {
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, userProfile, navigate]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -72,6 +73,8 @@ const Login = () => {
               <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-sm">
                 {loginErrorMessage.includes('Email not confirmed') 
                   ? 'البريد الإلكتروني غير مؤكد. يرجى تفقد بريدك الإلكتروني والنقر على رابط التأكيد.'
+                  : loginErrorMessage.includes('الحساب قيد المراجعة')
+                  ? 'لم تتم الموافقة على حسابك بعد. يرجى الانتظار حتى يتم مراجعته من قبل المسؤول.'
                   : loginErrorMessage}
               </div>
             )}
@@ -98,9 +101,20 @@ const Login = () => {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>كلمة المرور</FormLabel>
+                      <div className="flex justify-between items-center">
+                        <FormLabel>كلمة المرور</FormLabel>
+                        <Link 
+                          to="/forgot-password" 
+                          className="text-xs text-primary hover:underline"
+                        >
+                          نسيت كلمة المرور؟
+                        </Link>
+                      </div>
                       <FormControl>
-                        <Input type="password" placeholder="أدخل كلمة المرور" {...field} />
+                        <div className="relative">
+                          <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input type="password" placeholder="أدخل كلمة المرور" className="pl-10" {...field} />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -117,6 +131,7 @@ const Login = () => {
             </Form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
+            <Separator className="my-2" />
             <div className="text-center text-sm">
               ليس لديك حساب؟{' '}
               <Link to="/register" className="text-primary hover:underline inline-flex items-center">
