@@ -45,14 +45,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        toast({
-          title: "خطأ في تسجيل الدخول",
-          description: error.message,
-          variant: "destructive",
-        });
+        // التحقق من نوع الخطأ
+        if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "البريد الإلكتروني غير مؤكد",
+            description: "يرجى التحقق من بريدك الإلكتروني وتأكيد الحساب قبل تسجيل الدخول",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "خطأ في تسجيل الدخول",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
         return { error };
       }
       
@@ -74,7 +83,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error, data } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+        } 
+      });
       
       if (error) {
         toast({
@@ -85,10 +100,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
       
-      toast({
-        title: "تم التسجيل بنجاح",
-        description: "تم إنشاء حسابك. يرجى تسجيل الدخول.",
-      });
+      // التحقق مما إذا كان التأكيد مطلوبًا
+      if (data?.user?.identities?.length === 0) {
+        toast({
+          title: "البريد الإلكتروني مسجل بالفعل",
+          description: "يرجى تسجيل الدخول بدلاً من ذلك.",
+          variant: "destructive",
+        });
+      } else if (data?.user && !data?.session) {
+        toast({
+          title: "تم التسجيل بنجاح",
+          description: "تم إرسال رابط التأكيد إلى بريدك الإلكتروني. يرجى تأكيد حسابك ثم تسجيل الدخول.",
+        });
+      } else {
+        toast({
+          title: "تم التسجيل بنجاح",
+          description: "تم إنشاء حسابك. يمكنك الآن تسجيل الدخول.",
+        });
+      }
       
       return { error: null };
     } catch (error: any) {
