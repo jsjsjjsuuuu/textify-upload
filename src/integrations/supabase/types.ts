@@ -138,6 +138,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      admin_update_user_password_by_email: {
+        Args: {
+          user_email: string
+          new_password: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
