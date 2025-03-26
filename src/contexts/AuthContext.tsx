@@ -8,8 +8,9 @@ type AuthContextType = {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  emailConfirmationSent: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any, emailConfirmationSent?: boolean }>;
   signOut: () => Promise<void>;
 };
 
@@ -19,10 +20,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // إعداد المستمع لتغييرات حالة المصادقة
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_, session) => {
         setSession(session);
@@ -31,7 +32,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // التحقق من وجود جلسة حالية
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -48,26 +48,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        // التحقق من نوع الخطأ
-        if (error.message.includes('Email not confirmed')) {
-          toast({
-            title: "البريد الإلكتروني غير مؤكد",
-            description: "يرجى التحقق من بريدك الإلكتروني وتأكيد الحساب قبل تسجيل الدخول",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "خطأ في تسجيل الدخول",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "فشل تسجيل الدخول",
+          description: error.message,
+          variant: "destructive",
+        });
         return { error };
       }
       
       toast({
         title: "تم تسجيل الدخول بنجاح",
-        description: "مرحبًا بعودتك!",
+        description: "مرحبًا بك مجددًا!",
       });
       
       return { error: null };
@@ -94,30 +85,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) {
         toast({
-          title: "خطأ في التسجيل",
+          title: "فشل التسجيل",
           description: error.message,
           variant: "destructive",
         });
         return { error };
       }
       
-      // التحقق مما إذا كان التأكيد مطلوبًا
-      if (data?.user?.identities?.length === 0) {
+      if (data?.user && !data?.session) {
+        setEmailConfirmationSent(true);
         toast({
-          title: "البريد الإلكتروني مسجل بالفعل",
-          description: "يرجى تسجيل الدخول بدلاً من ذلك.",
-          variant: "destructive",
+          title: "تم إرسال رسالة التأكيد",
+          description: "يرجى التحقق من بريدك الإلكتروني وتأكيد الحساب",
         });
-      } else if (data?.user && !data?.session) {
-        toast({
-          title: "تم التسجيل بنجاح",
-          description: "تم إرسال رابط التأكيد إلى بريدك الإلكتروني. يرجى تأكيد حسابك ثم تسجيل الدخول.",
-        });
-      } else {
-        toast({
-          title: "تم التسجيل بنجاح",
-          description: "تم إنشاء حسابك. يمكنك الآن تسجيل الدخول.",
-        });
+        return { error: null, emailConfirmationSent: true };
       }
       
       return { error: null };
@@ -136,7 +117,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await supabase.auth.signOut();
       toast({
         title: "تم تسجيل الخروج",
-        description: "تم تسجيل الخروج بنجاح",
+        description: "لقد قمت بتسجيل الخروج بنجاح",
       });
     } catch (error: any) {
       toast({
@@ -148,7 +129,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ 
+      session, 
+      user, 
+      loading, 
+      emailConfirmationSent,
+      signIn, 
+      signUp, 
+      signOut 
+    }}>
       {children}
     </AuthContext.Provider>
   );

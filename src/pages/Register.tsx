@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -26,15 +25,8 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const Register = () => {
   const navigate = useNavigate();
-  const { signUp, user } = useAuth();
+  const { signUp, emailConfirmationSent } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [registered, setRegistered] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      navigate('/');
-    }
-  }, [user, navigate]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -49,21 +41,21 @@ const Register = () => {
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
     try {
-      const { error } = await signUp(
+      const { error, emailConfirmationSent } = await signUp(
         data.email, 
         data.password, 
         { full_name: data.fullName }
       );
       
-      if (!error) {
-        setRegistered(true);
+      if (!error && emailConfirmationSent) {
+        // سيتم عرض رسالة التأكيد في AuthContext
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (registered) {
+  if (emailConfirmationSent) {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader />
@@ -75,18 +67,18 @@ const Register = () => {
                   <Check className="h-12 w-12 text-green-600" />
                 </div>
               </div>
-              <CardTitle className="text-2xl text-center">تم التسجيل بنجاح!</CardTitle>
+              <CardTitle className="text-2xl text-center">تم إرسال رسالة التأكيد</CardTitle>
               <CardDescription className="text-center">
-                تم إرسال رابط التأكيد إلى بريدك الإلكتروني. يرجى تفقد بريدك والنقر على الرابط لتأكيد حسابك ثم العودة لتسجيل الدخول.
+                لقد أرسلنا رابط التأكيد إلى بريدك الإلكتروني. يرجى التحقق والنقر على الرابط لتأكيد حسابك.
               </CardDescription>
             </CardHeader>
-            <CardFooter className="flex justify-center">
+            <CardFooter>
               <Button 
                 variant="outline" 
                 onClick={() => navigate('/login')} 
-                className="w-full mt-4"
+                className="w-full"
               >
-                العودة إلى صفحة تسجيل الدخول
+                العودة إلى تسجيل الدخول
               </Button>
             </CardFooter>
           </Card>

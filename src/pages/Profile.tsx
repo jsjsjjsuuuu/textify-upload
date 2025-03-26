@@ -10,12 +10,12 @@ import { supabase } from '@/integrations/supabase/client';
 import AppHeader from '@/components/AppHeader';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Check, Edit, User } from 'lucide-react';
+import { Check, Edit, UserCircle } from 'lucide-react';
 
 interface Profile {
+  full_name: string | null;
   username: string | null;
   avatar_url: string | null;
-  full_name: string | null;
 }
 
 const Profile = () => {
@@ -26,9 +26,9 @@ const Profile = () => {
   const [updating, setUpdating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<Profile>({
-    username: '',
+    full_name: null,
+    username: null,
     avatar_url: null,
-    full_name: '',
   });
 
   useEffect(() => {
@@ -39,7 +39,7 @@ const Profile = () => {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('username, avatar_url, full_name')
+          .select('full_name, username, avatar_url')
           .eq('id', user.id)
           .single();
 
@@ -47,13 +47,11 @@ const Profile = () => {
           throw error;
         }
 
-        if (data) {
-          setProfile({
-            username: data.username,
-            avatar_url: data.avatar_url,
-            full_name: data.full_name || '',
-          });
-        }
+        setProfile({
+          full_name: data?.full_name || null,
+          username: data?.username || null,
+          avatar_url: data?.avatar_url || null,
+        });
       } catch (error: any) {
         toast({
           title: 'خطأ',
@@ -77,8 +75,8 @@ const Profile = () => {
       const { error } = await supabase
         .from('profiles')
         .update({
-          username: profile.username,
           full_name: profile.full_name,
+          username: profile.username,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
@@ -122,12 +120,10 @@ const Profile = () => {
         throw uploadError;
       }
       
-      // الحصول على URL العام للصورة
       const { data } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
         
-      // تحديث الملف الشخصي مع الرابط الجديد
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ 
@@ -180,7 +176,7 @@ const Profile = () => {
       return profile.username.substring(0, 2).toUpperCase();
     }
     
-    return 'U';
+    return 'مس';
   };
 
   return (
