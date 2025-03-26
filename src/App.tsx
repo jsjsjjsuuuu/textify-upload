@@ -8,13 +8,15 @@ import { ThemeProvider } from "@/components/ui/theme-provider";
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="light" storageKey="app-theme">
-      <BrowserRouter>
-        <AppRoutes />
-        <Toaster />
-        <SonnerToaster position="top-center" closeButton />
-      </BrowserRouter>
-    </ThemeProvider>
+    <React.StrictMode>
+      <ThemeProvider defaultTheme="light" storageKey="app-theme">
+        <BrowserRouter>
+          <AppRoutes />
+          <Toaster />
+          <SonnerToaster position="top-center" closeButton />
+        </BrowserRouter>
+      </ThemeProvider>
+    </React.StrictMode>
   );
 }
 
