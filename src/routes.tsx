@@ -9,6 +9,7 @@ import AutomationPage from './pages/AutomationPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import Records from './pages/Records';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -33,6 +34,11 @@ export const AppRoutes = () => {
         <Route path="/profile" element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        } />
+        <Route path="/records" element={
+          <ProtectedRoute>
+            <Records />
           </ProtectedRoute>
         } />
         <Route path="/automation/:imageId" element={

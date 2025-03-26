@@ -1,338 +1,383 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AppHeader from '@/components/AppHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import AppHeader from '@/components/AppHeader';
-import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Check, Edit, UserCircle } from 'lucide-react';
-
-interface Profile {
-  full_name: string | null;
-  username: string | null;
-  avatar_url: string | null;
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Upload, User, Mail, Key, FileImage } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Profile = () => {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [profile, setProfile] = useState<Profile>({
-    full_name: null,
-    username: null,
-    avatar_url: null,
+  const navigate = useNavigate();
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  
+  const [userData, setUserData] = useState({
+    id: '',
+    email: '',
+    username: '',
+    fullName: '',
+    avatarUrl: '',
   });
-
+  
+  const [stats, setStats] = useState({
+    totalImages: 0,
+    processedImages: 0,
+    pendingImages: 0
+  });
+  
   useEffect(() => {
-    async function loadProfile() {
-      try {
-        setLoading(true);
-        if (!user) return;
-
-        // تحقق من وجود العمود في الجدول أولا
-        const { data: columnData, error: columnError } = await supabase
-          .from('profiles')
-          .select('*')
-          .limit(1);
-
-        if (columnError) {
-          console.error('خطأ في التحقق من أعمدة الجدول:', columnError);
-          // عدم إظهار خطأ للمستخدم، فقط استمر بتحميل ما يمكن تحميله
+    if (user) {
+      setUserData(prevData => ({
+        ...prevData,
+        id: user.id,
+        email: user.email || '',
+      }));
+      
+      // جلب بيانات المستخدم من جدول الملفات الشخصية
+      const fetchUserProfile = async () => {
+        try {
+          setIsLoading(true);
+          
+          // جلب بيانات الملف الشخصي
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('username, avatar_url, full_name')
+            .eq('id', user.id)
+            .single();
+          
+          if (profileError) {
+            throw profileError;
+          }
+          
+          if (profileData) {
+            setUserData(prevData => ({
+              ...prevData,
+              username: profileData.username || '',
+              fullName: profileData.full_name || '',
+              avatarUrl: profileData.avatar_url || '',
+            }));
+          }
+          
+          // إحصائيات الصور
+          const { data: imagesAll } = await supabase
+            .from('images')
+            .select('id, status')
+            .eq('user_id', user.id);
+          
+          if (imagesAll) {
+            const processedCount = imagesAll.filter(img => img.status === 'completed').length;
+            const pendingCount = imagesAll.filter(img => img.status === 'pending').length;
+            
+            setStats({
+              totalImages: imagesAll.length,
+              processedImages: processedCount,
+              pendingImages: pendingCount
+            });
+          }
+        } catch (error) {
+          console.error('خطأ في جلب بيانات المستخدم:', error);
+          toast({
+            title: 'خطأ',
+            description: 'تعذر جلب بيانات المستخدم',
+            variant: 'destructive',
+          });
+        } finally {
+          setIsLoading(false);
         }
-
-        // تحقق مما إذا كان العمود موجودًا في البيانات التي تم استرجاعها
-        const hasFullNameColumn = columnData && columnData.length > 0 && 'full_name' in columnData[0];
-        const hasUsernameColumn = columnData && columnData.length > 0 && 'username' in columnData[0];
-        const hasAvatarUrlColumn = columnData && columnData.length > 0 && 'avatar_url' in columnData[0];
-
-        // بناء استعلام SQL ديناميكيًا بناءً على الأعمدة المتاحة
-        let query = supabase
-          .from('profiles')
-          .select('id');
-
-        if (hasFullNameColumn) query = query.select('full_name');
-        if (hasUsernameColumn) query = query.select('username');
-        if (hasAvatarUrlColumn) query = query.select('avatar_url');
-
-        const { data, error } = await query
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        setProfile({
-          full_name: hasFullNameColumn ? data?.full_name || null : null,
-          username: hasUsernameColumn ? data?.username || null : null,
-          avatar_url: hasAvatarUrlColumn ? data?.avatar_url || null : null,
-        });
-      } catch (error: any) {
+      };
+      
+      fetchUserProfile();
+    }
+  }, [user, toast]);
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setUserData(prevData => ({
+      ...prevData,
+      [name]: value
+    }));
+  };
+  
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+      
+      const file = files[0];
+      if (!file.type.startsWith('image/')) {
         toast({
           title: 'خطأ',
-          description: 'حدث خطأ أثناء تحميل الملف الشخصي',
+          description: 'يرجى اختيار ملف صورة صالح',
           variant: 'destructive',
         });
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadProfile();
-  }, [user, toast]);
-
-  const updateProfile = async () => {
-    try {
-      setUpdating(true);
-      if (!user) return;
-
-      // تحقق من وجود العمود في الجدول أولا
-      const { data: columnData, error: columnError } = await supabase
-        .from('profiles')
-        .select('*')
-        .limit(1);
-
-      if (columnError) {
-        throw columnError;
-      }
-
-      // تحقق مما إذا كان العمود موجودًا في البيانات التي تم استرجاعها
-      const hasFullNameColumn = columnData && columnData.length > 0 && 'full_name' in columnData[0];
-      const hasUsernameColumn = columnData && columnData.length > 0 && 'username' in columnData[0];
-
-      // إعداد البيانات للتحديث
-      const updateData: any = {
-        updated_at: new Date().toISOString(),
-      };
-
-      if (hasFullNameColumn) updateData.full_name = profile.full_name;
-      if (hasUsernameColumn) updateData.username = profile.username;
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: 'تم التحديث',
-        description: 'تم تحديث الملف الشخصي بنجاح',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'خطأ',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      setUploading(true);
-      
-      if (!event.target.files || event.target.files.length === 0) {
-        throw new Error('يرجى تحديد صورة للتحميل.');
+        return;
       }
       
-      const file = event.target.files[0];
+      setUploadingAvatar(true);
+      
+      // تحميل الصورة إلى التخزين
       const fileExt = file.name.split('.').pop();
-      const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${user?.id}/avatar.${fileExt}`;
       
+      // رفع الملف
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
-        
+        .upload(filePath, file, { upsert: true });
+      
       if (uploadError) {
         throw uploadError;
       }
       
-      const { data } = supabase.storage
+      // الحصول على URL للصورة
+      const { data } = await supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
-
-      // تحقق من وجود العمود avatar_url
-      const { data: columnData, error: columnError } = await supabase
-        .from('profiles')
-        .select('*')
-        .limit(1);
-
-      if (columnError) {
-        throw columnError;
-      }
-
-      const hasAvatarUrlColumn = columnData && columnData.length > 0 && 'avatar_url' in columnData[0];
       
-      if (!hasAvatarUrlColumn) {
-        throw new Error('عمود avatar_url غير موجود في جدول profiles');
-      }
+      if (data) {
+        const avatarUrl = data.publicUrl;
         
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ 
-          avatar_url: data.publicUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user?.id);
+        // تحديث الملف الشخصي بعنوان URL للصورة الجديدة
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ avatar_url: avatarUrl })
+          .eq('id', user?.id);
         
-      if (updateError) {
-        throw updateError;
+        if (updateError) {
+          throw updateError;
+        }
+        
+        // تحديث حالة واجهة المستخدم
+        setUserData(prevData => ({
+          ...prevData,
+          avatarUrl
+        }));
+        
+        toast({
+          title: 'تم بنجاح',
+          description: 'تم تحديث صورة الملف الشخصي',
+        });
       }
-      
-      setProfile({
-        ...profile,
-        avatar_url: data.publicUrl,
-      });
-      
-      toast({
-        title: 'تم التحميل',
-        description: 'تم تحميل الصورة بنجاح',
-      });
-      
-    } catch (error: any) {
+    } catch (error) {
+      console.error('خطأ في تحميل الصورة:', error);
       toast({
         title: 'خطأ',
-        description: error.message,
+        description: 'تعذر تحميل الصورة. يرجى المحاولة مرة أخرى.',
         variant: 'destructive',
       });
-      console.error(error);
     } finally {
-      setUploading(false);
+      setUploadingAvatar(false);
     }
   };
-
+  
+  const handleUpdateProfile = async () => {
+    try {
+      setIsUpdating(true);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username: userData.username,
+          full_name: userData.fullName
+        })
+        .eq('id', user?.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: 'تم بنجاح',
+        description: 'تم تحديث معلومات الملف الشخصي',
+      });
+    } catch (error) {
+      console.error('خطأ في تحديث الملف الشخصي:', error);
+      toast({
+        title: 'خطأ',
+        description: 'تعذر تحديث الملف الشخصي. يرجى المحاولة مرة أخرى.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
   };
-
-  const getInitials = () => {
-    if (profile.full_name) {
-      return profile.full_name.split(' ')
-        .map(name => name[0])
-        .join('')
-        .toUpperCase()
-        .substring(0, 2);
-    }
-    
-    if (profile.username) {
-      return profile.username.substring(0, 2).toUpperCase();
-    }
-    
-    return 'مس';
-  };
-
+  
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
-      <div className="container max-w-md mx-auto p-4 pt-10">
-        <Card className="w-full border rounded-xl shadow-lg overflow-hidden">
-          <CardHeader className="bg-muted/20 pb-8">
-            <CardTitle className="text-2xl text-center">الملف الشخصي</CardTitle>
-            <CardDescription className="text-center">
-              إدارة معلومات حسابك
-            </CardDescription>
-            <div className="flex justify-center mt-8">
-              <div className="relative">
-                <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
-                  {profile.avatar_url ? (
-                    <AvatarImage src={profile.avatar_url} alt={profile.username || 'صورة المستخدم'} />
-                  ) : (
-                    <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                      {getInitials()}
+      
+      <main className="container mx-auto p-6 max-w-6xl">
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* معلومات الملف الشخصي */}
+            <Card className="md:col-span-1 apple-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="apple-subheader text-center">الملف الشخصي</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center space-y-4">
+                <div className="relative">
+                  <Avatar className="h-24 w-24 border-2 border-border">
+                    {userData.avatarUrl ? (
+                      <AvatarImage src={userData.avatarUrl} alt={userData.username} />
+                    ) : null}
+                    <AvatarFallback className="text-2xl bg-muted">
+                      {uploadingAvatar ? (
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                      ) : (
+                        userData.username?.substring(0, 2) || <User className="h-8 w-8" />
+                      )}
                     </AvatarFallback>
-                  )}
-                </Avatar>
-                <div className="absolute bottom-0 right-0">
-                  <label htmlFor="avatar-upload" className="cursor-pointer">
-                    <div className="bg-primary rounded-full p-2 text-primary-foreground shadow-md hover:bg-primary/90 transition-colors">
-                      <Edit className="h-4 w-4" />
-                    </div>
+                  </Avatar>
+                  <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 cursor-pointer bg-primary text-primary-foreground rounded-full p-1.5 shadow-md hover:bg-primary/90 transition-colors">
                     <input 
                       id="avatar-upload" 
-                      type="file" 
-                      accept="image/*" 
+                      type="file"
+                      accept="image/*"
                       className="hidden" 
-                      onChange={uploadAvatar}
-                      disabled={uploading}
+                      onChange={handleAvatarUpload}
+                      disabled={uploadingAvatar}
                     />
+                    <FileImage className="h-4 w-4" />
                   </label>
                 </div>
-              </div>
-            </div>
-            {uploading && (
-              <div className="flex justify-center mt-2">
-                <span className="text-sm text-muted-foreground">جاري تحميل الصورة...</span>
-              </div>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-4 pt-6">
-            {loading ? (
-              <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">البريد الإلكتروني</Label>
-                  <Input id="email" value={user?.email || ''} disabled className="bg-muted/20" />
+                
+                <div className="space-y-1 text-center">
+                  <h3 className="font-medium text-lg">{userData.fullName || userData.username}</h3>
+                  <p className="text-muted-foreground text-sm">{userData.email}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="full_name" className="text-sm font-medium">الاسم الكامل</Label>
-                  <Input
-                    id="full_name"
-                    value={profile.full_name || ''}
-                    onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-                    placeholder="أدخل اسمك الكامل"
-                    className="focus:border-primary"
-                  />
+                
+                <div className="w-full grid grid-cols-3 gap-2 pt-4">
+                  <div className="text-center p-2">
+                    <p className="text-2xl font-semibold">{stats.totalImages}</p>
+                    <p className="text-xs text-muted-foreground">إجمالي الصور</p>
+                  </div>
+                  <div className="text-center p-2">
+                    <p className="text-2xl font-semibold">{stats.processedImages}</p>
+                    <p className="text-xs text-muted-foreground">معالجة</p>
+                  </div>
+                  <div className="text-center p-2">
+                    <p className="text-2xl font-semibold">{stats.pendingImages}</p>
+                    <p className="text-xs text-muted-foreground">قيد الانتظار</p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-sm font-medium">اسم المستخدم</Label>
-                  <Input
-                    id="username"
-                    value={profile.username || ''}
-                    onChange={(e) => setProfile({ ...profile, username: e.target.value })}
-                    placeholder="أدخل اسم المستخدم"
-                    className="focus:border-primary"
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4 pb-6">
-            <Button 
-              onClick={updateProfile} 
-              disabled={loading || updating} 
-              className="w-full rounded-full"
-            >
-              {updating ? 'جاري التحديث...' : 'تحديث الملف الشخصي'}
-              {!updating && <Check className="mr-2 h-4 w-4" />}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleSignOut} 
-              className="w-full rounded-full border-destructive text-destructive hover:bg-destructive/10"
-            >
-              تسجيل الخروج
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+              </CardContent>
+              <CardFooter className="flex justify-center pt-2">
+                <Button variant="destructive" onClick={handleSignOut}>
+                  تسجيل الخروج
+                </Button>
+              </CardFooter>
+            </Card>
+
+            {/* تعديل الملف الشخصي */}
+            <Card className="md:col-span-2 apple-card">
+              <CardHeader>
+                <CardTitle className="apple-subheader">تعديل المعلومات الشخصية</CardTitle>
+                <CardDescription>قم بتعديل المعلومات الشخصية الخاصة بك</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="info" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="info">المعلومات الأساسية</TabsTrigger>
+                    <TabsTrigger value="security">الأمان</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="info" className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">الاسم الكامل</Label>
+                      <Input
+                        id="fullName"
+                        name="fullName"
+                        value={userData.fullName}
+                        onChange={handleInputChange}
+                        placeholder="أدخل الاسم الكامل"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="username">اسم المستخدم</Label>
+                      <Input
+                        id="username"
+                        name="username"
+                        value={userData.username}
+                        onChange={handleInputChange}
+                        placeholder="أدخل اسم المستخدم"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">البريد الإلكتروني</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={userData.email}
+                        disabled
+                        className="bg-muted"
+                      />
+                      <p className="text-xs text-muted-foreground">لا يمكن تغيير البريد الإلكتروني</p>
+                    </div>
+                    <Button 
+                      onClick={handleUpdateProfile} 
+                      className="w-full mt-4"
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? (
+                        <>
+                          <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                          جاري التحديث...
+                        </>
+                      ) : 'حفظ التغييرات'}
+                    </Button>
+                  </TabsContent>
+                  <TabsContent value="security" className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="currentPassword">كلمة المرور الحالية</Label>
+                      <Input
+                        id="currentPassword"
+                        type="password"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newPassword">كلمة المرور الجديدة</Label>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">تأكيد كلمة المرور الجديدة</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <Button className="w-full mt-4">تغيير كلمة المرور</Button>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </main>
     </div>
   );
 };
