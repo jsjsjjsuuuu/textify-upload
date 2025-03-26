@@ -4,6 +4,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { useImageState } from "@/hooks/useImageState";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useImageProcessingCore = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
@@ -11,6 +13,7 @@ export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const { 
     images, 
@@ -31,7 +34,63 @@ export const useImageProcessingCore = () => {
     setProcessingProgress
   });
 
-  // وظيفة إرسال البيانات إلى API (تم تحديثها لدعم ويب هوك n8n)
+  // وظيفة لحفظ بيانات الصورة في Supabase
+  const saveImageToDatabase = async (image: ImageData) => {
+    if (!user) {
+      toast({
+        title: "خطأ",
+        description: "يجب تسجيل الدخول لحفظ البيانات",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('images')
+        .insert({
+          user_id: user.id,
+          file_name: image.file.name,
+          preview_url: image.previewUrl,
+          extracted_text: image.extractedText,
+          company_name: image.companyName || "",
+          sender_name: image.senderName || "",
+          phone_number: image.phoneNumber || "",
+          code: image.code || "",
+          price: image.price || "",
+          province: image.province || "",
+          status: image.status
+        })
+        .select();
+
+      if (error) {
+        toast({
+          title: "خطأ في حفظ البيانات",
+          description: error.message,
+          variant: "destructive",
+        });
+        console.error("خطأ في حفظ البيانات:", error);
+        return null;
+      }
+
+      toast({
+        title: "نجاح",
+        description: `تم حفظ البيانات في قاعدة البيانات`,
+      });
+
+      return data[0];
+    } catch (error: any) {
+      console.error("خطأ في حفظ البيانات:", error);
+      toast({
+        title: "خطأ",
+        description: error.message,
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  // وظيفة إرسال البيانات إلى API (تم تحديثها لدعم ويب هوك n8n وحفظ البيانات في قاعدة البيانات)
   const handleSubmitToApi = async (id: string, image: ImageData) => {
     setIsSubmitting(true);
     try {
@@ -54,6 +113,9 @@ export const useImageProcessingCore = () => {
       
       const data = await response.json();
       console.log("تم إرسال البيانات بنجاح:", data);
+
+      // حفظ البيانات في قاعدة البيانات Supabase
+      await saveImageToDatabase(image);
 
       // تحديث حالة الصورة
       updateImage(id, { status: "completed", submitted: true });
@@ -87,6 +149,7 @@ export const useImageProcessingCore = () => {
     handleFileChange,
     handleTextChange,
     handleDelete: deleteImage,
-    handleSubmitToApi
+    handleSubmitToApi,
+    saveImageToDatabase
   };
 };

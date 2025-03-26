@@ -1,11 +1,16 @@
 
 import React from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 import ServicePage from './pages/ServicePage';
 import PolicyPage from './pages/PolicyPage';
 import AutomationPage from './pages/AutomationPage';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Profile from './pages/Profile';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './contexts/AuthContext';
 
 /**
  * تكوين مسارات التطبيق
@@ -13,12 +18,36 @@ import AutomationPage from './pages/AutomationPage';
  */
 export const AppRoutes = () => {
   return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/services" element={<ServicePage />} />
-      <Route path="/policy" element={<PolicyPage />} />
-      <Route path="/automation/:imageId" element={<AutomationPage />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        {/* صفحات المصادقة */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        
+        {/* الصفحات المحمية */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        } />
+        <Route path="/automation/:imageId" element={
+          <ProtectedRoute>
+            <AutomationPage />
+          </ProtectedRoute>
+        } />
+        
+        {/* الصفحات العامة */}
+        <Route path="/services" element={<ServicePage />} />
+        <Route path="/policy" element={<PolicyPage />} />
+        
+        {/* صفحة 404 والتحويلات */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AuthProvider>
   );
 };
