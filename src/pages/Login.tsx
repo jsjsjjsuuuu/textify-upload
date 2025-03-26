@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
+import { Mail, UserPlus } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'يرجى إدخال بريد إلكتروني صحيح' }),
@@ -22,6 +23,8 @@ const Login = () => {
   const navigate = useNavigate();
   const { signIn, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLoginError, setHasLoginError] = useState(false);
+  const [loginErrorMessage, setLoginErrorMessage] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -39,9 +42,13 @@ const Login = () => {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
+    setHasLoginError(false);
     try {
       const { error } = await signIn(data.email, data.password);
-      if (!error) {
+      if (error) {
+        setHasLoginError(true);
+        setLoginErrorMessage(error.message);
+      } else {
         navigate('/');
       }
     } finally {
@@ -61,6 +68,13 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {hasLoginError && (
+              <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-sm">
+                {loginErrorMessage.includes('Email not confirmed') 
+                  ? 'البريد الإلكتروني غير مؤكد. يرجى تفقد بريدك الإلكتروني والنقر على رابط التأكيد.'
+                  : loginErrorMessage}
+              </div>
+            )}
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -70,7 +84,10 @@ const Login = () => {
                     <FormItem>
                       <FormLabel>البريد الإلكتروني</FormLabel>
                       <FormControl>
-                        <Input placeholder="أدخل بريدك الإلكتروني" {...field} />
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input placeholder="أدخل بريدك الإلكتروني" className="pl-10" {...field} />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -99,11 +116,12 @@ const Login = () => {
               </form>
             </Form>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-2">
+          <CardFooter className="flex flex-col space-y-4">
             <div className="text-center text-sm">
               ليس لديك حساب؟{' '}
-              <Link to="/register" className="text-primary hover:underline">
+              <Link to="/register" className="text-primary hover:underline inline-flex items-center">
                 إنشاء حساب جديد
+                <UserPlus className="mr-1 h-4 w-4" />
               </Link>
             </div>
           </CardFooter>
