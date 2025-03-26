@@ -93,20 +93,11 @@ const UserManagementTab: React.FC = () => {
   const onResetPasswordSubmit = async (data: ResetPasswordFormValues) => {
     setIsLoading(true);
     try {
-      // البحث عن المستخدم أولاً للحصول على معرف المستخدم
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', data.email)
-        .single();
-      
-      if (userError || !userData) {
-        throw new Error('لم يتم العثور على المستخدم');
-      }
-      
-      // استخدام الوظيفة المخصصة لتحديث كلمة المرور
-      const { data: result, error } = await supabase.rpc('admin_update_user_password', {
-        user_id: userData.id,
+      // استخدام الوظيفة المخصصة لتحديث كلمة المرور مباشرة
+      // لا نحتاج للبحث عن معرف المستخدم أولاً من خلال البريد الإلكتروني
+      // لأن هذا يتطلب صلاحيات إضافية في Supabase
+      const { data: result, error } = await supabase.rpc('admin_update_user_password_by_email', {
+        user_email: data.email,
         new_password: data.newPassword,
       });
       
