@@ -107,9 +107,9 @@ const ImageDataForm = ({
     }
   };
   return <div className="p-4">
-      <h3 className="text-lg font-semibold text-brand-brown dark:text-brand-beige mb-3">البيانات المستخرجة</h3>
+      <h3 className="text-lg font-semibold mb-3 text-gray-900">البيانات المستخرجة</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mx-0 my-[101px]">
         {/* اسم الشركة */}
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
