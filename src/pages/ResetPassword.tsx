@@ -30,6 +30,15 @@ const ResetPassword = () => {
   const [resetSuccess, setResetSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isValidResetLink, setIsValidResetLink] = useState(true);
+  
+  // إضافة استخدام useForm هنا
+  const form = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
   useEffect(() => {
     // التحقق مما إذا كان المستخدم قد وصل من خلال رابط إعادة تعيين كلمة المرور
