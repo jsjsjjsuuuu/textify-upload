@@ -38,13 +38,43 @@
     text-align: right;
   }
 
-  /* Dark mode specific styles */
+  /* تنسيقات أسلوب أبل للجداول */
+  .apple-table {
+    @apply w-full border-collapse;
+  }
+  
+  .apple-table th {
+    @apply text-left py-4 px-6 border-b border-border font-medium text-foreground;
+  }
+  
+  .apple-table td {
+    @apply py-4 px-6 border-b border-border text-foreground;
+  }
+  
+  .apple-table tr:hover {
+    @apply bg-muted/20;
+  }
+
+  /* تنسيقات ألونر داكن */
   .dark .image-preview-card {
     @apply bg-card border border-border;
   }
   
   .dark .upload-zone:hover, .dark .upload-zone.active {
     @apply border-brand-coral/50 bg-brand-coral/10;
+  }
+
+  /* تنسيقات جداول ألوان داكنة */
+  .dark .apple-table th {
+    @apply text-white/80 border-border;
+  }
+  
+  .dark .apple-table td {
+    @apply text-white/70 border-border;
+  }
+  
+  .dark .apple-table tr:hover {
+    @apply bg-muted/30;
   }
 
   /* Modern card styles */

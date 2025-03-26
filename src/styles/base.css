@@ -11,6 +11,29 @@
   body {
     @apply bg-background text-foreground;
     direction: rtl;
-    font-family: var(--font-arabic), system-ui, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  }
+}
+
+/* قواعد عامة لتحسين التصميم على طريقة أبل */
+@layer components {
+  .apple-card {
+    @apply rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md;
+  }
+  
+  .apple-header {
+    @apply text-4xl font-medium tracking-tight;
+  }
+  
+  .apple-subheader {
+    @apply text-xl font-medium;
+  }
+
+  .apple-content {
+    @apply max-w-4xl mx-auto text-base leading-relaxed;
+  }
+
+  .apple-button {
+    @apply rounded-full px-6 py-2.5 font-medium transition-colors;
   }
 }

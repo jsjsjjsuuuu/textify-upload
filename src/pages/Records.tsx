@@ -1,173 +1,284 @@
-import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+
+import React, { useState } from "react";
+import AppHeader from "@/components/AppHeader";
+import { motion } from "framer-motion";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
+import { Search, ChevronDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import BackgroundPattern from "@/components/BackgroundPattern";
-import { Upload, PictureInPicture, Save, Brain } from "lucide-react";
-import { testGeminiConnection } from "@/lib/gemini";
+import { Badge } from "@/components/ui/badge";
 
+// بيانات وهمية للجدول
+const RECORDS_DATA = [
+  {
+    id: 1,
+    name: "أحمد محمد",
+    email: "ahmed.m@example.com",
+    location: "الرياض، المملكة العربية السعودية",
+    status: "نشط",
+    balance: 1250.00,
+  },
+  {
+    id: 2,
+    name: "سارة عبدالله",
+    email: "sarah.a@example.com",
+    location: "دبي، الإمارات العربية المتحدة",
+    status: "نشط",
+    balance: 600.00,
+  },
+  {
+    id: 3,
+    name: "محمد خالد",
+    email: "mohammad.k@example.com",
+    location: "القاهرة، مصر",
+    status: "غير نشط",
+    balance: 650.00,
+  },
+  {
+    id: 4,
+    name: "مريم العلي",
+    email: "mariam.a@example.com",
+    location: "عمان، الأردن",
+    status: "نشط",
+    balance: 0.00,
+  },
+  {
+    id: 5,
+    name: "فيصل سعود",
+    email: "faisal.s@example.com",
+    location: "الكويت، الكويت",
+    status: "نشط",
+    balance: -1000.00,
+  },
+];
+
+// أنواع الفرز
+type SortDirection = "asc" | "desc" | null;
+type SortField = "name" | "email" | "location" | "status" | "balance" | null;
+
+// مكون الصفحة الرئيسي
 const Records = () => {
-  const [savedApiKey, setSavedApiKey] = useState<string>("");
-  const [apiKey, setApiKey] = useState<string>("");
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const { toast } = useToast();
+  const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
-  useEffect(() => {
-    const storedApiKey = localStorage.getItem("geminiApiKey") || "";
-    setSavedApiKey(storedApiKey);
-    setApiKey(storedApiKey);
-  }, []);
-
-  const handleSaveApiKey = async () => {
-    if (!apiKey) {
-      toast({
-        title: "خطأ",
-        description: "الرجاء إدخال مفتاح API صالح",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsTestingConnection(true);
-    try {
-      const testResult = await testGeminiConnection(apiKey);
-      if (testResult.success) {
-        localStorage.setItem("geminiApiKey", apiKey);
-        setSavedApiKey(apiKey);
-        
-        toast({
-          title: "تم الحفظ",
-          description: "تم حفظ مفتاح API بنجاح واختبار الاتصال",
-        });
-      } else {
-        toast({
-          title: "خطأ في الاتصال",
-          description: testResult.message,
-          variant: "destructive",
-        });
+  // التعامل مع الفرز
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortField(null);
+        setSortDirection(null);
       }
-    } catch (error) {
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء اختبار الاتصال",
-        variant: "destructive",
-      });
-    } finally {
-      setIsTestingConnection(false);
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
     }
   };
 
-  useEffect(() => {
-    if (!apiKey && !savedApiKey) {
-      const defaultApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
-      setApiKey(defaultApiKey);
-      setSavedApiKey(defaultApiKey);
-      localStorage.setItem("geminiApiKey", defaultApiKey);
-      toast({
-        title: "تم تعيين المفتاح الافتراضي",
-        description: "تم تعيين مفتاح API الافتراضي بنجاح",
+  // تطبيق الفرز والبحث على البيانات
+  const filteredAndSortedRecords = React.useMemo(() => {
+    let records = [...RECORDS_DATA];
+
+    // تطبيق البحث
+    if (searchTerm) {
+      records = records.filter(
+        (record) =>
+          record.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          record.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          record.location.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // تطبيق الفرز
+    if (sortField && sortDirection) {
+      records.sort((a, b) => {
+        let valueA = a[sortField];
+        let valueB = b[sortField];
+
+        if (typeof valueA === "string" && typeof valueB === "string") {
+          valueA = valueA.toLowerCase();
+          valueB = valueB.toLowerCase();
+        }
+
+        if (valueA < valueB) return sortDirection === "asc" ? -1 : 1;
+        if (valueA > valueB) return sortDirection === "asc" ? 1 : -1;
+        return 0;
       });
     }
-  }, [apiKey, savedApiKey, toast]);
+
+    return records;
+  }, [searchTerm, sortField, sortDirection]);
+
+  // رمز السهم للفرز
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ChevronDown className="h-4 w-4 opacity-50" />;
+    if (sortDirection === "asc") return <ArrowUp className="h-4 w-4" />;
+    return <ArrowDown className="h-4 w-4" />;
+  };
+
+  // أيقونة الحالة
+  const getStatusBadge = (status: string) => {
+    if (status === "نشط") {
+      return (
+        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30">
+          {status}
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="bg-gray-100 text-gray-800 dark:bg-gray-800/40 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60">
+        {status}
+      </Badge>
+    );
+  };
+
+  // تنسيق المبلغ
+  const formatBalance = (balance: number) => {
+    const formatter = new Intl.NumberFormat("ar-SA", {
+      style: "currency",
+      currency: "SAR",
+    });
+    return formatter.format(balance);
+  };
 
   return (
-    <div className="relative min-h-screen pb-20">
-      <BackgroundPattern />
-
-      <div className="container px-4 py-8 mx-auto max-w-6xl">
-        <header className="text-center mb-8 animate-slide-up">
-          <h1 className="text-4xl font-bold text-brand-brown mb-3">السجلات واستخراج البيانات</h1>
-        </header>
-
-        <nav className="mb-8 flex justify-end">
-          <ul className="flex gap-6 py-[3px] my-0 mx-[240px] px-[174px]">
-            <li>
-              <a href="/" className="text-brand-brown font-medium hover:text-brand-coral transition-colors my-[46px]">
-                الرئيسية
-              </a>
-            </li>
-            <li>
-              <a href="/api" className="text-brand-brown font-medium hover:text-brand-coral transition-colors">
-                API
-              </a>
-            </li>
-            <li>
-              <a href="/records" className="text-brand-brown font-medium hover:text-brand-coral transition-colors">
-                السجلات
-              </a>
-            </li>
-          </ul>
-        </nav>
-
-        <div className="grid grid-cols-1 gap-8">
-          <Card className="p-6 shadow-md bg-white/90 backdrop-blur-sm">
-            <h2 className="text-2xl font-bold text-brand-brown mb-6">إعدادات استخراج البيانات باستخدام Gemini</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="apiKey" className="block text-sm font-medium mb-1">مفتاح API لـ Gemini:</label>
-                <div className="flex gap-2">
-                  <Input
-                    id="apiKey"
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="أدخل مفتاح API لـ Gemini هنا"
-                    className="flex-1"
-                    dir="ltr"
-                  />
-                  <Button 
-                    onClick={handleSaveApiKey} 
-                    className="bg-brand-brown hover:bg-brand-brown/90"
-                    disabled={isTestingConnection}
-                  >
-                    {isTestingConnection ? (
-                      <span className="flex items-center">
-                        <Brain className="h-4 w-4 ml-1 animate-pulse" />
-                        جاري الاختبار...
-                      </span>
-                    ) : (
-                      <span className="flex items-center">
-                        <Save className="h-4 w-4 ml-1" />
-                        حفظ واختبار
-                      </span>
-                    )}
-                  </Button>
-                </div>
-                {savedApiKey && (
-                  <p className="text-xs text-green-600 mt-1">تم تكوين مفتاح API بنجاح!</p>
-                )}
-                <p className="text-xs text-muted-foreground mt-2">
-                  تم تعيين مفتاح API تلقائيًا: AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8
-                </p>
-              </div>
-
-              <div className="bg-muted/30 p-4 rounded-lg">
-                <div className="flex items-center mb-2">
-                  <PictureInPicture className="h-5 w-5 text-brand-brown mr-2" />
-                  <h3 className="text-lg font-semibold">ميزات استخراج البيانات</h3>
-                </div>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>استخراج تلقائي للبيانات من الصور مثل الكود، الاسم، رقم الهاتف، الخ.</li>
-                  <li>دعم اللغة العربية بشكل كامل.</li>
-                  <li>تحليل متقدم للصور باستخدام نماذج الذكاء الاصطناعي من Google Gemini.</li>
-                  <li>تحويل النص المستخرج إلى هيكل بيانات منظم.</li>
-                </ul>
-              </div>
-
-              <div className="bg-brand-brown/10 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">كيفية استخدام الميزة:</h3>
-                <ol className="list-decimal list-inside space-y-1 text-sm">
-                  <li>قم بإدخال مفتاح API لـ Gemini واحفظه.</li>
-                  <li>عد إلى الصفحة الرئيسية وقم برفع الصور كالمعتاد.</li>
-                  <li>سيتم استخدام Gemini لاستخراج البيانات تلقائيًا من الصور المرفوعة.</li>
-                </ol>
-              </div>
+    <div className="min-h-screen bg-background">
+      <AppHeader />
+      <main className="container mx-auto p-6 max-w-7xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-8"
+        >
+          {/* عنوان الصفحة */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-medium tracking-tight">السجلات</h1>
+              <p className="text-muted-foreground mt-1">
+                إدارة ومراجعة سجلات العملاء
+              </p>
             </div>
-          </Card>
-        </div>
-      </div>
+          </div>
+
+          {/* فلتر البحث */}
+          <div className="relative">
+            <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="البحث في السجلات..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-9 text-right"
+            />
+          </div>
+
+          {/* جدول السجلات */}
+          <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table className="w-full">
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("name")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>الاسم</span>
+                        {getSortIcon("name")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("email")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>البريد الإلكتروني</span>
+                        {getSortIcon("email")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("location")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>الموقع</span>
+                        {getSortIcon("location")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("status")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>الحالة</span>
+                        {getSortIcon("status")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("balance")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>الرصيد</span>
+                        {getSortIcon("balance")}
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedRecords.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        لم يتم العثور على أي سجلات.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredAndSortedRecords.map((record) => (
+                      <TableRow 
+                        key={record.id}
+                        className="hover:bg-muted/30 transition-colors"
+                      >
+                        <TableCell className="font-medium px-6 py-4">
+                          {record.name}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <span className="text-muted-foreground">{record.email}</span>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          {record.location}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          {getStatusBadge(record.status)}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <span className={record.balance < 0 ? "text-destructive" : record.balance > 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                            {formatBalance(record.balance)}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* معلومات إضافية */}
+          <p className="text-center text-sm text-muted-foreground">
+            تم عرض {filteredAndSortedRecords.length} من إجمالي {RECORDS_DATA.length} سجل
+          </p>
+        </motion.div>
+      </main>
     </div>
   );
 };

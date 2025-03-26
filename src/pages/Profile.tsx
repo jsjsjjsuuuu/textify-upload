@@ -37,9 +37,32 @@ const Profile = () => {
         setLoading(true);
         if (!user) return;
 
-        const { data, error } = await supabase
+        // تحقق من وجود العمود في الجدول أولا
+        const { data: columnData, error: columnError } = await supabase
           .from('profiles')
-          .select('full_name, username, avatar_url')
+          .select('*')
+          .limit(1);
+
+        if (columnError) {
+          console.error('خطأ في التحقق من أعمدة الجدول:', columnError);
+          // عدم إظهار خطأ للمستخدم، فقط استمر بتحميل ما يمكن تحميله
+        }
+
+        // تحقق مما إذا كان العمود موجودًا في البيانات التي تم استرجاعها
+        const hasFullNameColumn = columnData && columnData.length > 0 && 'full_name' in columnData[0];
+        const hasUsernameColumn = columnData && columnData.length > 0 && 'username' in columnData[0];
+        const hasAvatarUrlColumn = columnData && columnData.length > 0 && 'avatar_url' in columnData[0];
+
+        // بناء استعلام SQL ديناميكيًا بناءً على الأعمدة المتاحة
+        let query = supabase
+          .from('profiles')
+          .select('id');
+
+        if (hasFullNameColumn) query = query.select('full_name');
+        if (hasUsernameColumn) query = query.select('username');
+        if (hasAvatarUrlColumn) query = query.select('avatar_url');
+
+        const { data, error } = await query
           .eq('id', user.id)
           .single();
 
@@ -48,9 +71,9 @@ const Profile = () => {
         }
 
         setProfile({
-          full_name: data?.full_name || null,
-          username: data?.username || null,
-          avatar_url: data?.avatar_url || null,
+          full_name: hasFullNameColumn ? data?.full_name || null : null,
+          username: hasUsernameColumn ? data?.username || null : null,
+          avatar_url: hasAvatarUrlColumn ? data?.avatar_url || null : null,
         });
       } catch (error: any) {
         toast({
@@ -72,13 +95,31 @@ const Profile = () => {
       setUpdating(true);
       if (!user) return;
 
+      // تحقق من وجود العمود في الجدول أولا
+      const { data: columnData, error: columnError } = await supabase
+        .from('profiles')
+        .select('*')
+        .limit(1);
+
+      if (columnError) {
+        throw columnError;
+      }
+
+      // تحقق مما إذا كان العمود موجودًا في البيانات التي تم استرجاعها
+      const hasFullNameColumn = columnData && columnData.length > 0 && 'full_name' in columnData[0];
+      const hasUsernameColumn = columnData && columnData.length > 0 && 'username' in columnData[0];
+
+      // إعداد البيانات للتحديث
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (hasFullNameColumn) updateData.full_name = profile.full_name;
+      if (hasUsernameColumn) updateData.username = profile.username;
+
       const { error } = await supabase
         .from('profiles')
-        .update({
-          full_name: profile.full_name,
-          username: profile.username,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', user.id);
 
       if (error) {
@@ -123,6 +164,22 @@ const Profile = () => {
       const { data } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
+
+      // تحقق من وجود العمود avatar_url
+      const { data: columnData, error: columnError } = await supabase
+        .from('profiles')
+        .select('*')
+        .limit(1);
+
+      if (columnError) {
+        throw columnError;
+      }
+
+      const hasAvatarUrlColumn = columnData && columnData.length > 0 && 'avatar_url' in columnData[0];
+      
+      if (!hasAvatarUrlColumn) {
+        throw new Error('عمود avatar_url غير موجود في جدول profiles');
+      }
         
       const { error: updateError } = await supabase
         .from('profiles')
@@ -183,19 +240,19 @@ const Profile = () => {
     <div className="min-h-screen bg-background">
       <AppHeader />
       <div className="container max-w-md mx-auto p-4 pt-10">
-        <Card className="w-full">
-          <CardHeader>
+        <Card className="w-full border rounded-xl shadow-lg overflow-hidden">
+          <CardHeader className="bg-muted/20 pb-8">
             <CardTitle className="text-2xl text-center">الملف الشخصي</CardTitle>
             <CardDescription className="text-center">
               إدارة معلومات حسابك
             </CardDescription>
-            <div className="flex justify-center mt-4">
+            <div className="flex justify-center mt-8">
               <div className="relative">
-                <Avatar className="h-24 w-24 border-4 border-primary-foreground shadow-lg">
+                <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
                   {profile.avatar_url ? (
                     <AvatarImage src={profile.avatar_url} alt={profile.username || 'صورة المستخدم'} />
                   ) : (
-                    <AvatarFallback className="text-xl bg-primary text-primary-foreground">
+                    <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
                       {getInitials()}
                     </AvatarFallback>
                   )}
@@ -223,7 +280,7 @@ const Profile = () => {
               </div>
             )}
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             {loading ? (
               <div className="flex justify-center py-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -231,43 +288,45 @@ const Profile = () => {
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="email">البريد الإلكتروني</Label>
-                  <Input id="email" value={user?.email || ''} disabled />
+                  <Label htmlFor="email" className="text-sm font-medium">البريد الإلكتروني</Label>
+                  <Input id="email" value={user?.email || ''} disabled className="bg-muted/20" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="full_name">الاسم الكامل</Label>
+                  <Label htmlFor="full_name" className="text-sm font-medium">الاسم الكامل</Label>
                   <Input
                     id="full_name"
                     value={profile.full_name || ''}
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                     placeholder="أدخل اسمك الكامل"
+                    className="focus:border-primary"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="username">اسم المستخدم</Label>
+                  <Label htmlFor="username" className="text-sm font-medium">اسم المستخدم</Label>
                   <Input
                     id="username"
                     value={profile.username || ''}
                     onChange={(e) => setProfile({ ...profile, username: e.target.value })}
                     placeholder="أدخل اسم المستخدم"
+                    className="focus:border-primary"
                   />
                 </div>
               </>
             )}
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter className="flex flex-col space-y-4 pb-6">
             <Button 
               onClick={updateProfile} 
               disabled={loading || updating} 
-              className="w-full"
+              className="w-full rounded-full"
             >
               {updating ? 'جاري التحديث...' : 'تحديث الملف الشخصي'}
               {!updating && <Check className="mr-2 h-4 w-4" />}
             </Button>
             <Button 
-              variant="destructive" 
+              variant="outline" 
               onClick={handleSignOut} 
-              className="w-full"
+              className="w-full rounded-full border-destructive text-destructive hover:bg-destructive/10"
             >
               تسجيل الخروج
             </Button>
