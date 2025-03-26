@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,6 +37,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // جلب بيانات الملف الشخصي
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log("جلب بيانات الملف الشخصي للمستخدم:", userId);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('full_name, avatar_url, is_approved, subscription_plan')
@@ -48,6 +49,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('خطأ في جلب بيانات الملف الشخصي:', error);
         return;
       }
+      
+      console.log("تم استلام بيانات الملف الشخصي:", data);
 
       setUserProfile({
         isApproved: data?.is_approved || false,
@@ -70,6 +73,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_, session) => {
+        console.log("تغيير حالة المصادقة:", session ? "مسجل الدخول" : "غير مسجل الدخول");
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -87,6 +92,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("التحقق من جلسة المستخدم:", session ? "موجودة" : "غير موجودة");
+      
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -104,9 +111,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log("محاولة تسجيل الدخول للمستخدم:", email);
+      
       const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
+        console.error("فشل تسجيل الدخول:", error.message);
+        
         toast({
           title: "فشل تسجيل الدخول",
           description: error.message,
@@ -123,6 +134,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .single();
       
       if (profileError) {
+        console.error("خطأ في التحقق من حالة الحساب:", profileError.message);
+        
         toast({
           title: "خطأ",
           description: "لا يمكن التحقق من حالة الحساب",
@@ -130,6 +143,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
         return { error: profileError };
       }
+      
+      console.log("حالة اعتماد الحساب:", profileData.is_approved);
       
       if (!profileData.is_approved) {
         // تسجيل الخروج تلقائياً إذا لم يتم اعتماد الحساب
@@ -151,6 +166,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       return { error: null };
     } catch (error: any) {
+      console.error("خطأ غير متوقع أثناء تسجيل الدخول:", error);
+      
       toast({
         title: "خطأ",
         description: error.message,

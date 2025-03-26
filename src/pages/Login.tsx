@@ -10,8 +10,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
-import { Mail, UserPlus, KeyRound } from 'lucide-react';
+import { Mail, UserPlus, KeyRound, AlertCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'يرجى إدخال بريد إلكتروني صحيح' }),
@@ -44,14 +45,34 @@ const Login = () => {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     setHasLoginError(false);
+    
     try {
+      console.log("بيانات تسجيل الدخول:", { email: data.email }); // تسجيل معلومات الدخول للتصحيح
+      
       const { error } = await signIn(data.email, data.password);
+      
       if (error) {
+        console.error("خطأ تسجيل الدخول:", error.message);
         setHasLoginError(true);
-        setLoginErrorMessage(error.message);
+        
+        // ترجمة رسائل الخطأ للعربية
+        if (error.message.includes('Invalid login credentials')) {
+          setLoginErrorMessage('بيانات تسجيل الدخول غير صحيحة. يرجى التحقق من البريد الإلكتروني وكلمة المرور.');
+        } else if (error.message.includes('Email not confirmed')) {
+          setLoginErrorMessage('البريد الإلكتروني غير مؤكد. يرجى تفقد بريدك الإلكتروني والنقر على رابط التأكيد.');
+        } else if (error.message.includes('الحساب قيد المراجعة')) {
+          setLoginErrorMessage('لم تتم الموافقة على حسابك بعد. يرجى الانتظار حتى يتم مراجعته من قبل المسؤول.');
+        } else {
+          setLoginErrorMessage(error.message);
+        }
       } else {
-        navigate('/');
+        // نجاح تسجيل الدخول، سيتم التوجيه في الـ useEffect
+        console.log("تم تسجيل الدخول بنجاح");
       }
+    } catch (error: any) {
+      console.error("خطأ غير متوقع:", error);
+      setHasLoginError(true);
+      setLoginErrorMessage('حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى لاحقاً.');
     } finally {
       setIsLoading(false);
     }
@@ -70,13 +91,13 @@ const Login = () => {
           </CardHeader>
           <CardContent>
             {hasLoginError && (
-              <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-sm">
-                {loginErrorMessage.includes('Email not confirmed') 
-                  ? 'البريد الإلكتروني غير مؤكد. يرجى تفقد بريدك الإلكتروني والنقر على رابط التأكيد.'
-                  : loginErrorMessage.includes('الحساب قيد المراجعة')
-                  ? 'لم تتم الموافقة على حسابك بعد. يرجى الانتظار حتى يتم مراجعته من قبل المسؤول.'
-                  : loginErrorMessage}
-              </div>
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>خطأ في تسجيل الدخول</AlertTitle>
+                <AlertDescription>
+                  {loginErrorMessage}
+                </AlertDescription>
+              </Alert>
             )}
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
