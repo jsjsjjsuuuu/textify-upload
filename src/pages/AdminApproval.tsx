@@ -12,9 +12,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { 
-  CheckCircle, XCircle, User, Calendar, RefreshCw, Lock, Eye, EyeOff, 
-  Clock, Shield, Edit, Save, Calendar as CalendarIcon, Ban,
-  CheckSquare, AlertCircle, UserCheck, UserX, UserPlus
+  CheckCircle, XCircle, User, Calendar as CalendarIcon, RefreshCw, Lock, Eye, EyeOff, 
+  Clock, Shield, Edit, Save, Ban, CheckSquare, AlertCircle, UserCheck, UserX, UserPlus
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -104,32 +103,21 @@ const AdminApproval = () => {
         return;
       }
       
-      // جلب بيانات المستخدمين من الصفوف
-      const usersWithEmails = [];
-      
-      for (const profile of (profilesData || [])) {
-        // محاولة جلب البريد الإلكتروني للمستخدم
-        const { data: userData, error: userError } = await supabase
-          .from('auth.users')
-          .select('email, created_at')
-          .eq('id', profile.id)
-          .single();
-        
-        const email = userData?.email || 'غير متوفر';
-        const created_at = userData?.created_at || profile.created_at;
-        
-        usersWithEmails.push({
+      // تحويل بيانات الملفات الشخصية إلى قائمة المستخدمين
+      // نحن لا نستطيع الوصول إلى جدول auth.users مباشرة من واجهة برمجة التطبيقات
+      const usersWithEmails = (profilesData || []).map((profile: ProfileData) => {
+        return {
           id: profile.id,
-          email: email,
+          email: profile.username ? `${profile.username}@example.com` : 'unknown@example.com', // استخدام اسم المستخدم كبديل
           full_name: profile.full_name || '',
           avatar_url: profile.avatar_url || '',
           is_approved: profile.is_approved || false,
-          created_at: created_at,
+          created_at: profile.created_at,
           subscription_plan: profile.subscription_plan || 'standard',
           account_status: profile.account_status || 'active',
           subscription_end_date: profile.subscription_end_date || null,
-        });
-      }
+        };
+      });
       
       setUsers(usersWithEmails);
     } catch (error) {
@@ -861,7 +849,7 @@ const AdminApproval = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
+                        <CalendarIcon className="h-3 w-3" />
                         {user.created_at ? formatDate(user.created_at) : 'غير متوفر'}
                       </div>
                     </TableCell>

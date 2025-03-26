@@ -95,7 +95,7 @@ const UserManagementTab: React.FC = () => {
     try {
       // البحث عن المستخدم أولاً للحصول على معرف المستخدم
       const { data: userData, error: userError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('id')
         .eq('email', data.email)
         .single();
