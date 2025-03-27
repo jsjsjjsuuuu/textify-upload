@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
@@ -83,7 +82,7 @@ const AdminApproval = () => {
 
   // التحقق من وجود المستخدم وصلاحياته
   useEffect(() => {
-    if (!user || !userProfile?.isApproved) {
+    if (!user || !userProfile?.is_approved) {
       window.location.href = '/login';
     }
   }, [user, userProfile]);
@@ -103,12 +102,27 @@ const AdminApproval = () => {
         return;
       }
       
+      // جلب بيانات المستخدمين من auth.users من خلال RPC (وظيفة مخصصة في قاعدة البيانات)
+      const { data: authUsersData, error: authUsersError } = await supabase.rpc('get_users_emails');
+      
+      if (authUsersError) {
+        console.error('Auth users error:', authUsersError);
+        // نستمر بالعمل مع البيانات المتاحة من الملفات الشخصية فقط
+      }
+      
+      // إنشاء كائن للبحث السريع عن البريد الإلكتروني حسب معرف المستخدم
+      const emailsMap: Record<string, string> = {};
+      if (authUsersData) {
+        authUsersData.forEach((user: {id: string, email: string}) => {
+          emailsMap[user.id] = user.email;
+        });
+      }
+      
       // تحويل بيانات الملفات الشخصية إلى قائمة المستخدمين
-      // نحن لا نستطيع الوصول إلى جدول auth.users مباشرة من واجهة برمجة التطبيقات
       const usersWithEmails = (profilesData || []).map((profile: ProfileData) => {
         return {
           id: profile.id,
-          email: profile.username ? `${profile.username}@example.com` : 'unknown@example.com', // استخدام اسم المستخدم كبديل
+          email: emailsMap[profile.id] || profile.username ? `${profile.username}@example.com` : 'unknown@example.com',
           full_name: profile.full_name || '',
           avatar_url: profile.avatar_url || '',
           is_approved: profile.is_approved || false,
@@ -130,10 +144,12 @@ const AdminApproval = () => {
 
   // جلب البيانات عند تحميل الصفحة
   useEffect(() => {
-    if (user && userProfile?.isApproved) {
+    if (user && userProfile?.is_approved) {
       fetchUsers();
     }
   }, [user, userProfile]);
+
+  // وظائف الموافقة والرفض وتحديث البيانات
 
   // وظيفة الموافقة على مستخدم
   const approveUser = async (userId: string) => {
@@ -450,7 +466,7 @@ const AdminApproval = () => {
   };
 
   // التحقق من الصلاحيات
-  if (!user || !userProfile?.isApproved) {
+  if (!user || !userProfile?.is_approved) {
     return null;
   }
 
@@ -873,120 +889,4 @@ const AdminApproval = () => {
                             onClick={() => rejectUser(user.id)}
                           >
                             <UserX className="h-4 w-4 mr-1" />
-                            إلغاء
-                          </Button>
-                        ) : (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                            onClick={() => approveUser(user.id)}
-                          >
-                            <UserCheck className="h-4 w-4 mr-1" />
-                            موافقة
-                          </Button>
-                        )}
-                        
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                            >
-                              <Shield className="h-4 w-4 mr-1" />
-                              التحكم
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                              <DialogTitle>إدارة حساب المستخدم</DialogTitle>
-                              <DialogDescription>
-                                تغيير حالة الحساب والباقة للمستخدم <span className="font-bold">{user.full_name || user.email}</span>
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                              <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right col-span-1">
-                                  حالة الحساب
-                                </Label>
-                                <Select 
-                                  defaultValue={user.account_status || 'active'} 
-                                  onValueChange={(value) => updateAccountStatus(user.id, value)}
-                                >
-                                  <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="اختر حالة الحساب" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="active">نشط</SelectItem>
-                                    <SelectItem value="suspended">موقوف</SelectItem>
-                                    <SelectItem value="expired">منتهي</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right col-span-1">
-                                  الباقة
-                                </Label>
-                                <Select 
-                                  defaultValue={user.subscription_plan || 'standard'} 
-                                  onValueChange={(value) => updateSubscriptionPlan(user.id, value)}
-                                >
-                                  <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="اختر الباقة" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="standard">الباقة العادية</SelectItem>
-                                    <SelectItem value="vip">الباقة VIP</SelectItem>
-                                    <SelectItem value="pro">الباقة المتميزة PRO</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right col-span-1">
-                                  تاريخ الانتهاء
-                                </Label>
-                                <div className="col-span-3">
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        className="w-full justify-start text-right font-normal"
-                                      >
-                                        <CalendarIcon className="ml-2 h-4 w-4" />
-                                        {user.subscription_end_date ? format(new Date(user.subscription_end_date), 'PPP', { locale: arSA }) : 'اختر تاريخًا'}
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                      <Calendar
-                                        mode="single"
-                                        selected={user.subscription_end_date ? new Date(user.subscription_end_date) : undefined}
-                                        onSelect={(date) => updateSubscriptionEndDate(user.id, date?.toISOString() || null)}
-                                        initialFocus
-                                      />
-                                    </PopoverContent>
-                                  </Popover>
-                                </div>
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button variant="outline" className="w-full sm:w-auto">
-                                إغلاق
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    </TableCell>
-                  </>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    );
-  }
-};
-
-export default AdminApproval;
+                            إل
