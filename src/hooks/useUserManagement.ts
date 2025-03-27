@@ -70,7 +70,7 @@ export const useUserManagement = () => {
       const usersWithCompleteData = (profilesData || []).map((profile: any) => {
         const userData = authUsersMap[profile.id] || { email: '', created_at: profile.created_at || new Date().toISOString() };
         
-        // معالجة is_admin بشكل أكثر دقة
+        // معالجة is_admin بشكل أكثر دقة - التأكد من أنها قيمة منطقية
         const isAdmin = profile.is_admin === true;
         
         return {
@@ -82,15 +82,13 @@ export const useUserManagement = () => {
         };
       });
       
-      // تسجيل معلومات المستخدمين للتصحيح
-      console.log('معلومات المستخدمين:', usersWithCompleteData.map(user => ({
+      console.log('معلومات المستخدمين بعد المعالجة:', usersWithCompleteData.map(user => ({
         id: user.id,
         is_admin: user.is_admin,
         is_admin_type: typeof user.is_admin
       })));
       
       setUsers(usersWithCompleteData);
-      
     } catch (error) {
       console.error('خطأ في جلب بيانات المستخدمين:', error);
       toast.error('حدث خطأ أثناء جلب بيانات المستخدمين');
