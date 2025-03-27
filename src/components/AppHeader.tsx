@@ -46,7 +46,7 @@ const AppHeader = () => {
               السجلات
             </Link>
             {/* إضافة رابط لصفحة الموافقات للمسؤولين فقط */}
-            {user && userProfile?.isApproved && (
+            {user && userProfile?.is_approved && (
               <Link
                 to="/admin/approvals"
                 className={`transition-colors hover:text-foreground/80 ${
@@ -70,14 +70,14 @@ const AppHeader = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={userProfile?.avatarUrl || `https://avatar.iran.liara.run/public/${user?.email}`} alt={user?.email || "User Avatar"} />
+                    <AvatarImage src={userProfile?.avatar_url || `https://avatar.iran.liara.run/public/${user?.email}`} alt={user?.email || "User Avatar"} />
                     <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel>
-                  {userProfile?.fullName || user?.email}
+                  {userProfile?.full_name || user?.email}
                 </DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   الملف الشخصي

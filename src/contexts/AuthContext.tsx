@@ -1,5 +1,6 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { Auth, SupabaseClient, Session } from '@supabase/supabase-js';
+import { SupabaseClient, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfile {
@@ -7,20 +8,29 @@ interface UserProfile {
   username: string;
   full_name: string;
   avatar_url: string;
-  isApproved: boolean;
-  // Add other profile fields here
+  is_approved: boolean;
+  // تحويل أسماء الخصائص لتتطابق مع قاعدة البيانات
+  isApproved?: boolean; // للتوافق مع الكود القديم
+  fullName?: string; // للتوافق مع الكود القديم
+  avatarUrl?: string; // للتوافق مع الكود القديم
+  // إضافة الخصائص الأخرى
+  subscription_plan?: string;
+  subscription_end_date?: string;
+  account_status?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface AuthContextType {
   supabaseClient: SupabaseClient | null;
-  auth: Auth | null;
+  auth: any | null; // تغيير من Auth إلى any
   user: any | null;
   session: Session | null;
   userProfile: UserProfile | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any; user: any | null }>;
   signOut: () => Promise<void>;
-  signUp: (email: string, password: string) => Promise<{ error: any; user: any | null }>;
+  signUp: (email: string, password: string, userData?: any) => Promise<{ error: any; user: any | null; emailConfirmationSent?: boolean }>;
   forgotPassword: (email: string) => Promise<{ error: any; sent: boolean }>;
   resetPassword: (newPassword: string) => Promise<{ error: any; success: boolean }>;
   updateUser: (updates: any) => Promise<{ data: any; error: any }>;
@@ -35,7 +45,7 @@ interface AuthProviderProps {
 
 const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [supabaseClient, setSupabaseClient] = useState<SupabaseClient | null>(null);
-  const [auth, setAuth] = useState<Auth | null>(null);
+  const [auth, setAuth] = useState<any | null>(null);
   const [user, setUser] = useState<any | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -95,7 +105,17 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (profile) {
         console.log("تم العثور على ملف شخصي موجود:", profile);
-        return profile;
+        
+        // تحويل البيانات لتتوافق مع واجهة UserProfile
+        const userProfileData: UserProfile = {
+          ...profile,
+          isApproved: profile.is_approved,
+          fullName: profile.full_name,
+          avatarUrl: profile.avatar_url
+        };
+        
+        setUserProfile(userProfileData);
+        return userProfileData;
       }
       
       // إنشاء ملف شخصي جديد إذا لم يكن موجودًا
@@ -122,7 +142,17 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       console.log("تم إنشاء ملف شخصي جديد بنجاح:", newProfile);
-      return newProfile;
+      
+      // تحويل البيانات لتتوافق مع واجهة UserProfile
+      const newUserProfileData: UserProfile = {
+        ...newProfile,
+        isApproved: newProfile.is_approved,
+        fullName: newProfile.full_name,
+        avatarUrl: newProfile.avatar_url
+      };
+      
+      setUserProfile(newUserProfileData);
+      return newUserProfileData;
     } catch (error) {
       console.error("خطأ غير متوقع في التحقق من الملف الشخصي:", error);
       return null;
@@ -130,7 +160,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // تحديث وظيفة fetchUserProfile لاستخدام وظيفة createUserProfileIfMissing الجديدة
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
     console.log("جلب ملف المستخدم الشخصي لـ:", userId);
     
     try {
@@ -145,9 +175,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // إذا لم يتم العثور على ملف شخصي، قم بإنشاء واحد جديد
         if (error.code === 'PGRST116') {
           console.log("لم يتم العثور على ملف شخصي، محاولة إنشاء واحد جديد");
-          const newProfile = await createUserProfileIfMissing(userId);
-          setUserProfile(newProfile);
-          return newProfile;
+          return await createUserProfileIfMissing(userId);
         }
         
         console.error("خطأ في جلب الملف الشخصي:", error);
@@ -155,8 +183,17 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       console.log("تم جلب الملف الشخصي بنجاح:", profile);
-      setUserProfile(profile);
-      return profile;
+      
+      // تحويل البيانات لتتوافق مع واجهة UserProfile
+      const userProfileData: UserProfile = {
+        ...profile,
+        isApproved: profile.is_approved,
+        fullName: profile.full_name,
+        avatarUrl: profile.avatar_url
+      };
+      
+      setUserProfile(userProfileData);
+      return userProfileData;
     } catch (error) {
       console.error("خطأ غير متوقع في جلب الملف الشخصي:", error);
       return null;

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -39,8 +38,9 @@ interface SubscriptionPlanOption {
 
 const Register = () => {
   const navigate = useNavigate();
-  const { signUp, emailConfirmationSent } = useAuth();
+  const { signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const subscriptionPlans: SubscriptionPlanOption[] = [
     {
@@ -80,24 +80,21 @@ const Register = () => {
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
     try {
-      const { error, emailConfirmationSent } = await signUp(
+      const { error, user } = await signUp(
         data.email, 
-        data.password, 
-        { 
-          full_name: data.fullName,
-          subscription_plan: data.subscriptionPlan
-        }
+        data.password
       );
       
-      if (!error && emailConfirmationSent) {
-        // سيتم عرض رسالة التأكيد في AuthContext
+      if (!error && user) {
+        // تم التسجيل بنجاح
+        setEmailSent(true);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (emailConfirmationSent) {
+  if (emailSent) {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader />

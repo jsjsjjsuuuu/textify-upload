@@ -14,9 +14,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectTo = '/login',
   requireApproval = true
 }) => {
-  const { user, userProfile, loading } = useAuth();
+  const { user, userProfile, isLoading } = useAuth();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -29,7 +29,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // التحقق من حالة الموافقة إذا كان مطلوبًا
-  if (requireApproval && userProfile && !userProfile.isApproved) {
+  if (requireApproval && userProfile && !userProfile.is_approved) {
     return <Navigate to="/login" />;
   }
 
