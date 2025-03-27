@@ -21,7 +21,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // للتصحيح المباشر في وحدة التحكم
   useEffect(() => {
     if (user && userProfile) {
-      console.log("معلومات المستخدم:", {
+      console.log("معلومات المستخدم في ProtectedRoute:", {
         id: user.id,
         email: user.email,
         is_approved: userProfile?.is_approved,
@@ -38,6 +38,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
+  // إذا لم يكن المستخدم مسجلاً، قم بتوجيهه إلى صفحة تسجيل الدخول
   if (!user) {
     console.log("لا يوجد مستخدم مسجل الدخول، التوجيه إلى:", redirectTo);
     return <Navigate to={redirectTo} />;

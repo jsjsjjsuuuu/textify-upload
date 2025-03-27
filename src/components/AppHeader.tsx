@@ -38,7 +38,9 @@ const AppHeader = () => {
     navigate('/login');
   };
   
+  // تحديد ما إذا كان المستخدم مسؤولاً
   const isAdmin = userProfile?.is_admin === true;
+  console.log("هل المستخدم مسؤول في AppHeader:", isAdmin);
   
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
