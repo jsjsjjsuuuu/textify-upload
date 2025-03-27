@@ -14,6 +14,14 @@ export const useImageState = () => {
       ...newImage
     };
     console.log("إضافة صورة جديدة:", imageWithDefaults.id);
+    
+    // التحقق من عدم وجود الصورة بالفعل لمنع التكرار
+    const exists = images.some(img => img.id === imageWithDefaults.id);
+    if (exists) {
+      console.log("الصورة موجودة بالفعل، تجاهل الإضافة:", imageWithDefaults.id);
+      return;
+    }
+    
     setImages(prev => [imageWithDefaults, ...prev]);
   };
 
@@ -60,6 +68,17 @@ export const useImageState = () => {
       return bNum - aNum;
     });
   };
+  
+  // إعادة تعيين الترقيم للصور
+  const renumberImages = () => {
+    const sortedImages = getSortedImages();
+    sortedImages.forEach((img, index) => {
+      const newNumber = sortedImages.length - index;
+      if (img.number !== newNumber) {
+        updateImage(img.id, { number: newNumber });
+      }
+    });
+  };
 
   // تنظيف عناوين URL للكائنات عند إلغاء تحميل المكون
   useEffect(() => {
@@ -79,6 +98,7 @@ export const useImageState = () => {
     updateImage,
     deleteImage,
     handleTextChange,
-    setImages // إضافة الوظيفة الجديدة للتحكم المباشر في مجموعة الصور
+    setImages, // إضافة الوظيفة الجديدة للتحكم المباشر في مجموعة الصور
+    renumberImages // إضافة وظيفة إعادة ترقيم الصور
   };
 };

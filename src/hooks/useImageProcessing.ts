@@ -37,6 +37,8 @@ export const useImageProcessing = () => {
       const refreshData = async () => {
         try {
           await coreProcessing.refreshUserData();
+          // إعادة ترقيم الصور بعد التحديث
+          coreProcessing.renumberImages();
           toast.success("تم تحديث بياناتك بنجاح!");
         } catch (error) {
           console.error("فشل تحديث البيانات:", error);

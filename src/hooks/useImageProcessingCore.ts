@@ -23,7 +23,8 @@ export const useImageProcessingCore = () => {
     updateImage, 
     deleteImage, 
     handleTextChange,
-    setImages 
+    setImages,
+    renumberImages 
   } = useImageState();
   
   const { 
@@ -119,7 +120,10 @@ export const useImageProcessingCore = () => {
         
         if (userImages.length > 0) {
           console.log(`تم تحميل ${userImages.length} صورة للمستخدم وإضافتها إلى الحالة`);
+          
+          // استبدال الصور بدلاً من إضافتها لمنع التكرار
           setImages(userImages);
+          
           toast({
             title: "تم التحميل",
             description: `تم تحميل ${userImages.length} سجل من بياناتك بنجاح`,
@@ -149,31 +153,74 @@ export const useImageProcessingCore = () => {
     console.log("جاري حفظ البيانات في قاعدة البيانات...", image);
 
     try {
-      const { data, error } = await supabase
+      // التحقق من وجود السجل
+      const { data: existingData, error: checkError } = await supabase
         .from('images')
-        .insert({
-          user_id: user.id,
-          file_name: image.file.name,
-          preview_url: image.previewUrl,
-          extracted_text: image.extractedText,
-          company_name: image.companyName || "",
-          sender_name: image.senderName || "",
-          phone_number: image.phoneNumber || "",
-          code: image.code || "",
-          price: image.price || "",
-          province: image.province || "",
-          status: image.status
-        })
-        .select();
+        .select('id')
+        .eq('id', image.id)
+        .maybeSingle();
+        
+      if (checkError) {
+        console.error("خطأ في التحقق من وجود السجل:", checkError);
+      }
+      
+      let result;
+      
+      // إذا كان السجل موجودًا، قم بتحديثه
+      if (existingData) {
+        console.log("السجل موجود بالفعل، جاري التحديث:", image.id);
+        const { data, error } = await supabase
+          .from('images')
+          .update({
+            user_id: user.id,
+            file_name: image.file.name,
+            preview_url: image.previewUrl,
+            extracted_text: image.extractedText,
+            company_name: image.companyName || "",
+            sender_name: image.senderName || "",
+            phone_number: image.phoneNumber || "",
+            code: image.code || "",
+            price: image.price || "",
+            province: image.province || "",
+            status: image.status,
+            submitted: image.submitted || false
+          })
+          .eq('id', image.id)
+          .select()
+          .single();
+          
+        if (error) {
+          throw error;
+        }
+        
+        result = data;
+      } else {
+        // إذا لم يكن موجودًا، قم بإضافته
+        console.log("إنشاء سجل جديد للصورة:", image.id);
+        const { data, error } = await supabase
+          .from('images')
+          .insert({
+            id: image.id,
+            user_id: user.id,
+            file_name: image.file.name,
+            preview_url: image.previewUrl,
+            extracted_text: image.extractedText,
+            company_name: image.companyName || "",
+            sender_name: image.senderName || "",
+            phone_number: image.phoneNumber || "",
+            code: image.code || "",
+            price: image.price || "",
+            province: image.province || "",
+            status: image.status,
+            submitted: image.submitted || false
+          })
+          .select();
 
-      if (error) {
-        toast({
-          title: "خطأ في حفظ البيانات",
-          description: error.message,
-          variant: "destructive",
-        });
-        console.error("خطأ في حفظ البيانات:", error);
-        return null;
+        if (error) {
+          throw error;
+        }
+        
+        result = data[0];
       }
 
       // تحديث حالة الصورة ليشير إلى أنها تم حفظها
@@ -184,8 +231,8 @@ export const useImageProcessingCore = () => {
         description: `تم حفظ البيانات في قاعدة البيانات`,
       });
 
-      console.log("تم حفظ البيانات بنجاح:", data[0]);
-      return data[0];
+      console.log("تم حفظ البيانات بنجاح:", result);
+      return result;
     } catch (error: any) {
       console.error("خطأ في حفظ البيانات:", error);
       toast({
@@ -264,7 +311,9 @@ export const useImageProcessingCore = () => {
     const userImages = await fetchUserImages();
     
     if (userImages.length > 0) {
+      // استبدال الصور بدلاً من إضافتها لمنع التكرار
       setImages(userImages);
+      
       toast({
         title: "تم التحديث",
         description: `تم تحديث ${userImages.length} سجل من بياناتك بنجاح`,
@@ -290,6 +339,7 @@ export const useImageProcessingCore = () => {
     saveImageToDatabase,
     saveProcessedImage,
     fetchUserImages,
-    refreshUserData
+    refreshUserData,
+    renumberImages
   };
 };
