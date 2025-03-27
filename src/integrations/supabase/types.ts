@@ -145,6 +145,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_users_emails: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

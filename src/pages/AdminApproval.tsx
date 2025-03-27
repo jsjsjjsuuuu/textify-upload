@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
@@ -122,7 +123,7 @@ const AdminApproval = () => {
       const usersWithEmails = (profilesData || []).map((profile: ProfileData) => {
         return {
           id: profile.id,
-          email: emailsMap[profile.id] || profile.username ? `${profile.username}@example.com` : 'unknown@example.com',
+          email: emailsMap[profile.id] || (profile.username ? `${profile.username}@example.com` : 'unknown@example.com'),
           full_name: profile.full_name || '',
           avatar_url: profile.avatar_url || '',
           is_approved: profile.is_approved || false,
@@ -889,4 +890,30 @@ const AdminApproval = () => {
                             onClick={() => rejectUser(user.id)}
                           >
                             <UserX className="h-4 w-4 mr-1" />
-                            إل
+                            إلغاء الاعتماد
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            onClick={() => approveUser(user.id)}
+                          >
+                            <UserCheck className="h-4 w-4 mr-1" />
+                            اعتماد
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+};
+
+export default AdminApproval;
