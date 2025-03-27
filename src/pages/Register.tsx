@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -93,6 +92,8 @@ const Register = () => {
     setHasRegisterError(false);
     
     try {
+      console.log("محاولة تسجيل مستخدم جديد:", data.email);
+      
       const { error, user } = await signUp(
         data.email, 
         data.password,
@@ -103,17 +104,25 @@ const Register = () => {
       if (error) {
         setHasRegisterError(true);
         
-        // ترجمة رسائل الخطأ للعربية
-        if (error.message && error.message.includes('User already registered')) {
+        // ترجمة رسائل الخطأ للعربية وتحسين رسائل الأخطاء المحددة
+        if (error.message?.includes('User already registered')) {
           setRegisterErrorMessage('هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول أو استخدام بريد إلكتروني آخر.');
+        } else if (error.message?.toLowerCase().includes('rate limit') || error.message?.toLowerCase().includes('exceeded')) {
+          setRegisterErrorMessage('تم تجاوز الحد المسموح به لإرسال رسائل البريد الإلكتروني. يرجى المحاولة مرة أخرى بعد قليل أو التواصل مع الدعم الفني.');
+        } else if (error.message?.includes('Invalid email')) {
+          setRegisterErrorMessage('البريد الإلكتروني غير صالح. يرجى التأكد من إدخال بريد إلكتروني صحيح.');
+        } else if (error.message?.includes('Password should be at least')) {
+          setRegisterErrorMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل.');
         } else {
-          setRegisterErrorMessage(error.message || 'حدث خطأ أثناء التسجيل.');
+          setRegisterErrorMessage(error.message || 'حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى.');
         }
+        console.error("خطأ في التسجيل:", error.message);
         return;
       }
       
       if (user) {
         // تم التسجيل بنجاح
+        console.log("تم التسجيل بنجاح للمستخدم:", user.id);
         setEmailSent(true);
       }
     } catch (error: any) {
