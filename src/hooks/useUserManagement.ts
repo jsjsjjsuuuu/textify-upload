@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -84,45 +83,28 @@ export const useUserManagement = () => {
       const usersWithCompleteData = (profilesData || []).map((profile: any) => {
         const userData = authUsersMap[profile.id] || { email: '', created_at: profile.created_at || new Date().toISOString() };
         
-        // قبل التحويل (للتصحيح)
-        console.log('معلومات ملف المستخدم:', {
-          id: profile.id,
-          is_admin_raw: profile.is_admin,
-          is_admin_type: typeof profile.is_admin
-        });
-        
-        // التحويل إلى قيمة منطقية صريحة
+        // معالجة is_admin بشكل أكثر دقة
         const isAdmin = profile.is_admin === true;
         
         return {
+          ...profile,
           id: profile.id,
           email: userData.email,
-          full_name: profile.full_name || '',
-          avatar_url: profile.avatar_url || '',
-          is_approved: profile.is_approved || false,
-          is_admin: isAdmin, // تأكد من أن القيمة منطقية دائمًا
+          is_admin: isAdmin, // التأكد من أن القيمة منطقية
           created_at: userData.created_at || profile.created_at,
-          subscription_plan: profile.subscription_plan || 'standard',
-          account_status: profile.account_status || 'active',
-          subscription_end_date: profile.subscription_end_date || null,
-          username: profile.username || '',
         };
       });
       
-      console.log('تم إنشاء قائمة المستخدمين النهائية:', usersWithCompleteData.length);
-      // تصحيح - طباعة بعض البيانات للتحقق
-      if (usersWithCompleteData.length > 0) {
-        console.log('عينة من بيانات المستخدم النهائية:', {
-          first_user: usersWithCompleteData[0],
-          is_admin_value: usersWithCompleteData[0].is_admin,
-          is_admin_type: typeof usersWithCompleteData[0].is_admin
-        });
-      }
+      console.log('معلومات المستخدمين:', usersWithCompleteData.map(user => ({
+        id: user.id,
+        is_admin: user.is_admin,
+        is_admin_type: typeof user.is_admin
+      })));
       
       setUsers(usersWithCompleteData);
       
     } catch (error) {
-      console.error('خطأ غير متوقع أثناء جلب بيانات المستخدمين:', error);
+      console.error('خطأ في جلب بيانات المستخدمين:', error);
       toast.error('حدث خطأ أثناء جلب بيانات المستخدمين');
     } finally {
       setIsLoading(false);
@@ -395,4 +377,3 @@ export const useUserManagement = () => {
     handleDateSelect,
   };
 };
-
