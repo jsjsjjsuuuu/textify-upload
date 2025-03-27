@@ -10,6 +10,7 @@ interface UserProfile {
   full_name: string | null;
   avatar_url: string | null;
   is_approved: boolean | null;
+  is_admin: boolean | null;
   subscription_plan?: string | null;
   subscription_end_date?: string | null;
   account_status?: string | null;
@@ -49,35 +50,56 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      setIsLoading(true);
-      setSupabaseClient(supabase);
-      setAuth(supabase.auth);
+      try {
+        setIsLoading(true);
+        setSupabaseClient(supabase);
+        setAuth(supabase.auth);
 
-      // Fetch initial session
-      const { data: initialSession } = await supabase.auth.getSession();
-      setSession(initialSession.session);
+        // تهيئة Supabase مع الإعدادات الصحيحة للتعامل مع الجلسة
+        console.log("تهيئة خدمة المصادقة...");
 
-      // Fetch user data if session exists
-      if (initialSession.session?.user) {
-        setUser(initialSession.session.user);
-        await fetchUserProfile(initialSession.session.user.id);
-      }
+        // الحصول على الجلسة الحالية
+        const { data: initialSession } = await supabase.auth.getSession();
+        setSession(initialSession.session);
 
-      setIsLoading(false);
-
-      // Subscribe to auth state changes
-      supabase.auth.onAuthStateChange(async (event, currentSession) => {
-        console.log("تغيرت حالة المصادقة:", event);
-        
-        setSession(currentSession);
-        setUser(currentSession?.user || null);
-
-        if (currentSession?.user) {
-          await fetchUserProfile(currentSession.user.id);
+        // جلب بيانات المستخدم إذا كانت الجلسة موجودة
+        if (initialSession.session?.user) {
+          console.log("تم العثور على جلسة موجودة، جاري تحميل بيانات المستخدم:", initialSession.session.user.id);
+          setUser(initialSession.session.user);
+          await fetchUserProfile(initialSession.session.user.id);
         } else {
-          setUserProfile(null);
+          console.log("لم يتم العثور على جلسة موجودة");
         }
-      });
+
+        // الاشتراك في أحداث تغيير حالة المصادقة
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+          console.log("تغيرت حالة المصادقة:", event);
+          
+          // تحديث حالة الجلسة والمستخدم
+          setSession(currentSession);
+          setUser(currentSession?.user || null);
+
+          // تأخير استدعاء جلب الملف الشخصي لتجنب تعارضات الاستدعاءات المتزامنة
+          if (currentSession?.user) {
+            setTimeout(async () => {
+              await fetchUserProfile(currentSession.user.id);
+            }, 0);
+          } else {
+            setUserProfile(null);
+          }
+        });
+
+        // إعادة التصريح عند إغلاق المكون
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error("خطأ في تهيئة المصادقة:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     initializeAuth();
@@ -121,7 +143,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             username: userEmail.split('@')[0],
             full_name: fullName || '',
             subscription_plan: plan || 'standard',
-            is_approved: true // تعيين is_approved كـ true افتراضيًا
+            is_approved: true, // تعيين is_approved كـ true افتراضيًا
+            is_admin: false // تعيين is_admin كـ false افتراضيًا
           }
         ])
         .select()
@@ -151,17 +174,17 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // استخدام maybeSingle بدلاً من single لتجنب الأخطاء عند عدم وجود نتائج
       
       if (error) {
-        // إذا لم يتم العثور على ملف شخصي، قم بإنشاء واحد جديد
-        if (error.code === 'PGRST116') {
-          console.log("لم يتم العثور على ملف شخصي، محاولة إنشاء واحد جديد");
-          return await createUserProfileIfMissing(userId);
-        }
-        
         console.error("خطأ في جلب الملف الشخصي:", error);
         return null;
+      }
+
+      if (!profile) {
+        // إذا لم يتم العثور على ملف شخصي، قم بإنشاء واحد جديد
+        console.log("لم يتم العثور على ملف شخصي، محاولة إنشاء واحد جديد");
+        return await createUserProfileIfMissing(userId);
       }
       
       console.log("تم جلب الملف الشخصي بنجاح:", profile);
@@ -190,18 +213,17 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (data.user) {
         console.log("تم تسجيل الدخول بنجاح، جلب الملف الشخصي");
         
-        // التحقق من وجود ملف شخصي أو إنشاء ملف جديد
-        const profile = await fetchUserProfile(data.user.id);
-        
-        if (!profile) {
-          console.warn("لم يتم العثور على ملف شخصي ولم يتم إنشاء ملف جديد");
-        } else if (!profile.is_approved) {
-          console.warn("حساب المستخدم غير معتمد:", profile);
-          return { 
-            error: { message: 'حسابك قيد المراجعة. يرجى الانتظار حتى تتم الموافقة عليه من قبل المسؤول.' }, 
-            user: null 
-          };
-        }
+        // تأخير استدعاء جلب الملف الشخصي لتجنب تعارضات الاستدعاءات المتزامنة
+        setTimeout(async () => {
+          // التحقق من وجود ملف شخصي أو إنشاء ملف جديد
+          const profile = await fetchUserProfile(data.user.id);
+          
+          if (!profile) {
+            console.warn("لم يتم العثور على ملف شخصي ولم يتم إنشاء ملف جديد");
+          } else if (!profile.is_approved) {
+            console.warn("حساب المستخدم غير معتمد:", profile);
+          }
+        }, 0);
       }
       
       return { error: null, user: data.user };
@@ -225,9 +247,18 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signUp = async (email: string, password: string, fullName: string, plan: string) => {
     try {
+      console.log("بدء عملية تسجيل مستخدم جديد:", email);
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          // إضافة البيانات الوصفية للمستخدم
+          data: {
+            full_name: fullName,
+            subscription_plan: plan
+          }
+        }
       });
 
       if (error) {
@@ -239,7 +270,9 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // إنشاء ملف شخصي للمستخدم عند التسجيل
       if (data.user) {
-        await createUserProfileIfMissing(data.user.id, fullName, plan);
+        setTimeout(async () => {
+          await createUserProfileIfMissing(data.user.id, fullName, plan);
+        }, 0);
       }
 
       return { error: null, user: data.user };

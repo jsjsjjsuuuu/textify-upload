@@ -78,6 +78,8 @@ const Login = () => {
           setLoginErrorMessage('بيانات تسجيل الدخول غير صحيحة. يرجى التحقق من البريد الإلكتروني وكلمة المرور.');
         } else if (error.message && error.message.includes('Email not confirmed')) {
           setLoginErrorMessage('البريد الإلكتروني غير مؤكد. يرجى تفقد بريدك الإلكتروني والنقر على رابط التأكيد.');
+        } else if (error.message && error.message.toLowerCase().includes('rate limit')) {
+          setLoginErrorMessage('تم تجاوز الحد المسموح به لمحاولات تسجيل الدخول. يرجى المحاولة مرة أخرى بعد بضع دقائق.');
         } else {
           setLoginErrorMessage(error.message || 'حدث خطأ أثناء تسجيل الدخول.');
         }

@@ -94,6 +94,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          is_admin: boolean | null
           is_approved: boolean | null
           subscription_end_date: string | null
           subscription_plan: string | null
@@ -106,6 +107,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          is_admin?: boolean | null
           is_approved?: boolean | null
           subscription_end_date?: string | null
           subscription_plan?: string | null
@@ -118,6 +120,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_admin?: boolean | null
           is_approved?: boolean | null
           subscription_end_date?: string | null
           subscription_plan?: string | null
