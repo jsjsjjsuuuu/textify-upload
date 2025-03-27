@@ -8,6 +8,8 @@ import { ThemeProvider } from "@/components/ui/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 function App() {
+  console.log("تحميل التطبيق الرئيسي App");
+  
   return (
     <React.StrictMode>
       <ThemeProvider defaultTheme="light" storageKey="app-theme">

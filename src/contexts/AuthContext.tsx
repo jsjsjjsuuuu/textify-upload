@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { SupabaseClient, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,42 +48,47 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  // تحسين عملية تهيئة المصادقة لتجنب التحديثات المتكررة
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        if (isInitialized) return;
+        
         setIsLoading(true);
         setSupabaseClient(supabase);
         setAuth(supabase.auth);
 
-        // تهيئة Supabase مع الإعدادات الصحيحة للتعامل مع الجلسة
         console.log("تهيئة خدمة المصادقة...");
 
-        // الاشتراك في أحداث تغيير حالة المصادقة
+        // أولاً، إعداد الاستماع لأحداث تغيير حالة المصادقة
         const {
           data: { subscription },
-        } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+        } = supabase.auth.onAuthStateChange((event, currentSession) => {
           console.log("تغيرت حالة المصادقة:", event);
           
-          // تحديث حالة الجلسة والمستخدم
+          // تحديث حالة الجلسة والمستخدم بطريقة آمنة
           setSession(currentSession);
           setUser(currentSession?.user || null);
 
-          // إذا كان المستخدم مسجل دخوله، نجلب ملفه الشخصي
+          // استخدام setTimeout لكسر التسلسل المباشر وتجنب الحلقات اللانهائية
           if (currentSession?.user) {
-            await fetchUserProfileSafely(currentSession.user.id);
+            setTimeout(() => {
+              fetchUserProfileSafely(currentSession.user.id);
+            }, 0);
           } else {
             setUserProfile(null);
           }
         });
 
-        // الحصول على الجلسة الحالية
+        // ثم، الحصول على الجلسة الحالية
         const { data: initialSession } = await supabase.auth.getSession();
         setSession(initialSession.session);
 
         // جلب بيانات المستخدم إذا كانت الجلسة موجودة
         if (initialSession.session?.user) {
-          console.log("تم العثور على جلسة موجودة، جاري تحميل بيانات المستخدم:", initialSession.session.user.id);
+          console.log("تم العثور على جلسة موجودة:", initialSession.session.user.id);
           setUser(initialSession.session.user);
           
           await fetchUserProfileSafely(initialSession.session.user.id);
@@ -90,26 +96,28 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log("لم يتم العثور على جلسة موجودة");
         }
 
-        // إعادة التصريح عند إغلاق المكون
+        setIsInitialized(true);
+        setIsLoading(false);
+
+        // إلغاء الاشتراك عند إغلاق المكون
         return () => {
           subscription.unsubscribe();
         };
       } catch (error) {
         console.error("خطأ في تهيئة المصادقة:", error);
-      } finally {
         setIsLoading(false);
+        setIsInitialized(true);
       }
     };
 
     initializeAuth();
-  }, []);
+  }, [isInitialized]);
 
   // طريقة آمنة لجلب الملف الشخصي بدون تكرار لانهائي
   const fetchUserProfileSafely = async (userId: string): Promise<UserProfile | null> => {
     try {
       console.log("جلب ملف المستخدم الشخصي بطريقة آمنة:", userId);
       
-      // استخدام RPC بدلاً من الاستعلام المباشر لتجنب مشكلة التكرار اللانهائي
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -122,7 +130,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (!data) {
-        // إذا لم يتم العثور على ملف شخصي، قم بإنشاء واحد جديد
         console.log("لم يتم العثور على ملف شخصي، محاولة إنشاء واحد جديد");
         return await createUserProfileIfMissing(userId);
       }
@@ -151,6 +158,19 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { data: userData } = await supabase.auth.getUser();
       const userEmail = userData.user?.email || '';
       
+      // التحقق أولاً من عدم وجود الملف الشخصي (تجنب الإدخالات المكررة)
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (existingProfile) {
+        console.log("الملف الشخصي موجود بالفعل:", existingProfile.id);
+        // جلب الملف الشخصي الكامل وإعادته
+        return await fetchUserProfileSafely(userId);
+      }
+      
       const { data: newProfile, error: insertError } = await supabase
         .from('profiles')
         .insert([
@@ -159,8 +179,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             username: userEmail.split('@')[0],
             full_name: fullName || '',
             subscription_plan: plan || 'standard',
-            is_approved: false, // يحتاج للموافقة من قبل المسؤول
-            is_admin: false // تعيين is_admin كـ false افتراضيًا
+            is_approved: false,
+            is_admin: false
           }
         ])
         .select()
@@ -209,7 +229,9 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (data.user) {
         console.log("تم تسجيل الدخول بنجاح، جلب الملف الشخصي");
-        await fetchUserProfileSafely(data.user.id);
+        setTimeout(() => {
+          fetchUserProfileSafely(data.user.id);
+        }, 0);
       }
       
       return { error: null, user: data.user };
@@ -239,7 +261,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email,
         password,
         options: {
-          // إضافة البيانات الوصفية للمستخدم
           data: {
             full_name: fullName,
             subscription_plan: plan
@@ -254,9 +275,12 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('تم التسجيل بنجاح، المستخدم:', data.user);
       
-      // إنشاء ملف شخصي للمستخدم عند التسجيل
+      // إنشاء ملف شخصي للمستخدم عند التسجيل فقط إذا تم إنشاء المستخدم بنجاح
       if (data.user) {
-        await createUserProfileIfMissing(data.user.id, fullName, plan);
+        console.log("جاري إنشاء الملف الشخصي للمستخدم الجديد");
+        setTimeout(async () => {
+          await createUserProfileIfMissing(data.user.id, fullName, plan);
+        }, 0);
       }
 
       return { error: null, user: data.user };
@@ -340,7 +364,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!isLoading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

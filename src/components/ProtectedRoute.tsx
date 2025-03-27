@@ -16,6 +16,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireApproval = true,
   adminOnly = false
 }) => {
+  console.log("تحميل مكون الحماية ProtectedRoute");
   const { user, userProfile, isLoading, refreshUserProfile } = useAuth();
 
   // عند تحميل المكون، قم بتحديث الملف الشخصي للتأكد من أحدث البيانات
