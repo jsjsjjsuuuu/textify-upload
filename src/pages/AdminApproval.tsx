@@ -1,11 +1,10 @@
-
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
-import { toast } from 'sonner'; // إضافة استيراد toast من مكتبة sonner
+import { toast } from 'sonner';
 
 // استيراد المكونات المستخرجة
 import UserTable from '@/components/admin/UserTable';
@@ -83,6 +82,7 @@ const AdminApproval = () => {
       console.log('تنفيذ إعادة تعيين كلمة المرور مع البيانات:', {
         userToReset,
         userToResetType: typeof userToReset,
+        userToResetLength: userToReset.length,
         passwordLength: newPassword.length,
         passwordEmpty: !newPassword.trim()
       });

@@ -167,7 +167,7 @@ export const useUserManagement = () => {
     }
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - محسنة ومعاد كتابتها
+  // وظيفة إعادة تعيين كلمة المرور - محسنة ومعاد كتابتها بالكامل
   const resetUserPassword = async (userId: string, newPassword: string) => {
     setIsProcessing(true);
     try {
@@ -187,8 +187,18 @@ export const useUserManagement = () => {
         setIsProcessing(false);
         return;
       }
+
+      // التحقق من صحة تنسيق UUID
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isValidUuid = uuidPattern.test(userId);
       
-      // استخدام وظيفة موجودة بالفعل في تعريف TypeScript: admin_reset_password_by_string_id
+      console.log('التحقق من تنسيق UUID:', {
+        userId,
+        isValidUuid,
+        passwordLength: newPassword.length
+      });
+
+      // استخدام الدالة الموجودة بالفعل: admin_reset_password_by_string_id
       const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
         user_id_str: userId,
         new_password: newPassword
@@ -203,17 +213,9 @@ export const useUserManagement = () => {
         console.error('خطأ في إعادة تعيين كلمة المرور:', error);
         toast.error(`فشل في إعادة تعيين كلمة المرور: ${error.message}`);
         
-        // محاولة إضافية باستخدام أحد الوظيفتين الموجودتين سابقاً
-        console.log('المحاولة باستخدام طريقة بديلة...');
-        
-        try {
-          // التحقق من أن معرف المستخدم هو UUID صالح
-          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          if (!uuidPattern.test(userId)) {
-            console.error('معرف المستخدم ليس UUID صالح:', userId);
-            toast.error('معرف المستخدم غير صالح للطريقة البديلة');
-            throw new Error('معرف المستخدم ليس بتنسيق UUID صالح');
-          }
+        // محاولة استخدام طريقة بديلة إذا كان معرف المستخدم صالحًا
+        if (isValidUuid) {
+          console.log('المحاولة باستخدام الطريقة البديلة admin_update_user_password');
           
           const { data: traditionalData, error: traditionalError } = await supabase.rpc('admin_update_user_password', {
             user_id: userId,
@@ -237,9 +239,8 @@ export const useUserManagement = () => {
           } else {
             throw new Error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
           }
-        } catch (traditionalCatchError: any) {
-          console.error('خطأ في الطريقة التقليدية:', traditionalCatchError);
-          toast.error(`جميع المحاولات فشلت. آخر خطأ: ${traditionalCatchError.message || 'خطأ غير معروف'}`);
+        } else {
+          throw new Error('معرف المستخدم ليس بتنسيق UUID صالح');
         }
       } else {
         // نجحت الطريقة المباشرة
