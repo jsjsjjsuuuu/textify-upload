@@ -3,12 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserProfile } from '@/types/UserProfile';
 
-interface AuthUserData {
-  id: string;
-  email: string;
-  created_at: string;
-}
-
 export const useUserManagement = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
