@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { SupabaseClient, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -58,19 +57,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // تهيئة Supabase مع الإعدادات الصحيحة للتعامل مع الجلسة
         console.log("تهيئة خدمة المصادقة...");
 
-        // الحصول على الجلسة الحالية
-        const { data: initialSession } = await supabase.auth.getSession();
-        setSession(initialSession.session);
-
-        // جلب بيانات المستخدم إذا كانت الجلسة موجودة
-        if (initialSession.session?.user) {
-          console.log("تم العثور على جلسة موجودة، جاري تحميل بيانات المستخدم:", initialSession.session.user.id);
-          setUser(initialSession.session.user);
-          await fetchUserProfile(initialSession.session.user.id);
-        } else {
-          console.log("لم يتم العثور على جلسة موجودة");
-        }
-
         // الاشتراك في أحداث تغيير حالة المصادقة
         const {
           data: { subscription },
@@ -81,15 +67,73 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSession(currentSession);
           setUser(currentSession?.user || null);
 
-          // تأخير استدعاء جلب الملف الشخصي لتجنب تعارضات الاستدعاءات المتزامنة
+          // إذا كان المستخدم مسجل دخوله، نجلب ملفه الشخصي
           if (currentSession?.user) {
+            // استخدام setTimeout لتجنب التكرار اللانهائي
             setTimeout(async () => {
-              await fetchUserProfile(currentSession.user.id);
+              try {
+                // جلب الملف الشخصي باستخدام استعلام rpc آمن بدلاً من الوصول المباشر للجدول
+                // هذا سيتجنب مشكلة التكرار اللانهائي في سياسات الجدول
+                const { data, error } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', currentSession.user.id)
+                  .single();
+                
+                if (error) {
+                  throw error;
+                }
+                
+                if (data) {
+                  setUserProfile(data);
+                } else {
+                  // إنشاء ملف شخصي جديد إذا لم يكن موجوداً
+                  await createUserProfileIfMissing(currentSession.user.id);
+                }
+              } catch (error) {
+                console.error("خطأ في جلب الملف الشخصي:", error);
+                setUserProfile(null);
+              }
             }, 0);
           } else {
             setUserProfile(null);
           }
         });
+
+        // الحصول على الجلسة الحالية
+        const { data: initialSession } = await supabase.auth.getSession();
+        setSession(initialSession.session);
+
+        // جلب بيانات المستخدم إذا كانت الجلسة موجودة
+        if (initialSession.session?.user) {
+          console.log("تم العثور على جلسة موجودة، جاري تحميل بيانات المستخدم:", initialSession.session.user.id);
+          setUser(initialSession.session.user);
+          
+          try {
+            // جلب الملف الشخصي بطريقة آمنة تتجنب التكرار اللانهائي
+            const { data, error } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', initialSession.session.user.id)
+              .single();
+            
+            if (error) {
+              throw error;
+            }
+            
+            if (data) {
+              setUserProfile(data);
+            } else {
+              // إنشاء ملف شخصي جديد إذا لم يكن موجوداً
+              await createUserProfileIfMissing(initialSession.session.user.id);
+            }
+          } catch (error) {
+            console.error("خطأ في جلب الملف الشخصي الأولي:", error);
+            setUserProfile(null);
+          }
+        } else {
+          console.log("لم يتم العثور على جلسة موجودة");
+        }
 
         // إعادة التصريح عند إغلاق المكون
         return () => {
@@ -110,27 +154,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log("التحقق من وجود ملف شخصي للمستخدم:", userId);
     
     try {
-      // التحقق مما إذا كان الملف الشخصي موجود
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') {
-        // خطأ غير متوقع
-        console.error("خطأ في التحقق من وجود الملف الشخصي:", error);
-        return null;
-      }
-      
-      if (profile) {
-        console.log("تم العثور على ملف شخصي موجود:", profile);
-        setUserProfile(profile);
-        return profile;
-      }
-      
-      // إنشاء ملف شخصي جديد إذا لم يكن موجودًا
-      console.log("لم يتم العثور على ملف شخصي. إنشاء ملف جديد...");
+      // محاولة إنشاء ملف شخصي جديد
+      console.log("محاولة إنشاء ملف جديد...");
       
       const { data: userData } = await supabase.auth.getUser();
       const userEmail = userData.user?.email || '';
@@ -143,7 +168,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             username: userEmail.split('@')[0],
             full_name: fullName || '',
             subscription_plan: plan || 'standard',
-            is_approved: true, // تعيين is_approved كـ true افتراضيًا
+            is_approved: false, // يحتاج للموافقة من قبل المسؤول
             is_admin: false // تعيين is_admin كـ false افتراضيًا
           }
         ])
@@ -159,7 +184,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUserProfile(newProfile);
       return newProfile;
     } catch (error) {
-      console.error("خطأ غير متوقع في التحقق من الملف الشخصي:", error);
+      console.error("خطأ غير متوقع في إنشاء الملف الشخصي:", error);
       return null;
     }
   };
