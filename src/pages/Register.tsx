@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -13,6 +14,7 @@ import { User, Mail, Check, KeyRound, Crown, Shield, AlertCircle, Loader2 } from
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { toast } from 'sonner';
 
 const registerSchema = z.object({
   fullName: z.string().min(3, { message: 'الاسم الكامل يجب أن يكون 3 أحرف على الأقل' }),
@@ -70,7 +72,7 @@ const Register = () => {
   ];
 
   // إذا كان المستخدم مسجل الدخول بالفعل
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       navigate('/');
     }
@@ -88,12 +90,11 @@ const Register = () => {
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
+    console.log("محاولة تسجيل مستخدم جديد:", data.email);
     setIsLoading(true);
     setHasRegisterError(false);
     
     try {
-      console.log("محاولة تسجيل مستخدم جديد:", data.email);
-      
       const { error, user } = await signUp(
         data.email, 
         data.password,
@@ -107,28 +108,32 @@ const Register = () => {
         // ترجمة رسائل الخطأ للعربية وتحسين رسائل الأخطاء المحددة
         if (error.message?.includes('User already registered')) {
           setRegisterErrorMessage('هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول أو استخدام بريد إلكتروني آخر.');
+          toast.error('البريد الإلكتروني مسجل بالفعل');
         } else if (error.message?.toLowerCase().includes('rate limit') || error.message?.toLowerCase().includes('exceeded')) {
           setRegisterErrorMessage('تم تجاوز الحد المسموح به لإرسال رسائل البريد الإلكتروني. يرجى المحاولة مرة أخرى بعد قليل أو التواصل مع الدعم الفني.');
+          toast.error('تم تجاوز الحد المسموح به');
         } else if (error.message?.includes('Invalid email')) {
           setRegisterErrorMessage('البريد الإلكتروني غير صالح. يرجى التأكد من إدخال بريد إلكتروني صحيح.');
+          toast.error('البريد الإلكتروني غير صالح');
         } else if (error.message?.includes('Password should be at least')) {
           setRegisterErrorMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل.');
+          toast.error('كلمة المرور قصيرة جداً');
         } else {
           setRegisterErrorMessage(error.message || 'حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى.');
+          toast.error('حدث خطأ أثناء التسجيل');
         }
         console.error("خطأ في التسجيل:", error.message);
-        return;
-      }
-      
-      if (user) {
+      } else {
         // تم التسجيل بنجاح
-        console.log("تم التسجيل بنجاح للمستخدم:", user.id);
+        console.log("تم التسجيل بنجاح للمستخدم:", user?.id);
         setEmailSent(true);
+        toast.success('تم إنشاء الحساب بنجاح');
       }
     } catch (error: any) {
       console.error("خطأ غير متوقع في التسجيل:", error);
       setHasRegisterError(true);
       setRegisterErrorMessage('حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى لاحقاً.');
+      toast.error('حدث خطأ غير متوقع');
     } finally {
       setIsLoading(false);
     }
