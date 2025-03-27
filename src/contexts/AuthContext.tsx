@@ -3,19 +3,20 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { SupabaseClient, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+// تحديث واجهة UserProfile لدعم اسماء الحقول القديمة والجديدة
 interface UserProfile {
   id: string;
-  username: string;
-  full_name: string;
-  avatar_url: string;
-  is_approved: boolean;
-  // تحويل أسماء الخصائص لتتطابق مع قاعدة البيانات
-  isApproved?: boolean; // للتوافق مع الكود القديم
-  fullName?: string; // للتوافق مع الكود القديم
-  avatarUrl?: string; // للتوافق مع الكود القديم
-  // إضافة الخصائص الأخرى
+  username: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  is_approved: boolean | null;
+  // حقول متوافقة مع القاعدة السابقة
+  fullName?: string;
+  avatarUrl?: string;
+  isApproved?: boolean;
+  // الخصائص الأخرى
   subscription_plan?: string;
-  subscription_end_date?: string;
+  subscription_end_date?: string | null;
   account_status?: string;
   created_at?: string;
   updated_at?: string;
@@ -23,14 +24,14 @@ interface UserProfile {
 
 interface AuthContextType {
   supabaseClient: SupabaseClient | null;
-  auth: any | null; // تغيير من Auth إلى any
+  auth: any | null;
   user: any | null;
   session: Session | null;
   userProfile: UserProfile | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any; user: any | null }>;
   signOut: () => Promise<void>;
-  signUp: (email: string, password: string, userData?: any) => Promise<{ error: any; user: any | null; emailConfirmationSent?: boolean }>;
+  signUp: (email: string, password: string) => Promise<{ error: any; user: any | null }>;
   forgotPassword: (email: string) => Promise<{ error: any; sent: boolean }>;
   resetPassword: (newPassword: string) => Promise<{ error: any; success: boolean }>;
   updateUser: (updates: any) => Promise<{ data: any; error: any }>;
