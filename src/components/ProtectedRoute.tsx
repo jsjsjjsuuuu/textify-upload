@@ -29,8 +29,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // التحقق من حالة الموافقة إذا كان مطلوبًا
-  if (requireApproval && userProfile && !userProfile.is_approved) {
-    return <Navigate to="/login" />;
+  if (requireApproval && userProfile) {
+    // استخدام is_approved بشكل أساسي، مع الرجوع إلى isApproved كاحتياطي
+    const isUserApproved = userProfile.is_approved !== null ? userProfile.is_approved : userProfile.isApproved;
+    
+    if (!isUserApproved) {
+      return <Navigate to="/login" />;
+    }
   }
 
   return <>{children}</>;

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -131,140 +132,167 @@ const Register = () => {
       <AppHeader />
       <div className="container max-w-md mx-auto p-4 pt-10">
         <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center">إنشاء حساب جديد</CardTitle>
-            <CardDescription className="text-center">
-              أدخل بياناتك الشخصية واختر الباقة المناسبة لإنشاء حساب جديد
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="fullName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>الاسم الكامل</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input placeholder="أدخل اسمك الكامل" className="pl-10" {...field} />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>البريد الإلكتروني</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input placeholder="أدخل بريدك الإلكتروني" className="pl-10" {...field} />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>كلمة المرور</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input type="password" placeholder="أدخل كلمة المرور" className="pl-10" {...field} />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>تأكيد كلمة المرور</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input type="password" placeholder="أكد كلمة المرور" className="pl-10" {...field} />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <Separator className="my-4" />
-                
-                <FormField
-                  control={form.control}
-                  name="subscriptionPlan"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>اختر نوع الباقة</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex flex-col space-y-3"
-                        >
-                          {subscriptionPlans.map((plan) => (
-                            <div key={plan.id} className={`
-                              flex items-center justify-between p-3 rounded-lg border-2 transition-all
-                              ${field.value === plan.id 
-                                ? 'bg-primary/5 border-primary'
-                                : 'border-muted hover:border-muted-foreground/20'
-                              }
-                            `}>
-                              <div className="flex items-center gap-3">
-                                <RadioGroupItem value={plan.id} id={plan.id} />
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2">
-                                    {plan.icon}
-                                    <span className="font-medium">{plan.title}</span>
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">{plan.description}</span>
-                                </div>
-                              </div>
-                              <div className="text-sm">{plan.price}</div>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
+          {emailSent ? (
+            <>
+              <CardHeader>
+                <div className="flex justify-center mb-4">
+                  <div className="bg-green-100 p-3 rounded-full">
+                    <Check className="h-12 w-12 text-green-600" />
+                  </div>
+                </div>
+                <CardTitle className="text-2xl text-center">تم إرسال رسالة التأكيد</CardTitle>
+                <CardDescription className="text-center">
+                  لقد أرسلنا رابط التأكيد إلى بريدك الإلكتروني. يرجى التحقق والنقر على الرابط لتأكيد حسابك. سيتم مراجعة حسابك من قبل المسؤول قبل تفعيله.
+                </CardDescription>
+              </CardHeader>
+              <CardFooter>
                 <Button 
-                  type="submit" 
-                  className="w-full mt-6" 
-                  disabled={isLoading}
+                  variant="outline" 
+                  onClick={() => navigate('/login')} 
+                  className="w-full"
                 >
-                  {isLoading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب'}
+                  العودة إلى تسجيل الدخول
                 </Button>
-              </form>
-            </Form>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-2">
-            <div className="text-center text-sm">
-              لديك حساب بالفعل؟{' '}
-              <Link to="/login" className="text-primary hover:underline">
-                تسجيل الدخول
-              </Link>
-            </div>
-          </CardFooter>
+              </CardFooter>
+            </>
+          ) : (
+            <>
+              <CardHeader>
+                <CardTitle className="text-2xl text-center">إنشاء حساب جديد</CardTitle>
+                <CardDescription className="text-center">
+                  أدخل بياناتك الشخصية واختر الباقة المناسبة لإنشاء حساب جديد
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="fullName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>الاسم الكامل</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                              <Input placeholder="أدخل اسمك الكامل" className="pl-10" {...field} />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>البريد الإلكتروني</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                              <Input placeholder="أدخل بريدك الإلكتروني" className="pl-10" {...field} />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>كلمة المرور</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                              <Input type="password" placeholder="أدخل كلمة المرور" className="pl-10" {...field} />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>تأكيد كلمة المرور</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                              <Input type="password" placeholder="أكد كلمة المرور" className="pl-10" {...field} />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Separator className="my-4" />
+                    
+                    <FormField
+                      control={form.control}
+                      name="subscriptionPlan"
+                      render={({ field }) => (
+                        <FormItem className="space-y-3">
+                          <FormLabel>اختر نوع الباقة</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                              className="flex flex-col space-y-3"
+                            >
+                              {subscriptionPlans.map((plan) => (
+                                <div key={plan.id} className={`
+                                  flex items-center justify-between p-3 rounded-lg border-2 transition-all
+                                  ${field.value === plan.id 
+                                    ? 'bg-primary/5 border-primary'
+                                    : 'border-muted hover:border-muted-foreground/20'
+                                  }
+                                `}>
+                                  <div className="flex items-center gap-3">
+                                    <RadioGroupItem value={plan.id} id={plan.id} />
+                                    <div className="flex flex-col gap-1">
+                                      <div className="flex items-center gap-2">
+                                        {plan.icon}
+                                        <span className="font-medium">{plan.title}</span>
+                                      </div>
+                                      <span className="text-xs text-muted-foreground">{plan.description}</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-sm">{plan.price}</div>
+                                </div>
+                              ))}
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button 
+                      type="submit" 
+                      className="w-full mt-6" 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب'}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+              <CardFooter className="flex flex-col space-y-2">
+                <div className="text-center text-sm">
+                  لديك حساب بالفعل؟{' '}
+                  <Link to="/login" className="text-primary hover:underline">
+                    تسجيل الدخول
+                  </Link>
+                </div>
+              </CardFooter>
+            </>
+          )}
         </Card>
       </div>
     </div>

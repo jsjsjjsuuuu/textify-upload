@@ -26,6 +26,21 @@ const AppHeader = () => {
     navigate('/login');
   };
   
+  // التحقق من حالة الموافقة باستخدام is_approved والرجوع إلى isApproved كاحتياطي
+  const isUserApproved = userProfile ? 
+    (userProfile.is_approved !== null ? userProfile.is_approved : userProfile.isApproved) : 
+    false;
+  
+  // استخدام avatar_url مع الرجوع إلى avatarUrl كاحتياطي
+  const userAvatarUrl = userProfile ? 
+    (userProfile.avatar_url || userProfile.avatarUrl) : 
+    null;
+  
+  // استخدام full_name مع الرجوع إلى fullName كاحتياطي
+  const userFullName = userProfile ? 
+    (userProfile.full_name || userProfile.fullName) : 
+    null;
+  
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
@@ -46,7 +61,7 @@ const AppHeader = () => {
               السجلات
             </Link>
             {/* إضافة رابط لصفحة الموافقات للمسؤولين فقط */}
-            {user && userProfile?.is_approved && (
+            {user && isUserApproved && (
               <Link
                 to="/admin/approvals"
                 className={`transition-colors hover:text-foreground/80 ${
@@ -70,14 +85,14 @@ const AppHeader = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={userProfile?.avatar_url || `https://avatar.iran.liara.run/public/${user?.email}`} alt={user?.email || "User Avatar"} />
+                    <AvatarImage src={userAvatarUrl || `https://avatar.iran.liara.run/public/${user?.email}`} alt={user?.email || "User Avatar"} />
                     <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel>
-                  {userProfile?.full_name || user?.email}
+                  {userFullName || user?.email}
                 </DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   الملف الشخصي
