@@ -58,6 +58,8 @@ const UserManagementTab: React.FC = () => {
   const onAddUserSubmit = async (data: AddUserFormValues) => {
     setIsLoading(true);
     try {
+      console.log("محاولة إضافة مستخدم جديد:", data.email);
+      
       // إنشاء المستخدم في Supabase
       const { error } = await supabase.auth.admin.createUser({
         email: data.email,
@@ -69,8 +71,11 @@ const UserManagementTab: React.FC = () => {
       });
       
       if (error) {
+        console.error("فشل إضافة المستخدم:", error.message);
         throw error;
       }
+      
+      console.log("تم إضافة المستخدم بنجاح:", data.email);
       
       toast({
         title: "تم بنجاح",
@@ -79,6 +84,8 @@ const UserManagementTab: React.FC = () => {
       
       addUserForm.reset();
     } catch (error: any) {
+      console.error("خطأ أثناء إضافة المستخدم:", error.message);
+      
       toast({
         title: "خطأ",
         description: error.message || "حدث خطأ أثناء إضافة المستخدم",
@@ -93,17 +100,25 @@ const UserManagementTab: React.FC = () => {
   const onResetPasswordSubmit = async (data: ResetPasswordFormValues) => {
     setIsLoading(true);
     try {
-      // استخدام الوظيفة المخصصة لتحديث كلمة المرور مباشرة
-      // لا نحتاج للبحث عن معرف المستخدم أولاً من خلال البريد الإلكتروني
-      // لأن هذا يتطلب صلاحيات إضافية في Supabase
+      console.log("محاولة إعادة تعيين كلمة المرور للمستخدم:", data.email);
+      
+      // استخدام الوظيفة المخصصة لتحديث كلمة المرور باستخدام البريد الإلكتروني
       const { data: result, error } = await supabase.rpc('admin_update_user_password_by_email', {
         user_email: data.email,
         new_password: data.newPassword,
       });
       
-      if (error || !result) {
-        throw error || new Error('فشل تحديث كلمة المرور');
+      if (error) {
+        console.error("فشل تحديث كلمة المرور:", error.message);
+        throw error;
       }
+      
+      if (!result) {
+        console.error("فشل تحديث كلمة المرور: لم يتم العثور على المستخدم");
+        throw new Error('فشل تحديث كلمة المرور: لم يتم العثور على المستخدم');
+      }
+      
+      console.log("تم تغيير كلمة المرور بنجاح للمستخدم:", data.email);
       
       toast({
         title: "تم بنجاح",
@@ -112,6 +127,8 @@ const UserManagementTab: React.FC = () => {
       
       resetPasswordForm.reset();
     } catch (error: any) {
+      console.error("خطأ أثناء تغيير كلمة المرور:", error.message);
+      
       toast({
         title: "خطأ",
         description: error.message || "حدث خطأ أثناء تغيير كلمة المرور",

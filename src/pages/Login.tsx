@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
-import { Mail, UserPlus, KeyRound, AlertCircle } from 'lucide-react';
+import { Mail, UserPlus, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
@@ -23,13 +23,21 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, user, userProfile } = useAuth();
+  const { signIn, user, userProfile, session } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoginError, setHasLoginError] = useState(false);
   const [loginErrorMessage, setLoginErrorMessage] = useState('');
+  
+  console.log("تهيئة صفحة تسجيل الدخول، حالة الجلسة:", !!session, "حالة المستخدم:", !!user);
 
+  // التحقق من وجود مستخدم ومعتمد
   useEffect(() => {
+    console.log("فحص حالة المستخدم:", user ? "موجود" : "غير موجود", 
+                "الملف الشخصي:", userProfile ? "موجود" : "غير موجود",
+                "الموافقة:", userProfile?.isApproved);
+                
     if (user && userProfile?.isApproved) {
+      console.log("المستخدم مسجل الدخول ومعتمد، جارِ التوجيه إلى الصفحة الرئيسية");
       navigate('/');
     }
   }, [user, userProfile, navigate]);
@@ -43,29 +51,28 @@ const Login = () => {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
+    console.log("محاولة تسجيل الدخول باستخدام:", data.email);
+    
     setIsLoading(true);
     setHasLoginError(false);
     
     try {
-      console.log("محاولة تسجيل الدخول للمستخدم:", data.email); // تسجيل معلومات الدخول للتصحيح
-      
       const { error, user: authUser } = await signIn(data.email, data.password);
       
       console.log("نتيجة تسجيل الدخول:", error ? "فشل" : "نجاح", "المستخدم:", authUser || "لا يوجد");
       
       if (error) {
-        console.error("خطأ تسجيل الدخول:", error.message);
         setHasLoginError(true);
         
         // ترجمة رسائل الخطأ للعربية
-        if (error.message.includes('Invalid login credentials')) {
+        if (error.message && error.message.includes('Invalid login credentials')) {
           setLoginErrorMessage('بيانات تسجيل الدخول غير صحيحة. يرجى التحقق من البريد الإلكتروني وكلمة المرور.');
-        } else if (error.message.includes('Email not confirmed')) {
+        } else if (error.message && error.message.includes('Email not confirmed')) {
           setLoginErrorMessage('البريد الإلكتروني غير مؤكد. يرجى تفقد بريدك الإلكتروني والنقر على رابط التأكيد.');
-        } else if (error.message.includes('الحساب قيد المراجعة')) {
+        } else if (error.message && error.message.includes('الحساب قيد المراجعة')) {
           setLoginErrorMessage('لم تتم الموافقة على حسابك بعد. يرجى الانتظار حتى يتم مراجعته من قبل المسؤول.');
         } else {
-          setLoginErrorMessage(error.message);
+          setLoginErrorMessage(error.message || 'حدث خطأ أثناء تسجيل الدخول.');
         }
       } else {
         // نجاح تسجيل الدخول، سيتم التوجيه في الـ useEffect
@@ -148,7 +155,12 @@ const Login = () => {
                   className="w-full" 
                   disabled={isLoading}
                 >
-                  {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                      جاري تسجيل الدخول...
+                    </>
+                  ) : 'تسجيل الدخول'}
                 </Button>
               </form>
             </Form>

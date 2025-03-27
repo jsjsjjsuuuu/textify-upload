@@ -35,6 +35,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
   const { toast } = useToast();
 
+  console.log("تهيئة سياق المصادقة AuthContext");
+
   // جلب بيانات الملف الشخصي
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -44,7 +46,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('profiles')
         .select('full_name, avatar_url, is_approved, subscription_plan')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // استخدام maybeSingle بدلاً من single لتجنب الأخطاء
 
       if (error) {
         console.error('خطأ في جلب بيانات الملف الشخصي:', error);
@@ -72,16 +74,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // تعيين مستمع لتغييرات حالة المصادقة
+    console.log("تهيئة مستمع تغييرات حالة المصادقة");
+    
+    // 1. قم أولاً بإعداد مستمع لتغييرات حالة المصادقة
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      (event, newSession) => {
         console.log("تغيير حالة المصادقة:", event, newSession ? "مسجل الدخول" : "غير مسجل الدخول");
         
+        // تعيين الجلسة والمستخدم فقط، بدون استدعاء وظائف Supabase أخرى
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
+        // إذا كان هناك مستخدم، قم بتأجيل استدعاء جلب الملف الشخصي
         if (newSession?.user) {
-          // تأخير استدعاء Supabase مرة أخرى لتجنب التعارض
           setTimeout(() => {
             fetchUserProfile(newSession.user.id);
           }, 0);
@@ -93,7 +98,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // التحقق من الجلسة الحالية عند تحميل الصفحة
+    // 2. بعد إعداد المستمع، تحقق من الجلسة الحالية
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       console.log("التحقق من جلسة المستخدم:", currentSession ? "موجودة" : "غير موجودة");
       
@@ -108,6 +113,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => {
+      console.log("إلغاء اشتراك مستمع تغييرات حالة المصادقة");
       subscription.unsubscribe();
     };
   }, []);
@@ -116,7 +122,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("محاولة تسجيل الدخول للمستخدم:", email);
       
-      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+      // استخدام تهيئة واضحة للخيارات
+      const { error, data } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password
+      });
       
       if (error) {
         console.error("فشل تسجيل الدخول:", error.message);
@@ -129,12 +139,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
       
+      console.log("نجح تسجيل الدخول، معرف المستخدم:", data.user.id);
+      
       // التحقق مما إذا كان الحساب معتمداً
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('is_approved')
         .eq('id', data.user.id)
-        .maybeSingle();  // استخدام maybeSingle بدلاً من single لتجنب الأخطاء إذا لم يتم العثور على الملف الشخصي
+        .maybeSingle();
       
       if (profileError) {
         console.error("خطأ في التحقق من حالة الحساب:", profileError.message);
@@ -176,7 +188,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       toast({
         title: "خطأ",
-        description: error.message,
+        description: error.message || "حدث خطأ غير متوقع أثناء تسجيل الدخول",
         variant: "destructive",
       });
       return { error, user: null };
@@ -185,6 +197,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, metadata?: any) => {
     try {
+      console.log("محاولة إنشاء حساب جديد:", email);
+      
       const { error, data } = await supabase.auth.signUp({ 
         email, 
         password,
@@ -198,6 +212,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       
       if (error) {
+        console.error("فشل إنشاء الحساب:", error.message);
+        
         toast({
           title: "فشل التسجيل",
           description: error.message,
@@ -206,19 +222,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
       
+      console.log("نتيجة إنشاء الحساب:", data.user ? "تم إنشاء المستخدم" : "لم يتم إنشاء المستخدم");
+      
       if (data?.user) {
         // تحديث الملف الشخصي بمعلومات الاشتراك
-        await supabase
+        const { error: profileError } = await supabase
           .from('profiles')
           .update({
             subscription_plan: metadata?.subscription_plan || 'standard',
             full_name: metadata?.full_name || '',
           })
           .eq('id', data.user.id);
+          
+        if (profileError) {
+          console.error("خطأ في تحديث الملف الشخصي:", profileError.message);
+        }
       }
       
       if (data?.user && !data?.session) {
         setEmailConfirmationSent(true);
+        
+        console.log("تم إرسال رسالة تأكيد البريد الإلكتروني");
+        
         toast({
           title: "تم إرسال رسالة التأكيد",
           description: "يرجى التحقق من بريدك الإلكتروني وتأكيد الحساب. سيتم مراجعة حسابك من قبل المسؤول.",
@@ -228,9 +253,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       return { error: null };
     } catch (error: any) {
+      console.error("خطأ غير متوقع أثناء إنشاء الحساب:", error);
+      
       toast({
         title: "خطأ",
-        description: error.message,
+        description: error.message || "حدث خطأ غير متوقع أثناء إنشاء الحساب",
         variant: "destructive",
       });
       return { error };
@@ -239,15 +266,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      console.log("محاولة تسجيل الخروج");
+      
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("خطأ أثناء تسجيل الخروج:", error.message);
+        
+        toast({
+          title: "خطأ",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("تم تسجيل الخروج بنجاح");
+      
       toast({
         title: "تم تسجيل الخروج",
         description: "لقد قمت بتسجيل الخروج بنجاح",
       });
     } catch (error: any) {
+      console.error("خطأ غير متوقع أثناء تسجيل الخروج:", error);
+      
       toast({
         title: "خطأ",
-        description: error.message,
+        description: error.message || "حدث خطأ غير متوقع أثناء تسجيل الخروج",
         variant: "destructive",
       });
     }
@@ -284,7 +329,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("خطأ غير متوقع:", error);
       toast({
         title: "خطأ",
-        description: error.message,
+        description: error.message || "حدث خطأ غير متوقع أثناء إرسال رابط إعادة تعيين كلمة المرور",
         variant: "destructive",
       });
       return { error, sent: false };
@@ -320,7 +365,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("خطأ غير متوقع:", error);
       toast({
         title: "خطأ",
-        description: error.message,
+        description: error.message || "حدث خطأ غير متوقع أثناء إعادة تعيين كلمة المرور",
         variant: "destructive",
       });
       return { error, success: false };

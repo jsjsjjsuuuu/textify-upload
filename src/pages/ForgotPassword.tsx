@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
-import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const forgotPasswordSchema = z.object({
@@ -46,6 +46,9 @@ const ForgotPassword = () => {
         console.log("تم إرسال رابط استعادة كلمة المرور بنجاح");
         setEmailSent(true);
       }
+    } catch (error: any) {
+      console.error("خطأ غير متوقع:", error);
+      setError(error.message || "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.");
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +113,12 @@ const ForgotPassword = () => {
                     className="w-full" 
                     disabled={isLoading}
                   >
-                    {isLoading ? 'جاري إرسال الرابط...' : 'إرسال رابط استعادة كلمة المرور'}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                        جاري إرسال الرابط...
+                      </>
+                    ) : 'إرسال رابط استعادة كلمة المرور'}
                   </Button>
                 </form>
               </Form>

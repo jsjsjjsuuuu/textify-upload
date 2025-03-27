@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
-import { KeyRound, CheckCircle, ArrowLeft } from 'lucide-react';
+import { KeyRound, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -51,6 +51,8 @@ const ResetPassword = () => {
       if (error || !data.session) {
         console.error("رابط إعادة تعيين كلمة المرور غير صالح:", error?.message || "لا توجد جلسة");
         setIsValidResetLink(false);
+      } else {
+        console.log("رابط إعادة تعيين كلمة المرور صالح، نوع الجلسة:", data.session.access_token ? "جلسة مصادقة" : "جلسة إعادة تعيين كلمة المرور");
       }
     };
 
@@ -77,6 +79,9 @@ const ResetPassword = () => {
           navigate('/login');
         }, 3000);
       }
+    } catch (error: any) {
+      console.error("خطأ غير متوقع أثناء إعادة تعيين كلمة المرور:", error);
+      setError(error.message || "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.");
     } finally {
       setIsLoading(false);
     }
@@ -180,7 +185,12 @@ const ResetPassword = () => {
                     className="w-full" 
                     disabled={isLoading}
                   >
-                    {isLoading ? 'جاري إعادة تعيين كلمة المرور...' : 'إعادة تعيين كلمة المرور'}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                        جاري إعادة تعيين كلمة المرور...
+                      </>
+                    ) : 'إعادة تعيين كلمة المرور'}
                   </Button>
                 </form>
               </Form>
