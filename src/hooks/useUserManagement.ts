@@ -7,6 +7,7 @@ import { UserProfile } from '@/types/UserProfile';
 interface AuthUserData {
   id: string;
   email: string;
+  created_at: string;
 }
 
 export const useUserManagement = () => {
@@ -61,39 +62,42 @@ export const useUserManagement = () => {
         }
       }
       
-      console.log('تم جلب بيانات المستخدمين الأساسية:', authUsersData?.length || 0);
+      console.log('تم جلب بيانات المستخدمين الأساسية:', authUsersData);
       
-      // إنشاء كائن للبحث السريع عن البريد الإلكتروني حسب معرف المستخدم
-      const emailsMap: Record<string, string> = {};
+      // إنشاء كائن للبحث السريع عن البريد الإلكتروني وتاريخ الإنشاء حسب معرف المستخدم
+      const authUsersMap: Record<string, { email: string, created_at: string }> = {};
       if (authUsersData && Array.isArray(authUsersData)) {
         authUsersData.forEach((user: AuthUserData) => {
-          if (user && user.id && user.email) {
-            emailsMap[user.id] = user.email;
+          if (user && user.id) {
+            authUsersMap[user.id] = { 
+              email: user.email || '',
+              created_at: user.created_at || new Date().toISOString()
+            };
           }
         });
       }
       
-      console.log('تم إنشاء خريطة البريد الإلكتروني للمستخدمين');
+      console.log('تم إنشاء خريطة بيانات المستخدمين:', Object.keys(authUsersMap).length);
       
       // تحويل بيانات الملفات الشخصية إلى قائمة المستخدمين
-      const usersWithEmails = (profilesData || []).map((profile: any) => {
-        const email = emailsMap[profile.id] || (profile.username ? `${profile.username}@example.com` : 'unknown@example.com');
+      const usersWithCompleteData = (profilesData || []).map((profile: any) => {
+        const userData = authUsersMap[profile.id] || { email: '', created_at: profile.created_at || new Date().toISOString() };
         
         return {
           id: profile.id,
-          email: email,
+          email: userData.email,
           full_name: profile.full_name || '',
           avatar_url: profile.avatar_url || '',
           is_approved: profile.is_approved || false,
-          created_at: profile.created_at,
+          created_at: userData.created_at || profile.created_at,
           subscription_plan: profile.subscription_plan || 'standard',
           account_status: profile.account_status || 'active',
           subscription_end_date: profile.subscription_end_date || null,
         };
       });
       
-      console.log('تم إنشاء قائمة المستخدمين النهائية:', usersWithEmails.length);
-      setUsers(usersWithEmails);
+      console.log('تم إنشاء قائمة المستخدمين النهائية:', usersWithCompleteData.length);
+      setUsers(usersWithCompleteData);
       
     } catch (error) {
       console.error('خطأ غير متوقع أثناء جلب بيانات المستخدمين:', error);
@@ -175,12 +179,12 @@ export const useUserManagement = () => {
         return;
       }
       
-      if (data) {
+      if (data === true) {
         toast.success('تم إعادة تعيين كلمة المرور بنجاح');
         setNewPassword('');
         setShowPassword(false);
       } else {
-        toast.error('لم يتم العثور على المستخدم');
+        toast.error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
       }
     } catch (error) {
       console.error('خطأ غير متوقع في إعادة تعيين كلمة المرور:', error);

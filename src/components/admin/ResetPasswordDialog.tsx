@@ -1,15 +1,14 @@
 
 import React from 'react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { RefreshCw } from 'lucide-react';
 
 interface ResetPasswordDialogProps {
@@ -28,30 +27,41 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
   isProcessing
 }) => {
   return (
-    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>تأكيد إعادة تعيين كلمة المرور</AlertDialogTitle>
-          <AlertDialogDescription>
-            هل أنت متأكد من أنك تريد إعادة تعيين كلمة المرور لهذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>إلغاء</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={onConfirm}
-            disabled={isProcessing}
-          >
-            {isProcessing ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                جاري المعالجة...
-              </>
-            ) : 'تأكيد إعادة التعيين'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>تأكيد إعادة تعيين كلمة المرور</DialogTitle>
+          <DialogDescription>
+            هل أنت متأكد من أنك تريد إعادة تعيين كلمة مرور هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="sm:justify-start">
+          <div className="flex gap-2 w-full justify-end">
+            <Button
+              variant="outline"
+              onClick={onCancel}
+              disabled={isProcessing}
+            >
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={onConfirm}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+                  جاري التنفيذ...
+                </>
+              ) : (
+                'تأكيد إعادة التعيين'
+              )}
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
