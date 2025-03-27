@@ -141,6 +141,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      admin_reset_password_direct_api: {
+        Args: {
+          user_id_str: string
+          new_password: string
+        }
+        Returns: boolean
+      }
       admin_update_user_email: {
         Args: {
           user_id: string
