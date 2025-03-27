@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, RefreshCw } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -23,9 +23,12 @@ import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays } 
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/utils/dateFormatter";
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("number");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -36,6 +39,8 @@ const Index = () => {
     isProcessing,
     processingProgress,
     isSubmitting,
+    isLoading,
+    dataLoaded,
     useGemini,
     bookmarkletStats,
     handleFileChange,
@@ -43,7 +48,8 @@ const Index = () => {
     handleDelete,
     handleSubmitToApi,
     saveImageToDatabase,
-    formatDate: formatImageDate
+    formatDate: formatImageDate,
+    refreshUserImages
   } = useImageProcessing();
   
   const {
@@ -51,6 +57,25 @@ const Index = () => {
     formatPrice,
     formatProvinceName
   } = useDataFormatting();
+  
+  // التحقق من حالة تسجيل الدخول وتحميل البيانات عند تحميل الصفحة
+  useEffect(() => {
+    if (user && !dataLoaded && images.length === 0) {
+      console.log("تلقائي: المستخدم مسجل الدخول ولا توجد بيانات في الصفحة الرئيسية، جاري تحميل البيانات...");
+      refreshUserImages();
+    }
+  }, [user, dataLoaded, images.length]);
+  
+  // التعامل مع تحديث البيانات يدويًا
+  const handleRefreshData = () => {
+    if (isLoading) {
+      toast.info("جاري تحميل البيانات بالفعل، يرجى الانتظار...");
+      return;
+    }
+    
+    console.log("يدوي: جاري تحديث بيانات المستخدم من الصفحة الرئيسية...");
+    refreshUserImages();
+  };
   
   // عند اكتمال معالجة الصور، حفظها في قاعدة البيانات
   useEffect(() => {
@@ -260,6 +285,15 @@ const Index = () => {
                       إدارة ومراجعة سجلات الوصولات المستخرجة
                     </p>
                   </div>
+                  <Button
+                    onClick={handleRefreshData}
+                    variant="outline"
+                    disabled={isLoading}
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    {isLoading ? 'جاري التحديث...' : 'تحديث البيانات'}
+                  </Button>
                 </div>
 
                 {/* فلتر البحث */}
@@ -363,7 +397,12 @@ const Index = () => {
                         {filteredAndSortedImages.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                              {images.length === 0 ? 
+                              {isLoading ? (
+                                <div className="flex flex-col items-center gap-2">
+                                  <RefreshCw className="h-10 w-10 text-muted-foreground/60 animate-spin" />
+                                  <p>جاري تحميل السجلات...</p>
+                                </div>
+                              ) : images.length === 0 ? 
                                 <div className="flex flex-col items-center gap-2">
                                   <CalendarDays className="h-10 w-10 text-muted-foreground/60" />
                                   <p>لا توجد سجلات بعد.</p>
@@ -456,6 +495,7 @@ const Index = () => {
                 {/* معلومات إضافية */}
                 <p className="text-center text-sm text-muted-foreground">
                   تم عرض {filteredAndSortedImages.length} من إجمالي {images.length} سجل
+                  {isLoading && " (جاري التحميل...)"}
                 </p>
               </motion.div>
             </div>
@@ -485,4 +525,3 @@ const Index = () => {
 };
 
 export default Index;
-

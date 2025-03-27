@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { useImageState } from "@/hooks/useImageState";
@@ -11,6 +11,8 @@ export const useImageProcessingCore = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [bookmarkletStats, setBookmarkletStats] = useState({ total: 0, ready: 0, success: 0, error: 0 });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -20,7 +22,8 @@ export const useImageProcessingCore = () => {
     addImage, 
     updateImage, 
     deleteImage, 
-    handleTextChange 
+    handleTextChange,
+    setImages 
   } = useImageState();
   
   const { 
@@ -33,6 +36,104 @@ export const useImageProcessingCore = () => {
     updateImage,
     setProcessingProgress
   });
+
+  // وظيفة لجلب صور المستخدم من قاعدة البيانات
+  const fetchUserImages = async () => {
+    if (!user) {
+      console.log("لا يوجد مستخدم مسجل الدخول، لا يمكن جلب الصور");
+      return [];
+    }
+
+    if (isLoading) {
+      console.log("جاري بالفعل تحميل الصور، تجاهل طلب التحميل الإضافي");
+      return [];
+    }
+
+    try {
+      setIsLoading(true);
+      console.log("جاري جلب صور المستخدم من قاعدة البيانات...", user.id);
+
+      const { data, error } = await supabase
+        .from('images')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("خطأ في جلب صور المستخدم:", error);
+        toast({
+          title: "خطأ",
+          description: `فشل في تحميل الصور: ${error.message}`,
+          variant: "destructive",
+        });
+        return [];
+      }
+
+      console.log(`تم جلب ${data.length} صورة للمستخدم:`, user.id);
+      
+      // تحويل البيانات من Supabase إلى نموذج ImageData
+      const convertedImages = data.map((item, index) => {
+        const image: Partial<ImageData> = {
+          id: item.id || `db-${Date.now()}-${index}`,
+          previewUrl: item.preview_url || '',
+          extractedText: item.extracted_text || '',
+          companyName: item.company_name || '',
+          senderName: item.sender_name || '',
+          phoneNumber: item.phone_number || '',
+          code: item.code || '',
+          price: item.price || '',
+          province: item.province || '',
+          status: item.status as "processing" | "pending" | "completed" | "error" || "completed",
+          date: new Date(item.created_at),
+          submitted: item.submitted || false,
+          number: data.length - index, // ترقيم تنازلي بناءً على الترتيب
+          // إنشاء كائن File وهمي لأن البيانات المستردة من قاعدة البيانات لا تحتوي على الملف الأصلي
+          file: new File([], item.file_name || "unknown_file.jpg", { type: "image/jpeg" })
+        };
+        
+        return image as ImageData;
+      });
+
+      return convertedImages;
+    } catch (error: any) {
+      console.error("خطأ غير متوقع في جلب الصور:", error);
+      toast({
+        title: "خطأ",
+        description: `فشل في تحميل الصور: ${error.message}`,
+        variant: "destructive",
+      });
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // تحميل بيانات المستخدم عند تغيير حالة تسجيل الدخول
+  useEffect(() => {
+    // فقط تحميل البيانات إذا كان المستخدم مسجل الدخول ولم يتم تحميل البيانات من قبل
+    if (user && !dataLoaded) {
+      console.log("تم اكتشاف تسجيل دخول مستخدم، جاري تحميل بياناته...");
+      
+      const loadUserData = async () => {
+        const userImages = await fetchUserImages();
+        
+        if (userImages.length > 0) {
+          console.log(`تم تحميل ${userImages.length} صورة للمستخدم وإضافتها إلى الحالة`);
+          setImages(userImages);
+          toast({
+            title: "تم التحميل",
+            description: `تم تحميل ${userImages.length} سجل من بياناتك بنجاح`,
+          });
+        } else {
+          console.log("لم يتم العثور على سجلات للمستخدم أو فشل التحميل");
+        }
+        
+        setDataLoaded(true);
+      };
+      
+      loadUserData();
+    }
+  }, [user, dataLoaded]);
 
   // وظيفة لحفظ بيانات الصورة في Supabase
   const saveImageToDatabase = async (image: ImageData) => {
@@ -157,11 +258,29 @@ export const useImageProcessingCore = () => {
     }
   };
 
+  // إجراء تحميل جديد للبيانات - مفيد عند الرغبة في إعادة تحميل البيانات يدويًا
+  const refreshUserData = async () => {
+    setDataLoaded(false); // إعادة ضبط حالة التحميل ليتم إعادة تحميل البيانات
+    const userImages = await fetchUserImages();
+    
+    if (userImages.length > 0) {
+      setImages(userImages);
+      toast({
+        title: "تم التحديث",
+        description: `تم تحديث ${userImages.length} سجل من بياناتك بنجاح`,
+      });
+    }
+    
+    setDataLoaded(true);
+  };
+
   return {
     images,
     isProcessing,
     processingProgress,
     isSubmitting,
+    isLoading,
+    dataLoaded,
     useGemini,
     bookmarkletStats,
     handleFileChange,
@@ -169,6 +288,8 @@ export const useImageProcessingCore = () => {
     handleDelete: deleteImage,
     handleSubmitToApi,
     saveImageToDatabase,
-    saveProcessedImage
+    saveProcessedImage,
+    fetchUserImages,
+    refreshUserData
   };
 };

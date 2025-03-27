@@ -2,6 +2,7 @@
 import { formatDate } from "@/utils/dateFormatter";
 import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 export const useImageProcessing = () => {
   const coreProcessing = useImageProcessingCore();
@@ -15,6 +16,9 @@ export const useImageProcessing = () => {
     localStorage.getItem('defaultSheetId') || ''
   );
   
+  // إضافة حالة لتتبع ما إذا كان المستخدم طلب تحديث البيانات يدويًا
+  const [userRequestedRefresh, setUserRequestedRefresh] = useState(false);
+  
   // حفظ تفضيلات المستخدم في التخزين المحلي
   useEffect(() => {
     localStorage.setItem('autoExportEnabled', autoExportEnabled.toString());
@@ -27,6 +31,25 @@ export const useImageProcessing = () => {
     }
   }, [defaultSheetId]);
   
+  // إضافة تأثير لتحديث البيانات عندما يطلب المستخدم ذلك
+  useEffect(() => {
+    if (userRequestedRefresh) {
+      const refreshData = async () => {
+        try {
+          await coreProcessing.refreshUserData();
+          toast.success("تم تحديث بياناتك بنجاح!");
+        } catch (error) {
+          console.error("فشل تحديث البيانات:", error);
+          toast.error("حدث خطأ أثناء تحديث البيانات");
+        } finally {
+          setUserRequestedRefresh(false);
+        }
+      };
+      
+      refreshData();
+    }
+  }, [userRequestedRefresh, coreProcessing]);
+  
   // تفعيل/تعطيل التصدير التلقائي
   const toggleAutoExport = (value: boolean) => {
     setAutoExportEnabled(value);
@@ -37,12 +60,18 @@ export const useImageProcessing = () => {
     setDefaultSheetId(sheetId);
   };
   
+  // وظيفة لتحديث البيانات يدويًا
+  const refreshUserImages = () => {
+    setUserRequestedRefresh(true);
+  };
+  
   return {
     ...coreProcessing,
     formatDate,
     autoExportEnabled,
     defaultSheetId,
     toggleAutoExport,
-    setDefaultSheet
+    setDefaultSheet,
+    refreshUserImages
   };
 };

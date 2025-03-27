@@ -78,6 +78,7 @@ export const useImageState = () => {
     addImage,
     updateImage,
     deleteImage,
-    handleTextChange
+    handleTextChange,
+    setImages // إضافة الوظيفة الجديدة للتحكم المباشر في مجموعة الصور
   };
 };
