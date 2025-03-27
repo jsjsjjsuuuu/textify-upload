@@ -47,6 +47,7 @@ export const useUserManagement = () => {
       }
       
       console.log('تم جلب الملفات الشخصية:', profilesData?.length || 0);
+      console.log('عينة من بيانات الملفات الشخصية:', profilesData?.[0]);
       
       // جلب بيانات المستخدمين من خلال الدالة المخصصة get_users_emails
       const { data: authUsersData, error: authUsersError } = await supabase.rpc('get_users_emails');
@@ -83,20 +84,41 @@ export const useUserManagement = () => {
       const usersWithCompleteData = (profilesData || []).map((profile: any) => {
         const userData = authUsersMap[profile.id] || { email: '', created_at: profile.created_at || new Date().toISOString() };
         
+        // قبل التحويل (للتصحيح)
+        console.log('معلومات ملف المستخدم:', {
+          id: profile.id,
+          is_admin_raw: profile.is_admin,
+          is_admin_type: typeof profile.is_admin
+        });
+        
+        // التحويل إلى قيمة منطقية صريحة
+        const isAdmin = profile.is_admin === true;
+        
         return {
           id: profile.id,
           email: userData.email,
           full_name: profile.full_name || '',
           avatar_url: profile.avatar_url || '',
           is_approved: profile.is_approved || false,
+          is_admin: isAdmin, // تأكد من أن القيمة منطقية دائمًا
           created_at: userData.created_at || profile.created_at,
           subscription_plan: profile.subscription_plan || 'standard',
           account_status: profile.account_status || 'active',
           subscription_end_date: profile.subscription_end_date || null,
+          username: profile.username || '',
         };
       });
       
       console.log('تم إنشاء قائمة المستخدمين النهائية:', usersWithCompleteData.length);
+      // تصحيح - طباعة بعض البيانات للتحقق
+      if (usersWithCompleteData.length > 0) {
+        console.log('عينة من بيانات المستخدم النهائية:', {
+          first_user: usersWithCompleteData[0],
+          is_admin_value: usersWithCompleteData[0].is_admin,
+          is_admin_type: typeof usersWithCompleteData[0].is_admin
+        });
+      }
+      
       setUsers(usersWithCompleteData);
       
     } catch (error) {
@@ -373,3 +395,4 @@ export const useUserManagement = () => {
     handleDateSelect,
   };
 };
+

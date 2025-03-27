@@ -70,6 +70,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // التحقق من صلاحيات المسؤول إذا كان مطلوبًا
   if (adminOnly && userProfile) {
     console.log("التحقق من صلاحيات المسؤول:", userProfile.is_admin);
+    // تأكد من أن المقارنة تتم مع قيمة منطقية
     if (userProfile.is_admin !== true) {
       console.log("المستخدم ليس مسؤولاً، التوجيه إلى الصفحة الرئيسية");
       return <Navigate to="/" />;
