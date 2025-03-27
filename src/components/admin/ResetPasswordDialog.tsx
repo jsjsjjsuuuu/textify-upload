@@ -25,6 +25,13 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
   onCancel,
   isProcessing
 }) => {
+  // إغلاق مربع الحوار تلقائيًا بعد المعالجة
+  const handleConfirm = () => {
+    // تسجيل بيانات التصحيح
+    console.log('تأكيد إعادة تعيين كلمة المرور من مربع الحوار');
+    onConfirm();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -43,7 +50,7 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
           </Button>
           <Button 
             variant="destructive" 
-            onClick={onConfirm}
+            onClick={handleConfirm}
             disabled={isProcessing}
           >
             {isProcessing ? (

@@ -75,22 +75,33 @@ const AdminApproval = () => {
     }
   }, [user, userProfile, fetchAttempted]);
 
-  // التعامل مع تأكيد إعادة تعيين كلمة المرور
+  // التعامل مع تأكيد إعادة تعيين كلمة المرور - محسن مع مزيد من السجلات
   const handleConfirmReset = () => {
     if (userToReset && newPassword) {
       // طباعة سجل تصحيح لمساعدة في تشخيص المشكلة
       console.log('تنفيذ إعادة تعيين كلمة المرور مع البيانات:', {
         userToReset,
+        userToResetType: typeof userToReset,
         passwordLength: newPassword.length,
         passwordEmpty: !newPassword.trim()
       });
       
+      // تنفيذ عملية إعادة تعيين كلمة المرور
       resetUserPassword(userToReset, newPassword);
     } else {
       console.error('لا يمكن إعادة تعيين كلمة المرور:', {
         userToReset,
-        hasPassword: !!newPassword
+        hasPassword: !!newPassword,
+        passwordLength: newPassword ? newPassword.length : 0
       });
+      
+      if (!userToReset) {
+        toast.error('لم يتم تحديد مستخدم لإعادة تعيين كلمة المرور');
+      }
+      
+      if (!newPassword) {
+        toast.error('يرجى إدخال كلمة المرور الجديدة');
+      }
     }
   };
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -168,7 +167,7 @@ export const useUserManagement = () => {
     }
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - تحسين مع مزيد من السجلات ومعالجة الأخطاء
+  // وظيفة إعادة تعيين كلمة المرور - محسنة
   const resetUserPassword = async (userId: string, newPassword: string) => {
     setIsProcessing(true);
     try {
@@ -189,45 +188,69 @@ export const useUserManagement = () => {
         return;
       }
       
-      // التحقق من أن معرف المستخدم هو UUID صالح
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidPattern.test(userId)) {
-        console.error('معرف المستخدم ليس UUID صالح:', userId);
-        toast.error('معرف المستخدم غير صالح');
-        setIsProcessing(false);
-        return;
-      }
-      
       // طباعة معلومات إضافية للتصحيح
-      console.log('المعلمات المرسلة لوظيفة admin_update_user_password:', {
+      console.log('المعلمات المرسلة لإعادة تعيين كلمة المرور:', {
         user_id: userId,
         user_id_type: typeof userId,
-        new_password: '***' + (newPassword.length > 3 ? newPassword.substr(newPassword.length - 3) : ''), // للأمان لا نطبع كلمة المرور كاملة
-        new_password_type: typeof newPassword
+        new_password_length: newPassword.length
       });
       
-      // استدعاء وظيفة قاعدة البيانات المخصصة لتغيير كلمة المرور
-      const { data, error } = await supabase.rpc('admin_update_user_password', {
-        user_id: userId,
+      // محاولة استخدام الوظيفة الجديدة التي تتعامل مع معرف المستخدم كنص
+      const { data: stringIdData, error: stringIdError } = await supabase.rpc('admin_reset_password_by_string_id', {
+        user_id_str: userId,
         new_password: newPassword
       });
       
-      console.log('نتيجة استدعاء admin_update_user_password:', { data, error });
+      console.log('نتيجة استدعاء admin_reset_password_by_string_id:', { data: stringIdData, error: stringIdError });
       
-      if (error) {
-        console.error('خطأ في إعادة تعيين كلمة المرور:', error);
-        toast.error('فشل في إعادة تعيين كلمة المرور: ' + error.message);
-        return;
-      }
-      
-      if (data === true) {
-        console.log('تم تغيير كلمة المرور بنجاح');
-        toast.success('تم إعادة تعيين كلمة المرور بنجاح');
-        setNewPassword('');
-        setShowPassword(false);
+      if (stringIdError) {
+        console.error('خطأ في إعادة تعيين كلمة المرور (طريقة النص):', stringIdError);
+        
+        // إذا فشلت الطريقة الأولى، نحاول استخدام الوظيفة الأصلية
+        console.log('المحاولة باستخدام الطريقة التقليدية...');
+        
+        // التحقق من أن معرف المستخدم هو UUID صالح
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidPattern.test(userId)) {
+          console.error('معرف المستخدم ليس UUID صالح:', userId);
+          toast.error('معرف المستخدم غير صالح');
+          setIsProcessing(false);
+          return;
+        }
+        
+        const { data, error } = await supabase.rpc('admin_update_user_password', {
+          user_id: userId,
+          new_password: newPassword
+        });
+        
+        console.log('نتيجة استدعاء admin_update_user_password:', { data, error });
+        
+        if (error) {
+          console.error('خطأ في إعادة تعيين كلمة المرور:', error);
+          toast.error('فشل في إعادة تعيين كلمة المرور: ' + error.message);
+          return;
+        }
+        
+        if (data === true) {
+          console.log('تم تغيير كلمة المرور بنجاح');
+          toast.success('تم إعادة تعيين كلمة المرور بنجاح');
+          setNewPassword('');
+          setShowPassword(false);
+        } else {
+          console.error('لم يتم إعادة تعيين كلمة المرور، البيانات المرتجعة:', data);
+          toast.error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
+        }
       } else {
-        console.error('لم يتم إعادة تعيين كلمة المرور، البيانات المرتجعة:', data);
-        toast.error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
+        // الطريقة الجديدة نجحت
+        if (stringIdData === true) {
+          console.log('تم تغيير كلمة المرور بنجاح (طريقة النص)');
+          toast.success('تم إعادة تعيين كلمة المرور بنجاح');
+          setNewPassword('');
+          setShowPassword(false);
+        } else {
+          console.error('لم يتم إعادة تعيين كلمة المرور، البيانات المرتجعة (طريقة النص):', stringIdData);
+          toast.error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
+        }
       }
     } catch (error) {
       console.error('خطأ غير متوقع في إعادة تعيين كلمة المرور:', error);
@@ -417,6 +440,11 @@ export const useUserManagement = () => {
   const prepareUserPasswordReset = (userId: string) => {
     if (!newPassword || newPassword.trim() === '') {
       toast.error('يرجى إدخال كلمة المرور الجديدة أولاً');
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
       return;
     }
     

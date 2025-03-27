@@ -134,6 +134,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_reset_password_by_string_id: {
+        Args: {
+          user_id_str: string
+          new_password: string
+        }
+        Returns: boolean
+      }
       admin_update_user_email: {
         Args: {
           user_id: string
