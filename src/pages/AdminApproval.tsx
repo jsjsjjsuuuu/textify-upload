@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
@@ -40,6 +39,7 @@ const AdminApproval = () => {
     setNewPassword,
     setShowPassword,
     setShowConfirmReset,
+    setUserToReset,
     fetchUsers,
     approveUser,
     rejectUser,

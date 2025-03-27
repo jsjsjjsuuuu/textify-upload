@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -320,6 +319,7 @@ export const useUserManagement = () => {
     setNewPassword,
     setShowPassword,
     setShowConfirmReset,
+    setUserToReset,
     fetchUsers,
     approveUser,
     rejectUser,
