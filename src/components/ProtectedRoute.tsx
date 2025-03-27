@@ -16,7 +16,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireApproval = true,
   adminOnly = false
 }) => {
-  const { user, userProfile, isLoading } = useAuth();
+  const { user, userProfile, isLoading, refreshUserProfile } = useAuth();
+
+  // عند تحميل المكون، قم بتحديث الملف الشخصي للتأكد من أحدث البيانات
+  useEffect(() => {
+    if (user) {
+      refreshUserProfile();
+    }
+  }, [user]);
 
   // للتصحيح المباشر في وحدة التحكم
   useEffect(() => {

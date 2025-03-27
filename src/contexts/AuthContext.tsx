@@ -31,6 +31,7 @@ interface AuthContextType {
   resetPassword: (newPassword: string) => Promise<{ error: any; success: boolean }>;
   updateUser: (updates: any) => Promise<{ data: any; error: any }>;
   fetchUserProfile: (userId: string) => Promise<UserProfile | null>;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,32 +70,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           // إذا كان المستخدم مسجل دخوله، نجلب ملفه الشخصي
           if (currentSession?.user) {
-            // استخدام setTimeout لتجنب التكرار اللانهائي
-            setTimeout(async () => {
-              try {
-                // جلب الملف الشخصي باستخدام استعلام rpc آمن بدلاً من الوصول المباشر للجدول
-                // هذا سيتجنب مشكلة التكرار اللانهائي في سياسات الجدول
-                const { data, error } = await supabase
-                  .from('profiles')
-                  .select('*')
-                  .eq('id', currentSession.user.id)
-                  .single();
-                
-                if (error) {
-                  throw error;
-                }
-                
-                if (data) {
-                  setUserProfile(data);
-                } else {
-                  // إنشاء ملف شخصي جديد إذا لم يكن موجوداً
-                  await createUserProfileIfMissing(currentSession.user.id);
-                }
-              } catch (error) {
-                console.error("خطأ في جلب الملف الشخصي:", error);
-                setUserProfile(null);
-              }
-            }, 0);
+            await fetchUserProfileSafely(currentSession.user.id);
           } else {
             setUserProfile(null);
           }
@@ -109,28 +85,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log("تم العثور على جلسة موجودة، جاري تحميل بيانات المستخدم:", initialSession.session.user.id);
           setUser(initialSession.session.user);
           
-          try {
-            // جلب الملف الشخصي بطريقة آمنة تتجنب التكرار اللانهائي
-            const { data, error } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', initialSession.session.user.id)
-              .single();
-            
-            if (error) {
-              throw error;
-            }
-            
-            if (data) {
-              setUserProfile(data);
-            } else {
-              // إنشاء ملف شخصي جديد إذا لم يكن موجوداً
-              await createUserProfileIfMissing(initialSession.session.user.id);
-            }
-          } catch (error) {
-            console.error("خطأ في جلب الملف الشخصي الأولي:", error);
-            setUserProfile(null);
-          }
+          await fetchUserProfileSafely(initialSession.session.user.id);
         } else {
           console.log("لم يتم العثور على جلسة موجودة");
         }
@@ -149,14 +104,50 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
+  // طريقة آمنة لجلب الملف الشخصي بدون تكرار لانهائي
+  const fetchUserProfileSafely = async (userId: string): Promise<UserProfile | null> => {
+    try {
+      console.log("جلب ملف المستخدم الشخصي بطريقة آمنة:", userId);
+      
+      // استخدام RPC بدلاً من الاستعلام المباشر لتجنب مشكلة التكرار اللانهائي
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("خطأ في جلب الملف الشخصي:", error);
+        return null;
+      }
+
+      if (!data) {
+        // إذا لم يتم العثور على ملف شخصي، قم بإنشاء واحد جديد
+        console.log("لم يتم العثور على ملف شخصي، محاولة إنشاء واحد جديد");
+        return await createUserProfileIfMissing(userId);
+      }
+      
+      console.log("تم جلب الملف الشخصي بنجاح:", data);
+      
+      // التأكد من أن is_admin هو Boolean
+      const profile = {
+        ...data,
+        is_admin: data.is_admin === true
+      } as UserProfile;
+      
+      setUserProfile(profile);
+      return profile;
+    } catch (error) {
+      console.error("خطأ غير متوقع في جلب الملف الشخصي:", error);
+      return null;
+    }
+  };
+
   // وظيفة إنشاء ملف تعريف المستخدم إذا لم يكن موجودًا
   const createUserProfileIfMissing = async (userId: string, fullName?: string, plan?: string): Promise<UserProfile | null> => {
-    console.log("التحقق من وجود ملف شخصي للمستخدم:", userId);
+    console.log("محاولة إنشاء ملف شخصي جديد للمستخدم:", userId);
     
     try {
-      // محاولة إنشاء ملف شخصي جديد
-      console.log("محاولة إنشاء ملف جديد...");
-      
       const { data: userData } = await supabase.auth.getUser();
       const userEmail = userData.user?.email || '';
       
@@ -189,36 +180,17 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // إعادة تحميل الملف الشخصي
+  const refreshUserProfile = async (): Promise<void> => {
+    if (!user) return;
+    
+    console.log("إعادة تحميل الملف الشخصي للمستخدم:", user.id);
+    await fetchUserProfileSafely(user.id);
+  };
+
   // تحديث وظيفة fetchUserProfile
   const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
-    console.log("جلب ملف المستخدم الشخصي لـ:", userId);
-    
-    try {
-      // محاولة جلب الملف الشخصي
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle(); // استخدام maybeSingle بدلاً من single لتجنب الأخطاء عند عدم وجود نتائج
-      
-      if (error) {
-        console.error("خطأ في جلب الملف الشخصي:", error);
-        return null;
-      }
-
-      if (!profile) {
-        // إذا لم يتم العثور على ملف شخصي، قم بإنشاء واحد جديد
-        console.log("لم يتم العثور على ملف شخصي، محاولة إنشاء واحد جديد");
-        return await createUserProfileIfMissing(userId);
-      }
-      
-      console.log("تم جلب الملف الشخصي بنجاح:", profile);
-      setUserProfile(profile);
-      return profile;
-    } catch (error) {
-      console.error("خطأ غير متوقع في جلب الملف الشخصي:", error);
-      return null;
-    }
+    return await fetchUserProfileSafely(userId);
   };
 
   const signIn = async (email: string, password: string) => {
@@ -237,18 +209,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (data.user) {
         console.log("تم تسجيل الدخول بنجاح، جلب الملف الشخصي");
-        
-        // تأخير استدعاء جلب الملف الشخصي لتجنب تعارضات الاستدعاءات المتزامنة
-        setTimeout(async () => {
-          // التحقق من وجود ملف شخصي أو إنشاء ملف جديد
-          const profile = await fetchUserProfile(data.user.id);
-          
-          if (!profile) {
-            console.warn("لم يتم العثور على ملف شخصي ولم يتم إنشاء ملف جديد");
-          } else if (!profile.is_approved) {
-            console.warn("حساب المستخدم غير معتمد:", profile);
-          }
-        }, 0);
+        await fetchUserProfileSafely(data.user.id);
       }
       
       return { error: null, user: data.user };
@@ -295,9 +256,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // إنشاء ملف شخصي للمستخدم عند التسجيل
       if (data.user) {
-        setTimeout(async () => {
-          await createUserProfileIfMissing(data.user.id, fullName, plan);
-        }, 0);
+        await createUserProfileIfMissing(data.user.id, fullName, plan);
       }
 
       return { error: null, user: data.user };
@@ -375,7 +334,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     forgotPassword,
     resetPassword,
     updateUser,
-    fetchUserProfile
+    fetchUserProfile,
+    refreshUserProfile
   };
 
   return (

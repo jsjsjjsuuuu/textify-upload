@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import { ProfileCard, ProfileEditCard, ProfileSkeleton } from '@/components/Profile';
@@ -7,7 +7,7 @@ import { useProfileData } from '@/hooks/useProfileData';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Profile = () => {
-  const { signOut } = useAuth();
+  const { signOut, refreshUserProfile } = useAuth();
   const navigate = useNavigate();
   
   const {
@@ -20,6 +20,12 @@ const Profile = () => {
     handleAvatarUpload,
     handleUpdateProfile
   } = useProfileData();
+  
+  // تحديث معلومات المستخدم عند تحميل الصفحة
+  useEffect(() => {
+    // ننفذ تحديث بيانات المستخدم من Supabase
+    refreshUserProfile();
+  }, []);
   
   const handleSignOut = async () => {
     await signOut();

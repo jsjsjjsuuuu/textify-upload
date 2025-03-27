@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -19,7 +18,7 @@ export interface UserStats {
 }
 
 export const useProfileData = () => {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(true);
@@ -58,34 +57,19 @@ export const useProfileData = () => {
     try {
       setIsLoading(true);
       
+      // محاولة تحديث الملف الشخصي من AuthContext أولاً
+      await refreshUserProfile();
+      
       // استخدام البيانات من كائن userProfile المتوفر من AuthContext
       if (userProfile) {
+        console.log("تم الحصول على بيانات الملف الشخصي من AuthContext:", userProfile);
+        
         setUserData(prevData => ({
           ...prevData,
           username: userProfile.username || '',
           fullName: userProfile.full_name || '',
           avatarUrl: userProfile.avatar_url || '',
         }));
-      } else {
-        // جلب بيانات الملف الشخصي إذا لم تكن متوفرة بالفعل
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('username, avatar_url, full_name')
-          .eq('id', user.id)
-          .single();
-        
-        if (profileError) {
-          throw profileError;
-        }
-        
-        if (profileData) {
-          setUserData(prevData => ({
-            ...prevData,
-            username: profileData.username || '',
-            fullName: profileData.full_name || '',
-            avatarUrl: profileData.avatar_url || '',
-          }));
-        }
       }
       
       // إحصائيات الصور

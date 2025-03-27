@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -36,12 +35,20 @@ const Login = () => {
   useEffect(() => {
     console.log("فحص حالة المستخدم:", user ? "موجود" : "غير موجود", 
                 "الملف الشخصي:", userProfile ? "موجود" : "غير موجود",
-                "الموافقة:", userProfile?.is_approved);
-                
+                "الموافقة:", userProfile?.is_approved, 
+                "المسؤول:", userProfile?.is_admin);
+            
     if (user) {
       // إذا كان المستخدم مسجل الدخول وتم تحميل ملفه الشخصي
       if (userProfile) {
-        // التحقق إذا كان المستخدم معتمداً (أو تخطي التحقق إذا كانت قيمة is_approved غير موجودة)
+        // التحقق من صلاحيات المسؤول أولاً - المسؤولون يمكنهم الدخول حتى بدون موافقة
+        if (userProfile.is_admin === true) {
+          console.log("المستخدم مسؤول، جارِ التوجيه إلى الصفحة الرئيسية");
+          navigate('/');
+          return;
+        }
+      
+        // التحقق إذا كان المستخدم معتمداً
         if (userProfile.is_approved === undefined || userProfile.is_approved) {
           console.log("المستخدم مسجل الدخول ومعتمد، جارِ التوجيه إلى الصفحة الرئيسية");
           navigate('/');
@@ -104,11 +111,9 @@ const Login = () => {
       } else {
         // نجاح تسجيل الدخول، عرض إشعار النجاح
         toast.success('تم تسجيل الدخول بنجاح');
-        console.log("تم تسجيل الدخول بنجاح، جاري التحقق من حالة الاعتماد");
-        
-        // تنفيذ التوجيه هنا مباشرة بعد تسجيل الدخول الناجح
-        // لن ننتظر تحميل الملف الشخصي
-        navigate('/');
+        console.log("تم تسجيل الدخول بنجاح، جاري التحقق من حالة الاعتماد والصلاحيات");
+      
+        // مباشرة بعد تسجيل الدخول بنجاح، سيتم تحديث الحالة وسيقوم useEffect بالتوجيه المناسب
       }
     } catch (error: any) {
       console.error("خطأ غير متوقع في تسجيل الدخول:", error);
