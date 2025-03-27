@@ -84,6 +84,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         // ثم، الحصول على الجلسة الحالية
         const { data: initialSession } = await supabase.auth.getSession();
+        console.log("بيانات الجلسة الأولية:", initialSession?.session ? "موجودة" : "غير موجودة");
         setSession(initialSession.session);
 
         // جلب بيانات المستخدم إذا كانت الجلسة موجودة
@@ -141,6 +142,13 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         ...data,
         is_admin: data.is_admin === true
       } as UserProfile;
+      
+      console.log("بيانات الملف الشخصي بعد المعالجة:", {
+        ...profile,
+        is_admin_original: data.is_admin,
+        is_admin_processed: profile.is_admin,
+        is_admin_type: typeof profile.is_admin
+      });
       
       setUserProfile(profile);
       return profile;

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -22,13 +22,14 @@ const AppHeader = () => {
   const { setTheme } = useTheme();
   
   // للتصحيح المباشر
-  React.useEffect(() => {
+  useEffect(() => {
     if (user && userProfile) {
       console.log("معلومات المستخدم في AppHeader:", {
         id: user.id,
         email: user.email,
         is_approved: userProfile?.is_approved,
-        is_admin: userProfile?.is_admin
+        is_admin: userProfile?.is_admin,
+        userProfileType: typeof userProfile?.is_admin
       });
     }
   }, [user, userProfile]);

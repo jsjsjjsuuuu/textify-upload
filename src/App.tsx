@@ -1,5 +1,5 @@
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter } from "react-router-dom";
 import { AppRoutes } from "@/routes";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,6 +9,18 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 function App() {
   console.log("تحميل التطبيق الرئيسي App");
+  
+  // تسجيل نوع المتصفح ومعلومات أخرى يمكن أن تساعد في التصحيح
+  useEffect(() => {
+    console.log("معلومات المتصفح:", {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language,
+      cookiesEnabled: navigator.cookieEnabled,
+      screenWidth: window.innerWidth,
+      screenHeight: window.innerHeight,
+    });
+  }, []);
   
   return (
     <React.StrictMode>

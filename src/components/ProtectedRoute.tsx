@@ -22,6 +22,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // عند تحميل المكون، قم بتحديث الملف الشخصي للتأكد من أحدث البيانات
   useEffect(() => {
     if (user) {
+      console.log("محاولة تحديث ملف المستخدم في ProtectedRoute");
       refreshUserProfile();
     }
   }, [user, refreshUserProfile]);
@@ -33,12 +34,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         id: user.id,
         email: user.email,
         is_approved: userProfile?.is_approved,
-        is_admin: userProfile?.is_admin
+        is_admin: userProfile?.is_admin,
+        adminOnly: adminOnly,
+        requireApproval: requireApproval
       });
     }
-  }, [user, userProfile]);
+  }, [user, userProfile, adminOnly, requireApproval]);
 
   if (isLoading) {
+    console.log("جاري تحميل بيانات المستخدم في ProtectedRoute");
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -61,9 +65,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // التحقق من صلاحيات المسؤول إذا كان مطلوبًا
   if (adminOnly && userProfile) {
     console.log("التحقق من صلاحيات المسؤول:", userProfile.is_admin);
-    if (!userProfile.is_admin) {
+    if (userProfile.is_admin !== true) {
       console.log("المستخدم ليس مسؤولاً، التوجيه إلى الصفحة الرئيسية");
       return <Navigate to="/" />;
+    } else {
+      console.log("المستخدم مسؤول، السماح بالوصول إلى صفحة الإدارة");
     }
   }
 
