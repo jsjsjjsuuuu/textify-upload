@@ -46,6 +46,7 @@ const AdminApproval = () => {
     approveUser,
     rejectUser,
     resetUserPassword,
+    updateUserEmail,
     saveUserData,
     startEditing,
     cancelEditing,
@@ -143,6 +144,7 @@ const AdminApproval = () => {
                   onUserDataChange={handleEditChange}
                   onDateSelect={handleDateSelect}
                   onPasswordReset={() => prepareUserPasswordReset(editedUserData!.id)}
+                  onEmailChange={updateUserEmail}
                 />
               ) : (
                 <UserTable 

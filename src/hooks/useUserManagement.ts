@@ -203,6 +203,52 @@ export const useUserManagement = () => {
     }
   };
 
+  // وظيفة تغيير البريد الإلكتروني للمستخدم
+  const updateUserEmail = async (userId: string, newEmail: string) => {
+    setIsProcessing(true);
+    try {
+      console.log('جاري تغيير البريد الإلكتروني للمستخدم:', userId, newEmail);
+      
+      // استدعاء وظيفة قاعدة البيانات المخصصة لتغيير البريد الإلكتروني
+      const { data, error } = await supabase.rpc('admin_update_user_email', {
+        user_id: userId,
+        new_email: newEmail
+      });
+      
+      if (error) {
+        console.error('خطأ في تغيير البريد الإلكتروني:', error);
+        toast.error('فشل في تغيير البريد الإلكتروني: ' + error.message);
+        return;
+      }
+      
+      if (data === true) {
+        toast.success('تم تغيير البريد الإلكتروني بنجاح');
+        
+        // تحديث البريد الإلكتروني في قائمة المستخدمين المحلية
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === userId ? { ...user, email: newEmail } : user
+          )
+        );
+        
+        // تحديث بيانات المستخدم المعدّل إذا كان مفتوحاً
+        if (editedUserData && editedUserData.id === userId) {
+          setEditedUserData({
+            ...editedUserData,
+            email: newEmail
+          });
+        }
+      } else {
+        toast.error('لم يتم العثور على المستخدم أو البريد الإلكتروني مستخدم بالفعل');
+      }
+    } catch (error) {
+      console.error('خطأ غير متوقع في تغيير البريد الإلكتروني:', error);
+      toast.error('حدث خطأ أثناء تغيير البريد الإلكتروني');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // وظيفة تحديث بيانات المستخدم بالكامل
   const saveUserData = async () => {
     if (!editedUserData) return;
@@ -377,6 +423,7 @@ export const useUserManagement = () => {
     approveUser,
     rejectUser,
     resetUserPassword,
+    updateUserEmail,
     saveUserData,
     startEditing,
     cancelEditing,

@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
@@ -16,9 +16,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireApproval = true,
   adminOnly = false
 }) => {
+  const location = useLocation();
   console.log("تحميل مكون الحماية ProtectedRoute", {
     adminOnly,
-    requireApproval
+    requireApproval,
+    location: location.pathname
   });
   
   const { user, userProfile, isLoading, refreshUserProfile } = useAuth();
@@ -41,10 +43,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         is_admin: userProfile?.is_admin,
         adminOnly: adminOnly,
         requireApproval: requireApproval,
-        is_admin_type: typeof userProfile?.is_admin
+        is_admin_type: typeof userProfile?.is_admin,
+        location: location.pathname
       });
     }
-  }, [user, userProfile, adminOnly, requireApproval]);
+  }, [user, userProfile, adminOnly, requireApproval, location.pathname]);
 
   if (isLoading) {
     console.log("جاري تحميل بيانات المستخدم في ProtectedRoute");
@@ -58,13 +61,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // إذا لم يكن المستخدم مسجلاً، قم بتوجيهه إلى صفحة تسجيل الدخول
   if (!user) {
     console.log("لا يوجد مستخدم مسجل الدخول، التوجيه إلى:", redirectTo);
-    return <Navigate to={redirectTo} />;
+    return <Navigate to={redirectTo} state={{ from: location.pathname }} />;
   }
 
   // التحقق من حالة الموافقة إذا كان مطلوبًا
   if (requireApproval && userProfile && !userProfile.is_approved) {
     console.log("المستخدم غير معتمد، التوجيه إلى صفحة تسجيل الدخول");
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" state={{ message: "حسابك قيد المراجعة. يرجى الانتظار حتى تتم الموافقة عليه." }} />;
   }
 
   // التحقق من صلاحيات المسؤول إذا كان مطلوبًا

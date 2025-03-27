@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { Lock, Eye, EyeOff, CalendarIcon, RefreshCw, Save } from 'lucide-react';
+import { Lock, Eye, EyeOff, CalendarIcon, RefreshCw, Save, Mail } from 'lucide-react';
 
 import { UserProfile } from '@/types/UserProfile';
 
@@ -26,6 +26,7 @@ interface UserEditFormProps {
   onUserDataChange: (field: string, value: any) => void;
   onDateSelect: (date: Date | undefined) => void;
   onPasswordReset: () => void;
+  onEmailChange?: (userId: string, newEmail: string) => void;
 }
 
 const UserEditForm: React.FC<UserEditFormProps> = ({
@@ -40,8 +41,20 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
   onNewPasswordChange,
   onUserDataChange,
   onDateSelect,
-  onPasswordReset
+  onPasswordReset,
+  onEmailChange
 }) => {
+  const [newEmail, setNewEmail] = useState('');
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+
+  const handleEmailChangeSubmit = () => {
+    if (newEmail && onEmailChange) {
+      onEmailChange(userData.id, newEmail);
+      setIsEditingEmail(false);
+      setNewEmail('');
+    }
+  };
+
   return (
     <div className="bg-muted/20 p-4 rounded-lg">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -55,11 +68,50 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
         </div>
         <div>
           <Label htmlFor="edit-email">البريد الإلكتروني</Label>
-          <Input 
-            id="edit-email"
-            value={userData?.email || ''} 
-            disabled
-          />
+          {isEditingEmail ? (
+            <div className="flex gap-2">
+              <Input 
+                id="edit-email-new"
+                value={newEmail} 
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="البريد الإلكتروني الجديد"
+              />
+              <Button 
+                variant="outline" 
+                onClick={handleEmailChangeSubmit} 
+                disabled={!newEmail}
+                size="sm"
+                className="whitespace-nowrap"
+              >
+                <Mail className="h-4 w-4 mr-1" />
+                تغيير
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={() => setIsEditingEmail(false)}
+                size="sm"
+              >
+                إلغاء
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2 items-center">
+              <Input 
+                id="edit-email"
+                value={userData?.email || ''} 
+                disabled
+              />
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditingEmail(true)}
+                size="sm"
+                className="whitespace-nowrap"
+              >
+                <Mail className="h-4 w-4 mr-1" />
+                تعديل
+              </Button>
+            </div>
+          )}
         </div>
         <div>
           <Label htmlFor="edit-plan">نوع الباقة</Label>
