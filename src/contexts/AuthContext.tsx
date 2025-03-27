@@ -3,21 +3,16 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { SupabaseClient, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-// تحديث واجهة UserProfile لدعم اسماء الحقول القديمة والجديدة
+// واجهة UserProfile موحدة مع استخدام أسماء الحقول الجديدة فقط
 interface UserProfile {
   id: string;
   username: string | null;
   full_name: string | null;
   avatar_url: string | null;
   is_approved: boolean | null;
-  // حقول متوافقة مع القاعدة السابقة
-  fullName?: string;
-  avatarUrl?: string;
-  isApproved?: boolean;
-  // الخصائص الأخرى
-  subscription_plan?: string;
+  subscription_plan?: string | null;
   subscription_end_date?: string | null;
-  account_status?: string;
+  account_status?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -31,7 +26,7 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any; user: any | null }>;
   signOut: () => Promise<void>;
-  signUp: (email: string, password: string) => Promise<{ error: any; user: any | null }>;
+  signUp: (email: string, password: string, fullName: string, plan: string) => Promise<{ error: any; user: any | null }>;
   forgotPassword: (email: string) => Promise<{ error: any; sent: boolean }>;
   resetPassword: (newPassword: string) => Promise<{ error: any; success: boolean }>;
   updateUser: (updates: any) => Promise<{ data: any; error: any }>;
@@ -72,6 +67,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Subscribe to auth state changes
       supabase.auth.onAuthStateChange(async (event, currentSession) => {
+        console.log("تغيرت حالة المصادقة:", event);
+        
         setSession(currentSession);
         setUser(currentSession?.user || null);
 
@@ -86,8 +83,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
-  // أضف هذه الوظيفة داخل مزود السياق AuthProvider
-  const createUserProfileIfMissing = async (userId: string) => {
+  // وظيفة إنشاء ملف تعريف المستخدم إذا لم يكن موجودًا
+  const createUserProfileIfMissing = async (userId: string, fullName?: string, plan?: string): Promise<UserProfile | null> => {
     console.log("التحقق من وجود ملف شخصي للمستخدم:", userId);
     
     try {
@@ -106,17 +103,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (profile) {
         console.log("تم العثور على ملف شخصي موجود:", profile);
-        
-        // تحويل البيانات لتتوافق مع واجهة UserProfile
-        const userProfileData: UserProfile = {
-          ...profile,
-          isApproved: profile.is_approved,
-          fullName: profile.full_name,
-          avatarUrl: profile.avatar_url
-        };
-        
-        setUserProfile(userProfileData);
-        return userProfileData;
+        setUserProfile(profile);
+        return profile;
       }
       
       // إنشاء ملف شخصي جديد إذا لم يكن موجودًا
@@ -131,6 +119,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           { 
             id: userId,
             username: userEmail.split('@')[0],
+            full_name: fullName || '',
+            subscription_plan: plan || 'standard',
             is_approved: true // تعيين is_approved كـ true افتراضيًا
           }
         ])
@@ -143,24 +133,15 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       console.log("تم إنشاء ملف شخصي جديد بنجاح:", newProfile);
-      
-      // تحويل البيانات لتتوافق مع واجهة UserProfile
-      const newUserProfileData: UserProfile = {
-        ...newProfile,
-        isApproved: newProfile.is_approved,
-        fullName: newProfile.full_name,
-        avatarUrl: newProfile.avatar_url
-      };
-      
-      setUserProfile(newUserProfileData);
-      return newUserProfileData;
+      setUserProfile(newProfile);
+      return newProfile;
     } catch (error) {
       console.error("خطأ غير متوقع في التحقق من الملف الشخصي:", error);
       return null;
     }
   };
 
-  // تحديث وظيفة fetchUserProfile لاستخدام وظيفة createUserProfileIfMissing الجديدة
+  // تحديث وظيفة fetchUserProfile
   const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
     console.log("جلب ملف المستخدم الشخصي لـ:", userId);
     
@@ -184,17 +165,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       console.log("تم جلب الملف الشخصي بنجاح:", profile);
-      
-      // تحويل البيانات لتتوافق مع واجهة UserProfile
-      const userProfileData: UserProfile = {
-        ...profile,
-        isApproved: profile.is_approved,
-        fullName: profile.full_name,
-        avatarUrl: profile.avatar_url
-      };
-      
-      setUserProfile(userProfileData);
-      return userProfileData;
+      setUserProfile(profile);
+      return profile;
     } catch (error) {
       console.error("خطأ غير متوقع في جلب الملف الشخصي:", error);
       return null;
@@ -219,13 +191,16 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log("تم تسجيل الدخول بنجاح، جلب الملف الشخصي");
         
         // التحقق من وجود ملف شخصي أو إنشاء ملف جديد
-        const profile = await createUserProfileIfMissing(data.user.id);
+        const profile = await fetchUserProfile(data.user.id);
         
         if (!profile) {
           console.warn("لم يتم العثور على ملف شخصي ولم يتم إنشاء ملف جديد");
         } else if (!profile.is_approved) {
           console.warn("حساب المستخدم غير معتمد:", profile);
-          // يمكن إضافة منطق خاص للتعامل مع الحسابات غير المعتمدة
+          return { 
+            error: { message: 'حسابك قيد المراجعة. يرجى الانتظار حتى تتم الموافقة عليه من قبل المسؤول.' }, 
+            user: null 
+          };
         }
       }
       
@@ -248,7 +223,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, fullName: string, plan: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -261,6 +236,12 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('تم التسجيل بنجاح، المستخدم:', data.user);
+      
+      // إنشاء ملف شخصي للمستخدم عند التسجيل
+      if (data.user) {
+        await createUserProfileIfMissing(data.user.id, fullName, plan);
+      }
+
       return { error: null, user: data.user };
     } catch (error: any) {
       console.error("خطأ غير متوقع في التسجيل:", error);

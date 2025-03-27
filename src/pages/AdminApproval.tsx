@@ -59,6 +59,7 @@ interface ProfileData {
   subscription_plan?: string | null;
   account_status?: string | null;
   subscription_end_date?: string | null;
+  username?: string | null;
   [key: string]: any;
 }
 
@@ -162,8 +163,6 @@ const AdminApproval = () => {
       fetchUsers();
     }
   }, [user, userProfile]);
-
-  // وظائف الموافقة والرفض وتحديث البيانات
 
   // وظيفة الموافقة على مستخدم
   const approveUser = async (userId: string) => {

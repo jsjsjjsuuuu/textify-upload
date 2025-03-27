@@ -19,7 +19,7 @@ export interface UserStats {
 }
 
 export const useProfileData = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +50,7 @@ export const useProfileData = () => {
       
       fetchUserProfile();
     }
-  }, [user]);
+  }, [user, userProfile]);
 
   const fetchUserProfile = async () => {
     if (!user) return;
@@ -58,24 +58,34 @@ export const useProfileData = () => {
     try {
       setIsLoading(true);
       
-      // جلب بيانات الملف الشخصي
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('username, avatar_url, full_name')
-        .eq('id', user.id)
-        .single();
-      
-      if (profileError) {
-        throw profileError;
-      }
-      
-      if (profileData) {
+      // استخدام البيانات من كائن userProfile المتوفر من AuthContext
+      if (userProfile) {
         setUserData(prevData => ({
           ...prevData,
-          username: profileData.username || '',
-          fullName: profileData.full_name || '',
-          avatarUrl: profileData.avatar_url || '',
+          username: userProfile.username || '',
+          fullName: userProfile.full_name || '',
+          avatarUrl: userProfile.avatar_url || '',
         }));
+      } else {
+        // جلب بيانات الملف الشخصي إذا لم تكن متوفرة بالفعل
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('username, avatar_url, full_name')
+          .eq('id', user.id)
+          .single();
+        
+        if (profileError) {
+          throw profileError;
+        }
+        
+        if (profileData) {
+          setUserData(prevData => ({
+            ...prevData,
+            username: profileData.username || '',
+            fullName: profileData.full_name || '',
+            avatarUrl: profileData.avatar_url || '',
+          }));
+        }
       }
       
       // إحصائيات الصور

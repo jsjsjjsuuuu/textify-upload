@@ -13,7 +13,6 @@ import AppHeader from '@/components/AppHeader';
 import { Mail, UserPlus, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { supabase } from '@/integrations/supabase/client';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'يرجى إدخال بريد إلكتروني صحيح' }),
@@ -30,82 +29,25 @@ const Login = () => {
   const [loginErrorMessage, setLoginErrorMessage] = useState('');
   
   console.log("تهيئة صفحة تسجيل الدخول، حالة الجلسة:", !!session, "حالة المستخدم:", !!user);
-  console.log("بيانات الجلسة:", session);
   console.log("هل تم العثور على ملف المستخدم؟", !!userProfile);
 
   // التحقق من وجود مستخدم
   useEffect(() => {
     console.log("فحص حالة المستخدم:", user ? "موجود" : "غير موجود", 
                 "الملف الشخصي:", userProfile ? "موجود" : "غير موجود",
-                "الموافقة:", userProfile?.isApproved);
+                "الموافقة:", userProfile?.is_approved);
                 
     if (user) {
-      // إذا كان المستخدم موجود لكن لا يوجد ملف شخصي، قم بإنشاء ملف شخصي
-      if (!userProfile) {
-        console.log("المستخدم موجود لكن لا يوجد ملف شخصي، محاولة إنشاء ملف شخصي جديد");
-        createUserProfile(user.id);
-      } else if (userProfile?.isApproved) {
+      if (userProfile?.is_approved) {
         console.log("المستخدم مسجل الدخول ومعتمد، جارِ التوجيه إلى الصفحة الرئيسية");
         navigate('/');
-      } else {
+      } else if (userProfile && userProfile.is_approved === false) {
         console.log("المستخدم مسجل الدخول لكن غير معتمد، البقاء في صفحة تسجيل الدخول");
         setHasLoginError(true);
         setLoginErrorMessage('حسابك قيد المراجعة. يرجى الانتظار حتى تتم الموافقة عليه من قبل المسؤول.');
       }
     }
   }, [user, userProfile, navigate]);
-
-  // وظيفة لإنشاء ملف شخصي للمستخدم إذا لم يكن موجودًا
-  const createUserProfile = async (userId: string) => {
-    try {
-      console.log("محاولة إنشاء ملف شخصي جديد للمستخدم:", userId);
-      
-      // التحقق مما إذا كان الملف الشخصي موجود بالفعل
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        // حدث خطأ غير أن الملف الشخصي غير موجود
-        console.error("خطأ في التحقق من وجود الملف الشخصي:", fetchError);
-        return;
-      }
-      
-      if (existingProfile) {
-        console.log("تم العثور على ملف شخصي موجود:", existingProfile);
-        return;
-      }
-      
-      // إنشاء ملف شخصي جديد
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        console.error("تعذر الحصول على بيانات المستخدم:", userError);
-        return;
-      }
-      
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert([
-          { 
-            id: userId,
-            username: userData.user?.email?.split('@')[0],
-            is_approved: true // تعيين حالة الاعتماد كـ true افتراضيًا للمستخدمين الجدد
-          }
-        ]);
-      
-      if (insertError) {
-        console.error("فشل في إنشاء ملف شخصي:", insertError);
-      } else {
-        console.log("تم إنشاء ملف شخصي جديد بنجاح للمستخدم:", userId);
-        // إعادة تحميل الصفحة للحصول على الملف الشخصي المحدث
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error("خطأ غير متوقع في إنشاء الملف الشخصي:", error);
-    }
-  };
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -122,8 +64,7 @@ const Login = () => {
     setHasLoginError(false);
     
     try {
-      // إرسال بيانات تسجيل الدخول مباشرة إلى Supabase
-      console.log("إرسال بيانات تسجيل الدخول إلى Supabase:", { email: data.email, password: "***مخفي***" });
+      console.log("إرسال بيانات تسجيل الدخول:", { email: data.email, password: "***مخفي***" });
       
       const { error, user: authUser } = await signIn(data.email, data.password);
       
@@ -137,8 +78,6 @@ const Login = () => {
           setLoginErrorMessage('بيانات تسجيل الدخول غير صحيحة. يرجى التحقق من البريد الإلكتروني وكلمة المرور.');
         } else if (error.message && error.message.includes('Email not confirmed')) {
           setLoginErrorMessage('البريد الإلكتروني غير مؤكد. يرجى تفقد بريدك الإلكتروني والنقر على رابط التأكيد.');
-        } else if (error.message && error.message.includes('الحساب قيد المراجعة')) {
-          setLoginErrorMessage('لم تتم الموافقة على حسابك بعد. يرجى الانتظار حتى يتم مراجعته من قبل المسؤول.');
         } else {
           setLoginErrorMessage(error.message || 'حدث خطأ أثناء تسجيل الدخول.');
         }
