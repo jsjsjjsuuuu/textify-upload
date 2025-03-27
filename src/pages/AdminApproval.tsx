@@ -1,9 +1,10 @@
+
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 // استيراد المكونات المستخرجة
 import UserTable from '@/components/admin/UserTable';
@@ -63,7 +64,9 @@ const AdminApproval = () => {
 
   // جلب البيانات عند تحميل الصفحة
   useEffect(() => {
+    console.log('جاري تحميل صفحة إدارة المستخدمين...');
     if (user && userProfile?.is_approved) {
+      console.log('المستخدم موجود ومعتمد، جاري جلب البيانات...');
       fetchUsers();
     }
   }, [user, userProfile]);

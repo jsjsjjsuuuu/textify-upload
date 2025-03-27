@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,41 +31,57 @@ export const useUserManagement = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
+      console.log('بدء جلب بيانات المستخدمين...');
+      
       // جلب بيانات الملفات الشخصية
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
       
       if (profilesError) {
+        console.error('خطأ في جلب الملفات الشخصية:', profilesError);
         toast.error('خطأ في جلب بيانات الملفات الشخصية');
-        console.error('Profiles error:', profilesError);
+        setIsLoading(false);
         return;
       }
+      
+      console.log('تم جلب الملفات الشخصية:', profilesData?.length || 0);
       
       // جلب بيانات المستخدمين من خلال الدالة المخصصة get_users_emails
       const { data: authUsersData, error: authUsersError } = await supabase.rpc('get_users_emails');
       
       if (authUsersError) {
-        console.error('Auth users error:', authUsersError);
+        console.error('خطأ في جلب بيانات المستخدمين الأساسية:', authUsersError);
         toast.error('خطأ في جلب بيانات المستخدمين');
-        // نستمر بالعمل مع البيانات المتاحة من الملفات الشخصية فقط
+        
+        // في حالة فشل جلب البيانات من الدالة، نستمر باستخدام البيانات الموجودة في الملفات الشخصية فقط
+        if (!profilesData || profilesData.length === 0) {
+          setIsLoading(false);
+          return;
+        }
       }
+      
+      console.log('تم جلب بيانات المستخدمين الأساسية:', authUsersData?.length || 0);
       
       // إنشاء كائن للبحث السريع عن البريد الإلكتروني حسب معرف المستخدم
       const emailsMap: Record<string, string> = {};
-      if (authUsersData) {
+      if (authUsersData && Array.isArray(authUsersData)) {
         authUsersData.forEach((user: AuthUserData) => {
-          emailsMap[user.id] = user.email;
+          if (user && user.id && user.email) {
+            emailsMap[user.id] = user.email;
+          }
         });
       }
       
+      console.log('تم إنشاء خريطة البريد الإلكتروني للمستخدمين');
+      
       // تحويل بيانات الملفات الشخصية إلى قائمة المستخدمين
       const usersWithEmails = (profilesData || []).map((profile: any) => {
-        const email = emailsMap[profile.id];
+        const email = emailsMap[profile.id] || (profile.username ? `${profile.username}@example.com` : 'unknown@example.com');
         
         return {
           id: profile.id,
-          email: email || (profile.username ? `${profile.username}@example.com` : 'unknown@example.com'),
+          email: email,
           full_name: profile.full_name || '',
           avatar_url: profile.avatar_url || '',
           is_approved: profile.is_approved || false,
@@ -75,9 +92,11 @@ export const useUserManagement = () => {
         };
       });
       
+      console.log('تم إنشاء قائمة المستخدمين النهائية:', usersWithEmails.length);
       setUsers(usersWithEmails);
+      
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('خطأ غير متوقع أثناء جلب بيانات المستخدمين:', error);
       toast.error('حدث خطأ أثناء جلب بيانات المستخدمين');
     } finally {
       setIsLoading(false);
@@ -86,13 +105,17 @@ export const useUserManagement = () => {
 
   // وظيفة الموافقة على مستخدم
   const approveUser = async (userId: string) => {
+    setIsProcessing(true);
     try {
+      console.log('جاري الموافقة على المستخدم:', userId);
+      
       const { error } = await supabase
         .from('profiles')
         .update({ is_approved: true })
         .eq('id', userId);
       
       if (error) {
+        console.error('خطأ في الموافقة على المستخدم:', error);
         toast.error('فشل في الموافقة على المستخدم');
         return;
       }
@@ -100,20 +123,26 @@ export const useUserManagement = () => {
       toast.success('تمت الموافقة على المستخدم بنجاح');
       fetchUsers(); // إعادة تحميل البيانات
     } catch (error) {
-      console.error('Error approving user:', error);
+      console.error('خطأ غير متوقع في الموافقة على المستخدم:', error);
       toast.error('حدث خطأ أثناء الموافقة على المستخدم');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   // وظيفة رفض مستخدم
   const rejectUser = async (userId: string) => {
+    setIsProcessing(true);
     try {
+      console.log('جاري رفض المستخدم:', userId);
+      
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ is_approved: false })
         .eq('id', userId);
       
       if (updateError) {
+        console.error('خطأ في رفض المستخدم:', updateError);
         toast.error('فشل في رفض المستخدم');
         return;
       }
@@ -121,8 +150,10 @@ export const useUserManagement = () => {
       toast.success('تم رفض المستخدم بنجاح');
       fetchUsers(); // إعادة تحميل البيانات
     } catch (error) {
-      console.error('Error rejecting user:', error);
+      console.error('خطأ غير متوقع في رفض المستخدم:', error);
       toast.error('حدث خطأ أثناء رفض المستخدم');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -130,6 +161,8 @@ export const useUserManagement = () => {
   const resetUserPassword = async (userId: string, newPassword: string) => {
     setIsProcessing(true);
     try {
+      console.log('جاري إعادة تعيين كلمة المرور للمستخدم:', userId);
+      
       // استدعاء وظيفة قاعدة البيانات المخصصة لتغيير كلمة المرور
       const { data, error } = await supabase.rpc('admin_update_user_password', {
         user_id: userId,
@@ -137,8 +170,8 @@ export const useUserManagement = () => {
       });
       
       if (error) {
-        toast.error('فشل في إعادة تعيين كلمة المرور');
-        console.error('Reset password error:', error);
+        console.error('خطأ في إعادة تعيين كلمة المرور:', error);
+        toast.error('فشل في إعادة تعيين كلمة المرور: ' + error.message);
         return;
       }
       
@@ -150,7 +183,7 @@ export const useUserManagement = () => {
         toast.error('لم يتم العثور على المستخدم');
       }
     } catch (error) {
-      console.error('Error resetting password:', error);
+      console.error('خطأ غير متوقع في إعادة تعيين كلمة المرور:', error);
       toast.error('حدث خطأ أثناء إعادة تعيين كلمة المرور');
     } finally {
       setIsProcessing(false);
@@ -165,6 +198,8 @@ export const useUserManagement = () => {
     
     setIsProcessing(true);
     try {
+      console.log('جاري حفظ بيانات المستخدم:', editedUserData.id);
+      
       // تحديث بيانات الملف الشخصي
       const { error: profileError } = await supabase
         .from('profiles')
@@ -178,8 +213,8 @@ export const useUserManagement = () => {
         .eq('id', editedUserData.id);
       
       if (profileError) {
-        toast.error('فشل في تحديث بيانات المستخدم');
-        console.error('Profile update error:', profileError);
+        console.error('خطأ في تحديث بيانات المستخدم:', profileError);
+        toast.error('فشل في تحديث بيانات المستخدم: ' + profileError.message);
         return;
       }
       
@@ -190,7 +225,7 @@ export const useUserManagement = () => {
       setEditedUserData(null);
       fetchUsers(); // إعادة تحميل البيانات
     } catch (error) {
-      console.error('Error saving user data:', error);
+      console.error('خطأ غير متوقع في حفظ بيانات المستخدم:', error);
       toast.error('حدث خطأ أثناء حفظ بيانات المستخدم');
     } finally {
       setIsProcessing(false);
