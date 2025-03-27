@@ -13,6 +13,7 @@ import AppHeader from '@/components/AppHeader';
 import { Mail, UserPlus, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'يرجى إدخال بريد إلكتروني صحيح' }),
@@ -30,18 +31,81 @@ const Login = () => {
   
   console.log("تهيئة صفحة تسجيل الدخول، حالة الجلسة:", !!session, "حالة المستخدم:", !!user);
   console.log("بيانات الجلسة:", session);
+  console.log("هل تم العثور على ملف المستخدم؟", !!userProfile);
 
-  // التحقق من وجود مستخدم ومعتمد
+  // التحقق من وجود مستخدم
   useEffect(() => {
     console.log("فحص حالة المستخدم:", user ? "موجود" : "غير موجود", 
                 "الملف الشخصي:", userProfile ? "موجود" : "غير موجود",
                 "الموافقة:", userProfile?.isApproved);
                 
-    if (user && userProfile?.isApproved) {
-      console.log("المستخدم مسجل الدخول ومعتمد، جارِ التوجيه إلى الصفحة الرئيسية");
-      navigate('/');
+    if (user) {
+      // إذا كان المستخدم موجود لكن لا يوجد ملف شخصي، قم بإنشاء ملف شخصي
+      if (!userProfile) {
+        console.log("المستخدم موجود لكن لا يوجد ملف شخصي، محاولة إنشاء ملف شخصي جديد");
+        createUserProfile(user.id);
+      } else if (userProfile?.isApproved) {
+        console.log("المستخدم مسجل الدخول ومعتمد، جارِ التوجيه إلى الصفحة الرئيسية");
+        navigate('/');
+      } else {
+        console.log("المستخدم مسجل الدخول لكن غير معتمد، البقاء في صفحة تسجيل الدخول");
+        setHasLoginError(true);
+        setLoginErrorMessage('حسابك قيد المراجعة. يرجى الانتظار حتى تتم الموافقة عليه من قبل المسؤول.');
+      }
     }
   }, [user, userProfile, navigate]);
+
+  // وظيفة لإنشاء ملف شخصي للمستخدم إذا لم يكن موجودًا
+  const createUserProfile = async (userId: string) => {
+    try {
+      console.log("محاولة إنشاء ملف شخصي جديد للمستخدم:", userId);
+      
+      // التحقق مما إذا كان الملف الشخصي موجود بالفعل
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        // حدث خطأ غير أن الملف الشخصي غير موجود
+        console.error("خطأ في التحقق من وجود الملف الشخصي:", fetchError);
+        return;
+      }
+      
+      if (existingProfile) {
+        console.log("تم العثور على ملف شخصي موجود:", existingProfile);
+        return;
+      }
+      
+      // إنشاء ملف شخصي جديد
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error("تعذر الحصول على بيانات المستخدم:", userError);
+        return;
+      }
+      
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert([
+          { 
+            id: userId,
+            username: userData.user?.email?.split('@')[0],
+            is_approved: true // تعيين حالة الاعتماد كـ true افتراضيًا للمستخدمين الجدد
+          }
+        ]);
+      
+      if (insertError) {
+        console.error("فشل في إنشاء ملف شخصي:", insertError);
+      } else {
+        console.log("تم إنشاء ملف شخصي جديد بنجاح للمستخدم:", userId);
+        // إعادة تحميل الصفحة للحصول على الملف الشخصي المحدث
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("خطأ غير متوقع في إنشاء الملف الشخصي:", error);
+    }
+  };
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -78,6 +142,9 @@ const Login = () => {
         } else {
           setLoginErrorMessage(error.message || 'حدث خطأ أثناء تسجيل الدخول.');
         }
+      } else if (!authUser) {
+        setHasLoginError(true);
+        setLoginErrorMessage('حدث خطأ غير متوقع. لم يتم العثور على بيانات المستخدم.');
       } else {
         // نجاح تسجيل الدخول، سيتم التوجيه في الـ useEffect
         console.log("تم تسجيل الدخول بنجاح، جاري التحقق من حالة الاعتماد");
