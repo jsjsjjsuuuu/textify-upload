@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, UserCog } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 const AppHeader = () => {
@@ -21,10 +21,24 @@ const AppHeader = () => {
   const navigate = useNavigate();
   const { setTheme } = useTheme();
   
+  // للتصحيح المباشر
+  React.useEffect(() => {
+    if (user && userProfile) {
+      console.log("معلومات المستخدم في AppHeader:", {
+        id: user.id,
+        email: user.email,
+        is_approved: userProfile?.is_approved,
+        is_admin: userProfile?.is_admin
+      });
+    }
+  }, [user, userProfile]);
+  
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
   };
+  
+  const isAdmin = userProfile?.is_admin === true;
   
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -45,14 +59,16 @@ const AppHeader = () => {
             >
               السجلات
             </Link>
-            {/* إضافة رابط لصفحة الموافقات للمسؤولين فقط */}
-            {user && userProfile?.is_admin && (
+            
+            {/* إظهار رابط صفحة إدارة المستخدمين للمسؤولين فقط مع إضافة أيقونة واضحة */}
+            {isAdmin && (
               <Link
                 to="/admin/approvals"
-                className={`transition-colors hover:text-foreground/80 ${
+                className={`transition-colors hover:text-foreground/80 flex items-center ${
                   pathname === "/admin/approvals" ? "text-foreground font-bold" : "text-foreground/60"
                 }`}
               >
+                <UserCog className="h-4 w-4 ml-1" />
                 إدارة المستخدمين
               </Link>
             )}
@@ -65,6 +81,7 @@ const AppHeader = () => {
             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
           </Button>
+          
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -78,10 +95,19 @@ const AppHeader = () => {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel>
                   {userProfile?.full_name || user?.email}
+                  {isAdmin && (
+                    <span className="text-xs text-blue-600 block mt-1">حساب مسؤول</span>
+                  )}
                 </DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   الملف الشخصي
                 </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem onClick={() => navigate('/admin/approvals')}>
+                    <UserCog className="h-4 w-4 ml-1" />
+                    إدارة المستخدمين
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   تسجيل الخروج

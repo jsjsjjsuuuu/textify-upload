@@ -21,6 +21,8 @@ import { AuthProvider } from './contexts/AuthContext';
  * يمكن استيراد هذا المكون واستخدامه في App.tsx
  */
 export const AppRoutes = () => {
+  console.log("تحميل المسارات...");
+  
   return (
     <AuthProvider>
       <Routes>
@@ -46,11 +48,14 @@ export const AppRoutes = () => {
             <Profile />
           </ProtectedRoute>
         } />
+        
+        {/* صفحة إدارة المستخدمين - للمسؤولين فقط */}
         <Route path="/admin/approvals" element={
-          <ProtectedRoute adminOnly={true}>
+          <ProtectedRoute adminOnly={true} redirectTo="/">
             <AdminApproval />
           </ProtectedRoute>
         } />
+        
         <Route path="/records" element={
           <ProtectedRoute>
             <Navigate to="/" replace />
