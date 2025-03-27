@@ -33,6 +33,7 @@ const AdminApproval = () => {
     selectedDate,
     showConfirmReset,
     userToReset,
+    fetchAttempted,
     setActiveTab,
     setFilterPlan,
     setFilterStatus,
@@ -55,9 +56,9 @@ const AdminApproval = () => {
     handleDateSelect,
   } = useUserManagement();
 
-  // جلب البيانات عند تحميل الصفحة
+  // جلب البيانات عند تحميل الصفحة - مع منع التكرار
   useEffect(() => {
-    console.log('جاري تحميل صفحة إدارة المستخدمين...');
+    console.log('جاري تحميل صفحة إدارة المستخدمين...', { fetchAttempted });
     
     // تسجيل معلومات المستخدم للتصحيح
     console.log('معلومات المستخدم في AdminApproval:', {
@@ -67,8 +68,11 @@ const AdminApproval = () => {
       is_admin: userProfile?.is_admin
     });
     
-    fetchUsers();
-  }, [user, userProfile]);
+    // جلب البيانات فقط إذا لم تتم محاولة الجلب من قبل أو إذا كانت قائمة المستخدمين فارغة
+    if (!fetchAttempted && user && userProfile) {
+      fetchUsers();
+    }
+  }, [user, userProfile, fetchAttempted]);
 
   // التعامل مع تأكيد إعادة تعيين كلمة المرور
   const handleConfirmReset = () => {

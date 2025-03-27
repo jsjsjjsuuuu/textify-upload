@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -10,6 +11,7 @@ export const useUserManagement = () => {
   const [filterPlan, setFilterPlan] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [fetchAttempted, setFetchAttempted] = useState(false);
   
   // حالة تعديل المستخدم
   const [isEditingUser, setIsEditingUser] = useState<string | null>(null);
@@ -23,9 +25,12 @@ export const useUserManagement = () => {
 
   // جلب قائمة المستخدمين
   const fetchUsers = async () => {
+    if (isLoading) return; // منع التنفيذ المتعدد إذا كان هناك طلب جاري بالفعل
+    
     setIsLoading(true);
     try {
       console.log('بدء جلب بيانات المستخدمين...');
+      setFetchAttempted(true); // تعيين أنه تمت محاولة الجلب على الأقل مرة واحدة
       
       // جلب بيانات الملفات الشخصية
       const { data: profilesData, error: profilesError } = await supabase
@@ -115,7 +120,13 @@ export const useUserManagement = () => {
       }
       
       toast.success('تمت الموافقة على المستخدم بنجاح');
-      fetchUsers(); // إعادة تحميل البيانات
+      
+      // تحديث المستخدم المعني فقط بدلاً من إعادة تحميل كل البيانات
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId ? { ...user, is_approved: true } : user
+        )
+      );
     } catch (error) {
       console.error('خطأ غير متوقع في الموافقة على المستخدم:', error);
       toast.error('حدث خطأ أثناء الموافقة على المستخدم');
@@ -142,7 +153,13 @@ export const useUserManagement = () => {
       }
       
       toast.success('تم رفض المستخدم بنجاح');
-      fetchUsers(); // إعادة تحميل البيانات
+      
+      // تحديث المستخدم المعني فقط
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId ? { ...user, is_approved: false } : user
+        )
+      );
     } catch (error) {
       console.error('خطأ غير متوقع في رفض المستخدم:', error);
       toast.error('حدث خطأ أثناء رفض المستخدم');
@@ -214,10 +231,16 @@ export const useUserManagement = () => {
       
       toast.success('تم تحديث بيانات المستخدم بنجاح');
       
+      // تحديث المستخدم في حالة المستخدمين المحلية
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === editedUserData.id ? { ...user, ...editedUserData } : user
+        )
+      );
+      
       // إعادة تعيين حالة التحرير
       setIsEditingUser(null);
       setEditedUserData(null);
-      fetchUsers(); // إعادة تحميل البيانات
     } catch (error) {
       console.error('خطأ غير متوقع في حفظ بيانات المستخدم:', error);
       toast.error('حدث خطأ أثناء حفظ بيانات المستخدم');
@@ -341,6 +364,7 @@ export const useUserManagement = () => {
     selectedDate,
     showConfirmReset,
     userToReset,
+    fetchAttempted,
     setActiveTab,
     setFilterPlan,
     setFilterStatus,
