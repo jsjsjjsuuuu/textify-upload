@@ -62,6 +62,12 @@ interface ProfileData {
   [key: string]: any;
 }
 
+// نوع بيانات المستخدم من auth.users
+interface AuthUserData {
+  id: string;
+  email: string;
+}
+
 const AdminApproval = () => {
   const { user, userProfile } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -103,27 +109,34 @@ const AdminApproval = () => {
         return;
       }
       
-      // جلب بيانات المستخدمين من auth.users من خلال RPC (وظيفة مخصصة في قاعدة البيانات)
+      // جلب بيانات المستخدمين من خلال الدالة المخصصة get_users_emails
       const { data: authUsersData, error: authUsersError } = await supabase.rpc('get_users_emails');
       
       if (authUsersError) {
         console.error('Auth users error:', authUsersError);
+        toast.error('خطأ في جلب بيانات المستخدمين');
         // نستمر بالعمل مع البيانات المتاحة من الملفات الشخصية فقط
       }
       
       // إنشاء كائن للبحث السريع عن البريد الإلكتروني حسب معرف المستخدم
       const emailsMap: Record<string, string> = {};
       if (authUsersData) {
-        authUsersData.forEach((user: {id: string, email: string}) => {
+        authUsersData.forEach((user: AuthUserData) => {
           emailsMap[user.id] = user.email;
         });
       }
       
+      console.log('Emails map:', emailsMap);
+      console.log('Profiles data:', profilesData);
+      
       // تحويل بيانات الملفات الشخصية إلى قائمة المستخدمين
       const usersWithEmails = (profilesData || []).map((profile: ProfileData) => {
+        const email = emailsMap[profile.id];
+        console.log(`User ID: ${profile.id}, Email from map: ${email}, Username: ${profile.username}`);
+        
         return {
           id: profile.id,
-          email: emailsMap[profile.id] || (profile.username ? `${profile.username}@example.com` : 'unknown@example.com'),
+          email: email || (profile.username ? `${profile.username}@example.com` : 'unknown@example.com'),
           full_name: profile.full_name || '',
           avatar_url: profile.avatar_url || '',
           is_approved: profile.is_approved || false,
