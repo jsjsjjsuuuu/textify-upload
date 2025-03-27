@@ -167,11 +167,11 @@ export const useUserManagement = () => {
     }
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - محسنة
+  // وظيفة إعادة تعيين كلمة المرور - محسنة ومعاد كتابتها
   const resetUserPassword = async (userId: string, newPassword: string) => {
     setIsProcessing(true);
     try {
-      console.log('جاري إعادة تعيين كلمة المرور للمستخدم:', userId);
+      console.log('بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
       console.log('طول كلمة المرور الجديدة:', newPassword.length);
       
       if (!newPassword || newPassword.trim() === '') {
@@ -188,78 +188,117 @@ export const useUserManagement = () => {
         return;
       }
       
-      // طباعة معلومات إضافية للتصحيح
-      console.log('المعلمات المرسلة لإعادة تعيين كلمة المرور:', {
-        user_id: userId,
-        user_id_type: typeof userId,
-        new_password_length: newPassword.length
-      });
-      
-      // محاولة استخدام الوظيفة الجديدة التي تتعامل مع معرف المستخدم كنص
-      const { data: stringIdData, error: stringIdError } = await supabase.rpc('admin_reset_password_by_string_id', {
+      // استخدام طريقة جديدة: admin_reset_password_direct_api
+      // هذه الطريقة تستخدم واجهة Supabase للمصادقة بشكل مباشر
+      const { data, error } = await supabase.rpc('admin_reset_password_direct_api', {
         user_id_str: userId,
         new_password: newPassword
       });
       
-      console.log('نتيجة استدعاء admin_reset_password_by_string_id:', { data: stringIdData, error: stringIdError });
+      console.log('نتيجة استدعاء admin_reset_password_direct_api:', { 
+        data, 
+        error: error ? { message: error.message, code: error.code } : null 
+      });
       
-      if (stringIdError) {
-        console.error('خطأ في إعادة تعيين كلمة المرور (طريقة النص):', stringIdError);
+      if (error) {
+        console.error('خطأ في إعادة تعيين كلمة المرور (الطريقة المباشرة):', error);
+        toast.error(`فشل في إعادة تعيين كلمة المرور: ${error.message}`);
         
-        // إذا فشلت الطريقة الأولى، نحاول استخدام الوظيفة الأصلية
-        console.log('المحاولة باستخدام الطريقة التقليدية...');
+        // محاولة إضافية باستخدام أحد الوظيفتين الموجودتين سابقاً
+        console.log('المحاولة باستخدام طريقة بديلة...');
         
-        // التحقق من أن معرف المستخدم هو UUID صالح
-        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidPattern.test(userId)) {
-          console.error('معرف المستخدم ليس UUID صالح:', userId);
-          toast.error('معرف المستخدم غير صالح');
-          setIsProcessing(false);
-          return;
-        }
-        
-        const { data, error } = await supabase.rpc('admin_update_user_password', {
-          user_id: userId,
+        // تجربة استخدام admin_reset_password_by_string_id أولاً
+        const { data: stringIdData, error: stringIdError } = await supabase.rpc('admin_reset_password_by_string_id', {
+          user_id_str: userId,
           new_password: newPassword
         });
         
-        console.log('نتيجة استدعاء admin_update_user_password:', { data, error });
+        console.log('نتيجة استدعاء admin_reset_password_by_string_id:', { 
+          data: stringIdData, 
+          error: stringIdError ? { message: stringIdError.message, code: stringIdError.code } : null 
+        });
         
-        if (error) {
-          console.error('خطأ في إعادة تعيين كلمة المرور:', error);
-          toast.error('فشل في إعادة تعيين كلمة المرور: ' + error.message);
-          return;
-        }
-        
-        if (data === true) {
-          console.log('تم تغيير كلمة المرور بنجاح');
-          toast.success('تم إعادة تعيين كلمة المرور بنجاح');
-          setNewPassword('');
-          setShowPassword(false);
+        if (stringIdError) {
+          console.error('خطأ في الطريقة البديلة الأولى:', stringIdError);
+          
+          // محاولة أخيرة باستخدام admin_update_user_password
+          console.log('المحاولة باستخدام الطريقة التقليدية...');
+          
+          try {
+            // التحقق من أن معرف المستخدم هو UUID صالح
+            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidPattern.test(userId)) {
+              console.error('معرف المستخدم ليس UUID صالح:', userId);
+              toast.error('معرف المستخدم غير صالح للطريقة البديلة');
+              throw new Error('معرف المستخدم ليس بتنسيق UUID صالح');
+            }
+            
+            const { data: traditionalData, error: traditionalError } = await supabase.rpc('admin_update_user_password', {
+              user_id: userId,
+              new_password: newPassword
+            });
+            
+            console.log('نتيجة استدعاء admin_update_user_password:', { 
+              data: traditionalData, 
+              error: traditionalError ? { message: traditionalError.message, code: traditionalError.code } : null 
+            });
+            
+            if (traditionalError) {
+              throw traditionalError;
+            }
+            
+            if (traditionalData === true) {
+              console.log('تم تغيير كلمة المرور بنجاح (طريقة تقليدية)');
+              toast.success('تم إعادة تعيين كلمة المرور بنجاح');
+              resetPasswordStates();
+              return;
+            } else {
+              throw new Error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
+            }
+          } catch (traditionalCatchError: any) {
+            console.error('خطأ في الطريقة التقليدية:', traditionalCatchError);
+            toast.error(`جميع المحاولات فشلت. آخر خطأ: ${traditionalCatchError.message || 'خطأ غير معروف'}`);
+          }
         } else {
-          console.error('لم يتم إعادة تعيين كلمة المرور، البيانات المرتجعة:', data);
-          toast.error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
+          // نجحت الطريقة البديلة الأولى
+          if (stringIdData === true) {
+            console.log('تم تغيير كلمة المرور بنجاح (طريقة بديلة)');
+            toast.success('تم إعادة تعيين كلمة المرور بنجاح');
+            resetPasswordStates();
+            return;
+          } else {
+            console.error('لم يتم إعادة تعيين كلمة المرور، البيانات غير متوقعة:', stringIdData);
+            toast.error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
+          }
         }
       } else {
-        // الطريقة الجديدة نجحت
-        if (stringIdData === true) {
-          console.log('تم تغيير كلمة المرور بنجاح (طريقة النص)');
+        // نجحت الطريقة المباشرة
+        if (data === true) {
+          console.log('تم تغيير كلمة المرور بنجاح (طريقة مباشرة)');
           toast.success('تم إعادة تعيين كلمة المرور بنجاح');
-          setNewPassword('');
-          setShowPassword(false);
+          resetPasswordStates();
+          return;
         } else {
-          console.error('لم يتم إعادة تعيين كلمة المرور، البيانات المرتجعة (طريقة النص):', stringIdData);
+          console.error('لم يتم إعادة تعيين كلمة المرور، البيانات غير متوقعة:', data);
           toast.error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('خطأ غير متوقع في إعادة تعيين كلمة المرور:', error);
-      toast.error('حدث خطأ أثناء إعادة تعيين كلمة المرور');
+      toast.error(`حدث خطأ أثناء إعادة تعيين كلمة المرور: ${error.message || 'خطأ غير معروف'}`);
     } finally {
       setIsProcessing(false);
       setShowConfirmReset(false);
       setUserToReset(null);
     }
+  };
+  
+  // وظيفة إعادة تعيين حالات كلمة المرور
+  const resetPasswordStates = () => {
+    setNewPassword('');
+    setShowPassword(false);
+    setShowConfirmReset(false);
+    setUserToReset(null);
   };
 
   // وظيفة تغيير البريد الإلكتروني للمستخدم
@@ -498,5 +537,6 @@ export const useUserManagement = () => {
     getUserCounts,
     prepareUserPasswordReset,
     handleDateSelect,
+    resetPasswordStates,
   };
 };
