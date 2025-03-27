@@ -78,7 +78,19 @@ const AdminApproval = () => {
   // التعامل مع تأكيد إعادة تعيين كلمة المرور
   const handleConfirmReset = () => {
     if (userToReset && newPassword) {
+      // طباعة سجل تصحيح لمساعدة في تشخيص المشكلة
+      console.log('تنفيذ إعادة تعيين كلمة المرور مع البيانات:', {
+        userToReset,
+        passwordLength: newPassword.length,
+        passwordEmpty: !newPassword.trim()
+      });
+      
       resetUserPassword(userToReset, newPassword);
+    } else {
+      console.error('لا يمكن إعادة تعيين كلمة المرور:', {
+        userToReset,
+        hasPassword: !!newPassword
+      });
     }
   };
 

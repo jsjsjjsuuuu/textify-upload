@@ -168,17 +168,51 @@ export const useUserManagement = () => {
     }
   };
 
-  // وظيفة إعادة تعيين كلمة المرور
+  // وظيفة إعادة تعيين كلمة المرور - تحسين مع مزيد من السجلات ومعالجة الأخطاء
   const resetUserPassword = async (userId: string, newPassword: string) => {
     setIsProcessing(true);
     try {
       console.log('جاري إعادة تعيين كلمة المرور للمستخدم:', userId);
+      console.log('طول كلمة المرور الجديدة:', newPassword.length);
+      
+      if (!newPassword || newPassword.trim() === '') {
+        console.error('كلمة المرور فارغة');
+        toast.error('كلمة المرور لا يمكن أن تكون فارغة');
+        setIsProcessing(false);
+        return;
+      }
+      
+      if (!userId) {
+        console.error('معرف المستخدم غير موجود');
+        toast.error('معرف المستخدم غير صالح');
+        setIsProcessing(false);
+        return;
+      }
+      
+      // التحقق من أن معرف المستخدم هو UUID صالح
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(userId)) {
+        console.error('معرف المستخدم ليس UUID صالح:', userId);
+        toast.error('معرف المستخدم غير صالح');
+        setIsProcessing(false);
+        return;
+      }
+      
+      // طباعة معلومات إضافية للتصحيح
+      console.log('المعلمات المرسلة لوظيفة admin_update_user_password:', {
+        user_id: userId,
+        user_id_type: typeof userId,
+        new_password: '***' + (newPassword.length > 3 ? newPassword.substr(newPassword.length - 3) : ''), // للأمان لا نطبع كلمة المرور كاملة
+        new_password_type: typeof newPassword
+      });
       
       // استدعاء وظيفة قاعدة البيانات المخصصة لتغيير كلمة المرور
       const { data, error } = await supabase.rpc('admin_update_user_password', {
         user_id: userId,
         new_password: newPassword
       });
+      
+      console.log('نتيجة استدعاء admin_update_user_password:', { data, error });
       
       if (error) {
         console.error('خطأ في إعادة تعيين كلمة المرور:', error);
@@ -187,10 +221,12 @@ export const useUserManagement = () => {
       }
       
       if (data === true) {
+        console.log('تم تغيير كلمة المرور بنجاح');
         toast.success('تم إعادة تعيين كلمة المرور بنجاح');
         setNewPassword('');
         setShowPassword(false);
       } else {
+        console.error('لم يتم إعادة تعيين كلمة المرور، البيانات المرتجعة:', data);
         toast.error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
       }
     } catch (error) {
@@ -379,12 +415,14 @@ export const useUserManagement = () => {
 
   // إعداد المستخدم لإعادة تعيين كلمة المرور
   const prepareUserPasswordReset = (userId: string) => {
-    if (newPassword) {
-      setUserToReset(userId);
-      setShowConfirmReset(true);
-    } else {
-      toast.error('يرجى إدخال كلمة المرور الجديدة');
+    if (!newPassword || newPassword.trim() === '') {
+      toast.error('يرجى إدخال كلمة المرور الجديدة أولاً');
+      return;
     }
+    
+    console.log('إعداد إعادة تعيين كلمة المرور للمستخدم:', userId);
+    setUserToReset(userId);
+    setShowConfirmReset(true);
   };
 
   // التعامل مع تحديد التاريخ
