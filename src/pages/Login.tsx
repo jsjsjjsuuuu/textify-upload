@@ -13,6 +13,7 @@ import AppHeader from '@/components/AppHeader';
 import { Mail, UserPlus, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'يرجى إدخال بريد إلكتروني صحيح' }),
@@ -38,16 +39,25 @@ const Login = () => {
                 "الموافقة:", userProfile?.is_approved);
                 
     if (user) {
-      if (userProfile?.is_approved) {
-        console.log("المستخدم مسجل الدخول ومعتمد، جارِ التوجيه إلى الصفحة الرئيسية");
+      // إذا كان المستخدم مسجل الدخول وتم تحميل ملفه الشخصي
+      if (userProfile) {
+        // التحقق إذا كان المستخدم معتمداً (أو تخطي التحقق إذا كانت قيمة is_approved غير موجودة)
+        if (userProfile.is_approved === undefined || userProfile.is_approved) {
+          console.log("المستخدم مسجل الدخول ومعتمد، جارِ التوجيه إلى الصفحة الرئيسية");
+          navigate('/');
+        } else {
+          console.log("المستخدم مسجل الدخول لكن غير معتمد، البقاء في صفحة تسجيل الدخول");
+          setHasLoginError(true);
+          setLoginErrorMessage('حسابك قيد المراجعة. يرجى الانتظار حتى تتم الموافقة عليه من قبل المسؤول.');
+        }
+      } else if (session) {
+        // إذا كان لدينا جلسة صالحة لكن لم يتم تحميل الملف الشخصي بعد
+        console.log("المستخدم مسجل الدخول ولكن لم يتم تحميل الملف الشخصي بعد");
+        // يمكننا توجيه المستخدم إلى الصفحة الرئيسية حتى في حالة عدم تحميل الملف الشخصي
         navigate('/');
-      } else if (userProfile && userProfile.is_approved === false) {
-        console.log("المستخدم مسجل الدخول لكن غير معتمد، البقاء في صفحة تسجيل الدخول");
-        setHasLoginError(true);
-        setLoginErrorMessage('حسابك قيد المراجعة. يرجى الانتظار حتى تتم الموافقة عليه من قبل المسؤول.');
       }
     }
-  }, [user, userProfile, navigate]);
+  }, [user, userProfile, session, navigate]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -76,24 +86,35 @@ const Login = () => {
         // ترجمة رسائل الخطأ للعربية
         if (error.message && error.message.includes('Invalid login credentials')) {
           setLoginErrorMessage('بيانات تسجيل الدخول غير صحيحة. يرجى التحقق من البريد الإلكتروني وكلمة المرور.');
+          toast.error('بيانات تسجيل الدخول غير صحيحة');
         } else if (error.message && error.message.includes('Email not confirmed')) {
           setLoginErrorMessage('البريد الإلكتروني غير مؤكد. يرجى تفقد بريدك الإلكتروني والنقر على رابط التأكيد.');
+          toast.error('البريد الإلكتروني غير مؤكد');
         } else if (error.message && error.message.toLowerCase().includes('rate limit')) {
           setLoginErrorMessage('تم تجاوز الحد المسموح به لمحاولات تسجيل الدخول. يرجى المحاولة مرة أخرى بعد بضع دقائق.');
+          toast.error('تم تجاوز الحد المسموح به لمحاولات تسجيل الدخول');
         } else {
           setLoginErrorMessage(error.message || 'حدث خطأ أثناء تسجيل الدخول.');
+          toast.error(error.message || 'حدث خطأ أثناء تسجيل الدخول');
         }
       } else if (!authUser) {
         setHasLoginError(true);
         setLoginErrorMessage('حدث خطأ غير متوقع. لم يتم العثور على بيانات المستخدم.');
+        toast.error('حدث خطأ غير متوقع');
       } else {
-        // نجاح تسجيل الدخول، سيتم التوجيه في الـ useEffect
+        // نجاح تسجيل الدخول، عرض إشعار النجاح
+        toast.success('تم تسجيل الدخول بنجاح');
         console.log("تم تسجيل الدخول بنجاح، جاري التحقق من حالة الاعتماد");
+        
+        // تنفيذ التوجيه هنا مباشرة بعد تسجيل الدخول الناجح
+        // لن ننتظر تحميل الملف الشخصي
+        navigate('/');
       }
     } catch (error: any) {
       console.error("خطأ غير متوقع في تسجيل الدخول:", error);
       setHasLoginError(true);
       setLoginErrorMessage('حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى لاحقاً.');
+      toast.error('حدث خطأ غير متوقع');
     } finally {
       setIsLoading(false);
     }
