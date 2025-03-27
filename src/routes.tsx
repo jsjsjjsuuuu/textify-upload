@@ -3,7 +3,7 @@ import React from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
-import ServicePage from './pages/ServicePage';
+import ServicePage from './pages/PolicyPage';
 import PolicyPage from './pages/PolicyPage';
 import AutomationPage from './pages/AutomationPage';
 import Login from './pages/Login';
