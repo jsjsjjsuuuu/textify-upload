@@ -13,7 +13,6 @@ import AppHeader from '@/components/AppHeader';
 import { Mail, UserPlus, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { toast } from 'sonner';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'يرجى إدخال بريد إلكتروني صحيح' }),
@@ -46,9 +45,6 @@ const Login = () => {
         console.log("المستخدم مسجل الدخول لكن غير معتمد، البقاء في صفحة تسجيل الدخول");
         setHasLoginError(true);
         setLoginErrorMessage('حسابك قيد المراجعة. يرجى الانتظار حتى تتم الموافقة عليه من قبل المسؤول.');
-        toast.warning('حسابك قيد المراجعة', {
-          description: 'يرجى الانتظار حتى تتم الموافقة عليه من قبل المسؤول'
-        });
       }
     }
   }, [user, userProfile, navigate]);
@@ -80,45 +76,24 @@ const Login = () => {
         // ترجمة رسائل الخطأ للعربية
         if (error.message && error.message.includes('Invalid login credentials')) {
           setLoginErrorMessage('بيانات تسجيل الدخول غير صحيحة. يرجى التحقق من البريد الإلكتروني وكلمة المرور.');
-          toast.error('بيانات تسجيل الدخول غير صحيحة', {
-            description: 'يرجى التحقق من البريد الإلكتروني وكلمة المرور'
-          });
         } else if (error.message && error.message.includes('Email not confirmed')) {
           setLoginErrorMessage('البريد الإلكتروني غير مؤكد. يرجى تفقد بريدك الإلكتروني والنقر على رابط التأكيد.');
-          toast.error('البريد الإلكتروني غير مؤكد', {
-            description: 'قد تكون هناك مشكلة في إعدادات البريد الإلكتروني. يرجى مراجعة المشرف'
-          });
         } else if (error.message && error.message.toLowerCase().includes('rate limit')) {
           setLoginErrorMessage('تم تجاوز الحد المسموح به لمحاولات تسجيل الدخول. يرجى المحاولة مرة أخرى بعد بضع دقائق.');
-          toast.error('تم تجاوز الحد المسموح به', {
-            description: 'يرجى المحاولة مرة أخرى بعد بضع دقائق'
-          });
         } else {
           setLoginErrorMessage(error.message || 'حدث خطأ أثناء تسجيل الدخول.');
-          toast.error('حدث خطأ أثناء تسجيل الدخول', {
-            description: error.message || 'يرجى المحاولة مرة أخرى لاحقاً'
-          });
         }
       } else if (!authUser) {
         setHasLoginError(true);
         setLoginErrorMessage('حدث خطأ غير متوقع. لم يتم العثور على بيانات المستخدم.');
-        toast.error('خطأ غير متوقع', {
-          description: 'لم يتم العثور على بيانات المستخدم'
-        });
       } else {
         // نجاح تسجيل الدخول، سيتم التوجيه في الـ useEffect
         console.log("تم تسجيل الدخول بنجاح، جاري التحقق من حالة الاعتماد");
-        toast.success('تم تسجيل الدخول بنجاح', {
-          description: 'جاري التحقق من حسابك...'
-        });
       }
     } catch (error: any) {
       console.error("خطأ غير متوقع في تسجيل الدخول:", error);
       setHasLoginError(true);
       setLoginErrorMessage('حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى لاحقاً.');
-      toast.error('خطأ غير متوقع', {
-        description: 'يرجى المحاولة مرة أخرى لاحقاً'
-      });
     } finally {
       setIsLoading(false);
     }
