@@ -38,9 +38,9 @@ const AppHeader = () => {
     navigate('/login');
   };
   
-  // تحديد ما إذا كان المستخدم مسؤولاً
+  // تحديد ما إذا كان المستخدم مسؤولاً بطريقة أكثر صرامة للتأكد من أن القيمة دائمًا منطقية (Boolean)
   const isAdmin = userProfile?.is_admin === true;
-  console.log("هل المستخدم مسؤول في AppHeader:", isAdmin);
+  console.log("هل المستخدم مسؤول في AppHeader:", isAdmin, "قيمة is_admin الأصلية:", userProfile?.is_admin);
   
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -62,7 +62,7 @@ const AppHeader = () => {
               السجلات
             </Link>
             
-            {/* إظهار رابط صفحة إدارة المستخدمين للمسؤولين فقط مع إضافة أيقونة واضحة */}
+            {/* إظهار رابط صفحة إدارة المستخدمين للمسؤولين فقط بشكل صريح */}
             {isAdmin && (
               <Link
                 to="/admin/approvals"

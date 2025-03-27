@@ -49,9 +49,9 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
         
-        {/* صفحة إدارة المستخدمين - للمسؤولين فقط */}
+        {/* صفحة إدارة المستخدمين - للمسؤولين فقط مع تعطيل requireApproval للمسؤولين */}
         <Route path="/admin/approvals" element={
-          <ProtectedRoute adminOnly={true} redirectTo="/">
+          <ProtectedRoute adminOnly={true} requireApproval={false} redirectTo="/">
             <AdminApproval />
           </ProtectedRoute>
         } />

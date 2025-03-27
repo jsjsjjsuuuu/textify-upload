@@ -55,20 +55,19 @@ const AdminApproval = () => {
     handleDateSelect,
   } = useUserManagement();
 
-  // التحقق من وجود المستخدم وصلاحياته
-  useEffect(() => {
-    if (!user || !userProfile?.is_approved) {
-      window.location.href = '/login';
-    }
-  }, [user, userProfile]);
-
   // جلب البيانات عند تحميل الصفحة
   useEffect(() => {
     console.log('جاري تحميل صفحة إدارة المستخدمين...');
-    if (user && userProfile?.is_approved) {
-      console.log('المستخدم موجود ومعتمد، جاري جلب البيانات...');
-      fetchUsers();
-    }
+    
+    // تسجيل معلومات المستخدم للتصحيح
+    console.log('معلومات المستخدم في AdminApproval:', {
+      id: user?.id,
+      email: user?.email,
+      is_approved: userProfile?.is_approved,
+      is_admin: userProfile?.is_admin
+    });
+    
+    fetchUsers();
   }, [user, userProfile]);
 
   // التعامل مع تأكيد إعادة تعيين كلمة المرور
@@ -77,11 +76,6 @@ const AdminApproval = () => {
       resetUserPassword(userToReset, newPassword);
     }
   };
-
-  // التحقق من الصلاحيات
-  if (!user || !userProfile?.is_approved) {
-    return null;
-  }
 
   const userCounts = getUserCounts();
   const filteredUsers = getFilteredUsers();
