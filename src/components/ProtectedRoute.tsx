@@ -23,7 +23,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (user) {
       refreshUserProfile();
     }
-  }, [user]);
+  }, [user, refreshUserProfile]);
 
   // للتصحيح المباشر في وحدة التحكم
   useEffect(() => {
