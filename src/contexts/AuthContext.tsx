@@ -55,14 +55,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       console.log("تم استلام بيانات الملف الشخصي:", data);
 
-      setUserProfile({
-        isApproved: data?.is_approved || false,
-        subscriptionPlan: (data?.subscription_plan as SubscriptionPlan) || 'standard',
-        fullName: data?.full_name || '',
-        avatarUrl: data?.avatar_url || '',
-      });
+      if (data) {
+        setUserProfile({
+          isApproved: data.is_approved || false,
+          subscriptionPlan: (data.subscription_plan as SubscriptionPlan) || 'standard',
+          fullName: data.full_name || '',
+          avatarUrl: data.avatar_url || '',
+        });
+      } else {
+        console.log("لم يتم العثور على ملف شخصي للمستخدم:", userId);
+        setUserProfile(null);
+      }
     } catch (error) {
-      console.error('خطأ غير متوقع:', error);
+      console.error('خطأ غير متوقع في جلب الملف الشخصي:', error);
     }
   };
 
@@ -76,16 +81,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log("تهيئة مستمع تغييرات حالة المصادقة");
     
-    // 1. قم أولاً بإعداد مستمع لتغييرات حالة المصادقة
+    // تكوين Supabase للاستخدام المستمر للجلسة
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("الجلسة الحالية:", currentSession ? "موجودة" : "غير موجودة");
+      
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      
+      if (currentSession?.user) {
+        fetchUserProfile(currentSession.user.id);
+      }
+      
+      setLoading(false);
+    });
+    
+    // 1. ضبط مستمع لتغييرات حالة المصادقة
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         console.log("تغيير حالة المصادقة:", event, newSession ? "مسجل الدخول" : "غير مسجل الدخول");
         
-        // تعيين الجلسة والمستخدم فقط، بدون استدعاء وظائف Supabase أخرى
+        // تعيين الجلسة والمستخدم
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
-        // إذا كان هناك مستخدم، قم بتأجيل استدعاء جلب الملف الشخصي
+        // إذا كان هناك مستخدم، جلب الملف الشخصي
         if (newSession?.user) {
           setTimeout(() => {
             fetchUserProfile(newSession.user.id);
@@ -97,20 +116,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(false);
       }
     );
-
-    // 2. بعد إعداد المستمع، تحقق من الجلسة الحالية
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      console.log("التحقق من جلسة المستخدم:", currentSession ? "موجودة" : "غير موجودة");
-      
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        fetchUserProfile(currentSession.user.id);
-      }
-      
-      setLoading(false);
-    });
 
     return () => {
       console.log("إلغاء اشتراك مستمع تغييرات حالة المصادقة");
@@ -159,8 +164,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error: profileError, user: null };
       }
       
-      // إذا لم يتم العثور على ملف شخصي، فسنفترض أن الحساب معتمد
-      const isApproved = profileData ? profileData.is_approved : true;
+      // إذا لم يتم العثور على ملف شخصي، إنشاء ملف شخصي جديد
+      if (!profileData) {
+        console.log("إنشاء ملف شخصي جديد للمستخدم:", data.user.id);
+        
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert([
+            { 
+              id: data.user.id,
+              is_approved: true,
+              subscription_plan: 'standard'
+            }
+          ]);
+          
+        if (insertError) {
+          console.error("خطأ في إنشاء ملف شخصي جديد:", insertError.message);
+          
+          // عدم إيقاف عملية تسجيل الدخول في حالة فشل إنشاء الملف الشخصي
+          toast({
+            title: "تحذير",
+            description: "تم تسجيل الدخول ولكن هناك مشكلة في ملفك الشخصي",
+            variant: "default",
+          });
+        }
+        
+        // تعيين القيم الافتراضية للملف الشخصي
+        setUserProfile({
+          isApproved: true,
+          subscriptionPlan: 'standard',
+          fullName: '',
+          avatarUrl: '',
+        });
+        
+        toast({
+          title: "تم تسجيل الدخول بنجاح",
+          description: "مرحبًا بك!",
+        });
+        
+        return { error: null, user: data.user };
+      }
+      
+      // إذا كان هناك ملف شخصي، التحقق من حالة الاعتماد
+      const isApproved = profileData.is_approved;
       
       console.log("حالة اعتماد الحساب:", isApproved);
       
@@ -225,17 +271,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("نتيجة إنشاء الحساب:", data.user ? "تم إنشاء المستخدم" : "لم يتم إنشاء المستخدم");
       
       if (data?.user) {
-        // تحديث الملف الشخصي بمعلومات الاشتراك
+        // إنشاء ملف شخصي جديد
         const { error: profileError } = await supabase
           .from('profiles')
-          .update({
+          .insert([{
+            id: data.user.id,
             subscription_plan: metadata?.subscription_plan || 'standard',
             full_name: metadata?.full_name || '',
-          })
-          .eq('id', data.user.id);
+            is_approved: false // الإعداد الافتراضي هو عدم الموافقة حتى يتم المراجعة
+          }]);
           
         if (profileError) {
-          console.error("خطأ في تحديث الملف الشخصي:", profileError.message);
+          console.error("خطأ في إنشاء الملف الشخصي:", profileError.message);
         }
       }
       
@@ -282,6 +329,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       console.log("تم تسجيل الخروج بنجاح");
+      
+      // إعادة تعيين حالة المستخدم والجلسة بعد تسجيل الخروج
+      setUser(null);
+      setSession(null);
+      setUserProfile(null);
       
       toast({
         title: "تم تسجيل الخروج",

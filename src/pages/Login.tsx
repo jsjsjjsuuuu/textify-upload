@@ -29,6 +29,7 @@ const Login = () => {
   const [loginErrorMessage, setLoginErrorMessage] = useState('');
   
   console.log("تهيئة صفحة تسجيل الدخول، حالة الجلسة:", !!session, "حالة المستخدم:", !!user);
+  console.log("بيانات الجلسة:", session);
 
   // التحقق من وجود مستخدم ومعتمد
   useEffect(() => {
@@ -57,9 +58,12 @@ const Login = () => {
     setHasLoginError(false);
     
     try {
+      // إرسال بيانات تسجيل الدخول مباشرة إلى Supabase
+      console.log("إرسال بيانات تسجيل الدخول إلى Supabase:", { email: data.email, password: "***مخفي***" });
+      
       const { error, user: authUser } = await signIn(data.email, data.password);
       
-      console.log("نتيجة تسجيل الدخول:", error ? "فشل" : "نجاح", "المستخدم:", authUser || "لا يوجد");
+      console.log("نتيجة تسجيل الدخول:", error ? `فشل: ${error.message}` : "نجاح", "المستخدم:", authUser || "لا يوجد");
       
       if (error) {
         setHasLoginError(true);
@@ -79,7 +83,7 @@ const Login = () => {
         console.log("تم تسجيل الدخول بنجاح، جاري التحقق من حالة الاعتماد");
       }
     } catch (error: any) {
-      console.error("خطأ غير متوقع:", error);
+      console.error("خطأ غير متوقع في تسجيل الدخول:", error);
       setHasLoginError(true);
       setLoginErrorMessage('حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى لاحقاً.');
     } finally {

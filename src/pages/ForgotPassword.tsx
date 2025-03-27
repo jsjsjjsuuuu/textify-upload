@@ -41,7 +41,15 @@ const ForgotPassword = () => {
       
       if (error) {
         console.error("خطأ في إرسال طلب استعادة كلمة المرور:", error.message);
-        setError(error.message);
+        
+        // ترجمة رسائل الخطأ الشائعة
+        if (error.message.includes("Email not found")) {
+          setError("لم يتم العثور على هذا البريد الإلكتروني في قاعدة البيانات. يرجى التأكد من البريد الإلكتروني أو التسجيل للحصول على حساب جديد.");
+        } else if (error.message.includes("rate limit")) {
+          setError("لقد تجاوزت الحد المسموح به لعدد المحاولات. يرجى الانتظار قبل المحاولة مرة أخرى.");
+        } else {
+          setError(error.message);
+        }
       } else if (sent) {
         console.log("تم إرسال رابط استعادة كلمة المرور بنجاح");
         setEmailSent(true);

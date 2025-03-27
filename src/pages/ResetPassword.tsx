@@ -30,6 +30,7 @@ const ResetPassword = () => {
   const [resetSuccess, setResetSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isValidResetLink, setIsValidResetLink] = useState(true);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   
   // إضافة استخدام useForm هنا
   const form = useForm<ResetPasswordFormValues>({
@@ -43,16 +44,30 @@ const ResetPassword = () => {
   useEffect(() => {
     // التحقق مما إذا كان المستخدم قد وصل من خلال رابط إعادة تعيين كلمة المرور
     const checkResetSession = async () => {
+      setIsCheckingSession(true);
       console.log("التحقق من صلاحية جلسة إعادة تعيين كلمة المرور");
-      const { data, error } = await supabase.auth.getSession();
       
-      console.log("نتيجة فحص الجلسة:", data.session ? "صالحة" : "غير صالحة", error ? `خطأ: ${error.message}` : "");
-      
-      if (error || !data.session) {
-        console.error("رابط إعادة تعيين كلمة المرور غير صالح:", error?.message || "لا توجد جلسة");
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        console.log("نتيجة فحص الجلسة:", data.session ? "صالحة" : "غير صالحة", error ? `خطأ: ${error.message}` : "");
+        
+        if (error) {
+          console.error("خطأ في التحقق من الجلسة:", error.message);
+          setIsValidResetLink(false);
+        } else if (!data.session) {
+          console.error("رابط إعادة تعيين كلمة المرور غير صالح: لا توجد جلسة");
+          setIsValidResetLink(false);
+        } else {
+          console.log("رابط إعادة تعيين كلمة المرور صالح، نوع الجلسة:", 
+                      data.session.access_token ? "جلسة مصادقة" : "جلسة إعادة تعيين كلمة المرور");
+          setIsValidResetLink(true);
+        }
+      } catch (error: any) {
+        console.error("خطأ غير متوقع في التحقق من الجلسة:", error);
         setIsValidResetLink(false);
-      } else {
-        console.log("رابط إعادة تعيين كلمة المرور صالح، نوع الجلسة:", data.session.access_token ? "جلسة مصادقة" : "جلسة إعادة تعيين كلمة المرور");
+      } finally {
+        setIsCheckingSession(false);
       }
     };
 
@@ -86,6 +101,19 @@ const ResetPassword = () => {
       setIsLoading(false);
     }
   };
+
+  // عرض شاشة التحميل أثناء التحقق من الجلسة
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AppHeader />
+        <div className="container max-w-md mx-auto p-4 pt-10 flex justify-center items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="mr-2">جاري التحقق من الرابط...</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!isValidResetLink) {
     return (
