@@ -47,7 +47,7 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         } />
         <Route path="/admin/approvals" element={
-          <ProtectedRoute>
+          <ProtectedRoute adminOnly={true}>
             <AdminApproval />
           </ProtectedRoute>
         } />

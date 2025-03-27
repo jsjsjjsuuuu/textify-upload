@@ -46,7 +46,7 @@ const AppHeader = () => {
               السجلات
             </Link>
             {/* إضافة رابط لصفحة الموافقات للمسؤولين فقط */}
-            {user && userProfile?.is_approved && (
+            {user && userProfile?.is_admin && (
               <Link
                 to="/admin/approvals"
                 className={`transition-colors hover:text-foreground/80 ${

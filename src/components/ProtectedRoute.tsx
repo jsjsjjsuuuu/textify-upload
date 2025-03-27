@@ -7,12 +7,14 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   redirectTo?: string;
   requireApproval?: boolean;
+  adminOnly?: boolean;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
   redirectTo = '/login',
-  requireApproval = true
+  requireApproval = true,
+  adminOnly = false
 }) => {
   const { user, userProfile, isLoading } = useAuth();
 
@@ -31,6 +33,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // التحقق من حالة الموافقة إذا كان مطلوبًا
   if (requireApproval && userProfile && !userProfile.is_approved) {
     return <Navigate to="/login" />;
+  }
+
+  // التحقق من صلاحيات المسؤول إذا كان مطلوبًا
+  if (adminOnly && userProfile && !userProfile.is_admin) {
+    return <Navigate to="/" />;
   }
 
   return <>{children}</>;
