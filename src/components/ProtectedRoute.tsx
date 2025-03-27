@@ -16,7 +16,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireApproval = true,
   adminOnly = false
 }) => {
-  console.log("تحميل مكون الحماية ProtectedRoute");
+  console.log("تحميل مكون الحماية ProtectedRoute", {
+    adminOnly,
+    requireApproval
+  });
+  
   const { user, userProfile, isLoading, refreshUserProfile } = useAuth();
 
   // عند تحميل المكون، قم بتحديث الملف الشخصي للتأكد من أحدث البيانات
@@ -36,7 +40,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         is_approved: userProfile?.is_approved,
         is_admin: userProfile?.is_admin,
         adminOnly: adminOnly,
-        requireApproval: requireApproval
+        requireApproval: requireApproval,
+        is_admin_type: typeof userProfile?.is_admin
       });
     }
   }, [user, userProfile, adminOnly, requireApproval]);
