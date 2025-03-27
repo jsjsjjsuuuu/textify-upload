@@ -45,9 +45,6 @@ export const useUserManagement = () => {
         return;
       }
       
-      console.log('تم جلب الملفات الشخصية:', profilesData?.length || 0);
-      console.log('عينة من بيانات الملفات الشخصية:', profilesData?.[0]);
-      
       // جلب بيانات المستخدمين من خلال الدالة المخصصة get_users_emails
       const { data: authUsersData, error: authUsersError } = await supabase.rpc('get_users_emails');
       
@@ -62,12 +59,10 @@ export const useUserManagement = () => {
         }
       }
       
-      console.log('تم جلب بيانات المستخدمين الأساسية:', authUsersData);
-      
       // إنشاء كائن للبحث السريع عن البريد الإلكتروني وتاريخ الإنشاء حسب معرف المستخدم
       const authUsersMap: Record<string, { email: string, created_at: string }> = {};
       if (authUsersData && Array.isArray(authUsersData)) {
-        authUsersData.forEach((user: AuthUserData) => {
+        authUsersData.forEach((user: { id: string, email: string, created_at: string }) => {
           if (user && user.id) {
             authUsersMap[user.id] = { 
               email: user.email || '',
@@ -76,8 +71,6 @@ export const useUserManagement = () => {
           }
         });
       }
-      
-      console.log('تم إنشاء خريطة بيانات المستخدمين:', Object.keys(authUsersMap).length);
       
       // تحويل بيانات الملفات الشخصية إلى قائمة المستخدمين
       const usersWithCompleteData = (profilesData || []).map((profile: any) => {
@@ -95,6 +88,7 @@ export const useUserManagement = () => {
         };
       });
       
+      // تسجيل معلومات المستخدمين للتصحيح
       console.log('معلومات المستخدمين:', usersWithCompleteData.map(user => ({
         id: user.id,
         is_admin: user.is_admin,
