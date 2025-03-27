@@ -181,7 +181,7 @@ const DirectExportTools: React.FC<DirectExportToolsProps> = ({
             <Button 
               onClick={() => handleCopyToClipboard("csv")} 
               className="flex-1"
-              variant={copiedFormat === "csv" ? "success" : "default"}
+              variant={copiedFormat === "csv" ? "secondary" : "default"}
             >
               <Copy className="mr-2 h-4 w-4" />
               {copiedFormat === "csv" ? "تم النسخ!" : "نسخ CSV إلى الحافظة"}
@@ -202,7 +202,7 @@ const DirectExportTools: React.FC<DirectExportToolsProps> = ({
             <Button 
               onClick={() => handleCopyToClipboard("json")} 
               className="flex-1"
-              variant={copiedFormat === "json" ? "success" : "default"}
+              variant={copiedFormat === "json" ? "secondary" : "default"}
             >
               <Copy className="mr-2 h-4 w-4" />
               {copiedFormat === "json" ? "تم النسخ!" : "نسخ JSON إلى الحافظة"}
@@ -223,7 +223,7 @@ const DirectExportTools: React.FC<DirectExportToolsProps> = ({
             <Button 
               onClick={() => handleCopyToClipboard("excel")} 
               className="flex-1"
-              variant={copiedFormat === "excel" ? "success" : "default"}
+              variant={copiedFormat === "excel" ? "secondary" : "default"}
             >
               <Table className="mr-2 h-4 w-4" />
               {copiedFormat === "excel" ? "تم النسخ!" : "نسخ بيانات Excel"}
