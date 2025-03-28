@@ -28,7 +28,7 @@ export const useSavedImageProcessing = (
       
       try {
         setIsSubmitting(true);
-        // حفظ البيانات في قاعدة البيانات - تصحيح عدد الوسائط المرسلة
+        // حفظ البيانات في قاعدة البيانات - تمرير الصورة فقط
         const savedData = await saveImageToDatabase(image);
         
         if (savedData) {

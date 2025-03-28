@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,7 +95,7 @@ export const useImageDatabase = (updateImage: (id: string, update: Partial<Image
     }
   };
   
-  // حفظ صورة معالجة في قاعدة البيانات
+  // حفظ صورة معالجة في قاعدة البيانات - تم تصحيح المعلمات
   const saveImageToDatabase = async (image: ImageData) => {
     try {
       console.log("جاري حفظ الصورة في قاعدة البيانات:", image.id);
