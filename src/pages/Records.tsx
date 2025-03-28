@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { motion } from "framer-motion";
@@ -19,6 +18,7 @@ import { Link } from "react-router-dom";
 import { formatDate } from "@/utils/dateFormatter";
 import { ImageData } from "@/types/ImageData";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
+import { supabase } from "@/integrations/supabase/client";
 
 // مكون الصفحة الرئيسي
 const Records = () => {
@@ -145,6 +145,17 @@ const Records = () => {
         انتظار
       </Badge>
     );
+  };
+
+  // قم بإنشاء عنوان URL للصورة من Storage
+  const getImageUrl = (image) => {
+    if (image.storage_path) {
+      const { data } = supabase.storage
+        .from('receipt_images')
+        .getPublicUrl(image.storage_path);
+      return data?.publicUrl || image.previewUrl;
+    }
+    return image.previewUrl;
   };
 
   return (
@@ -304,7 +315,7 @@ const Records = () => {
                             className="w-16 h-16 rounded-lg overflow-hidden bg-transparent cursor-pointer border border-border/40 dark:border-gray-700/40"
                           >
                             <img 
-                              src={image.previewUrl} 
+                              src={getImageUrl(image)} 
                               alt="صورة مصغرة" 
                               className="object-contain h-full w-full" 
                               style={{ mixBlendMode: 'multiply' }} 

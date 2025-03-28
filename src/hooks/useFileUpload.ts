@@ -8,13 +8,14 @@ import { createReliableBlobUrl } from "@/lib/gemini/utils";
 import { saveToLocalStorage } from "@/utils/bookmarklet/storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from "@/integrations/supabase/client";
 
 interface UseFileUploadProps {
   images: ImageData[];
   addImage: (image: ImageData) => void;
   updateImage: (id: string, fields: Partial<ImageData>) => void;
   setProcessingProgress: (progress: number) => void;
-  saveProcessedImage?: (image: ImageData) => Promise<void>; // إضافة وظيفة حفظ الصورة
+  saveProcessedImage?: (image: ImageData) => Promise<void>;
 }
 
 export const useFileUpload = ({
@@ -31,10 +32,47 @@ export const useFileUpload = ({
   const { useGemini, processWithGemini } = useGeminiProcessing();
   const { formatPhoneNumber, formatPrice } = useDataFormatting();
 
+  // وظيفة جديدة لرفع الصورة إلى Supabase Storage
+  const uploadImageToStorage = async (file: File, userId: string): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${uuidv4()}.${fileExt}`;
+      const storagePath = `${fileName}`;
+      
+      const { data, error } = await supabase.storage
+        .from('receipt_images')
+        .upload(storagePath, file);
+      
+      if (error) {
+        console.error("خطأ في رفع الصورة إلى التخزين:", error);
+        return null;
+      }
+
+      // الحصول على رابط URL العام للصورة
+      const { data: publicUrlData } = supabase.storage
+        .from('receipt_images')
+        .getPublicUrl(storagePath);
+      
+      return storagePath;
+    } catch (error) {
+      console.error("خطأ أثناء رفع الصورة:", error);
+      return null;
+    }
+  };
+
   const handleFileChange = async (files: FileList | null) => {
     console.log("معالجة الملفات:", files?.length);
     if (!files || files.length === 0) {
       console.log("لم يتم اختيار ملفات");
+      return;
+    }
+    
+    if (!user) {
+      toast({
+        title: "خطأ",
+        description: "يجب تسجيل الدخول أولاً لرفع الصور",
+        variant: "destructive"
+      });
       return;
     }
     
@@ -80,11 +118,11 @@ export const useFileUpload = ({
         continue;
       }
       
-      // إنشاء عنوان URL أكثر موثوقية للكائن
-      const previewUrl = createReliableBlobUrl(file);
-      console.log("تم إنشاء عنوان URL للمعاينة:", previewUrl);
+      // إنشاء عنوان URL مؤقت للعرض المبدئي
+      const tempPreviewUrl = createReliableBlobUrl(file);
+      console.log("تم إنشاء عنوان URL مؤقت للمعاينة:", tempPreviewUrl);
       
-      if (!previewUrl) {
+      if (!tempPreviewUrl) {
         toast({
           title: "خطأ في تحميل الصورة",
           description: "فشل في إنشاء معاينة للصورة",
@@ -92,6 +130,26 @@ export const useFileUpload = ({
         });
         continue;
       }
+      
+      // رفع الصورة إلى Supabase Storage
+      const storagePath = await uploadImageToStorage(file, user.id);
+      console.log("تم رفع الصورة إلى التخزين، المسار:", storagePath);
+      
+      if (!storagePath) {
+        toast({
+          title: "خطأ في رفع الصورة",
+          description: "فشل في تخزين الصورة على الخادم",
+          variant: "destructive"
+        });
+        continue;
+      }
+      
+      // الحصول على رابط URL العام للصورة
+      const { data: publicUrlData } = supabase.storage
+        .from('receipt_images')
+        .getPublicUrl(storagePath);
+      
+      const previewUrl = publicUrlData.publicUrl;
       
       const newImage: ImageData = {
         id: crypto.randomUUID(),
@@ -101,15 +159,16 @@ export const useFileUpload = ({
         date: new Date(),
         status: "processing",
         number: startingNumber + i,
-        user_id: user?.id, // إضافة معرف المستخدم للصورة الجديدة
-        batch_id: batchId // تعيين معرف الدفعة للصورة
+        user_id: user.id,
+        batch_id: batchId,
+        storage_path: storagePath
       };
       
       addImage(newImage);
       console.log("تمت إضافة صورة جديدة إلى الحالة بالمعرف:", newImage.id);
       
       try {
-        // استخدام Gemini فقط للمعالجة
+        // استخدام Gemini للمعالجة
         console.log("استخدام Gemini API للاستخراج");
         const processedImage = await processWithGemini(file, newImage);
         
@@ -134,6 +193,9 @@ export const useFileUpload = ({
         if (user) {
           processedImage.user_id = user.id;
         }
+
+        // إضافة مسار التخزين للصورة المعالجة
+        processedImage.storage_path = storagePath;
         
         updateImage(newImage.id, processedImage);
         console.log("تم تحديث الصورة بالبيانات المستخرجة:", newImage.id);

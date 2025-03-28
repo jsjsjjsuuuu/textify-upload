@@ -24,6 +24,7 @@ export type Database = {
           province: string | null
           sender_name: string | null
           status: string | null
+          storage_path: string | null
           submitted: boolean | null
           user_id: string
         }
@@ -41,6 +42,7 @@ export type Database = {
           province?: string | null
           sender_name?: string | null
           status?: string | null
+          storage_path?: string | null
           submitted?: boolean | null
           user_id: string
         }
@@ -58,6 +60,7 @@ export type Database = {
           province?: string | null
           sender_name?: string | null
           status?: string | null
+          storage_path?: string | null
           submitted?: boolean | null
           user_id?: string
         }

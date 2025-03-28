@@ -1,4 +1,3 @@
-
 export interface ImageData {
   id: string;
   file: File;
@@ -20,6 +19,8 @@ export interface ImageData {
   user_id?: string;
   // حقل جديد لتتبع مجموعة الصور المرفوعة معًا
   batch_id?: string;
+  // حقل جديد لمسار التخزين في Supabase Storage
+  storage_path?: string;
   // حقول لدعم عملية Bookmarklet
   bookmarkletStatus?: "ready" | "pending" | "success" | "error";
   bookmarkletMessage?: string;

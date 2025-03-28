@@ -41,7 +41,8 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
             province: image.province || "",
             status: image.status,
             submitted: true,
-            batch_id: image.batch_id || "default" // تحديث معرف الدفعة
+            batch_id: image.batch_id || "default",
+            storage_path: image.storage_path || null // تحديث مسار التخزين
           })
           .eq('id', existingImage.id)
           .select();
@@ -72,7 +73,8 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
           province: image.province || "",
           status: image.status,
           submitted: true,
-          batch_id: image.batch_id || "default" // إضافة معرف الدفعة
+          batch_id: image.batch_id || "default",
+          storage_path: image.storage_path || null // إضافة مسار التخزين
         })
         .select();
 
@@ -136,10 +138,19 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
           // إنشاء كائن File افتراضي للصور المخزنة سابقاً
           const dummyFile = new File([""], item.file_name || "unknown.jpg", { type: "image/jpeg" });
           
+          // الحصول على عنوان URL العام للصورة من Storage
+          let previewUrl = item.preview_url;
+          if (item.storage_path) {
+            const { data: publicUrlData } = supabase.storage
+              .from('receipt_images')
+              .getPublicUrl(item.storage_path);
+            previewUrl = publicUrlData.publicUrl;
+          }
+          
           return {
             id: item.id,
             file: dummyFile,
-            previewUrl: item.preview_url || "",
+            previewUrl: previewUrl,
             extractedText: item.extracted_text || "",
             code: item.code || "",
             senderName: item.sender_name || "",
@@ -152,7 +163,8 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
             submitted: item.submitted || false,
             number: data.length - index, // ترقيم تنازلي بناءً على ترتيب الاستلام
             user_id: item.user_id,
-            batch_id: item.batch_id || 'default' // إضافة معرف الدفعة مع قيمة افتراضية
+            batch_id: item.batch_id || 'default',
+            storage_path: item.storage_path || null
           };
         });
         

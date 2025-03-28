@@ -7,6 +7,7 @@ import ImageDataForm from "./ImageDataForm";
 import ActionButtons from "./ActionButtons";
 import { AutomationButton } from "@/components/ExtractedData";
 import BatchArrow from "./BatchArrow";
+import { useEffect } from "react";
 
 interface CardItemProps {
   image: ImageData;
@@ -35,6 +36,11 @@ const CardItem = ({
 }: CardItemProps) => {
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+  
+  // مراقبة البيانات والتأكد من عنوان URL للصورة
+  useEffect(() => {
+    console.log(`عرض بطاقة الصورة ${image.id} مع عنوان: ${image.previewUrl}`);
+  }, [image.id, image.previewUrl]);
 
   return (
     <motion.div
