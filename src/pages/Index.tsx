@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ArrowRight, RefreshCw } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
@@ -33,6 +32,7 @@ const Index = () => {
   const [sortField, setSortField] = useState("number");
   const [sortDirection, setSortDirection] = useState("desc");
   const [alreadySavedIds, setAlreadySavedIds] = useState<Set<string>>(new Set());
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
@@ -60,13 +60,35 @@ const Index = () => {
     formatProvinceName
   } = useDataFormatting();
   
-  // التحقق من حالة تسجيل الدخول وتحميل البيانات عند تحميل الصفحة
+  // تحديث قائمة المعرفات المحفوظة - استخدام useCallback لمنع التكرار
+  const updateSavedImageIds = useCallback(() => {
+    const savedIds = new Set(
+      images
+        .filter(img => img.submitted)
+        .map(img => img.id)
+    );
+    
+    // تحديث قائمة المعرفات المحفوظة إذا كان هناك تغيير
+    if (savedIds.size !== alreadySavedIds.size || 
+        ![...savedIds].every(id => alreadySavedIds.has(id))) {
+      console.log(`تحديث قائمة المعرفات المحفوظة: ${alreadySavedIds.size} -> ${savedIds.size}`);
+      setAlreadySavedIds(savedIds);
+    }
+  }, [images, alreadySavedIds]);
+  
+  // التحقق من حالة تسجيل الدخول وتحميل البيانات عند تحميل الصفحة - مرة واحدة فقط
   useEffect(() => {
-    if (user && !dataLoaded && images.length === 0) {
+    if (user && !dataLoaded && images.length === 0 && !initialLoadComplete) {
       console.log("تلقائي: المستخدم مسجل الدخول ولا توجد بيانات في الصفحة الرئيسية، جاري تحميل البيانات...");
       refreshUserImages();
+      setInitialLoadComplete(true);
     }
-  }, [user, dataLoaded, images.length]);
+  }, [user, dataLoaded, images.length, initialLoadComplete]);
+  
+  // تحديث قائمة المعرفات المحفوظة عند تغيير الصور
+  useEffect(() => {
+    updateSavedImageIds();
+  }, [images, updateSavedImageIds]);
   
   // التعامل مع تحديث البيانات يدويًا
   const handleRefreshData = () => {
@@ -90,22 +112,10 @@ const Index = () => {
     cleanupDuplicates();
   };
   
-  // عند اكتمال معالجة الصور، حفظها في قاعدة البيانات
+  // عند اكتمال معالجة الصور، حفظها في قاعدة البيانات - تحسين لمنع الحفظ المتكرر
   useEffect(() => {
     // فقط إذا كان المستخدم مسجل الدخول
-    if (!user) return;
-    
-    // تحديث قائمة المعرفات المحفوظة
-    const savedIds = new Set(
-      images
-        .filter(img => img.submitted)
-        .map(img => img.id)
-    );
-    
-    // تحديث قائمة المعرفات المحفوظة إذا كان هناك تغيير
-    if (savedIds.size !== alreadySavedIds.size) {
-      setAlreadySavedIds(savedIds);
-    }
+    if (!user || isLoading) return;
     
     // بدلاً من حفظ جميع الصور المكتملة مباشرة، تحقق من وجود صور جديدة مكتملة لم يتم حفظها بعد
     const completedNotSubmittedImages = images.filter(img => 
@@ -121,19 +131,22 @@ const Index = () => {
     if (completedNotSubmittedImages.length > 0) {
       console.log(`وجدت ${completedNotSubmittedImages.length} صورة مكتملة وغير محفوظة، جاري الحفظ...`);
       
-      completedNotSubmittedImages.forEach(async (image) => {
-        // تجنب الحفظ المزدوج باستخدام قائمة المعرفات المحفوظة
-        if (!alreadySavedIds.has(image.id)) {
-          // حفظ الصور المكتملة في قاعدة البيانات
-          await saveImageToDatabase(image);
-          console.log("تم حفظ الصورة في قاعدة البيانات:", image.id);
-          
-          // إضافة المعرف إلى قائمة المعرفات المحفوظة
-          setAlreadySavedIds(prev => new Set([...prev, image.id]));
-        }
+      // استخدام Promise.all لتحسين الأداء
+      Promise.all(
+        completedNotSubmittedImages.map(async (image) => {
+          // تجنب الحفظ المزدوج باستخدام قائمة المعرفات المحفوظة
+          if (!alreadySavedIds.has(image.id)) {
+            // حفظ الصور المكتملة في قاعدة البيانات
+            await saveImageToDatabase(image);
+            console.log("تم حفظ الصورة في قاعدة البيانات:", image.id);
+          }
+        })
+      ).then(() => {
+        // تحديث قائمة المعرفات المحفوظة بعد الانتهاء
+        updateSavedImageIds();
       });
     }
-  }, [images, user]);
+  }, [images, user, isLoading, alreadySavedIds, saveImageToDatabase, updateSavedImageIds]);
   
   const handleImageClick = (image: ImageData) => {
     console.log('صورة تم النقر عليها:', image.id);
@@ -258,14 +271,14 @@ const Index = () => {
         <section className="py-16 px-6">
           <div className="container mx-auto">
             <motion.div initial={{
-            opacity: 0,
-            y: 20
-          }} animate={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.6
-          }} className="text-center max-w-3xl mx-auto mb-12">
+              opacity: 0,
+              y: 20
+            }} animate={{
+              opacity: 1,
+              y: 0
+            }} transition={{
+              duration: 0.6
+            }} className="text-center max-w-3xl mx-auto mb-12">
               <h1 className="apple-header mb-4">معالج الصور والبيانات</h1>
               <p className="text-xl text-muted-foreground mb-8">
                 استخرج البيانات من الصور بسهولة وفعالية باستخدام تقنية الذكاء الاصطناعي المتطورة

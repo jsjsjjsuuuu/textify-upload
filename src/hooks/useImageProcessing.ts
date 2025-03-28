@@ -19,6 +19,9 @@ export const useImageProcessing = () => {
   // إضافة حالة لتتبع ما إذا كان المستخدم طلب تحديث البيانات يدويًا
   const [userRequestedRefresh, setUserRequestedRefresh] = useState(false);
   
+  // إضافة حالة لتتبع ما إذا كان المستخدم طلب تنظيف التكرار يدويًا
+  const [userRequestedCleanup, setUserRequestedCleanup] = useState(false);
+  
   // حفظ تفضيلات المستخدم في التخزين المحلي
   useEffect(() => {
     localStorage.setItem('autoExportEnabled', autoExportEnabled.toString());
@@ -37,13 +40,6 @@ export const useImageProcessing = () => {
       const refreshData = async () => {
         try {
           await coreProcessing.refreshUserData();
-          
-          // إزالة التكرار بعد التحديث
-          const duplicatesRemoved = coreProcessing.removeDuplicates();
-          
-          // إعادة ترقيم الصور بعد التحديث
-          coreProcessing.renumberImages();
-          
           toast.success("تم تحديث بياناتك بنجاح!");
         } catch (error) {
           console.error("فشل تحديث البيانات:", error);
@@ -56,6 +52,32 @@ export const useImageProcessing = () => {
       refreshData();
     }
   }, [userRequestedRefresh, coreProcessing]);
+  
+  // إضافة تأثير لتنظيف التكرار عندما يطلب المستخدم ذلك
+  useEffect(() => {
+    if (userRequestedCleanup) {
+      const cleanup = () => {
+        try {
+          const duplicatesRemoved = coreProcessing.removeDuplicates();
+          
+          if (duplicatesRemoved) {
+            toast.success("تم إزالة السجلات المكررة بنجاح");
+            // إعادة ترقيم الصور بعد التنظيف
+            coreProcessing.renumberImages();
+          } else {
+            toast.info("لا توجد سجلات مكررة لإزالتها");
+          }
+        } catch (error) {
+          console.error("فشل تنظيف البيانات:", error);
+          toast.error("حدث خطأ أثناء تنظيف البيانات");
+        } finally {
+          setUserRequestedCleanup(false);
+        }
+      };
+      
+      cleanup();
+    }
+  }, [userRequestedCleanup, coreProcessing]);
   
   // تفعيل/تعطيل التصدير التلقائي
   const toggleAutoExport = (value: boolean) => {
@@ -80,16 +102,13 @@ export const useImageProcessing = () => {
   
   // إزالة التكرار بشكل يدوي
   const cleanupDuplicates = () => {
-    const duplicatesRemoved = coreProcessing.removeDuplicates();
-    
-    if (duplicatesRemoved) {
-      toast.success("تم إزالة السجلات المكررة بنجاح");
-    } else {
-      toast.info("لا توجد سجلات مكررة لإزالتها");
+    if (coreProcessing.isLoading) {
+      toast.info("جاري تحميل البيانات بالفعل، يرجى الانتظار...");
+      return;
     }
     
-    // إعادة ترقيم الصور بعد التنظيف
-    coreProcessing.renumberImages();
+    console.log("طلب تنظيف البيانات المكررة من المستخدم");
+    setUserRequestedCleanup(true);
   };
   
   return {

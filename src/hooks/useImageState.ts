@@ -15,11 +15,14 @@ export const useImageState = () => {
     };
     console.log("إضافة صورة جديدة:", imageWithDefaults.id);
     
-    // تحسين منطق التحقق من التكرار - التحقق من المعرف وعنوان URL للمعاينة
+    // تحسين منطق التحقق من التكرار - التحقق من المعرف وعنوان URL للمعاينة وملف الصورة
     const exists = images.some(img => 
       img.id === imageWithDefaults.id || 
       (img.previewUrl && img.previewUrl === imageWithDefaults.previewUrl) ||
-      (img.file && img.file.name === imageWithDefaults.file.name && img.file.size === imageWithDefaults.file.size)
+      (img.file && imageWithDefaults.file && 
+       img.file.name === imageWithDefaults.file.name && 
+       img.file.size === imageWithDefaults.file.size &&
+       img.file.lastModified === imageWithDefaults.file.lastModified)
     );
     
     if (exists) {
@@ -85,30 +88,71 @@ export const useImageState = () => {
     });
   };
 
-  // ضمان عدم وجود معرفات مكررة
+  // تحسين منطق إزالة التكرار
   const removeDuplicates = () => {
-    const uniqueImageMap = new Map<string, ImageData>();
+    console.log("بدء عملية إزالة التكرار، عدد الصور الحالي:", images.length);
     
-    // استخدام Map لضمان أن كل معرف فريد
+    // استخدام Map للتعامل مع السجلات المكررة بشكل أكثر ذكاءً
+    const uniqueImageMap = new Map<string, ImageData>();
+    const fileSignatureMap = new Map<string, string[]>();
+    const removedIds = new Set<string>();
+    
+    // إنشاء توقيع فريد لكل صورة باستخدام بيانات الملف
     images.forEach(img => {
-      // إذا كان المعرف موجودًا بالفعل، نحتفظ بالنسخة الأحدث
-      if (uniqueImageMap.has(img.id)) {
-        const existingImg = uniqueImageMap.get(img.id)!;
-        // المقارنة بناءً على التاريخ لتحديد أي صورة أحدث
-        if (img.date > existingImg.date) {
+      const fileSignature = img.file ? 
+        `${img.file.name}_${img.file.size}_${img.file.type}` : 
+        (img.previewUrl || img.id);
+      
+      // إذا كان لدينا نفس توقيع الملف، نتحقق من المعرف للحصول على أحدث نسخة
+      if (fileSignatureMap.has(fileSignature)) {
+        const existingIds = fileSignatureMap.get(fileSignature) || [];
+        
+        // اختيار الصورة الأحدث أو المكتملة
+        const existingImgs = existingIds.map(id => uniqueImageMap.get(id)!);
+        const bestExistingImg = existingImgs.reduce((best, current) => {
+          // الأفضلية للمكتملة أو التي تم إرسالها
+          if (current.submitted && !best.submitted) return current;
+          if (current.status === "completed" && best.status !== "completed") return current;
+          
+          // عدا ذلك، استخدم الأحدث
+          return current.date > best.date ? current : best;
+        }, existingImgs[0]);
+        
+        // إذا كانت الصورة الحالية أحدث أو أفضل، استبدل
+        if ((img.submitted && !bestExistingImg.submitted) || 
+            (img.status === "completed" && bestExistingImg.status !== "completed") ||
+            (img.date > bestExistingImg.date)) {
+          // أضف هذه الصورة الجديدة الأفضل
           uniqueImageMap.set(img.id, img);
+          fileSignatureMap.set(fileSignature, [...existingIds, img.id]);
+          
+          // ضع علامة على الصور الأقدم لإزالتها
+          existingIds.forEach(id => {
+            if (id !== img.id) removedIds.add(id);
+          });
+        } else {
+          // الصورة الحالية ليست أفضل، ضع علامة لإزالتها
+          removedIds.add(img.id);
         }
       } else {
+        // هذه صورة جديدة فريدة
         uniqueImageMap.set(img.id, img);
+        fileSignatureMap.set(fileSignature, [img.id]);
       }
     });
     
-    // تحويل Map إلى مصفوفة
+    // إزالة الصور المكررة من الخريطة
+    removedIds.forEach(id => {
+      uniqueImageMap.delete(id);
+    });
+    
+    // تحويل الخريطة إلى مصفوفة
     const uniqueImages = Array.from(uniqueImageMap.values());
+    
+    console.log(`عدد الصور بعد إزالة التكرار: ${uniqueImages.length} (تم إزالة ${images.length - uniqueImages.length} صورة مكررة)`);
     
     // تحديث الحالة فقط إذا اختلف عدد الصور
     if (uniqueImages.length !== images.length) {
-      console.log(`تم إزالة ${images.length - uniqueImages.length} صورة مكررة`);
       setImages(uniqueImages);
       return true;
     }

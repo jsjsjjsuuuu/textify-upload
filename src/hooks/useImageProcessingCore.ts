@@ -115,7 +115,7 @@ export const useImageProcessingCore = () => {
     }
   };
 
-  // تحميل بيانات المستخدم عند تغيير حالة تسجيل الدخول
+  // تحميل بيانات المستخدم عند تغيير حالة تسجيل الدخول - تحسين منع التحميل المتكرر
   useEffect(() => {
     // فقط تحميل البيانات إذا كان المستخدم مسجل الدخول ولم يتم تحميل البيانات من قبل
     if (user && !dataLoaded) {
@@ -127,7 +127,7 @@ export const useImageProcessingCore = () => {
         if (userImages.length > 0) {
           console.log(`تم تحميل ${userImages.length} صورة للمستخدم وإضافتها إلى الحالة`);
           
-          // استبدال الصور بدلاً من إضافتها لمنع التكرار
+          // استبدال الصور بدلاً من إضافتها لمنع التكرار - تنظيف شامل للحالة
           setImages(userImages);
           
           // تطبيق الترقيم التسلسلي بعد تحميل البيانات
@@ -143,6 +143,7 @@ export const useImageProcessingCore = () => {
           console.log("لم يتم العثور على سجلات للمستخدم أو فشل التحميل");
         }
         
+        // تحديد حالة التحميل بعد اكتمال العملية بنجاح
         setDataLoaded(true);
       };
       
@@ -150,7 +151,7 @@ export const useImageProcessingCore = () => {
     }
   }, [user, dataLoaded]);
 
-  // وظيفة لحفظ بيانات الصورة في Supabase
+  // وظيفة لحفظ بيانات الصورة في Supabase - تحسين منع الحفظ المتكرر
   const saveImageToDatabase = async (image: ImageData) => {
     if (!user) {
       toast({
@@ -161,13 +162,13 @@ export const useImageProcessingCore = () => {
       return null;
     }
 
-    // تحقق من أن الصورة ليست محفوظة بالفعل
+    // تحقق من أن الصورة ليست محفوظة بالفعل - تجنب الحفظ المتكرر
     if (image.submitted && lastSavedIds.has(image.id)) {
       console.log("الصورة محفوظة بالفعل في قاعدة البيانات، تجاهل:", image.id);
       return null;
     }
 
-    console.log("جاري حفظ البيانات في قاعدة البيانات...", image);
+    console.log("جاري حفظ البيانات في قاعدة البيانات...", image.id);
 
     try {
       // التحقق من وجود السجل
@@ -325,18 +326,23 @@ export const useImageProcessingCore = () => {
     }
   };
 
-  // حفظ الصورة المعالجة في قاعدة البيانات تلقائياً عند الانتهاء من المعالجة
+  // حفظ الصورة المعالجة في قاعدة البيانات تلقائياً عند الانتهاء من المعالجة - تحسين منع الحفظ المتكرر
   const saveProcessedImage = async (image: ImageData) => {
     // التحقق من أن الصورة مكتملة المعالجة وتحتوي على البيانات الأساسية
     // والتحقق من أنها لم تحفظ من قبل
-    if (image.status === "completed" && image.code && image.senderName && image.phoneNumber && !image.submitted && !lastSavedIds.has(image.id)) {
+    if (image.status === "completed" && 
+        image.code && 
+        image.senderName && 
+        image.phoneNumber && 
+        !image.submitted && 
+        !lastSavedIds.has(image.id)) {
       console.log("حفظ الصورة المعالجة تلقائياً:", image.id);
       // حفظ البيانات في قاعدة البيانات
       await saveImageToDatabase(image);
     }
   };
 
-  // إجراء تحميل جديد للبيانات - مفيد عند الرغبة في إعادة تحميل البيانات يدويًا
+  // إجراء تحميل جديد للبيانات مع تحسين إزالة التكرار
   const refreshUserData = async () => {
     if (isLoading) {
       console.log("جاري بالفعل تحميل البيانات، تجاهل طلب التحديث");
@@ -348,6 +354,7 @@ export const useImageProcessingCore = () => {
     
     if (userImages.length > 0) {
       // استبدال الصور بدلاً من إضافتها لمنع التكرار
+      console.log(`استبدال الصور القديمة (${images.length}) بالصور المحدثة (${userImages.length})`);
       setImages(userImages);
       
       // بعد تعيين الصور، قم بإعادة ترقيمها
