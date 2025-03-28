@@ -8,6 +8,7 @@ interface ActionButtonsProps {
   isCompleted: boolean;
   isSubmitted: boolean;
   isPhoneNumberValid: boolean;
+  isAllFieldsFilled: boolean; // إضافة خاصية جديدة للتحقق من اكتمال الحقول
   onDelete: (id: string) => void;
   onSubmit: (id: string) => void;
 }
@@ -18,6 +19,7 @@ const ActionButtons = ({
   isCompleted,
   isSubmitted,
   isPhoneNumberValid,
+  isAllFieldsFilled, // استلام الخاصية الجديدة
   onDelete,
   onSubmit
 }: ActionButtonsProps) => {
@@ -36,8 +38,9 @@ const ActionButtons = ({
         variant="default" 
         size="sm" 
         className={`${isSubmitted ? 'bg-green-600' : 'bg-brand-green hover:bg-brand-green/90'} text-white transition-colors h-8 text-xs`}
-        disabled={!isCompleted || isSubmitting || isSubmitted || !isPhoneNumberValid} 
+        disabled={!isAllFieldsFilled || isSubmitting || isSubmitted || !isPhoneNumberValid} 
         onClick={() => onSubmit(imageId)}
+        title={!isAllFieldsFilled ? "يجب ملء جميع الحقول أولاً" : ""}
       >
         <Send size={14} className="ml-1 opacity-70" />
         {isSubmitting ? "جاري الإرسال..." : isSubmitted ? "تم الإرسال" : "إرسال البيانات"}

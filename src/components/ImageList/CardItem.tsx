@@ -7,7 +7,7 @@ import ImageDataForm from "./ImageDataForm";
 import ActionButtons from "./ActionButtons";
 import { AutomationButton } from "@/components/ExtractedData";
 import BatchArrow from "./BatchArrow";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 interface CardItemProps {
   image: ImageData;
@@ -36,6 +36,18 @@ const CardItem = ({
 }: CardItemProps) => {
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+  
+  // التحقق من اكتمال جميع الحقول المطلوبة
+  const isAllFieldsFilled = useMemo(() => {
+    return !!(
+      image.code && 
+      image.senderName && 
+      image.phoneNumber && 
+      image.province && 
+      image.price && 
+      isPhoneNumberValid
+    );
+  }, [image.code, image.senderName, image.phoneNumber, image.province, image.price, isPhoneNumberValid]);
   
   // مراقبة البيانات والتأكد من عنوان URL للصورة
   useEffect(() => {
@@ -85,6 +97,7 @@ const CardItem = ({
                 isCompleted={image.status === "completed"}
                 isSubmitted={!!image.submitted}
                 isPhoneNumberValid={isPhoneNumberValid}
+                isAllFieldsFilled={isAllFieldsFilled} // تمرير حالة اكتمال الحقول
                 onDelete={onDelete}
                 onSubmit={onSubmit}
               />

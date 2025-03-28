@@ -45,8 +45,37 @@ export const useImageProcessingCore = () => {
     deleteImageFromDatabase
   } = useImageDatabase(updateImage);
   
+  // التحقق من اكتمال البيانات المطلوبة للصورة
+  const validateRequiredFields = (image: ImageData): boolean => {
+    if (!image.code || !image.senderName || !image.phoneNumber || !image.province || !image.price) {
+      toast({
+        title: "بيانات غير مكتملة",
+        description: "يرجى ملء جميع الحقول المطلوبة: الكود، اسم المرسل، رقم الهاتف، المحافظة، السعر",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    // التحقق من صحة رقم الهاتف (11 رقم)
+    if (image.phoneNumber.replace(/[^\d]/g, '').length !== 11) {
+      toast({
+        title: "رقم هاتف غير صحيح",
+        description: "يجب أن يكون رقم الهاتف 11 رقم بالضبط",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
   // إعادة هيكلة وظيفة handleSubmitToApi لاستخدام الوظيفة الجديدة
   const handleSubmitToApi = async (id: string, image: ImageData) => {
+    // التحقق من اكتمال البيانات قبل الإرسال
+    if (!validateRequiredFields(image)) {
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       await submitToApi(id, image, user?.id);
@@ -116,6 +145,7 @@ export const useImageProcessingCore = () => {
     saveProcessedImage,
     loadUserImages: () => loadUserImages(user?.id, setAllImages),
     clearSessionImages,
-    removeDuplicates
+    removeDuplicates,
+    validateRequiredFields
   };
 };

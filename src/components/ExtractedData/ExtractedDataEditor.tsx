@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ImageData } from "@/types/ImageData";
 import { Card, CardContent } from "@/components/ui/card";
 import ExtractedDataActions from "./ExtractedDataActions";
@@ -9,6 +9,7 @@ import ExtractedDataFields from "./ExtractedDataFields";
 import AutomationButton from "./AutomationButton";
 import { useDataExtraction } from "@/hooks/useDataExtraction";
 import { motion } from "framer-motion";
+import { AlertCircle, CheckCircle } from "lucide-react";
 
 interface ExtractedDataEditorProps {
   image: ImageData;
@@ -43,8 +44,19 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
     });
   }, [image.id, setTempData]);
 
-  // التحقق من وجود البيانات المطلوبة للأتمتة
-  const hasRequiredData = !!image.code && !!image.senderName && !!image.phoneNumber;
+  // التحقق من اكتمال البيانات المطلوبة
+  const isAllDataComplete = useMemo(() => {
+    return !!(
+      image.code && 
+      image.senderName && 
+      image.phoneNumber && 
+      image.province && 
+      image.price
+    );
+  }, [image.code, image.senderName, image.phoneNumber, image.province, image.price]);
+
+  // التحقق من صحة رقم الهاتف
+  const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
 
   return (
     <motion.div
@@ -63,6 +75,21 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
               onAutoExtract={handleAutoExtract}
               hasExtractedText={!!image.extractedText}
             />
+            
+            {/* إضافة مؤشر حالة اكتمال البيانات */}
+            <div className="flex items-center gap-2">
+              {isAllDataComplete ? (
+                <div className="flex items-center text-green-600 text-xs">
+                  <CheckCircle size={14} className="ml-1" />
+                  <span>البيانات مكتملة</span>
+                </div>
+              ) : (
+                <div className="flex items-center text-amber-600 text-xs">
+                  <AlertCircle size={14} className="ml-1" />
+                  <span>البيانات غير مكتملة</span>
+                </div>
+              )}
+            </div>
           </div>
 
           <LearningNotifications 
@@ -83,16 +110,37 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
             />
           </motion.div>
 
+          {/* قسم يوضح الحقول المطلوب تعبئتها */}
+          <div className="mt-4 p-2 rounded-md bg-muted/50">
+            <h4 className="text-xs font-medium mb-1 text-center">الحقول المطلوبة للإرسال</h4>
+            <div className="grid grid-cols-2 gap-1 text-xs">
+              <div className={`flex items-center ${image.code ? 'text-green-600' : 'text-amber-600'}`}>
+                <span className="ml-1">{image.code ? '✓' : '•'}</span>
+                <span>الكود</span>
+              </div>
+              <div className={`flex items-center ${image.senderName ? 'text-green-600' : 'text-amber-600'}`}>
+                <span className="ml-1">{image.senderName ? '✓' : '•'}</span>
+                <span>اسم المرسل</span>
+              </div>
+              <div className={`flex items-center ${image.phoneNumber && isPhoneNumberValid ? 'text-green-600' : 'text-amber-600'}`}>
+                <span className="ml-1">{image.phoneNumber && isPhoneNumberValid ? '✓' : '•'}</span>
+                <span>رقم الهاتف</span>
+              </div>
+              <div className={`flex items-center ${image.province ? 'text-green-600' : 'text-amber-600'}`}>
+                <span className="ml-1">{image.province ? '✓' : '•'}</span>
+                <span>المحافظة</span>
+              </div>
+              <div className={`flex items-center ${image.price ? 'text-green-600' : 'text-amber-600'}`}>
+                <span className="ml-1">{image.price ? '✓' : '•'}</span>
+                <span>السعر</span>
+              </div>
+            </div>
+          </div>
+
           {/* إضافة قسم منفصل لزر الأتمتة ليكون أكثر بروزًا */}
           <div className="mt-6 flex justify-center">
             <AutomationButton image={image} />
           </div>
-
-          {!hasRequiredData && (
-            <div className="text-center mt-2 text-sm text-amber-600">
-              <p>يرجى استخراج البيانات الأساسية (الكود، اسم المرسل، رقم الهاتف) قبل بدء الأتمتة</p>
-            </div>
-          )}
 
           <RawTextViewer text={image.extractedText} />
         </CardContent>
