@@ -39,6 +39,10 @@ const ImageList = ({
   
   // ترتيب المجموعات حسب التاريخ (الأحدث أولاً)
   const sortedBatchIds = Object.keys(groupedImages).sort((a, b) => {
+    // التأكد من وجود عناصر في المصفوفات قبل الوصول إليها
+    if (groupedImages[a].length === 0 || groupedImages[b].length === 0) {
+      return 0;
+    }
     const dateA = groupedImages[a][0].date.getTime();
     const dateB = groupedImages[b][0].date.getTime();
     return dateB - dateA;
@@ -48,7 +52,7 @@ const ImageList = ({
     <motion.section 
       initial={{ opacity: 0, y: 20 }} 
       animate={{ opacity: 1, y: 0 }} 
-      transition={{ duration: this.setState }}
+      transition={{ duration: 0.3 }}
     >
       <h2 className="text-2xl font-bold mb-6 flex items-center">
         معاينة الصور والنصوص المستخرجة

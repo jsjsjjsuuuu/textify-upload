@@ -109,7 +109,7 @@ export const useImageProcessingCore = () => {
         console.log(`تم العثور على ${data.length} صورة للمستخدم`);
         
         // تحويل بيانات قاعدة البيانات إلى كائنات ImageData
-        const loadedImages: ImageData[] = data.map((item, index) => {
+        const loadedImages: ImageData[] = data.map((item: any, index: number) => {
           // إنشاء كائن File افتراضي للصور المخزنة سابقاً
           const dummyFile = new File([""], item.file_name || "unknown.jpg", { type: "image/jpeg" });
           
@@ -129,7 +129,7 @@ export const useImageProcessingCore = () => {
             submitted: item.submitted || false,
             number: data.length - index, // ترقيم تنازلي بناءً على ترتيب الاستلام
             user_id: item.user_id,
-            batch_id: item.batch_id // إضافة معرف الدفعة
+            batch_id: item.batch_id || 'default' // إضافة معرف الدفعة مع قيمة افتراضية
           };
         });
         
