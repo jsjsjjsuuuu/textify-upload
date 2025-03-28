@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { motion } from "framer-motion";
@@ -10,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays } from "lucide-react";
+import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays, Trash } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { formatDate } from "@/utils/dateFormatter";
 import { ImageData } from "@/types/ImageData";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 // مكون الصفحة الرئيسي
 const Records = () => {
@@ -26,6 +28,7 @@ const Records = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("number");
   const [sortDirection, setSortDirection] = useState("desc");
+  const { toast } = useToast();
   
   // استخدام hook معالجة الصور للحصول على بيانات الصور
   const {
@@ -33,8 +36,34 @@ const Records = () => {
     isSubmitting,
     handleDelete,
     handleSubmitToApi,
-    formatDate: formatImageDate
+    formatDate: formatImageDate,
+    loadUserImages,
   } = useImageProcessing();
+
+  // التعامل مع حذف صورة
+  const onDeleteImage = async (id: string) => {
+    try {
+      if (confirm("هل أنت متأكد من حذف هذا السجل؟")) {
+        await handleDelete(id);
+        toast({
+          title: "تم الحذف بنجاح",
+          description: "تم حذف السجل بنجاح"
+        });
+        
+        // إعادة تحميل البيانات بعد الحذف
+        if (user) {
+          loadUserImages();
+        }
+      }
+    } catch (error) {
+      console.error("خطأ في حذف السجل:", error);
+      toast({
+        title: "خطأ في الحذف",
+        description: "حدث خطأ أثناء محاولة حذف السجل",
+        variant: "destructive"
+      });
+    }
+  };
 
   // التعامل مع الفرز
   const handleSort = (field) => {
@@ -141,7 +170,7 @@ const Records = () => {
     }
     
     return (
-      <Badge variant="outline" className="bg-gray-100 text-gray-800 dark:bg-gray-800/40 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60">
+      <Badge variant="outline" className="bg-gray-200 text-gray-800 dark:bg-gray-800/40 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60">
         انتظار
       </Badge>
     );
@@ -345,29 +374,15 @@ const Records = () => {
                           {getStatusBadge(image.status, image.submitted)}
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <div className="flex gap-2 items-center">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-7 w-7 rounded-full bg-muted/30 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                              asChild
-                            >
-                              <Link to={`/automation/${image.id}`}>
-                                <File className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                            {image.status === "completed" && !image.submitted && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-7 w-7 rounded-full bg-muted/30 text-brand-green hover:bg-brand-green/10"
-                                disabled={isSubmitting || (image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, '').length !== 11)}
-                                onClick={() => handleSubmitToApi(image.id, image)}
-                              >
-                                <Receipt className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-full bg-muted/30 text-destructive hover:bg-destructive/10" 
+                            onClick={() => onDeleteImage(image.id)}
+                            title="حذف السجل"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
