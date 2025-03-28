@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 
-const MAX_RECORDS_PER_USER = 100; // الحد الأقصى لعدد السجلات لكل مستخدم
+const MAX_RECORDS_PER_USER = 9; // تعديل الحد الأقصى لعدد السجلات لكل مستخدم إلى 9 بدلاً من 100
 
 export const useImageDatabase = (updateImage: (id: string, fields: Partial<ImageData>) => void) => {
   const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
