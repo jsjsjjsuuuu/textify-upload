@@ -1,3 +1,4 @@
+
 export interface ImageData {
   id: string;
   file: File;
@@ -23,6 +24,8 @@ export interface ImageData {
   storage_path?: string;
   // حقل جديد لعدد محاولات إعادة المعالجة
   retryCount?: number;
+  // حقل جديد لوقت الإضافة لاستخدامه في إزالة التكرارات
+  added_at?: number;
   // حقول لدعم عملية Bookmarklet
   bookmarkletStatus?: "ready" | "pending" | "success" | "error";
   bookmarkletMessage?: string;
