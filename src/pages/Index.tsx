@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Info } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -10,6 +10,7 @@ import DirectExportTools from '@/components/DataExport/DirectExportTools';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -68,6 +69,14 @@ const Index = () => {
                   </Link>
                 </Button>
               </div>
+              
+              {/* إضافة معلومات عن ميزة تنظيف البيانات */}
+              <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <Info className="h-4 w-4 text-blue-500" />
+                <AlertDescription className="text-sm text-blue-600 dark:text-blue-300">
+                  لتحسين أداء النظام، يتم الاحتفاظ فقط بأحدث 100 سجل. السجلات القديمة يتم حذفها تلقائياً.
+                </AlertDescription>
+              </Alert>
             </motion.div>
           </div>
         </section>

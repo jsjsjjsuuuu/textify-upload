@@ -42,7 +42,8 @@ export const useImageProcessingCore = () => {
     loadUserImages,
     saveImageToDatabase,
     handleSubmitToApi: submitToApi,
-    deleteImageFromDatabase
+    deleteImageFromDatabase,
+    cleanupOldRecords
   } = useImageDatabase(updateImage);
   
   // التحقق من اكتمال البيانات المطلوبة للصورة
@@ -152,7 +153,7 @@ export const useImageProcessingCore = () => {
     addImage,
     updateImage,
     setProcessingProgress,
-    saveProcessedImage // تمرير وظيفة حفظ الصورة، ولكن لن يتم استخدامها تلقائياً في useFileUpload
+    saveProcessedImage
   });
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
@@ -160,6 +161,9 @@ export const useImageProcessingCore = () => {
     if (user) {
       console.log("تم تسجيل الدخول، جاري جلب صور المستخدم:", user.id);
       loadUserImages(user.id, setAllImages);
+      
+      // تنظيف السجلات القديمة عند بدء التطبيق
+      cleanupOldRecords(user.id);
     }
   }, [user]);
 
@@ -178,7 +182,13 @@ export const useImageProcessingCore = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     saveProcessedImage,
-    loadUserImages: () => loadUserImages(user?.id, setAllImages),
+    loadUserImages: () => {
+      if (user) {
+        loadUserImages(user.id, setAllImages);
+        // تنظيف السجلات القديمة أيضًا عند إعادة تحميل الصور يدويًا
+        cleanupOldRecords(user.id);
+      }
+    },
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields

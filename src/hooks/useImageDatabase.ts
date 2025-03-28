@@ -1,7 +1,10 @@
+
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
+
+const MAX_RECORDS_PER_USER = 100; // الحد الأقصى لعدد السجلات لكل مستخدم
 
 export const useImageDatabase = (updateImage: (id: string, fields: Partial<ImageData>) => void) => {
   const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
@@ -52,6 +55,10 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
         }
 
         console.log("تم تحديث البيانات بنجاح:", updatedData?.[0]);
+        
+        // بعد التحديث، تأكد من عدم تجاوز الحد الأقصى للسجلات
+        await cleanupOldRecords(userId);
+        
         return updatedData?.[0];
       }
 
@@ -97,10 +104,97 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
         description: "تم حفظ البيانات بنجاح",
       });
       
+      // بعد الإضافة، تأكد من عدم تجاوز الحد الأقصى للسجلات
+      await cleanupOldRecords(userId);
+      
       return data?.[0];
     } catch (error: any) {
       console.error("خطأ في حفظ البيانات:", error);
       return null;
+    }
+  };
+
+  // وظيفة لتنظيف السجلات القديمة والاحتفاظ فقط بأحدث MAX_RECORDS_PER_USER سجل
+  const cleanupOldRecords = async (userId: string) => {
+    try {
+      // 1. الحصول على عدد السجلات الحالية للمستخدم
+      const { count, error: countError } = await supabase
+        .from('images')
+        .select('id', { count: 'exact' })
+        .eq('user_id', userId);
+      
+      if (countError) {
+        console.error("خطأ في حساب عدد السجلات:", countError);
+        return;
+      }
+      
+      // تحويل count إلى رقم (لأنه يمكن أن يكون null)
+      const recordCount = count || 0;
+      
+      console.log(`عدد سجلات المستخدم: ${recordCount}، الحد الأقصى: ${MAX_RECORDS_PER_USER}`);
+      
+      // 2. إذا كان عدد السجلات أكبر من الحد الأقصى، قم بحذف السجلات القديمة
+      if (recordCount > MAX_RECORDS_PER_USER) {
+        // أ. الحصول على قائمة بالسجلات مرتبة من الأقدم إلى الأحدث
+        const { data: oldestRecords, error: fetchError } = await supabase
+          .from('images')
+          .select('id, storage_path')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: true })
+          .limit(recordCount - MAX_RECORDS_PER_USER);
+        
+        if (fetchError) {
+          console.error("خطأ في جلب السجلات القديمة:", fetchError);
+          return;
+        }
+        
+        console.log(`تم العثور على ${oldestRecords?.length || 0} سجل قديم للحذف`);
+        
+        if (!oldestRecords || oldestRecords.length === 0) {
+          return;
+        }
+        
+        // ب. استخراج معرفات السجلات للحذف
+        const recordIdsToDelete = oldestRecords.map(record => record.id);
+        
+        // ج. حذف الملفات من التخزين أولا (إذا كانت موجودة)
+        for (const record of oldestRecords) {
+          if (record.storage_path) {
+            const { error: storageError } = await supabase.storage
+              .from('receipt_images')
+              .remove([record.storage_path]);
+              
+            if (storageError) {
+              console.error(`خطأ في حذف الملف ${record.storage_path} من التخزين:`, storageError);
+              // نستمر في الحذف حتى لو فشل حذف بعض الملفات
+            } else {
+              console.log(`تم حذف الملف ${record.storage_path} من التخزين بنجاح`);
+            }
+          }
+        }
+        
+        // د. حذف السجلات من قاعدة البيانات
+        const { error: deleteError } = await supabase
+          .from('images')
+          .delete()
+          .in('id', recordIdsToDelete);
+        
+        if (deleteError) {
+          console.error("خطأ في حذف السجلات القديمة:", deleteError);
+          return;
+        }
+        
+        console.log(`تم حذف ${recordIdsToDelete.length} سجل قديم بنجاح`);
+        
+        // هـ. إظهار إشعار للمستخدم (اختياري)
+        toast({
+          title: "تنظيف البيانات",
+          description: `تم حذف ${recordIdsToDelete.length} سجل قديم للحفاظ على أداء النظام`,
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.error("خطأ في عملية تنظيف السجلات القديمة:", error);
     }
   };
 
@@ -317,6 +411,7 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
     saveImageToDatabase,
     loadUserImages,
     handleSubmitToApi,
-    deleteImageFromDatabase
+    deleteImageFromDatabase,
+    cleanupOldRecords
   };
 };
