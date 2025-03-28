@@ -9,6 +9,7 @@ interface ImageUploaderProps {
   isProcessing: boolean;
   processingProgress: number;
   activeUploads?: number;
+  queueLength?: number;
   onFileChange: (files: FileList | null) => void;
 }
 
@@ -16,10 +17,11 @@ const ImageUploader = ({
   isProcessing,
   processingProgress,
   activeUploads = 0,
+  queueLength = 0,
   onFileChange
 }: ImageUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
-  const [dragCounter, setDragCounter] = useState(0); // تعقب عدد أحداث السحب للتعامل مع السحب المتداخل
+  const [dragCounter, setDragCounter] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -60,6 +62,9 @@ const ImageUploader = ({
       fileInputRef.current.click();
     }
   };
+  
+  // حساب الإجمالي الكلي للصور قيد المعالجة
+  const totalProcessingItems = activeUploads + queueLength;
   
   return (
     <div className="w-full max-w-md mx-auto">
@@ -110,10 +115,13 @@ const ImageUploader = ({
                 <Progress value={processingProgress} className="h-2" />
                 <div className="mt-2 flex justify-between text-sm text-gray-500 dark:text-gray-400">
                   <p>{processingProgress}% مكتمل</p>
-                  {activeUploads > 0 && (
+                  {totalProcessingItems > 0 && (
                     <p className="text-blue-500 dark:text-blue-400 animate-pulse">
                       <LoaderCircle className="w-3.5 h-3.5 inline ml-1 animate-spin" />
-                      {activeUploads} قيد المعالجة
+                      <span className="font-medium">{activeUploads}</span> قيد المعالجة
+                      {queueLength > 0 && (
+                        <span className="mx-1">| <span className="font-medium">{queueLength}</span> في الانتظار</span>
+                      )}
                     </p>
                   )}
                 </div>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -147,7 +148,8 @@ export const useImageProcessingCore = () => {
   const { 
     isProcessing, 
     handleFileChange,
-    activeUploads
+    activeUploads,
+    queueLength
   } = useFileUpload({
     images,
     addImage,
@@ -191,6 +193,8 @@ export const useImageProcessingCore = () => {
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,
-    runCleanupNow // إضافة الوظيفة الجديدة للتنظيف اليدوي
+    runCleanupNow,
+    activeUploads,
+    queueLength
   };
 };
