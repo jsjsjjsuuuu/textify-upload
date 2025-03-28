@@ -1,6 +1,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import ImageErrorDisplay from "./ImageErrorDisplay";
+import { useToast } from "@/hooks/use-toast";
 
 interface DraggableImageProps {
   src: string | null;
@@ -20,8 +21,17 @@ const DraggableImage = ({
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [imgError, setImgError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    // Reset position and error state when src changes
+    setPosition({ x: 0, y: 0 });
+    setImgError(false);
+  }, [src]);
   
   useEffect(() => {
     // Reset position when zoom level changes
@@ -78,6 +88,40 @@ const DraggableImage = ({
       setIsDragging(false);
     }
   };
+  
+  const handleImageLoadError = () => {
+    if (retryCount < 2) {
+      // محاولة تحميل الصورة مرة أخرى
+      setRetryCount(prev => prev + 1);
+      // إضافة طابع زمني لتجنب التخزين المؤقت
+      const newSrc = src ? `${src}?t=${Date.now()}` : null;
+      if (newSrc && imageRef.current) {
+        imageRef.current.src = newSrc;
+      } else {
+        setImgError(true);
+        onImageError();
+      }
+    } else {
+      setImgError(true);
+      onImageError();
+    }
+  };
+  
+  const handleRetry = () => {
+    if (src) {
+      setRetryCount(0);
+      setImgError(false);
+      // إضافة طابع زمني لتجنب التخزين المؤقت
+      const newSrc = `${src}?t=${Date.now()}`;
+      if (imageRef.current) {
+        imageRef.current.src = newSrc;
+      }
+      toast({
+        title: "إعادة تحميل",
+        description: "جاري محاولة تحميل الصورة مرة أخرى..."
+      });
+    }
+  };
 
   return (
     <div 
@@ -88,7 +132,7 @@ const DraggableImage = ({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
     >
-      {src && (
+      {src && !imgError && (
         <div className="relative w-full h-full flex items-center justify-center">
           {!imageLoaded && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
@@ -112,9 +156,13 @@ const DraggableImage = ({
               willChange: 'transform', // Optimize for transforms
             }}
             onLoad={onImageLoad}
-            onError={onImageError}
+            onError={handleImageLoadError}
           />
         </div>
+      )}
+      
+      {(imgError || !src) && (
+        <ImageErrorDisplay onRetry={handleRetry} />
       )}
     </div>
   );

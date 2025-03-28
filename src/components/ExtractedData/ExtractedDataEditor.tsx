@@ -58,6 +58,15 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
   // التحقق من صحة رقم الهاتف
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
 
+  // عرض نسبة الثقة بشكل أفضل
+  const confidenceDisplay = image.confidence ? (
+    <div className="mt-3 text-center">
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+        دقة الاستخراج {image.confidence}%
+      </span>
+    </div>
+  ) : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -76,7 +85,7 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
               hasExtractedText={!!image.extractedText}
             />
             
-            {/* إضافة مؤشر حالة اكتمال البيانات */}
+            {/* عرض مؤشر حالة اكتمال البيانات */}
             <div className="flex items-center gap-2">
               {isAllDataComplete ? (
                 <div className="flex items-center text-green-600 text-xs">
@@ -91,6 +100,9 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
               )}
             </div>
           </div>
+
+          {/* عرض مؤشر الثقة في الأعلى بدلاً من بجانب كل حقل */}
+          {confidenceDisplay}
 
           <LearningNotifications 
             correctionsMade={correctionsMade} 
@@ -107,6 +119,7 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
               tempData={tempData}
               editMode={editMode}
               onTempChange={handleTempChange}
+              hideConfidence={true} // إخفاء عرض نسبة الثقة بجانب كل حقل
             />
           </motion.div>
 

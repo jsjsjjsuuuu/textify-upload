@@ -1,6 +1,6 @@
 
+import React from "react";
 import ExtractedDataField from "./ExtractedDataField";
-import { IRAQ_PROVINCES } from "@/utils/provinces";
 
 interface ExtractedDataFieldsProps {
   tempData: {
@@ -15,81 +15,82 @@ interface ExtractedDataFieldsProps {
   };
   editMode: boolean;
   onTempChange: (field: string, value: string) => void;
+  hideConfidence?: boolean; // إضافة خيار لإخفاء قيم الثقة
 }
 
-const ExtractedDataFields = ({ 
-  tempData, 
-  editMode, 
-  onTempChange 
+const ExtractedDataFields = ({
+  tempData,
+  editMode,
+  onTempChange,
+  hideConfidence = false
 }: ExtractedDataFieldsProps) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <ExtractedDataField 
-        label="اسم الشركة"
+    <div className="grid grid-cols-2 gap-4">
+      <ExtractedDataField
+        label="اسم الشركة:"
+        field="companyName"
         value={tempData.companyName}
+        onChange={onTempChange}
         editMode={editMode}
-        placeholder="أدخل اسم الشركة"
-        onChange={(value) => onTempChange("companyName", value)}
+        hideConfidence={hideConfidence}
       />
-
-      <ExtractedDataField 
-        label="الكود"
+      <ExtractedDataField
+        label="الكود:"
+        field="code"
         value={tempData.code}
+        onChange={onTempChange}
         editMode={editMode}
-        placeholder="أدخل الكود"
-        onChange={(value) => onTempChange("code", value)}
-        fieldType="code"
+        hideConfidence={hideConfidence}
       />
-
-      <ExtractedDataField 
-        label="اسم المرسل"
+      <ExtractedDataField
+        label="اسم المرسل:"
+        field="senderName"
         value={tempData.senderName}
+        onChange={onTempChange}
         editMode={editMode}
-        placeholder="أدخل اسم المرسل"
-        onChange={(value) => onTempChange("senderName", value)}
+        hideConfidence={hideConfidence}
       />
-
-      <ExtractedDataField 
-        label="رقم الهاتف"
+      <ExtractedDataField
+        label="رقم الهاتف:"
+        field="phoneNumber"
         value={tempData.phoneNumber}
+        onChange={onTempChange}
         editMode={editMode}
-        placeholder="أدخل رقم الهاتف"
-        onChange={(value) => onTempChange("phoneNumber", value)}
-        fieldType="phone"
+        hideConfidence={hideConfidence}
       />
-
-      <ExtractedDataField 
-        label="المحافظة"
+      <ExtractedDataField
+        label="المحافظة:"
+        field="province"
         value={tempData.province}
+        onChange={onTempChange}
         editMode={editMode}
-        placeholder="اختر المحافظة"
-        onChange={(value) => onTempChange("province", value)}
-        options={IRAQ_PROVINCES}
+        hideConfidence={hideConfidence}
       />
-
-      <ExtractedDataField 
-        label="السعر"
+      <ExtractedDataField
+        label="السعر:"
+        field="price"
         value={tempData.price}
+        onChange={onTempChange}
         editMode={editMode}
-        placeholder="أدخل السعر"
-        onChange={(value) => onTempChange("price", value)}
-        fieldType="price"
+        hideConfidence={hideConfidence}
       />
-
-      <ExtractedDataField 
-        label="العنوان"
+      <ExtractedDataField
+        label="العنوان:"
+        field="address"
         value={tempData.address}
+        onChange={onTempChange}
         editMode={editMode}
-        placeholder="أدخل العنوان"
-        onChange={(value) => onTempChange("address", value)}
+        className="col-span-2"
+        hideConfidence={hideConfidence}
       />
-
-      <ExtractedDataField 
-        label="ملاحظات"
+      <ExtractedDataField
+        label="ملاحظات:"
+        field="notes"
         value={tempData.notes}
+        onChange={onTempChange}
         editMode={editMode}
-        placeholder="أدخل ملاحظات إضافية"
-        onChange={(value) => onTempChange("notes", value)}
+        className="col-span-2"
+        hideConfidence={hideConfidence}
       />
     </div>
   );
