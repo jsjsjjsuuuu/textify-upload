@@ -105,6 +105,57 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
     }
   };
 
+  // وظيفة جديدة لحذف السجل من قاعدة البيانات
+  const deleteImageFromDatabase = async (imageId: string) => {
+    console.log("جاري حذف السجل من قاعدة البيانات:", imageId);
+    
+    try {
+      // التحقق أولاً مما إذا كان السجل موجود في قاعدة البيانات
+      const { data: existingImage } = await supabase
+        .from('images')
+        .select('id, storage_path')
+        .eq('id', imageId)
+        .maybeSingle();
+      
+      if (!existingImage) {
+        console.log("السجل غير موجود في قاعدة البيانات:", imageId);
+        return true; // يعتبر العملية ناجحة لأن السجل غير موجود أصلاً
+      }
+      
+      // إذا كان هناك ملف مخزن في Storage، نقوم بحذفه أولاً
+      if (existingImage.storage_path) {
+        const { error: storageError } = await supabase.storage
+          .from('receipt_images')
+          .remove([existingImage.storage_path]);
+          
+        if (storageError) {
+          console.error("خطأ في حذف الملف من التخزين:", storageError);
+          // نستمر في حذف السجل من قاعدة البيانات حتى لو فشل حذف الملف
+        } else {
+          console.log("تم حذف الملف من التخزين بنجاح:", existingImage.storage_path);
+        }
+      }
+      
+      // حذف السجل من قاعدة البيانات
+      const { error } = await supabase
+        .from('images')
+        .delete()
+        .eq('id', imageId);
+      
+      if (error) {
+        console.error("خطأ في حذف السجل من قاعدة البيانات:", error);
+        throw error;
+      }
+      
+      console.log("تم حذف السجل بنجاح من قاعدة البيانات:", imageId);
+      return true;
+      
+    } catch (error: any) {
+      console.error("خطأ أثناء محاولة حذف السجل:", error);
+      throw error;
+    }
+  };
+
   // وظيفة لتحميل صور المستخدم من قاعدة البيانات
   const loadUserImages = async (userId: string | undefined, setAllImages: (images: ImageData[]) => void) => {
     if (!userId) {
@@ -237,6 +288,7 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
     isLoadingUserImages,
     saveImageToDatabase,
     loadUserImages,
-    handleSubmitToApi
+    handleSubmitToApi,
+    deleteImageFromDatabase // تصدير الوظيفة الجديدة
   };
 };

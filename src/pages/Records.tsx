@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { motion } from "framer-motion";
@@ -44,15 +43,19 @@ const Records = () => {
   const onDeleteImage = async (id: string) => {
     try {
       if (confirm("هل أنت متأكد من حذف هذا السجل؟")) {
-        await handleDelete(id);
-        toast({
-          title: "تم الحذف بنجاح",
-          description: "تم حذف السجل بنجاح"
-        });
+        // استدعاء وظيفة الحذف التي تم تعديلها لتشمل الحذف من قاعدة البيانات
+        const success = await handleDelete(id);
         
-        // إعادة تحميل البيانات بعد الحذف
-        if (user) {
-          loadUserImages();
+        if (success) {
+          toast({
+            title: "تم الحذف بنجاح",
+            description: "تم حذف السجل بنجاح من قاعدة البيانات والتطبيق"
+          });
+          
+          // إعادة تحميل البيانات بعد الحذف للتأكد من التزامن
+          if (user) {
+            loadUserImages();
+          }
         }
       }
     } catch (error) {

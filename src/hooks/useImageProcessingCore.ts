@@ -41,7 +41,8 @@ export const useImageProcessingCore = () => {
     isLoadingUserImages,
     loadUserImages,
     saveImageToDatabase,
-    handleSubmitToApi: submitToApi
+    handleSubmitToApi: submitToApi,
+    deleteImageFromDatabase
   } = useImageDatabase(updateImage);
   
   // إعادة هيكلة وظيفة handleSubmitToApi لاستخدام الوظيفة الجديدة
@@ -51,6 +52,30 @@ export const useImageProcessingCore = () => {
       await submitToApi(id, image, user?.id);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // تعديل وظيفة حذف الصورة لتشمل الحذف من قاعدة البيانات
+  const handleDelete = async (id: string) => {
+    try {
+      // محاولة حذف السجل من قاعدة البيانات أولاً
+      if (user) {
+        await deleteImageFromDatabase(id);
+      }
+      
+      // ثم حذفه من الحالة المحلية
+      deleteImage(id);
+      
+      return true;
+    } catch (error) {
+      console.error("خطأ في حذف السجل:", error);
+      toast({
+        title: "خطأ في الحذف",
+        description: "حدث خطأ أثناء محاولة حذف السجل",
+        variant: "destructive"
+      });
+      
+      return false;
     }
   };
   
@@ -85,7 +110,7 @@ export const useImageProcessingCore = () => {
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
-    handleDelete: deleteImage,
+    handleDelete,
     handleSubmitToApi,
     saveImageToDatabase,
     saveProcessedImage,
