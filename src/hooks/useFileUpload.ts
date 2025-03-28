@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
@@ -24,6 +24,7 @@ interface UseFileUploadProps {
 const MAX_CONCURRENT_UPLOADS = 2; // تقليل العدد من 3 إلى 2
 const MAX_RETRIES = 3;           // زيادة عدد المحاولات
 const RETRY_DELAY_MS = 3000;     // إضافة تأخير بين المحاولات
+const PROGRESS_UPDATE_INTERVAL = 1000; // تحديث تقدم العملية كل ثانية
 
 export const useFileUpload = ({
   images,
@@ -36,6 +37,7 @@ export const useFileUpload = ({
   const [activeUploads, setActiveUploads] = useState(0); 
   const [processingQueue, setProcessingQueue] = useState<File[]>([]);
   const [queueProcessing, setQueueProcessing] = useState(false);
+  const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -290,13 +292,55 @@ export const useFileUpload = ({
     return errorMessage;
   };
 
+  // تحديث تقدم المعالجة بشكل منتظم
+  const updateProgress = useCallback(() => {
+    if (!processingStartTime || !queueProcessing) return;
+    
+    const totalFiles = processingQueue.length + activeUploads;
+    if (totalFiles === 0) {
+      setProcessingProgress(100);
+      return;
+    }
+    
+    const completedFiles = images.filter(img => 
+      img.status === "completed" || img.status === "error" || img.status === "pending"
+    ).length;
+    
+    // حساب التقدم بناءً على عدد الملفات المكتملة
+    const progress = Math.floor((completedFiles / totalFiles) * 100);
+    
+    // للتأكد من أن شريط التقدم لا يظل عند 0% لفترة طويلة
+    if (progress === 0) {
+      // عرض تقدم صناعي إذا كان قد مر وقت كافٍ
+      const elapsed = Date.now() - processingStartTime;
+      if (elapsed > 3000) {
+        // تعيين قيمة صغيرة لإظهار أن هناك تقدمًا
+        setProcessingProgress(5);
+      }
+    } else {
+      setProcessingProgress(progress);
+    }
+    
+    // إذا تم الانتهاء من جميع الملفات
+    if (activeUploads === 0 && processingQueue.length === 0) {
+      setProcessingProgress(100);
+      setQueueProcessing(false);
+      setIsProcessing(false);
+      setProcessingStartTime(null);
+    }
+  }, [processingStartTime, queueProcessing, processingQueue.length, activeUploads, images, setProcessingProgress]);
+
   // تنفيذ قائمة انتظار لمعالجة الصور بشكل متسلسل
-  const processQueue = async () => {
+  const processQueue = useCallback(async () => {
     if (processingQueue.length === 0 || queueProcessing) {
       return;
     }
 
     setQueueProcessing(true);
+    setProcessingStartTime(Date.now());
+    
+    // إعداد مؤقت لتحديث التقدم
+    const progressInterval = setInterval(updateProgress, PROGRESS_UPDATE_INTERVAL);
     
     try {
       // نسخة من قائمة الانتظار الحالية
@@ -314,6 +358,9 @@ export const useFileUpload = ({
       let activePromises = 0;
       let currentIndex = 0;
       const results = [];
+
+      // إعداد تحديث التقدم الأولي
+      setProcessingProgress(1); // بدء بقيمة صغيرة لإظهار أن هناك تقدمًا
 
       while (currentIndex < totalFiles) {
         // معالجة فقط إذا كان عدد العمليات النشطة أقل من الحد الأقصى
@@ -338,6 +385,11 @@ export const useFileUpload = ({
               // تقليل عدد التحميلات النشطة
               activePromises--;
               setActiveUploads(prev => Math.max(0, prev - 1));
+            })
+            .catch(err => {
+              console.error("خطأ غير متوقع في معالجة الملف:", err);
+              activePromises--;
+              setActiveUploads(prev => Math.max(0, prev - 1));
             });
           
           // تأخير قصير بين بدء المعالجات المتوازية لتقليل الضغط
@@ -348,37 +400,75 @@ export const useFileUpload = ({
         }
       }
       
-      // انتظار انتهاء جميع التحميلات
-      while (activePromises > 0) {
-        await delay(500);
-      }
-      
-      console.log(`اكتملت معالجة الدفعة. ${results.filter(Boolean).length}/${totalFiles} صور تمت معالجتها بنجاح`);
-      
-      // التحقق من وجود قائمة انتظار جديدة بعد الانتهاء من الحالية
-      if (processingQueue.length > 0) {
-        setQueueProcessing(false);
-        processQueue(); // معالجة الدفعة التالية
-      } else {
-        setQueueProcessing(false);
-        setIsProcessing(false);
-        
-        // تحديث إحصائيات التخزين
-        console.log("إعادة حفظ البيانات في localStorage");
-        const completedImages = images.filter(img => 
-          img.status === "completed" && img.code && img.senderName && img.phoneNumber
-        );
-        
-        if (completedImages.length > 0) {
-          saveToLocalStorage(completedImages);
+      // انتظار انتهاء جميع التحميلات النشطة
+      const checkComplete = async () => {
+        while (activePromises > 0) {
+          await delay(500);
         }
-      }
+        
+        console.log(`اكتملت معالجة الدفعة. ${results.filter(Boolean).length}/${totalFiles} صور تمت معالجتها بنجاح`);
+        
+        // التحقق من وجود قائمة انتظار جديدة بعد الانتهاء من الحالية
+        if (processingQueue.length > 0) {
+          setQueueProcessing(false);
+          clearInterval(progressInterval);
+          processQueue(); // معالجة الدفعة التالية
+        } else {
+          setQueueProcessing(false);
+          setIsProcessing(false);
+          setProcessingStartTime(null);
+          clearInterval(progressInterval);
+          setProcessingProgress(100);
+          
+          // تحديث إحصائيات التخزين
+          console.log("إعادة حفظ البيانات في localStorage");
+          const completedImages = images.filter(img => 
+            img.status === "completed" && img.code && img.senderName && img.phoneNumber
+          );
+          
+          if (completedImages.length > 0) {
+            saveToLocalStorage(completedImages);
+          }
+        }
+      };
+      
+      // ابدأ التحقق من اكتمال المعالجة
+      checkComplete();
+      
     } catch (error) {
       console.error("خطأ أثناء معالجة قائمة الانتظار:", error);
+      clearInterval(progressInterval);
       setQueueProcessing(false);
       setIsProcessing(false);
+      setProcessingStartTime(null);
     }
-  };
+  }, [processingQueue, queueProcessing, images, addImage, updateImage, setProcessingProgress, saveProcessedImage, updateProgress]);
+
+  // إضافة وظيفة لإعادة تشغيل المعالجة يدويًا
+  const manuallyTriggerProcessingQueue = useCallback(() => {
+    console.log("تم استدعاء إعادة تشغيل المعالجة يدويًا");
+    
+    // تأكد من أن هناك صورًا في قائمة الانتظار
+    if (processingQueue.length === 0) {
+      console.log("لا توجد صور في قائمة الانتظار للمعالجة");
+      return;
+    }
+    
+    // إعادة تعيين حالة المعالجة
+    setQueueProcessing(false);
+    
+    // استدعاء وظيفة معالجة القائمة بعد تأخير قصير
+    setTimeout(() => {
+      processQueue();
+    }, 500);
+  }, [processingQueue, processQueue]);
+
+  // استخدام useEffect لبدء معالجة القائمة عندما تتغير
+  useEffect(() => {
+    if (processingQueue.length > 0 && !queueProcessing) {
+      processQueue();
+    }
+  }, [processingQueue, queueProcessing, processQueue]);
 
   const handleFileChange = async (files: FileList | null) => {
     console.log("معالجة الملفات:", files?.length);
@@ -427,9 +517,10 @@ export const useFileUpload = ({
     // إضافة الملفات الجديدة إلى قائمة الانتظار
     setProcessingQueue(prev => [...prev, ...uniqueFiles]);
     
-    // بدء المعالجة إذا لم تكن جارية بالفعل
+    // بدء المعالجة تلقائيًا من خلال useEffect
     if (!queueProcessing) {
-      processQueue();
+      // تعيين قيمة صغيرة لإظهار أن العملية بدأت
+      setProcessingProgress(1);
     } else {
       toast({
         title: "تمت إضافة الصور إلى قائمة الانتظار",
@@ -438,12 +529,13 @@ export const useFileUpload = ({
     }
   };
 
-  // نقوم بإرجاع useGemini كقيمة ثابتة true
+  // نقوم بإرجاع manuallyTriggerProcessingQueue كجزء من واجهة الاستخدام
   return {
     isProcessing,
     useGemini: true, // قيمة ثابتة لاستخدام Gemini دائمًا
     handleFileChange,
     activeUploads,
-    queueLength: processingQueue.length
+    queueLength: processingQueue.length,
+    manuallyTriggerProcessingQueue
   };
 };

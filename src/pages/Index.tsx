@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -34,7 +35,10 @@ const Index = () => {
     clearSessionImages,
     loadUserImages,
     runCleanupNow,
-    saveProcessedImage
+    saveProcessedImage,
+    activeUploads,
+    queueLength,
+    retryProcessing
   } = useImageProcessing();
   
   const {
@@ -89,6 +93,32 @@ const Index = () => {
       throw error; // إعادة رمي الخطأ للتعامل معه في المكون الأصلي
     }
   };
+  
+  // وظيفة لإعادة تشغيل المعالجة إذا تجمدت
+  const handleRetryProcessing = () => {
+    if (isProcessing && processingProgress === 0) {
+      toast({
+        title: "إعادة المحاولة",
+        description: "جارٍ إعادة تشغيل معالجة الصور..."
+      });
+      
+      // استدعاء وظيفة إعادة تشغيل المعالجة
+      retryProcessing();
+    }
+  };
+  
+  // إعادة تشغيل المعالجة تلقائيًا إذا كانت متوقفة لفترة طويلة
+  useEffect(() => {
+    if (isProcessing && processingProgress === 0 && queueLength > 0) {
+      // إذا لم يتغير التقدم لمدة 20 ثانية، نحاول إعادة تشغيل المعالجة
+      const timeoutId = setTimeout(() => {
+        console.log("تم اكتشاف عملية معالجة متوقفة، محاولة إعادة التشغيل تلقائيًا");
+        retryProcessing();
+      }, 20000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isProcessing, processingProgress, queueLength, retryProcessing]);
   
   return (
     <div className="min-h-screen bg-background">
@@ -152,8 +182,24 @@ const Index = () => {
                     isProcessing={isProcessing} 
                     processingProgress={processingProgress}
                     onFileChange={handleFileChange} 
-                    activeUploads={0}
+                    activeUploads={activeUploads}
+                    queueLength={queueLength}
                   />
+                  
+                  {/* إضافة زر لإعادة المحاولة إذا كانت المعالجة متوقفة */}
+                  {isProcessing && processingProgress === 0 && (
+                    <div className="mt-4 text-center">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleRetryProcessing}
+                        className="animate-pulse"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        إعادة تشغيل المعالجة
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

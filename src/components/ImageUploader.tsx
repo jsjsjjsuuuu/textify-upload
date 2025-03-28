@@ -66,6 +66,9 @@ const ImageUploader = ({
   // حساب الإجمالي الكلي للصور قيد المعالجة
   const totalProcessingItems = activeUploads + queueLength;
   
+  // إضافة تأخير للتجسيد المرئي للتقدم - هذا يضمن أن المستخدم يرى أن هناك تقدمًا دائمًا
+  const visualProgress = processingProgress === 0 && isProcessing ? 5 : processingProgress;
+  
   return (
     <div className="w-full max-w-md mx-auto">
       <div 
@@ -112,9 +115,9 @@ const ImageUploader = ({
               </h3>
               
               <div className="w-full max-w-md">
-                <Progress value={processingProgress} className="h-2" />
+                <Progress value={visualProgress} className="h-2" />
                 <div className="mt-2 flex justify-between text-sm text-gray-500 dark:text-gray-400">
-                  <p>{processingProgress}% مكتمل</p>
+                  <p>{visualProgress}% مكتمل</p>
                   {totalProcessingItems > 0 && (
                     <p className="text-blue-500 dark:text-blue-400 animate-pulse">
                       <LoaderCircle className="w-3.5 h-3.5 inline ml-1 animate-spin" />
@@ -127,10 +130,19 @@ const ImageUploader = ({
                 </div>
               </div>
               
-              {/* معلومات حول عملية المعالجة */}
+              {/* تحسين معلومات حول عملية المعالجة */}
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-                يتم استخدام Gemini AI لاستخراج النص من الصور
+                {visualProgress === 0 ? 
+                  "جاري تحضير الصور للمعالجة..." : 
+                  "يتم استخدام Gemini AI لاستخراج النص من الصور"}
               </p>
+              
+              {/* إضافة معلومات عن الصبر في حالة التعليق */}
+              {(visualProgress < 10 && isProcessing) && (
+                <p className="text-xs text-amber-500 mt-1 animate-pulse">
+                  قد تستغرق عملية المعالجة بعض الوقت، يرجى الانتظار...
+                </p>
+              )}
             </>
           ) : (
             <>

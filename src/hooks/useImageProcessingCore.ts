@@ -145,11 +145,13 @@ export const useImageProcessingCore = () => {
     }
   };
   
+  // استدعاء useFileUpload مع تحسين آلية التعامل مع الصور
   const { 
     isProcessing, 
     handleFileChange,
     activeUploads,
-    queueLength
+    queueLength,
+    manuallyTriggerProcessingQueue
   } = useFileUpload({
     images,
     addImage,
@@ -168,6 +170,22 @@ export const useImageProcessingCore = () => {
       cleanupOldRecords(user.id);
     }
   }, [user]);
+
+  // إعادة تشغيل معالجة قائمة انتظار الصور إذا توقفت
+  useEffect(() => {
+    // إذا كان هناك صور في حالة معالجة لأكثر من دقيقة، حاول إعادة تشغيل المعالجة
+    const checkStuckImages = () => {
+      if (isProcessing && processingProgress === 0 && queueLength > 0) {
+        console.log("تم اكتشاف معالجة متوقفة، محاولة إعادة تشغيل المعالجة");
+        manuallyTriggerProcessingQueue();
+      }
+    };
+    
+    // التحقق كل 30 ثانية
+    const intervalId = setInterval(checkStuckImages, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [isProcessing, processingProgress, queueLength, manuallyTriggerProcessingQueue]);
 
   return {
     images,
@@ -195,6 +213,8 @@ export const useImageProcessingCore = () => {
     validateRequiredFields,
     runCleanupNow,
     activeUploads,
-    queueLength
+    queueLength,
+    // إضافة وظيفة إعادة تشغيل المعالجة يدويًا
+    retryProcessing: manuallyTriggerProcessingQueue
   };
 };
