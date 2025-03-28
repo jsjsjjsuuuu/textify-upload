@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2, RefreshCw, Eraser } from 'lucide-react';
+import { ArrowRight, Info, Trash2, RefreshCw } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -12,7 +13,6 @@ import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContaine
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -25,6 +25,7 @@ const Index = () => {
     isProcessing,
     processingProgress,
     isSubmitting,
+    useGemini,
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
@@ -35,12 +36,7 @@ const Index = () => {
     clearSessionImages,
     loadUserImages,
     runCleanupNow,
-    saveProcessedImage,
-    activeUploads,
-    queueLength,
-    retryProcessing,
-    removeDuplicates,
-    validateRequiredFields
+    saveProcessedImage
   } = useImageProcessing();
   
   const {
@@ -49,52 +45,16 @@ const Index = () => {
     formatProvinceName
   } = useDataFormatting();
 
-  // إضافة حالة لتتبع عملية التنظيف
-  const [isCleaning, setIsCleaning] = useState(false);
-
   // وظيفة تنفيذ التنظيف يدوياً
   const handleManualCleanup = async () => {
     if (user) {
-      setIsCleaning(true);
-      try {
-        await runCleanupNow(user.id);
-        // إعادة تحميل الصور بعد التنظيف
-        loadUserImages();
-        toast({
-          title: "تم التنظيف",
-          description: "تم تنظيف السجلات القديمة بنجاح",
-        });
-      } catch (error) {
-        console.error("خطأ أثناء تنظيف السجلات:", error);
-        toast({
-          title: "خطأ في التنظيف",
-          description: "حدث خطأ أثناء محاولة تنظيف السجلات القديمة",
-          variant: "destructive"
-        });
-      } finally {
-        setIsCleaning(false);
-      }
-    }
-  };
-  
-  // وظيفة إزالة التكرارات يدوياً
-  const handleRemoveDuplicates = () => {
-    setIsCleaning(true);
-    try {
-      removeDuplicates();
+      await runCleanupNow(user.id);
+      // إعادة تحميل الصور بعد التنظيف
+      loadUserImages();
       toast({
-        title: "تمت إزالة التكرارات",
-        description: "تم فحص الصور وإزالة التكرارات بنجاح"
+        title: "تم التنظيف",
+        description: "تم تنظيف السجلات القديمة بنجاح",
       });
-    } catch (error) {
-      console.error("خطأ أثناء إزالة التكرارات:", error);
-      toast({
-        title: "خطأ في إزالة التكرارات",
-        description: "حدث خطأ أثناء محاولة إزالة الصور المكررة",
-        variant: "destructive"
-      });
-    } finally {
-      setIsCleaning(false);
     }
   };
   
@@ -132,32 +92,6 @@ const Index = () => {
     }
   };
   
-  // وظيفة لإعادة تشغيل المعالجة إذا تجمدت
-  const handleRetryProcessing = () => {
-    if (isProcessing && processingProgress === 0) {
-      toast({
-        title: "إعادة المحاولة",
-        description: "جارٍ إعادة تشغيل معالجة الصور..."
-      });
-      
-      // استدعاء وظيفة إعادة تشغيل المعالجة
-      retryProcessing();
-    }
-  };
-  
-  // إعادة تشغيل المعالجة تلقائيًا إذا كانت متوقفة لفترة طويلة
-  useEffect(() => {
-    if (isProcessing && processingProgress === 0 && queueLength > 0) {
-      // إذا لم يتغير التقدم لمدة 20 ثانية، نحاول إعادة تشغيل المعالجة
-      const timeoutId = setTimeout(() => {
-        console.log("تم اكتشاف عملية معالجة متوقفة، محاولة إعادة التشغيل تلقائيًا");
-        retryProcessing();
-      }, 20000);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [isProcessing, processingProgress, queueLength, retryProcessing]);
-  
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
@@ -187,38 +121,24 @@ const Index = () => {
                 </Button>
               </div>
               
-              {/* أدوات التنظيف وإزالة التكرارات */}
-              <div className="mt-6">
-                <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                  <Info className="h-4 w-4 text-blue-500" />
-                  <AlertDescription className="text-sm text-blue-600 dark:text-blue-300">
-                    <div className="mb-2">أدوات صيانة البيانات لتحسين أداء النظام ومعالجة الصور المكررة</div>
-                    <div className="flex flex-wrap gap-2 justify-center mt-3">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handleManualCleanup} 
-                        disabled={isCleaning}
-                        className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
-                      >
-                        <RefreshCw className={`h-3 w-3 mr-1 ${isCleaning ? 'animate-spin' : ''}`} />
-                        تنظيف السجلات القديمة
-                      </Button>
-                      
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handleRemoveDuplicates}
-                        disabled={isCleaning}
-                        className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
-                      >
-                        <Eraser className="h-3 w-3 mr-1" />
-                        إزالة الصور المكررة
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              </div>
+              {/* معلومات عن ميزة تنظيف البيانات */}
+              <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <Info className="h-4 w-4 text-blue-500" />
+                <AlertDescription className="text-sm text-blue-600 dark:text-blue-300">
+                  لتحسين أداء النظام، يتم الاحتفاظ فقط بأحدث 100 سجل. السجلات القديمة يتم حذفها تلقائياً.
+                  <div className="mt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleManualCleanup} 
+                      className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      تنفيذ التنظيف الآن
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
             </motion.div>
           </div>
         </section>
@@ -232,26 +152,10 @@ const Index = () => {
                   <p className="text-muted-foreground text-center mb-6">قم بتحميل صور الإيصالات أو الفواتير وسنقوم باستخراج البيانات منها تلقائياً</p>
                   <ImageUploader 
                     isProcessing={isProcessing} 
-                    processingProgress={processingProgress}
+                    processingProgress={processingProgress} 
+                    useGemini={useGemini} 
                     onFileChange={handleFileChange} 
-                    activeUploads={activeUploads}
-                    queueLength={queueLength}
                   />
-                  
-                  {/* إضافة زر لإعادة المحاولة إذا كانت المعالجة متوقفة */}
-                  {isProcessing && processingProgress === 0 && (
-                    <div className="mt-4 text-center">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleRetryProcessing}
-                        className="animate-pulse"
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        إعادة تشغيل المعالجة
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -262,29 +166,10 @@ const Index = () => {
           <section className="py-16 px-6">
             <div className="container mx-auto">
               <div className="max-w-7xl mx-auto">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-2xl font-bold mb-2">الصور التي تم رفعها</h2>
-                    <p className="text-muted-foreground mb-8">
-                      هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.
-                    </p>
-                  </div>
-                  
-                  {/* إضافة زر لإزالة التكرارات في محتوى الصفحة */}
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleRemoveDuplicates}
-                      disabled={isCleaning}
-                      className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
-                    >
-                      <Eraser className="h-4 w-4 mr-2" />
-                      إزالة التكرارات
-                    </Button>
-                  </div>
-                </div>
-                
+                <h2 className="text-2xl font-bold mb-6">الصور التي تم رفعها</h2>
+                <p className="text-muted-foreground mb-8">
+                  هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.
+                </p>
                 <ImagePreviewContainer 
                   images={sessionImages} 
                   isSubmitting={isSubmitting} 

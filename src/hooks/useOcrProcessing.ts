@@ -5,9 +5,6 @@ import { extractTextFromImage } from "@/lib/ocrService";
 import { parseDataFromOCRText, updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { useToast } from "@/hooks/use-toast";
 
-// ملاحظة: لن نستخدم هذه الوظيفة بشكل مباشر بعد الآن لأننا سنستخدم Gemini دائمًا
-// لكن سنحتفظ بها للتوافق مع باقي الكود
-
 export const useOcrProcessing = () => {
   const { toast } = useToast();
 

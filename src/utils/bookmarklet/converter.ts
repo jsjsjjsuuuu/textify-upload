@@ -1,10 +1,9 @@
-
 /**
  * وحدة تحويل البيانات للتصدير
  */
 
 import { ImageData } from "@/types/ImageData";
-import type { BookmarkletItem } from "@/utils/bookmarklet/types";
+import { BookmarkletItem } from "./types";
 
 /**
  * تحويل بيانات الصور إلى تنسيق قابل للتصدير
@@ -15,43 +14,22 @@ export const convertImagesToBookmarkletItems = (images: ImageData[]): Bookmarkle
   }
 
   return images
-    .filter(img => {
-      // تحسين عملية التصفية للتأكد من صلاحية البيانات
-      const hasRequiredFields = img.code && img.senderName && img.phoneNumber;
-      // تعديل المقارنة لجعلها متوافقة مع الأنواع
-      const isValidStatus = img.status === "completed" || img.status === "processing" || img.status === "pending";
-      return hasRequiredFields && isValidStatus;
-    })
+    .filter(img => img.code && img.senderName && img.phoneNumber) // تصفية الصور التي تحتوي على البيانات الأساسية
     .map(img => ({
       id: img.id || generateId(),
       code: img.code || '',
       senderName: img.senderName || '',
-      phoneNumber: formatPhoneNumber(img.phoneNumber || ''),
+      phoneNumber: img.phoneNumber || '',
       province: img.province || '',
       price: img.price || '',
       companyName: img.companyName || '',
       exportDate: new Date().toISOString(),
-      status: 'ready' as const,
+      status: 'ready',
       notes: img.notes1 || '',
       recipientName: img.recipientName || '',
       // يمكن إضافة المزيد من الحقول هنا
     }));
 };
-
-// تنسيق رقم الهاتف
-function formatPhoneNumber(phone: string): string {
-  // إزالة كافة الأحرف غير الرقمية
-  const digits = phone.replace(/\D/g, '');
-  
-  // التأكد من أن الرقم يبدأ بـ 964 للعراق (إذا لم يكن كذلك)
-  if (digits.length === 10 && !digits.startsWith('964')) {
-    return `964${digits}`;
-  } else if (digits.length === 11 && digits.startsWith('0')) {
-    return `964${digits.substring(1)}`;
-  }
-  
-  return digits;
-}
 
 /**
  * توليد معرف فريد

@@ -20,17 +20,13 @@ const PHONE_PATTERNS = [
 
 /**
  * التحقق من صحة رقم الهاتف العراقي
- * يجب أن يكون الرقم 11 رقم بالضبط بعد التنظيف
  */
 export function isValidIraqiPhoneNumber(phoneNumber: string): boolean {
-  // إذا كان الرقم فارغاً، اعتبره صالحاً
-  if (!phoneNumber) return true;
-  
   // إزالة جميع الرموز غير الرقمية للتحقق من طول الرقم الأساسي
   const digitsOnly = phoneNumber.replace(/\D/g, '');
   
-  // التحقق من أن الرقم يحتوي على 11 رقمًا بالضبط
-  if (digitsOnly.length !== 11) {
+  // التحقق من أن الرقم يحتوي على 10 أو 11 رقمًا (رقم عراقي نموذجي)
+  if (!(digitsOnly.length === 10 || digitsOnly.length === 11)) {
     return false;
   }
   
@@ -42,9 +38,6 @@ export function isValidIraqiPhoneNumber(phoneNumber: string): boolean {
  * تنسيق رقم الهاتف العراقي إلى تنسيق موحد
  */
 export function formatIraqiPhoneNumber(phoneNumber: string): string {
-  // إذا كان الرقم فارغاً، أعد نفس القيمة
-  if (!phoneNumber) return phoneNumber;
-  
   // إزالة جميع الرموز غير الرقمية
   const digitsOnly = phoneNumber.replace(/\D/g, '');
   
@@ -59,13 +52,13 @@ export function formatIraqiPhoneNumber(phoneNumber: string): string {
     nationalNumber = '0' + nationalNumber;
   }
   
-  // إذا لم يكن الرقم 11 رقمًا بعد كل المحاولات، فهو غير صالح
+  // التحقق من أن الرقم الآن 11 رقمًا
   if (nationalNumber.length !== 11) {
-    // نعيد الرقم كما هو للسماح للمستخدم بتصحيحه
+    // إذا لم يكن الرقم 11 رقمًا، نعيده كما هو
     return phoneNumber;
   }
   
-  // تنسيق الرقم بالصيغة المطلوبة (مثال: 0771 123 4567)
+  // تنسيق الرقم (مثال: 0771 123 4567)
   return nationalNumber;
 }
 
@@ -73,8 +66,6 @@ export function formatIraqiPhoneNumber(phoneNumber: string): string {
  * استخراج رقم الهاتف من نص
  */
 export function extractPhoneNumber(text: string): string | null {
-  if (!text) return null;
-  
   // أنماط الاستخراج - أكثر تساهلاً من أنماط التحقق
   const extractionPatterns = [
     // نمط أساسي: 11 رقم متتالي مع 7 بعد الصفر

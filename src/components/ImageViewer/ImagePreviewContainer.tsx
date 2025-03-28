@@ -58,49 +58,22 @@ const ImagePreviewContainer = ({
     }
   }, [images, activeImage]);
 
-  // التحقق مما إذا كانت الصورة مكتملة (لديها البيانات الإلزامية)
-  const isImageComplete = useCallback((image: ImageData): boolean => {
-    // التحقق من وجود البيانات الأساسية
-    const hasRequiredFields = 
-      Boolean(image.code) && 
-      Boolean(image.senderName) && 
-      Boolean(image.province) &&
-      Boolean(image.price);
-      
-    // التحقق من صحة رقم الهاتف (إما فارغ أو صحيح بطول 11 رقم)
-    const hasValidPhone = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
-    
-    return hasRequiredFields && hasValidPhone;
-  }, []);
-  
-  // التحقق مما إذا كانت الصورة تحتوي على خطأ في رقم الهاتف
-  const hasPhoneError = useCallback((image: ImageData): boolean => {
-    return Boolean(image.phoneNumber) && image.phoneNumber.replace(/[^\d]/g, '').length !== 11;
-  }, []);
-
   // تصفية الصور حسب علامة التبويب النشطة
   const filteredImages = useCallback(() => {
     let result = [...images];
     
     if (activeTab === "pending") {
-      // الصور قيد الانتظار: الصور التي لم تكتمل معالجتها بعد
       result = result.filter(img => img.status === "pending");
     } else if (activeTab === "completed") {
-      // الصور المكتملة: الصور التي اكتملت معالجتها وتم ملء البيانات المطلوبة
-      result = result.filter(img => img.status === "completed" && isImageComplete(img));
+      result = result.filter(img => img.status === "completed");
     } else if (activeTab === "error") {
-      // الصور التي بها أخطاء: إما أن تكون حالتها "error" أو بها خطأ في رقم الهاتف
-      result = result.filter(img => img.status === "error" || hasPhoneError(img));
+      result = result.filter(img => img.status === "error");
     } else if (activeTab === "processing") {
-      // الصور قيد المعالجة
       result = result.filter(img => img.status === "processing");
-    } else if (activeTab === "incomplete") {
-      // الصور الغير مكتملة: تمت معالجتها ولكن تنقصها بعض البيانات المطلوبة
-      result = result.filter(img => img.status === "completed" && !isImageComplete(img) && !hasPhoneError(img));
     }
     
     return result;
-  }, [images, activeTab, isImageComplete, hasPhoneError]);
+  }, [images, activeTab]);
 
   // حساب عدد الصفحات
   const totalPages = Math.ceil(filteredImages().length / ITEMS_PER_PAGE);
@@ -272,23 +245,20 @@ const ImagePreviewContainer = ({
             
             {/* حالة الصورة */}
             <div className={`absolute top-2 left-2 z-10 px-1.5 py-0.5 text-xs rounded-full
-              ${image.status === "completed" && isImageComplete(image) ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
+              ${image.status === "completed" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
               ${image.status === "pending" ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" : ""}
-              ${image.status === "error" || hasPhoneError(image) ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" : ""}
+              ${image.status === "error" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" : ""}
               ${image.status === "processing" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" : ""}
-              ${image.status === "completed" && !isImageComplete(image) && !hasPhoneError(image) ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" : ""}
             `}>
-              {image.status === "completed" && isImageComplete(image) && "مكتملة"}
+              {image.status === "completed" && "مكتملة"}
               {image.status === "pending" && "قيد الانتظار"}
               {image.status === "error" && "فشل"}
-              {hasPhoneError(image) && "خطأ في رقم الهاتف"}
               {image.status === "processing" && (
                 <span className="flex items-center">
                   <Loader className="w-3 h-3 ml-1 animate-spin" />
                   جاري المعالجة
                 </span>
               )}
-              {image.status === "completed" && !isImageComplete(image) && !hasPhoneError(image) && "غير مكتملة"}
             </div>
             
             {/* صورة مصغرة */}
@@ -367,7 +337,7 @@ const ImagePreviewContainer = ({
                 إعادة معالجة
               </Button>
               
-              {activeImage.status === "completed" && isImageComplete(activeImage) && !activeImage.submitted && !hasPhoneError(activeImage) && (
+              {activeImage.status === "completed" && !activeImage.submitted && (
                 <Button
                   size="sm"
                   variant="default"
@@ -397,16 +367,6 @@ const ImagePreviewContainer = ({
     )
   );
 
-  // حساب عدد الصور في كل حالة
-  const countByStatus = {
-    all: images.length,
-    pending: images.filter(img => img.status === "pending").length,
-    completed: images.filter(img => img.status === "completed" && isImageComplete(img)).length,
-    incomplete: images.filter(img => img.status === "completed" && !isImageComplete(img) && !hasPhoneError(img)).length,
-    error: images.filter(img => img.status === "error" || hasPhoneError(img)).length,
-    processing: images.filter(img => img.status === "processing").length
-  };
-
   // عرض علامات التبويب وعرض الصور المعالجة
   return (
     <div className="container mx-auto">
@@ -416,37 +376,31 @@ const ImagePreviewContainer = ({
             <TabsTrigger value="all" className="relative">
               الكل
               <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 rounded-full">
-                {countByStatus.all}
+                {images.length}
               </span>
             </TabsTrigger>
             <TabsTrigger value="pending" className="relative">
               قيد الانتظار
               <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded-full">
-                {countByStatus.pending}
+                {images.filter(img => img.status === "pending").length}
               </span>
             </TabsTrigger>
             <TabsTrigger value="completed" className="relative">
               مكتملة
               <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
-                {countByStatus.completed}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="incomplete" className="relative">
-              غير مكتملة
-              <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full">
-                {countByStatus.incomplete}
+                {images.filter(img => img.status === "completed").length}
               </span>
             </TabsTrigger>
             <TabsTrigger value="error" className="relative">
-              أخطاء
+              فشل
               <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full">
-                {countByStatus.error}
+                {images.filter(img => img.status === "error").length}
               </span>
             </TabsTrigger>
             <TabsTrigger value="processing" className="relative">
               قيد المعالجة
               <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
-                {countByStatus.processing}
+                {images.filter(img => img.status === "processing").length}
               </span>
             </TabsTrigger>
           </TabsList>
@@ -550,17 +504,6 @@ const ImagePreviewContainer = ({
         </TabsContent>
         
         <TabsContent value="completed" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-            <div className="order-2 md:order-1">
-              {renderImagesGrid()}
-            </div>
-            <div className="order-1 md:order-2 mb-6 md:mb-0">
-              {renderActiveImage()}
-            </div>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="incomplete" className="mt-0">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
             <div className="order-2 md:order-1">
               {renderImagesGrid()}
