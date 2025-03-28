@@ -12,6 +12,7 @@ interface ImagePreviewContainerProps {
   onDelete: (id: string) => void;
   onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
+  showOnlySession?: boolean; // إضافة خيار لعرض صور الجلسة فقط
 }
 
 const ImagePreviewContainer = ({
@@ -20,7 +21,8 @@ const ImagePreviewContainer = ({
   onTextChange,
   onDelete,
   onSubmit,
-  formatDate
+  formatDate,
+  showOnlySession = false // القيمة الافتراضية هي false
 }: ImagePreviewContainerProps) => {
   const { toast } = useToast();
 
@@ -42,14 +44,16 @@ const ImagePreviewContainer = ({
           formatDate={formatDate}
         />
 
-        <ImageTable 
-          images={images}
-          isSubmitting={isSubmitting}
-          onImageClick={handleImageClick}
-          onDelete={onDelete}
-          onSubmit={onSubmit}
-          formatDate={formatDate}
-        />
+        {!showOnlySession && (
+          <ImageTable 
+            images={images}
+            isSubmitting={isSubmitting}
+            onImageClick={handleImageClick}
+            onDelete={onDelete}
+            onSubmit={onSubmit}
+            formatDate={formatDate}
+          />
+        )}
       </div>
     </>
   );

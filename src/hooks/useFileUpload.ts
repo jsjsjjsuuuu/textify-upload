@@ -67,7 +67,7 @@ export const useFileUpload = ({
         toast({
           title: "صورة مكررة",
           description: `الصورة ${file.name} موجودة بالفعل وتم تخطيها`,
-          variant: "warning"
+          variant: "default"
         });
         console.log("تم تخطي صورة مكررة:", file.name);
         continue;

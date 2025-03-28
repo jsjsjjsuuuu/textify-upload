@@ -23,6 +23,7 @@ import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays } 
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/utils/dateFormatter";
+import { useEffect as useReactEffect } from 'react';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ const Index = () => {
   // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
     images,
+    sessionImages,
     isProcessing,
     processingProgress,
     isSubmitting,
@@ -43,7 +45,8 @@ const Index = () => {
     handleDelete,
     handleSubmitToApi,
     saveImageToDatabase,
-    formatDate: formatImageDate
+    formatDate: formatImageDate,
+    clearSessionImages
   } = useImageProcessing();
   
   const {
@@ -52,9 +55,15 @@ const Index = () => {
     formatProvinceName
   } = useDataFormatting();
   
+  // مسح الصور المؤقتة عند تحميل الصفحة
+  useReactEffect(() => {
+    // مسح صور الجلسة عند تحميل الصفحة لأول مرة
+    clearSessionImages();
+  }, []);
+  
   // عند اكتمال معالجة الصور، حفظها في قاعدة البيانات
   useEffect(() => {
-    const completedImages = images.filter(img => 
+    const completedImages = sessionImages.filter(img => 
       img.status === "completed" && img.code && img.senderName && img.phoneNumber && !img.submitted
     );
     
@@ -65,7 +74,7 @@ const Index = () => {
         console.log("تم حفظ الصورة في قاعدة البيانات:", image.id);
       });
     }
-  }, [images]);
+  }, [sessionImages]);
   
   const handleImageClick = (image: ImageData) => {
     console.log('صورة تم النقر عليها:', image.id);
@@ -86,9 +95,9 @@ const Index = () => {
     }
   };
 
-  // تطبيق الفرز والبحث على البيانات
-  const filteredAndSortedImages = React.useMemo(() => {
-    let recordImages = [...images];
+  // تطبيق الفرز والبحث على البيانات - على صور الجلسة فقط
+  const filteredAndSortedSessionImages = React.useMemo(() => {
+    let recordImages = [...sessionImages];
 
     // تطبيق البحث
     if (searchTerm) {
@@ -128,7 +137,7 @@ const Index = () => {
     }
 
     return recordImages;
-  }, [images, searchTerm, sortField, sortDirection]);
+  }, [sessionImages, searchTerm, sortField, sortDirection]);
 
   // رمز السهم للفرز
   const getSortIcon = (field: string) => {
@@ -207,7 +216,7 @@ const Index = () => {
                   ابدأ الآن
                 </Button>
                 <Button variant="outline" className="apple-button" size="lg" asChild>
-                  <Link to="/">
+                  <Link to="/records">
                     استعراض السجلات
                     <ArrowRight className="mr-2 h-4 w-4" />
                   </Link>
@@ -231,233 +240,39 @@ const Index = () => {
           </div>
         </section>
 
-        {images.length > 0 && (
+        {sessionImages.length > 0 && (
           <section className="py-16 px-6">
             <div className="container mx-auto">
               <div className="max-w-7xl mx-auto">
-                <h2 className="text-2xl font-bold text-center mb-6">الصور المحملة</h2>
-                <ImageList images={images} isSubmitting={isSubmitting} onImageClick={handleImageClick} onTextChange={handleTextChange} onDelete={handleDelete} onSubmit={id => handleSubmitToApi(id, images.find(img => img.id === id)!)} formatDate={formatImageDate} />
+                <h2 className="text-2xl font-bold text-center mb-6">معاينة الصور والنصوص المستخرجة</h2>
+                <ImageList 
+                  images={sessionImages} 
+                  isSubmitting={isSubmitting} 
+                  onImageClick={handleImageClick} 
+                  onTextChange={handleTextChange} 
+                  onDelete={handleDelete} 
+                  onSubmit={id => handleSubmitToApi(id, sessionImages.find(img => img.id === id)!)} 
+                  formatDate={formatImageDate} 
+                />
               </div>
             </div>
           </section>
         )}
           
-        {/* عرض سجلات الصور */}
+        {/* عرض رابط للسجلات بدلاً من عرض جميع الصور مباشرة */}
         <section className="py-16 px-6 bg-gray-50 dark:bg-gray-800/20">
           <div className="container mx-auto">
-            <div className="max-w-7xl mx-auto">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="space-y-8"
-              >
-                {/* عنوان الصفحة */}
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-3xl font-medium tracking-tight">سجلات الوصولات</h2>
-                    <p className="text-muted-foreground mt-1">
-                      إدارة ومراجعة سجلات الوصولات المستخرجة
-                    </p>
-                  </div>
-                </div>
-
-                {/* فلتر البحث */}
-                <div className="relative">
-                  <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="البحث في السجلات... (الكود، الاسم، رقم الهاتف، المحافظة)"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pr-9 text-right"
-                  />
-                </div>
-
-                {/* جدول السجلات */}
-                <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <Table className="w-full">
-                      <TableHeader className="bg-muted/40">
-                        <TableRow>
-                          <TableHead 
-                            className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
-                            onClick={() => handleSort("number")}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span>الرقم</span>
-                              {getSortIcon("number")}
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
-                            onClick={() => handleSort("date")}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span>التاريخ</span>
-                              {getSortIcon("date")}
-                            </div>
-                          </TableHead>
-                          <TableHead className="text-right font-medium px-6 py-4">
-                            صورة
-                          </TableHead>
-                          <TableHead 
-                            className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
-                            onClick={() => handleSort("code")}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span>الكود</span>
-                              {getSortIcon("code")}
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
-                            onClick={() => handleSort("senderName")}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span>اسم المرسل</span>
-                              {getSortIcon("senderName")}
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
-                            onClick={() => handleSort("phoneNumber")}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span>رقم الهاتف</span>
-                              {getSortIcon("phoneNumber")}
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
-                            onClick={() => handleSort("province")}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span>المحافظة</span>
-                              {getSortIcon("province")}
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
-                            onClick={() => handleSort("price")}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span>السعر</span>
-                              {getSortIcon("price")}
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
-                            onClick={() => handleSort("status")}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span>الحالة</span>
-                              {getSortIcon("status")}
-                            </div>
-                          </TableHead>
-                          <TableHead className="text-right font-medium px-6 py-4">
-                            الإجراءات
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredAndSortedImages.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                              {images.length === 0 ? 
-                                <div className="flex flex-col items-center gap-2">
-                                  <CalendarDays className="h-10 w-10 text-muted-foreground/60" />
-                                  <p>لا توجد سجلات بعد.</p>
-                                  <p className="mt-2">قم بتحميل صور جديدة لتظهر هنا.</p>
-                                </div>
-                                : 
-                                "لم يتم العثور على أي سجلات مطابقة لكلمة البحث."
-                              }
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          filteredAndSortedImages.map((image) => (
-                            <TableRow 
-                              key={image.id}
-                              className="hover:bg-muted/30 transition-colors"
-                            >
-                              <TableCell className="font-medium px-6 py-4">
-                                {image.number || "-"}
-                              </TableCell>
-                              <TableCell className="px-6 py-4">
-                                <span className="text-muted-foreground">{formatImageDate(image.date)}</span>
-                              </TableCell>
-                              <TableCell className="px-6 py-4">
-                                <div 
-                                  className="w-16 h-16 rounded-lg overflow-hidden bg-transparent cursor-pointer border border-border/40 dark:border-gray-700/40"
-                                >
-                                  <img 
-                                    src={image.previewUrl} 
-                                    alt="صورة مصغرة" 
-                                    className="object-contain h-full w-full" 
-                                    style={{ mixBlendMode: 'multiply' }} 
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-6 py-4 font-medium">
-                                {image.code || "-"}
-                              </TableCell>
-                              <TableCell className="px-6 py-4">
-                                {image.senderName || "-"}
-                              </TableCell>
-                              <TableCell className="px-6 py-4">
-                                <span className={!image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11 ? "" : "text-destructive"}>
-                                  {image.phoneNumber || "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-6 py-4">
-                                {image.province || "-"}
-                              </TableCell>
-                              <TableCell className="px-6 py-4">
-                                <span className={image.price && parseFloat(image.price.replace(/[^\d.]/g, '')) < 0 ? "text-destructive" : ""}>
-                                  {image.price || "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-6 py-4">
-                                {getStatusBadge(image.status, image.submitted || false)}
-                              </TableCell>
-                              <TableCell className="px-6 py-4">
-                                <div className="flex gap-2 items-center">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-7 w-7 rounded-full bg-muted/30 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                                    asChild
-                                  >
-                                    <Link to={`/automation/${image.id}`}>
-                                      <File className="h-4 w-4" />
-                                    </Link>
-                                  </Button>
-                                  {image.status === "completed" && !image.submitted && (
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="h-7 w-7 rounded-full bg-muted/30 text-brand-green hover:bg-brand-green/10"
-                                      disabled={isSubmitting || (image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, '').length !== 11)}
-                                      onClick={() => handleSubmitToApi(image.id, image)}
-                                    >
-                                      <Receipt className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-
-                {/* معلومات إضافية */}
-                <p className="text-center text-sm text-muted-foreground">
-                  تم عرض {filteredAndSortedImages.length} من إجمالي {images.length} سجل
-                </p>
-              </motion.div>
+            <div className="max-w-7xl mx-auto text-center">
+              <h2 className="text-3xl font-medium tracking-tight mb-6">سجلات الوصولات</h2>
+              <p className="text-muted-foreground mb-8">
+                يمكنك الاطلاع على جميع سجلات الوصولات والبيانات المستخرجة في صفحة السجلات
+              </p>
+              <Button size="lg" className="apple-button" asChild>
+                <Link to="/records">
+                  عرض جميع السجلات
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>
@@ -470,7 +285,7 @@ const Index = () => {
               نظام استخراج البيانات - &copy; {new Date().getFullYear()}
             </p>
             <div className="flex gap-4">
-              <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link to="/records" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 السجلات
               </Link>
               <Link to="/profile" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -485,4 +300,3 @@ const Index = () => {
 };
 
 export default Index;
-

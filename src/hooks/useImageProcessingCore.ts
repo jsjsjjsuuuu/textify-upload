@@ -18,11 +18,13 @@ export const useImageProcessingCore = () => {
   
   const { 
     images, 
+    sessionImages,
     addImage, 
     updateImage, 
     deleteImage, 
     handleTextChange,
     setAllImages,
+    clearSessionImages,
     removeDuplicates
   } = useImageState();
   
@@ -97,7 +99,9 @@ export const useImageProcessingCore = () => {
           };
         });
         
+        // بدلاً من استبدال جميع الصور، نضيف السجلات المستوردة إلى مجموعة الصور الكاملة فقط
         setAllImages(loadedImages);
+        
         toast({
           title: "تم التحميل",
           description: `تم تحميل ${data.length} صورة من حسابك`
@@ -279,6 +283,7 @@ export const useImageProcessingCore = () => {
 
   return {
     images,
+    sessionImages,
     isProcessing,
     processingProgress,
     isSubmitting,
@@ -292,6 +297,7 @@ export const useImageProcessingCore = () => {
     saveImageToDatabase,
     saveProcessedImage,
     loadUserImages,
+    clearSessionImages,
     removeDuplicates
   };
 };

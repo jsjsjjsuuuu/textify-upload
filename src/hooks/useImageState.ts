@@ -4,12 +4,14 @@ import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 
 export const useImageState = () => {
+  // حالتان منفصلتان للصور: الصور المؤقتة والصور المستخرجة من قاعدة البيانات
   const [images, setImages] = useState<ImageData[]>([]);
+  const [sessionImages, setSessionImages] = useState<ImageData[]>([]);
   const { toast } = useToast();
 
   const addImage = (newImage: ImageData) => {
     // التحقق مما إذا كانت الصورة موجودة بالفعل (نفس المعرف أو نفس اسم الملف)
-    const isDuplicate = images.some(img => 
+    const isDuplicate = sessionImages.some(img => 
       img.id === newImage.id || 
       (img.file.name === newImage.file.name && 
        img.user_id === newImage.user_id)
@@ -26,11 +28,23 @@ export const useImageState = () => {
       ...newImage
     };
     console.log("إضافة صورة جديدة:", imageWithDefaults.id);
+    
+    // إضافة الصورة إلى مجموعة الصور المؤقتة للجلسة الحالية
+    setSessionImages(prev => [imageWithDefaults, ...prev]);
+    
+    // إضافة الصورة إلى مجموعة جميع الصور
     setImages(prev => [imageWithDefaults, ...prev]);
   };
 
   const updateImage = (id: string, updatedFields: Partial<ImageData>) => {
     console.log("تحديث الصورة:", id, updatedFields);
+    
+    // تحديث الصورة في مجموعة الصور المؤقتة
+    setSessionImages(prev => prev.map(img => 
+      img.id === id ? { ...img, ...updatedFields } : img
+    ));
+    
+    // تحديث الصورة في مجموعة جميع الصور
     setImages(prev => prev.map(img => 
       img.id === id ? { ...img, ...updatedFields } : img
     ));
@@ -38,7 +52,13 @@ export const useImageState = () => {
 
   const deleteImage = (id: string) => {
     console.log("حذف الصورة:", id);
+    
+    // حذف الصورة من مجموعة الصور المؤقتة
+    setSessionImages(prev => prev.filter(img => img.id !== id));
+    
+    // حذف الصورة من مجموعة جميع الصور
     setImages(prev => prev.filter(img => img.id !== id));
+    
     toast({
       title: "تم الحذف",
       description: "تم حذف الصورة بنجاح"
@@ -72,10 +92,25 @@ export const useImageState = () => {
       return bNum - aNum;
     });
   };
+  
+  // الحصول على الصور المؤقتة من الجلسة الحالية مرتبة
+  const getSortedSessionImages = () => {
+    return [...sessionImages].sort((a, b) => {
+      const aNum = a.number || 0;
+      const bNum = b.number || 0;
+      return bNum - aNum;
+    });
+  };
 
   // تحديث قائمة الصور كاملة
   const setAllImages = (newImages: ImageData[]) => {
     setImages(newImages);
+    // لا نقوم بتحديث sessionImages هنا لأنها تمثل فقط الصور المرفوعة في الجلسة الحالية
+  };
+  
+  // مسح الصور المؤقتة
+  const clearSessionImages = () => {
+    setSessionImages([]);
   };
 
   // إزالة الصور المكررة
@@ -101,6 +136,9 @@ export const useImageState = () => {
         description: `تم حذف ${images.length - deduplicatedImages.length} صورة مكررة`
       });
       setImages(deduplicatedImages);
+      setSessionImages(prev => prev.filter(img => 
+        deduplicatedImages.some(unique => unique.id === img.id)
+      ));
     }
   };
 
@@ -118,11 +156,13 @@ export const useImageState = () => {
 
   return {
     images: getSortedImages(),
+    sessionImages: getSortedSessionImages(),
     addImage,
     updateImage,
     deleteImage,
     handleTextChange,
     setAllImages,
+    clearSessionImages,
     removeDuplicates
   };
 };
