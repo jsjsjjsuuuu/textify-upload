@@ -45,7 +45,7 @@ interface AutomationResult {
 
 const SimpleAutomationSection = () => {
   const [projectUrl, setProjectUrl] = useState('');
-  const [projectName, setProjectName] = useState('مشروع أتمتة جديد');
+  const [projectName, setProjectName('مشروع أتمتة جديد');
   const [actions, setActions] = useState<SimpleAction[]>([
     { id: '1', selector: '', name: '', value: '', delay: '0' }
   ]);
