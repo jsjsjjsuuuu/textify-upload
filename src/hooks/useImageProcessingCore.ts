@@ -148,6 +148,7 @@ export const useImageProcessingCore = () => {
   const { 
     isProcessing, 
     useGemini, 
+    toggleGemini,
     handleFileChange 
   } = useFileUpload({
     images,
@@ -168,6 +169,67 @@ export const useImageProcessingCore = () => {
     }
   }, [user]);
 
+  // إضافة وظيفة لإعادة معالجة صورة واحدة
+  const reprocessImage = async (id: string) => {
+    const image = images.find(img => img.id === id);
+    if (!image) {
+      toast({
+        title: "خطأ",
+        description: "لم يتم العثور على الصورة المحددة",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // تحديث حالة الصورة إلى "قيد المعالجة"
+      updateImage(id, { 
+        status: "processing",
+        retryCount: (image.retryCount || 0) + 1
+      });
+
+      // استخدام وظيفة معالجة الصور من useFileUpload
+      const processImageWithOCR = async (file: File, image: ImageData) => {
+        const { processWithOcr } = await import('@/hooks/useOcrProcessing');
+        return processWithOcr(file, image);
+      };
+
+      const processImageWithGemini = async (file: File, image: ImageData) => {
+        const { processWithGemini } = await import('@/hooks/useGeminiProcessing');
+        return processWithGemini(file, image);
+      };
+
+      // معالجة الصورة بالطريقة المحددة
+      const processedImage = useGemini 
+        ? await processImageWithGemini(image.file, image)
+        : await processImageWithOCR(image.file, image);
+      
+      // تحديث الصورة بالبيانات الجديدة
+      updateImage(id, processedImage);
+      
+      // حفظ الصورة المعالجة في قاعدة البيانات
+      await saveProcessedImage(processedImage);
+      
+      toast({
+        title: "تمت إعادة المعالجة",
+        description: "تمت إعادة معالجة الصورة بنجاح",
+      });
+      
+      return processedImage;
+    } catch (error) {
+      console.error("خطأ في إعادة معالجة الصورة:", error);
+      updateImage(id, { status: "error" });
+      
+      toast({
+        title: "خطأ في المعالجة",
+        description: "حدث خطأ أثناء محاولة إعادة معالجة الصورة",
+        variant: "destructive"
+      });
+      
+      return null;
+    }
+  };
+
   return {
     images,
     sessionImages,
@@ -176,6 +238,7 @@ export const useImageProcessingCore = () => {
     isSubmitting,
     isLoadingUserImages,
     useGemini,
+    toggleGemini,
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
@@ -193,6 +256,7 @@ export const useImageProcessingCore = () => {
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,
-    runCleanupNow // إضافة الوظيفة الجديدة للتنظيف اليدوي
+    runCleanupNow,
+    reprocessImage // إضافة وظيفة إعادة المعالجة
   };
 };

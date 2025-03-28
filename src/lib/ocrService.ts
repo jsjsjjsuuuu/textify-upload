@@ -1,4 +1,3 @@
-
 import { createWorker, WorkerOptions } from 'tesseract.js';
 
 export interface OcrResult {
@@ -13,29 +12,28 @@ export interface OcrOptions {
 }
 
 export async function extractTextFromImage(file: File, options: OcrOptions = {}): Promise<OcrResult> {
-  console.log("Starting OCR extraction process for file:", file.name, "with options:", options);
+  console.log("بدء عملية استخراج النص من الصورة:", file.name, "مع الخيارات:", options);
   try {
     // إعداد خيارات معالجة الصور
-    const language = options.language || 'ara';
+    const language = options.language || 'ara+eng';
     const quality = options.quality || 'balanced';
     
     // إعداد خيارات جودة التعرف
     let workerOptions: Partial<WorkerOptions> = {};
     
     if (quality === 'fast') {
-      // Set faster but less accurate options using object notation
-      // since engineMode is not in the type definition
+      // خيارات أسرع ولكن أقل دقة
       workerOptions = {
         ...workerOptions,
-        // @ts-ignore - These properties exist at runtime but not in type definitions
+        // @ts-ignore - هذه الخصائص موجودة في وقت التشغيل ولكن ليست في تعريفات الأنواع
         engineMode: 3, // مسار أسرع
         tessedit_pageseg_mode: '3' // وضع التجزئة بالصفحة الكاملة
       };
     } else if (quality === 'best') {
-      // Set more accurate but slower options
+      // خيارات أكثر دقة ولكن أبطأ
       workerOptions = {
         ...workerOptions,
-        // @ts-ignore - These properties exist at runtime but not in type definitions
+        // @ts-ignore - هذه الخصائص موجودة في وقت التشغيل ولكن ليست في تعريفات الأنواع
         engineMode: 1, // أكثر دقة
         tessedit_pageseg_mode: '11', // وضع التجزئة التحليلي الكامل
         tessedit_ocr_engine_mode: '2' // وضع LSTM فقط
@@ -43,29 +41,29 @@ export async function extractTextFromImage(file: File, options: OcrOptions = {})
     }
     
     // إنشاء العامل مع خيارات مناسبة للغة العربية
-    console.log(`Creating Tesseract worker with language: ${language}, quality: ${quality}`);
+    console.log(`إنشاء Tesseract worker باللغة: ${language}، الجودة: ${quality}`);
     const worker = await createWorker(workerOptions);
-    console.log("Worker created successfully");
+    console.log("تم إنشاء العامل بنجاح");
     
     // تحميل اللغات المناسبة
-    console.log(`Loading language: ${language}`);
+    console.log(`تحميل اللغة: ${language}`);
     await worker.loadLanguage(language);
-    console.log(`Initializing worker with language: ${language}`);
+    console.log(`تهيئة العامل باللغة: ${language}`);
     await worker.initialize(language);
-    console.log("Worker initialized successfully");
+    console.log("تم تهيئة العامل بنجاح");
     
     // معالجة الصورة إذا تم طلب ذلك
-    console.log("Converting file to image data...");
+    console.log("تحويل الملف إلى بيانات الصورة...");
     let imageData = await fileToImageData(file);
-    console.log("File converted to image data successfully");
+    console.log("تم تحويل الملف إلى بيانات الصورة بنجاح");
     
     // التعرف على النص
-    console.log("Starting text recognition...");
+    console.log("بدء التعرف على النص...");
     const { data } = await worker.recognize(imageData);
-    console.log("Text recognition completed with confidence:", data.confidence);
+    console.log("تم الانتهاء من التعرف على النص بثقة:", data.confidence);
     
     await worker.terminate();
-    console.log("Worker terminated");
+    console.log("تم إنهاء العامل");
     
     // تحسين النص المستخرج بتنظيف البيانات
     const enhancedText = enhanceExtractedText(data.text);
@@ -75,8 +73,8 @@ export async function extractTextFromImage(file: File, options: OcrOptions = {})
       confidence: data.confidence
     };
   } catch (error) {
-    console.error('OCR processing error:', error);
-    throw new Error('Failed to extract text from image');
+    console.error('خطأ في معالجة OCR:', error);
+    throw new Error('فشل في استخراج النص من الصورة');
   }
 }
 
@@ -86,14 +84,14 @@ async function fileToImageData(file: File): Promise<string> {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        console.log("File read successful, image data length:", reader.result.length);
+        console.log("نجحت قراءة الملف، طول بيانات الصورة:", reader.result.length);
         resolve(reader.result);
       } else {
-        reject(new Error('Failed to convert file to image data'));
+        reject(new Error('فشل في تحويل الملف إلى بيانات صورة'));
       }
     };
     reader.onerror = () => {
-      console.error("FileReader error:", reader.error);
+      console.error("خطأ في FileReader:", reader.error);
       reject(reader.error);
     };
     reader.readAsDataURL(file);
