@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,15 +8,15 @@ import { ImageData } from "@/types/ImageData";
 import { AlertCircle, Copy, Download, FileText, Save, Table, Upload } from "lucide-react";
 import { convertImagesToBookmarkletItems, convertToCSV, convertToJSON, convertToExcel } from "@/utils/bookmarklet/converter";
 import { saveToLocalStorage, getStorageStats } from "@/utils/bookmarkletService";
-
 interface DirectExportToolsProps {
   images: ImageData[];
 }
-
 const DirectExportTools: React.FC<DirectExportToolsProps> = ({
   images
 }) => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [activeTab, setActiveTab] = useState("csv");
   const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
 
@@ -156,115 +155,12 @@ const DirectExportTools: React.FC<DirectExportToolsProps> = ({
   const getValidItemsCount = () => {
     return images.filter(img => img.status === "completed" && img.code && img.senderName && img.phoneNumber).length;
   };
-
-  return (
-    <div className="space-y-4">
-      {/* معلومات البيانات المتاحة */}
-      <Alert className="bg-primary/5 border-primary/20">
-        <FileText className="h-4 w-4" />
-        <AlertTitle>البيانات المتاحة للتصدير</AlertTitle>
-        <AlertDescription>
-          لديك <span className="font-bold">{getValidItemsCount()}</span> سجل مكتمل من إجمالي {images.length} سجل جاهز للتصدير.
-        </AlertDescription>
-      </Alert>
-
-      {/* أدوات التصدير */}
-      <Tabs defaultValue="csv" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger value="csv">CSV</TabsTrigger>
-          <TabsTrigger value="json">JSON</TabsTrigger>
-          <TabsTrigger value="excel">Excel</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="csv" className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-2">
-            <Button 
-              onClick={() => handleCopyToClipboard("csv")} 
-              className="flex-1"
-              variant={copiedFormat === "csv" ? "secondary" : "default"}
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              {copiedFormat === "csv" ? "تم النسخ!" : "نسخ CSV إلى الحافظة"}
-            </Button>
-            <Button 
-              onClick={() => handleDownloadFile("csv")} 
-              variant="outline" 
-              className="flex-1"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              تنزيل ملف CSV
-            </Button>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="json" className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-2">
-            <Button 
-              onClick={() => handleCopyToClipboard("json")} 
-              className="flex-1"
-              variant={copiedFormat === "json" ? "secondary" : "default"}
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              {copiedFormat === "json" ? "تم النسخ!" : "نسخ JSON إلى الحافظة"}
-            </Button>
-            <Button 
-              onClick={() => handleDownloadFile("json")} 
-              variant="outline" 
-              className="flex-1"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              تنزيل ملف JSON
-            </Button>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="excel" className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-2">
-            <Button 
-              onClick={() => handleCopyToClipboard("excel")} 
-              className="flex-1"
-              variant={copiedFormat === "excel" ? "secondary" : "default"}
-            >
-              <Table className="mr-2 h-4 w-4" />
-              {copiedFormat === "excel" ? "تم النسخ!" : "نسخ بيانات Excel"}
-            </Button>
-            <Button 
-              onClick={() => handleDownloadFile("excel")} 
-              variant="outline" 
-              className="flex-1"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              تنزيل لـ Excel
-            </Button>
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      <Separator />
+  return <div className="space-y-4">
       
-      {/* زر تصدير البيانات إلى ذاكرة المتصفح */}
-      <Button 
-        onClick={handleExportToStorage} 
-        className="w-full bg-brand-green hover:bg-brand-green/90"
-      >
-        <Save className="mr-2 h-4 w-4" />
-        حفظ البيانات في ذاكرة المتصفح
-      </Button>
-
-      {/* تنبيه في حالة عدم وجود سجلات */}
-      {getValidItemsCount() === 0 && (
-        <Alert variant="destructive" className="mt-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>لا توجد بيانات للتصدير</AlertTitle>
-          <AlertDescription>
-            يرجى معالجة صورة واحدة على الأقل واستخراج البيانات الأساسية (الكود، اسم المرسل، رقم الهاتف) قبل التصدير.
-          </AlertDescription>
-        </Alert>
-      )}
-    </div>
-  );
+      
+      
+    </div>;
 };
-
 const Code = ({
   className,
   ...props
@@ -274,5 +170,4 @@ const Code = ({
       <polyline points="8 6 2 12 8 18"></polyline>
     </svg>;
 };
-
 export default DirectExportTools;

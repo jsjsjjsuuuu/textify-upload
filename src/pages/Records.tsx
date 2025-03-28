@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays, RefreshCw } from "lucide-react";
+import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,6 @@ import { Link } from "react-router-dom";
 import { formatDate } from "@/utils/dateFormatter";
 import { ImageData } from "@/types/ImageData";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
-import { toast } from "sonner";
 
 // مكون الصفحة الرئيسي
 const Records = () => {
@@ -32,32 +31,10 @@ const Records = () => {
   const {
     images,
     isSubmitting,
-    isLoading,
-    dataLoaded,
     handleDelete,
     handleSubmitToApi,
-    formatDate: formatImageDate,
-    refreshUserImages
+    formatDate: formatImageDate
   } = useImageProcessing();
-
-  // التحقق من حالة تسجيل الدخول وتحميل البيانات عند تحميل الصفحة
-  useEffect(() => {
-    if (user && !dataLoaded && images.length === 0) {
-      console.log("تلقائي: المستخدم مسجل الدخول ولا توجد بيانات، جاري تحميل البيانات...");
-      refreshUserImages();
-    }
-  }, [user, dataLoaded, images.length]);
-
-  // التعامل مع تحديث البيانات يدويًا
-  const handleRefreshData = () => {
-    if (isLoading) {
-      toast.info("جاري تحميل البيانات بالفعل، يرجى الانتظار...");
-      return;
-    }
-    
-    console.log("يدوي: جاري تحديث بيانات المستخدم...");
-    refreshUserImages();
-  };
 
   // التعامل مع الفرز
   const handleSort = (field) => {
@@ -188,18 +165,12 @@ const Records = () => {
                 إدارة ومراجعة سجلات الوصولات المستخرجة
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleRefreshData} variant="outline" disabled={isLoading} className="flex items-center gap-2">
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                {isLoading ? 'جاري التحديث...' : 'تحديث البيانات'}
-              </Button>
-              <Button asChild>
-                <Link to="/upload" className="flex items-center gap-2">
-                  <Receipt className="h-4 w-4" />
-                  إضافة وصولات جديدة
-                </Link>
-              </Button>
-            </div>
+            <Button asChild>
+              <Link to="/upload" className="flex items-center gap-2">
+                <Receipt className="h-4 w-4" />
+                إضافة وصولات جديدة
+              </Link>
+            </Button>
           </div>
 
           {/* فلتر البحث */}
@@ -303,12 +274,7 @@ const Records = () => {
                   {filteredAndSortedImages.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                        {isLoading ? (
-                          <div className="flex flex-col items-center gap-2">
-                            <RefreshCw className="h-10 w-10 text-muted-foreground/60 animate-spin" />
-                            <p>جاري تحميل السجلات...</p>
-                          </div>
-                        ) : images.length === 0 ? 
+                        {images.length === 0 ? 
                           <div className="flex flex-col items-center gap-2">
                             <CalendarDays className="h-10 w-10 text-muted-foreground/60" />
                             <p>لا توجد سجلات بعد.</p>
@@ -403,7 +369,6 @@ const Records = () => {
           {/* معلومات إضافية */}
           <p className="text-center text-sm text-muted-foreground">
             تم عرض {filteredAndSortedImages.length} من إجمالي {images.length} سجل
-            {isLoading && " (جاري التحميل...)"}
           </p>
         </motion.div>
       </main>

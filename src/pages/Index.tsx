@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { ArrowRight, RefreshCw } from 'lucide-react';
+
+import React, { useEffect, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -18,21 +19,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays, Filter, Trash2, RotateCw } from "lucide-react";
+import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/utils/dateFormatter";
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("number");
   const [sortDirection, setSortDirection] = useState("desc");
-  const [alreadySavedIds, setAlreadySavedIds] = useState<Set<string>>(new Set());
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
@@ -40,8 +36,6 @@ const Index = () => {
     isProcessing,
     processingProgress,
     isSubmitting,
-    isLoading,
-    dataLoaded,
     useGemini,
     bookmarkletStats,
     handleFileChange,
@@ -49,9 +43,7 @@ const Index = () => {
     handleDelete,
     handleSubmitToApi,
     saveImageToDatabase,
-    formatDate: formatImageDate,
-    refreshUserImages,
-    cleanupDuplicates
+    formatDate: formatImageDate
   } = useImageProcessing();
   
   const {
@@ -60,93 +52,20 @@ const Index = () => {
     formatProvinceName
   } = useDataFormatting();
   
-  // تحديث قائمة المعرفات المحفوظة - استخدام useCallback لمنع التكرار
-  const updateSavedImageIds = useCallback(() => {
-    const savedIds = new Set(
-      images
-        .filter(img => img.submitted)
-        .map(img => img.id)
+  // عند اكتمال معالجة الصور، حفظها في قاعدة البيانات
+  useEffect(() => {
+    const completedImages = images.filter(img => 
+      img.status === "completed" && img.code && img.senderName && img.phoneNumber && !img.submitted
     );
     
-    // تحديث قائمة المعرفات المحفوظة إذا كان هناك تغيير
-    if (savedIds.size !== alreadySavedIds.size || 
-        ![...savedIds].every(id => alreadySavedIds.has(id))) {
-      console.log(`تحديث قائمة المعرفات المحفوظة: ${alreadySavedIds.size} -> ${savedIds.size}`);
-      setAlreadySavedIds(savedIds);
-    }
-  }, [images, alreadySavedIds]);
-  
-  // التحقق من حالة تسجيل الدخول وتحميل البيانات عند تحميل الصفحة - مرة واحدة فقط
-  useEffect(() => {
-    if (user && !dataLoaded && images.length === 0 && !initialLoadComplete) {
-      console.log("تلقائي: المستخدم مسجل الدخول ولا توجد بيانات في الصفحة الرئيسية، جاري تحميل البيانات...");
-      refreshUserImages();
-      setInitialLoadComplete(true);
-    }
-  }, [user, dataLoaded, images.length, initialLoadComplete]);
-  
-  // تحديث قائمة المعرفات المحفوظة عند تغيير الصور
-  useEffect(() => {
-    updateSavedImageIds();
-  }, [images, updateSavedImageIds]);
-  
-  // التعامل مع تحديث البيانات يدويًا
-  const handleRefreshData = () => {
-    if (isLoading) {
-      toast.info("جاري تحميل البيانات بالفعل، يرجى الانتظار...");
-      return;
-    }
-    
-    console.log("يدوي: جاري تحديث بيانات المستخدم من الصفحة الرئيسية...");
-    refreshUserImages();
-  };
-  
-  // معالجة تنظيف البيانات المكررة
-  const handleCleanupDuplicates = () => {
-    if (isLoading) {
-      toast.info("جاري تحميل البيانات بالفعل، يرجى الانتظار...");
-      return;
-    }
-    
-    console.log("يدوي: بدء عملية تنظيف السجلات المكررة...");
-    cleanupDuplicates();
-  };
-  
-  // عند اكتمال معالجة الصور، حفظها في قاعدة البيانات - تحسين لمنع الحفظ المتكرر
-  useEffect(() => {
-    // فقط إذا كان المستخدم مسجل الدخول
-    if (!user || isLoading) return;
-    
-    // بدلاً من حفظ جميع الصور المكتملة مباشرة، تحقق من وجود صور جديدة مكتملة لم يتم حفظها بعد
-    const completedNotSubmittedImages = images.filter(img => 
-      img.status === "completed" && 
-      img.code && 
-      img.senderName && 
-      img.phoneNumber && 
-      !img.submitted &&
-      !alreadySavedIds.has(img.id)
-    );
-    
-    // حفظ الصور الجديدة المكتملة فقط
-    if (completedNotSubmittedImages.length > 0) {
-      console.log(`وجدت ${completedNotSubmittedImages.length} صورة مكتملة وغير محفوظة، جاري الحفظ...`);
-      
-      // استخدام Promise.all لتحسين الأداء
-      Promise.all(
-        completedNotSubmittedImages.map(async (image) => {
-          // تجنب الحفظ المزدوج باستخدام قائمة المعرفات المحفوظة
-          if (!alreadySavedIds.has(image.id)) {
-            // حفظ الصور المكتملة في قاعدة البيانات
-            await saveImageToDatabase(image);
-            console.log("تم حفظ الصورة في قاعدة البيانات:", image.id);
-          }
-        })
-      ).then(() => {
-        // تحديث قائمة المعرفات المحفوظة بعد الانتهاء
-        updateSavedImageIds();
+    if (completedImages.length > 0) {
+      completedImages.forEach(async (image) => {
+        // حفظ الصور المكتملة في قاعدة البيانات
+        await saveImageToDatabase(image);
+        console.log("تم حفظ الصورة في قاعدة البيانات:", image.id);
       });
     }
-  }, [images, user, isLoading, alreadySavedIds, saveImageToDatabase, updateSavedImageIds]);
+  }, [images]);
   
   const handleImageClick = (image: ImageData) => {
     console.log('صورة تم النقر عليها:', image.id);
@@ -271,14 +190,14 @@ const Index = () => {
         <section className="py-16 px-6">
           <div className="container mx-auto">
             <motion.div initial={{
-              opacity: 0,
-              y: 20
-            }} animate={{
-              opacity: 1,
-              y: 0
-            }} transition={{
-              duration: 0.6
-            }} className="text-center max-w-3xl mx-auto mb-12">
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            duration: 0.6
+          }} className="text-center max-w-3xl mx-auto mb-12">
               <h1 className="apple-header mb-4">معالج الصور والبيانات</h1>
               <p className="text-xl text-muted-foreground mb-8">
                 استخرج البيانات من الصور بسهولة وفعالية باستخدام تقنية الذكاء الاصطناعي المتطورة
@@ -334,32 +253,12 @@ const Index = () => {
                 className="space-y-8"
               >
                 {/* عنوان الصفحة */}
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="flex justify-between items-center">
                   <div>
                     <h2 className="text-3xl font-medium tracking-tight">سجلات الوصولات</h2>
                     <p className="text-muted-foreground mt-1">
                       إدارة ومراجعة سجلات الوصولات المستخرجة
                     </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleCleanupDuplicates}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                      title="إزالة السجلات المكررة"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="hidden sm:inline">تنظيف المكررات</span>
-                    </Button>
-                    <Button
-                      onClick={handleRefreshData}
-                      variant="outline"
-                      disabled={isLoading}
-                      className="flex items-center gap-2"
-                    >
-                      <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                      {isLoading ? 'جاري التحديث...' : 'تحديث البيانات'}
-                    </Button>
                   </div>
                 </div>
 
@@ -464,12 +363,7 @@ const Index = () => {
                         {filteredAndSortedImages.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                              {isLoading ? (
-                                <div className="flex flex-col items-center gap-2">
-                                  <RefreshCw className="h-10 w-10 text-muted-foreground/60 animate-spin" />
-                                  <p>جاري تحميل السجلات...</p>
-                                </div>
-                              ) : images.length === 0 ? 
+                              {images.length === 0 ? 
                                 <div className="flex flex-col items-center gap-2">
                                   <CalendarDays className="h-10 w-10 text-muted-foreground/60" />
                                   <p>لا توجد سجلات بعد.</p>
@@ -562,7 +456,6 @@ const Index = () => {
                 {/* معلومات إضافية */}
                 <p className="text-center text-sm text-muted-foreground">
                   تم عرض {filteredAndSortedImages.length} من إجمالي {images.length} سجل
-                  {isLoading && " (جاري التحميل...)"}
                 </p>
               </motion.div>
             </div>
@@ -592,3 +485,4 @@ const Index = () => {
 };
 
 export default Index;
+
