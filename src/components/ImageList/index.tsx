@@ -1,6 +1,10 @@
+
 import { ImageData } from "@/types/ImageData";
 import CardItem from "./CardItem";
 import { motion } from "framer-motion";
+import { Fragment } from "react";
+import { ChevronDown } from "lucide-react";
+
 interface ImageListProps {
   images: ImageData[];
   isSubmitting: boolean;
@@ -10,6 +14,7 @@ interface ImageListProps {
   onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
 }
+
 const ImageList = ({
   images,
   isSubmitting,
@@ -20,23 +25,68 @@ const ImageList = ({
   formatDate
 }: ImageListProps) => {
   if (images.length === 0) return null;
-  return <motion.section initial={{
-    opacity: 0,
-    y: 20
-  }} animate={{
-    opacity: 1,
-    y: 0
-  }} transition={{
-    duration: 0.4
-  }}>
-      <h2 className="text-2xl font-bold mb-6 flex items-center text-gray-800 py-0 my-[21px] mx-[54px]">
-        
+  
+  // تجميع الصور حسب batch_id
+  const groupedImages: { [key: string]: ImageData[] } = {};
+  
+  images.forEach(image => {
+    const batchId = image.batch_id || 'default';
+    if (!groupedImages[batchId]) {
+      groupedImages[batchId] = [];
+    }
+    groupedImages[batchId].push(image);
+  });
+  
+  // ترتيب المجموعات حسب التاريخ (الأحدث أولاً)
+  const sortedBatchIds = Object.keys(groupedImages).sort((a, b) => {
+    const dateA = groupedImages[a][0].date.getTime();
+    const dateB = groupedImages[b][0].date.getTime();
+    return dateB - dateA;
+  });
+
+  return (
+    <motion.section 
+      initial={{ opacity: 0, y: 20 }} 
+      animate={{ opacity: 1, y: 0 }} 
+      transition={{ duration: this.setState }}
+    >
+      <h2 className="text-2xl font-bold mb-6 flex items-center">
         معاينة الصور والنصوص المستخرجة
       </h2>
       
       <div className="space-y-6">
-        {images.map(image => <CardItem key={image.id} image={image} isSubmitting={isSubmitting} onImageClick={onImageClick} onTextChange={onTextChange} onDelete={onDelete} onSubmit={onSubmit} formatDate={formatDate} />)}
+        {sortedBatchIds.map(batchId => {
+          const batchImages = groupedImages[batchId];
+          const hasManyImages = batchImages.length > 1;
+          
+          return (
+            <Fragment key={batchId}>
+              {batchImages.map((image, index) => (
+                <CardItem 
+                  key={image.id} 
+                  image={image} 
+                  isSubmitting={isSubmitting} 
+                  onImageClick={onImageClick} 
+                  onTextChange={onTextChange} 
+                  onDelete={onDelete} 
+                  onSubmit={onSubmit} 
+                  formatDate={formatDate}
+                  showBatchArrow={hasManyImages}
+                  isFirstInBatch={index === 0}
+                  isLastInBatch={index === batchImages.length - 1}
+                />
+              ))}
+              
+              {/* إضافة فاصل بين المجموعات */}
+              {batchId !== sortedBatchIds[sortedBatchIds.length - 1] && (
+                <div className="border-t border-gray-200 dark:border-gray-700 my-8"></div>
+              )}
+            </Fragment>
+          );
+        })}
       </div>
-    </motion.section>;
+    </motion.section>
+  );
 };
+
 export default ImageList;

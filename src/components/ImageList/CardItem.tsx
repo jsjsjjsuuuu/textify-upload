@@ -6,6 +6,7 @@ import DraggableImage from "./DraggableImage";
 import ImageDataForm from "./ImageDataForm";
 import ActionButtons from "./ActionButtons";
 import { AutomationButton } from "@/components/ExtractedData";
+import BatchArrow from "./BatchArrow";
 
 interface CardItemProps {
   image: ImageData;
@@ -15,6 +16,9 @@ interface CardItemProps {
   onDelete: (id: string) => void;
   onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
+  showBatchArrow?: boolean;
+  isFirstInBatch?: boolean;
+  isLastInBatch?: boolean;
 }
 
 const CardItem = ({ 
@@ -24,7 +28,10 @@ const CardItem = ({
   onTextChange, 
   onDelete, 
   onSubmit, 
-  formatDate 
+  formatDate,
+  showBatchArrow = false,
+  isFirstInBatch = false,
+  isLastInBatch = false
 }: CardItemProps) => {
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
@@ -34,8 +41,12 @@ const CardItem = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="max-w-5xl mx-auto"
+      className="max-w-5xl mx-auto relative"
     >
+      {showBatchArrow && (
+        <BatchArrow isFirst={isFirstInBatch} isLast={isLastInBatch} />
+      )}
+      
       <Card className="overflow-hidden bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow border-border/60 dark:border-gray-700/60 rounded-xl">
         <CardContent className="p-0">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-0">

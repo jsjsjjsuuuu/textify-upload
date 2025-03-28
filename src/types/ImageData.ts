@@ -18,6 +18,8 @@ export interface ImageData {
   extractionMethod?: "ocr" | "gemini";
   // حقول جديدة لدعم التكامل مع المستخدمين
   user_id?: string;
+  // حقل جديد لتتبع مجموعة الصور المرفوعة معًا
+  batch_id?: string;
   // حقول لدعم عملية Bookmarklet
   bookmarkletStatus?: "ready" | "pending" | "success" | "error";
   bookmarkletMessage?: string;

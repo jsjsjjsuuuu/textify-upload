@@ -5,9 +5,9 @@ import { ImageData } from "@/types/ImageData";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useDataFormatting } from "@/hooks/useDataFormatting";
 import { createReliableBlobUrl } from "@/lib/gemini/utils";
-import { saveToLocalStorage } from "@/utils/bookmarklet";
+import { saveToLocalStorage } from "@/utils/bookmarklet/storage";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from 'uuid';
 
 interface UseFileUploadProps {
   images: ImageData[];
@@ -49,6 +49,10 @@ export const useFileUpload = ({
     
     const startingNumber = images.length > 0 ? Math.max(...images.map(img => img.number || 0)) + 1 : 1;
     console.log("رقم بداية الصور الجديدة:", startingNumber);
+    
+    // إنشاء معرف فريد للدفعة لربط الصور المرفوعة معًا
+    const batchId = uuidv4();
+    console.log("إنشاء معرف دفعة جديد:", batchId);
     
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
@@ -97,7 +101,8 @@ export const useFileUpload = ({
         date: new Date(),
         status: "processing",
         number: startingNumber + i,
-        user_id: user?.id // إضافة معرف المستخدم للصورة الجديدة
+        user_id: user?.id, // إضافة معرف المستخدم للصورة الجديدة
+        batch_id: batchId // تعيين معرف الدفعة للصورة
       };
       
       addImage(newImage);
@@ -107,16 +112,6 @@ export const useFileUpload = ({
         // استخدام Gemini فقط للمعالجة
         console.log("استخدام Gemini API للاستخراج");
         const processedImage = await processWithGemini(file, newImage);
-        
-        // إذا كان هناك سعر، نتأكد من تنسيقه بشكل صحيح
-        if (processedImage.price) {
-          const originalPrice = processedImage.price;
-          processedImage.price = formatPrice(originalPrice);
-          
-          if (originalPrice !== processedImage.price) {
-            console.log(`تم تنسيق السعر تلقائيًا بعد المعالجة: "${originalPrice}" -> "${processedImage.price}"`);
-          }
-        }
         
         // تنظيف رقم الهاتف تلقائيًا بعد المعالجة
         if (processedImage.phoneNumber) {

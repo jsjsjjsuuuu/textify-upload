@@ -4,6 +4,7 @@ import { Edit, Trash, Send, AlertCircle } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
 
 interface ImageTableProps {
   images: ImageData[];
@@ -22,7 +23,58 @@ const ImageTable = ({
   onSubmit,
   formatDate
 }: ImageTableProps) => {
+  const [groupedImages, setGroupedImages] = useState<{ [key: string]: ImageData[] }>({});
+  
+  // تجميع الصور حسب batch_id
+  useEffect(() => {
+    const grouped: { [key: string]: ImageData[] } = {};
+    
+    images.forEach(image => {
+      const batchId = image.batch_id || 'default';
+      if (!grouped[batchId]) {
+        grouped[batchId] = [];
+      }
+      grouped[batchId].push(image);
+    });
+    
+    setGroupedImages(grouped);
+  }, [images]);
+  
   if (images.length === 0) return null;
+  
+  // تحويل المجموعات المرتبة إلى مصفوفة مسطحة مع معلومات إضافية
+  const prepareImageRows = () => {
+    const rows: (ImageData & { isFirstInBatch?: boolean; isLastInBatch?: boolean; showBatchConnector?: boolean })[] = [];
+    
+    // ترتيب المجموعات حسب التاريخ (الأحدث أولاً)
+    const sortedBatchIds = Object.keys(groupedImages).sort((a, b) => {
+      const dateA = groupedImages[a][0].date.getTime();
+      const dateB = groupedImages[b][0].date.getTime();
+      return dateB - dateA;
+    });
+    
+    sortedBatchIds.forEach(batchId => {
+      const batchImages = [...groupedImages[batchId]].sort((a, b) => {
+        // ترتيب الصور داخل المجموعة حسب الرقم
+        return (a.number || 0) - (b.number || 0);
+      });
+      
+      const hasManyImages = batchImages.length > 1;
+      
+      batchImages.forEach((image, index) => {
+        rows.push({
+          ...image,
+          isFirstInBatch: index === 0,
+          isLastInBatch: index === batchImages.length - 1,
+          showBatchConnector: hasManyImages && index < batchImages.length - 1
+        });
+      });
+    });
+    
+    return rows;
+  };
+  
+  const preparedImages = prepareImageRows();
 
   return (
     <motion.section
@@ -31,7 +83,7 @@ const ImageTable = ({
       transition={{ duration: 0.5 }}
       className="mt-10"
     >
-      <h2 className="text-2xl font-bold text-brand-brown dark:text-brand-beige mb-6 flex items-center">
+      <h2 className="text-2xl font-bold mb-6 flex items-center">
         <span className="bg-brand-green/10 w-1.5 h-6 rounded mr-2 block"></span>
         سجل النصوص المستخرجة
       </h2>
@@ -55,17 +107,35 @@ const ImageTable = ({
               </tr>
             </thead>
             <tbody>
-              {images.map(image => {
+              {preparedImages.map((image, rowIndex) => {
                 // التحقق من صحة رقم الهاتف
                 const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
                 
                 return (
                   <tr 
                     key={image.id} 
-                    className="hover:bg-muted/10 dark:hover:bg-gray-700/20 transition-colors border-b border-border/40 dark:border-gray-700/40 last:border-none"
+                    className="hover:bg-muted/10 dark:hover:bg-gray-700/20 transition-colors border-b border-border/40 dark:border-gray-700/40 last:border-none relative"
                   >
-                    <td className="py-3 px-4 text-sm">{image.number}</td>
-                    <td className="py-3 px-4 text-sm">{formatDate(image.date)}</td>
+                    <td className="py-3 px-4 text-sm relative">
+                      {/* عرض مؤشر الدفعة إذا كانت الصورة جزءًا من مجموعة */}
+                      {image.showBatchConnector && (
+                        <div className="absolute top-1/2 right-0 h-full">
+                          <div className="absolute top-1/2 bottom-0 right-2 border-r-2 border-dashed border-yellow-500"></div>
+                        </div>
+                      )}
+                      {image.isFirstInBatch && image.showBatchConnector && (
+                        <div className="absolute -bottom-0 right-2">
+                          <div className="w-4 h-4 flex items-center justify-center border-2 border-yellow-500 bg-white dark:bg-gray-800 rounded-full">
+                            <div className="w-1 h-1 bg-yellow-500 rounded-full"></div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {image.number || "-"}
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      <span className="text-muted-foreground">{formatDate(image.date)}</span>
+                    </td>
                     <td className="py-3 px-4">
                       <div 
                         className="w-20 h-20 rounded-lg overflow-hidden bg-transparent cursor-pointer border border-border/40 dark:border-gray-700/40 transition-transform hover:scale-105 group" 

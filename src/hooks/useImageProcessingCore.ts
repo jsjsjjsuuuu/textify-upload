@@ -128,7 +128,8 @@ export const useImageProcessingCore = () => {
             status: item.status as "processing" | "pending" | "completed" | "error" || "completed",
             submitted: item.submitted || false,
             number: data.length - index, // ترقيم تنازلي بناءً على ترتيب الاستلام
-            user_id: item.user_id
+            user_id: item.user_id,
+            batch_id: item.batch_id // إضافة معرف الدفعة
           };
         });
         
@@ -176,7 +177,8 @@ export const useImageProcessingCore = () => {
             price: image.price || "",
             province: image.province || "",
             status: image.status,
-            submitted: true
+            submitted: true,
+            batch_id: image.batch_id || "" // تحديث معرف الدفعة
           })
           .eq('id', existingImage.id)
           .select();
@@ -205,7 +207,8 @@ export const useImageProcessingCore = () => {
           price: image.price || "",
           province: image.province || "",
           status: image.status,
-          submitted: true
+          submitted: true,
+          batch_id: image.batch_id || "" // إضافة معرف الدفعة
         })
         .select();
 
