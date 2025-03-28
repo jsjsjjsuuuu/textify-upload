@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -145,7 +144,7 @@ export const useImageProcessingCore = () => {
     }
   };
   
-  // استدعاء useFileUpload مع تحسين آلية التعامل مع الصور
+  // استدعاء useFileUpload مع تحسين آلية التعامل مع الصور وتمرير وظيفة removeDuplicates
   const { 
     isProcessing, 
     handleFileChange,
@@ -157,7 +156,8 @@ export const useImageProcessingCore = () => {
     addImage,
     updateImage,
     setProcessingProgress,
-    saveProcessedImage
+    saveProcessedImage,
+    removeDuplicates  // تمرير وظيفة إزالة التكرارات
   });
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول

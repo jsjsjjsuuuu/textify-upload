@@ -17,6 +17,7 @@ interface UseFileUploadProps {
   updateImage: (id: string, fields: Partial<ImageData>) => void;
   setProcessingProgress: (progress: number) => void;
   saveProcessedImage?: (image: ImageData) => Promise<void>;
+  removeDuplicates?: () => void; // إضافة الوظيفة كخاصية اختيارية في الواجهة
 }
 
 // تحسين معالجة الصور لتتم بشكل متسلسل وبتتبع أفضل
@@ -30,7 +31,8 @@ export const useFileUpload = ({
   addImage,
   updateImage,
   setProcessingProgress,
-  saveProcessedImage
+  saveProcessedImage,
+  removeDuplicates
 }: UseFileUploadProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeUploads, setActiveUploads] = useState(0); 
@@ -411,9 +413,9 @@ export const useFileUpload = ({
       }
       
       // إزالة التكرارات بعد الانتهاء من المعالجة
-      if (typeof images.removeDuplicates === 'function') {
+      if (removeDuplicates && typeof removeDuplicates === 'function') {
         console.log("إزالة التكرارات بعد الانتهاء من المعالجة...");
-        images.removeDuplicates();
+        removeDuplicates();
       }
       
       // التحقق من وجود قائمة انتظار جديدة
@@ -435,7 +437,7 @@ export const useFileUpload = ({
         variant: "destructive"
       });
     }
-  }, [processingQueue, queueProcessing, images, addImage, updateImage, setProcessingProgress, updateProgress]);
+  }, [processingQueue, queueProcessing, images, addImage, updateImage, setProcessingProgress, updateProgress, removeDuplicates]);
 
   // وظيفة لإعادة تشغيل المعالجة يدويًا
   const manuallyTriggerProcessingQueue = useCallback(() => {
@@ -521,8 +523,8 @@ export const useFileUpload = ({
     manuallyTriggerProcessingQueue,
     // إضافة وظيفة جديدة لعمليات التنظيف
     cleanupDuplicates: () => {
-      if (typeof images.removeDuplicates === 'function') {
-        images.removeDuplicates();
+      if (removeDuplicates && typeof removeDuplicates === 'function') {
+        removeDuplicates();
       }
     }
   };
