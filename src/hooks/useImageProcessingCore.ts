@@ -178,12 +178,13 @@ export const useImageProcessingCore = () => {
             province: image.province || "",
             status: image.status,
             submitted: true,
-            batch_id: image.batch_id || "" // تحديث معرف الدفعة
+            batch_id: image.batch_id || "default" // تحديث معرف الدفعة
           })
           .eq('id', existingImage.id)
           .select();
 
         if (updateError) {
+          console.error("خطأ في تحديث البيانات:", updateError);
           throw updateError;
         }
 
@@ -208,12 +209,17 @@ export const useImageProcessingCore = () => {
           province: image.province || "",
           status: image.status,
           submitted: true,
-          batch_id: image.batch_id || "" // إضافة معرف الدفعة
+          batch_id: image.batch_id || "default" // إضافة معرف الدفعة
         })
         .select();
 
       if (error) {
         console.error("خطأ في حفظ البيانات:", error);
+        toast({
+          title: "خطأ",
+          description: `فشل حفظ البيانات: ${error.message}`,
+          variant: "destructive",
+        });
         return null;
       }
 
@@ -221,6 +227,12 @@ export const useImageProcessingCore = () => {
       updateImage(image.id, { submitted: true });
 
       console.log("تم حفظ البيانات بنجاح:", data?.[0]);
+      
+      toast({
+        title: "تم الحفظ",
+        description: "تم حفظ البيانات بنجاح",
+      });
+      
       return data?.[0];
     } catch (error: any) {
       console.error("خطأ في حفظ البيانات:", error);

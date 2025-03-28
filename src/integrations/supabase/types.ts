@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       images: {
         Row: {
+          batch_id: string | null
           code: string | null
           company_name: string | null
           created_at: string
@@ -27,6 +28,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          batch_id?: string | null
           code?: string | null
           company_name?: string | null
           created_at?: string
@@ -43,6 +45,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          batch_id?: string | null
           code?: string | null
           company_name?: string | null
           created_at?: string
