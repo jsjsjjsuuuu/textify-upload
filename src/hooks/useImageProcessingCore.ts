@@ -101,11 +101,6 @@ export const useImageProcessingCore = () => {
         
         // بدلاً من استبدال جميع الصور، نضيف السجلات المستوردة إلى مجموعة الصور الكاملة فقط
         setAllImages(loadedImages);
-        
-        toast({
-          title: "تم التحميل",
-          description: `تم تحميل ${data.length} صورة من حسابك`
-        });
       } else {
         console.log("لم يتم العثور على صور للمستخدم");
       }
@@ -162,11 +157,6 @@ export const useImageProcessingCore = () => {
           throw updateError;
         }
 
-        toast({
-          title: "نجاح",
-          description: `تم تحديث البيانات في قاعدة البيانات`,
-        });
-
         console.log("تم تحديث البيانات بنجاح:", updatedData[0]);
         return updatedData[0];
       }
@@ -202,11 +192,6 @@ export const useImageProcessingCore = () => {
 
       // تحديث حالة الصورة ليشير إلى أنها تم حفظها
       updateImage(image.id, { submitted: true, user_id: user.id });
-
-      toast({
-        title: "نجاح",
-        description: `تم حفظ البيانات في قاعدة البيانات`,
-      });
 
       console.log("تم حفظ البيانات بنجاح:", data[0]);
       
@@ -259,7 +244,7 @@ export const useImageProcessingCore = () => {
       
       toast({
         title: "نجاح",
-        description: `تم إرسال البيانات بنجاح لـ ${image.file.name}!`,
+        description: `تم إرسال البيانات بنجاح!`,
       });
 
       // تحديث السجلات بعد الحفظ
@@ -273,7 +258,7 @@ export const useImageProcessingCore = () => {
       
       toast({
         title: "خطأ",
-        description: `فشل إرسال البيانات لـ ${image.file.name}: ${error.message}`,
+        description: `فشل إرسال البيانات: ${error.message}`,
         variant: "destructive",
       });
     } finally {
