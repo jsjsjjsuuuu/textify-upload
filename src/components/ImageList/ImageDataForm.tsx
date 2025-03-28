@@ -1,3 +1,4 @@
+
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IRAQ_PROVINCES } from "@/utils/provinces";
@@ -19,7 +20,7 @@ const ImageDataForm = ({
     toast
   } = useToast();
 
-  // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
+  // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً بالضبط)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
 
   // State to manage temporary price value before formatting
@@ -109,12 +110,12 @@ const ImageDataForm = ({
   return <div className="p-4">
       <h3 className="text-lg font-semibold mb-3 text-gray-900 text-center">البيانات المستخرجة</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mx-0 my-[101px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
         {/* اسم الشركة */}
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
             <span>اسم الشركة:</span>
-            {image.confidence}
+            <span className="text-muted-foreground">{image.confidence}</span>
           </label>
           <Input value={image.companyName || ''} onChange={e => onTextChange(image.id, "companyName", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل اسم الشركة" />
         </div>
@@ -122,8 +123,11 @@ const ImageDataForm = ({
         {/* الكود */}
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
-            <span>الكود:</span>
-            {image.confidence}
+            <span className="flex items-center">
+              الكود:
+              <span className="text-red-500 mr-0.5">*</span>
+            </span>
+            <span className="text-muted-foreground">{image.confidence}</span>
           </label>
           <Input value={image.code || ''} onChange={e => onTextChange(image.id, "code", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل الكود" />
         </div>
@@ -131,8 +135,11 @@ const ImageDataForm = ({
         {/* اسم المرسل */}
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
-            <span>اسم المرسل:</span>
-            {image.confidence}
+            <span className="flex items-center">
+              اسم المرسل:
+              <span className="text-red-500 mr-0.5">*</span>
+            </span>
+            <span className="text-muted-foreground">{image.confidence}</span>
           </label>
           <Input value={image.senderName || ''} onChange={e => onTextChange(image.id, "senderName", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل اسم المرسل" />
         </div>
@@ -140,9 +147,12 @@ const ImageDataForm = ({
         {/* رقم الهاتف مع التحقق */}
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
-            <span>رقم الهاتف:</span>
+            <span className="flex items-center">
+              رقم الهاتف:
+              <span className="text-red-500 mr-0.5">*</span>
+            </span>
             <div className="flex items-center space-x-2 space-x-reverse">
-              {image.confidence}
+              <span className="text-muted-foreground">{image.confidence}</span>
               {image.phoneNumber && !isPhoneNumberValid && <span className="text-xs text-destructive font-normal flex items-center">
                   <AlertCircle className="h-3 w-3 ml-1" />
                   خطأ
@@ -150,7 +160,12 @@ const ImageDataForm = ({
             </div>
           </label>
           <div className="space-y-1">
-            <Input value={image.phoneNumber || ''} onChange={e => onTextChange(image.id, "phoneNumber", e.target.value)} className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm ${image.phoneNumber && !isPhoneNumberValid ? "border-destructive" : ""}`} placeholder="أدخل رقم الهاتف" />
+            <Input 
+              value={image.phoneNumber || ''} 
+              onChange={e => onTextChange(image.id, "phoneNumber", e.target.value)} 
+              className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm ${image.phoneNumber && !isPhoneNumberValid ? "border-destructive focus-visible:ring-destructive" : ""}`} 
+              placeholder="أدخل رقم الهاتف"
+            />
             {image.phoneNumber && !isPhoneNumberValid && <p className="text-xs text-destructive">
                 يجب أن يكون رقم الهاتف 11 رقم بالضبط
               </p>}
@@ -160,14 +175,17 @@ const ImageDataForm = ({
         {/* المحافظة */}
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
-            <span>المحافظة:</span>
-            {image.confidence}
+            <span className="flex items-center">
+              المحافظة:
+              <span className="text-red-500 mr-0.5">*</span>
+            </span>
+            <span className="text-muted-foreground">{image.confidence}</span>
           </label>
           <Select value={image.province || ''} onValueChange={value => onTextChange(image.id, "province", value)} dir="rtl">
             <SelectTrigger className="bg-white dark:bg-gray-900 h-8 text-sm">
               <SelectValue placeholder="اختر المحافظة" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-gray-900">
               {IRAQ_PROVINCES.map(province => <SelectItem key={province} value={province}>
                   {province}
                 </SelectItem>)}
@@ -178,9 +196,12 @@ const ImageDataForm = ({
         {/* السعر مع زر التحقق والتنبيهات */}
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
-            <span>السعر:</span>
+            <span className="flex items-center">
+              السعر:
+              <span className="text-red-500 mr-0.5">*</span>
+            </span>
             <div className="flex items-center space-x-2 space-x-reverse">
-              {image.confidence}
+              <span className="text-muted-foreground">{image.confidence}</span>
               {priceFormatted && <span className="text-[10px] bg-green-100 text-green-700 flex items-center px-1 rounded">
                   <Check className="h-2.5 w-2.5 ml-0.5" />
                   تم التنسيق
@@ -192,7 +213,12 @@ const ImageDataForm = ({
             </div>
           </label>
           <div className="flex">
-            <Input value={priceInput} onChange={e => handlePriceChange(e.target.value)} className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm rounded-l-none ${!isPriceValid ? "border-destructive" : ""}`} placeholder="أدخل السعر" />
+            <Input 
+              value={priceInput} 
+              onChange={e => handlePriceChange(e.target.value)} 
+              className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm rounded-l-none ${!isPriceValid ? "border-destructive focus-visible:ring-destructive" : ""}`} 
+              placeholder="أدخل السعر" 
+            />
             <Button size="sm" className="h-8 px-2 rounded-r-none" onClick={handleFormatPrice} variant="outline">
               <Check className="h-3.5 w-3.5" />
               <span className="text-[10px] mr-1">تحقق</span>
