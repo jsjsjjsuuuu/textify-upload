@@ -18,7 +18,8 @@ export const convertImagesToBookmarkletItems = (images: ImageData[]): Bookmarkle
     .filter(img => {
       // تحسين عملية التصفية للتأكد من صلاحية البيانات
       const hasRequiredFields = img.code && img.senderName && img.phoneNumber;
-      const isValidStatus = img.status === "completed" || img.status === "success";
+      // تعديل المقارنة لجعلها متوافقة مع الأنواع
+      const isValidStatus = img.status === "completed" || img.status === "processing" || img.status === "pending";
       return hasRequiredFields && isValidStatus;
     })
     .map(img => ({
