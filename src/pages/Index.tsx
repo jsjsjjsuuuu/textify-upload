@@ -87,7 +87,7 @@ const Index = () => {
               <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                 <Info className="h-4 w-4 text-blue-500" />
                 <AlertDescription className="text-sm text-blue-600 dark:text-blue-300">
-                  لتحسين أداء النظام، يتم الاحتفاظ فقط بأحدث 9 سجلات. السجلات القديمة يتم حذفها تلقائياً.
+                  لتحسين أداء النظام، يتم الاحتفاظ فقط بأحدث 100 سجل. السجلات القديمة يتم حذفها تلقائياً.
                   <div className="mt-2">
                     <Button size="sm" variant="outline" onClick={handleManualCleanup} className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100">
                       <Trash2 className="h-3 w-3 mr-1" />
