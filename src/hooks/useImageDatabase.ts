@@ -170,10 +170,11 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
 
   // وظيفة إرسال البيانات إلى API وحفظها في قاعدة البيانات
   const handleSubmitToApi = async (id: string, image: ImageData, userId: string | undefined) => {
+    // نستخدم useState في واجهة Hook عادية وليس داخل دالة أخرى
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    setIsSubmitting(true);
     try {
+      setIsSubmitting(true);
       // إعداد البيانات للإرسال
       const extractedData = {
         company_name: image.companyName || "",
@@ -206,12 +207,6 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
         title: "نجاح",
         description: `تم إرسال البيانات بنجاح!`,
       });
-
-      // تحديث السجلات بعد الحفظ
-      if (savedData && userId) {
-        await loadUserImages(userId, (images) => setAllImages(images));
-      }
-
     } catch (error: any) {
       console.error("خطأ في إرسال البيانات:", error);
       updateImage(id, { status: "error" });
