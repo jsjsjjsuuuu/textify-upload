@@ -2,6 +2,8 @@
 import React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Loader2 } from "lucide-react";
 
 interface ExtractedDataFieldProps {
   label: string;
@@ -10,7 +12,9 @@ interface ExtractedDataFieldProps {
   onChange: (field: string, value: string) => void;
   editMode: boolean;
   className?: string;
-  hideConfidence?: boolean; // إضافة خاصية لإخفاء قيم الثقة
+  hideConfidence?: boolean; // خاصية لإخفاء قيم الثقة
+  confidence?: number; // إضافة خاصية نسبة الثقة لكل حقل
+  isLoading?: boolean; // حالة التحميل
 }
 
 const ExtractedDataField = ({
@@ -20,7 +24,9 @@ const ExtractedDataField = ({
   onChange,
   editMode,
   className = "",
-  hideConfidence = false
+  hideConfidence = false,
+  confidence,
+  isLoading = false
 }: ExtractedDataFieldProps) => {
   const isTextArea = field === "address" || field === "notes";
 
@@ -32,16 +38,40 @@ const ExtractedDataField = ({
     field === "province" || 
     field === "price";
 
+  // تحديد لون البطاقة بناءً على نسبة الثقة
+  const getBadgeVariant = (confidenceValue: number) => {
+    if (confidenceValue >= 90) return "green";
+    if (confidenceValue >= 70) return "blue";
+    if (confidenceValue >= 50) return "yellow";
+    return "red";
+  };
+
   return (
     <div className={`relative ${className}`}>
       <div className="flex items-start gap-2">
         <div className="flex-1">
-          <label className="block text-sm font-medium mb-1">
-            {label}
-            {isRequiredField && (
-              <span className="text-red-500 mr-1">*</span>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium">
+              {label}
+              {isRequiredField && (
+                <span className="text-red-500 mr-1">*</span>
+              )}
+            </label>
+            
+            {!hideConfidence && confidence !== undefined && (
+              <Badge 
+                variant={getBadgeVariant(confidence) as any} 
+                className={`text-[10px] h-5 px-1.5 ${
+                  confidence >= 90 ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" :
+                  confidence >= 70 ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" :
+                  confidence >= 50 ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300" :
+                  "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                }`}
+              >
+                الثقة: {confidence}%
+              </Badge>
             )}
-          </label>
+          </div>
           
           {editMode ? (
             isTextArea ? (
@@ -50,24 +80,47 @@ const ExtractedDataField = ({
                 onChange={(e) => onChange(field, e.target.value)}
                 className="w-full text-sm resize-none h-20"
                 placeholder={`أدخل ${label.replace(':', '')}`}
+                disabled={isLoading}
               />
             ) : (
-              <Input
-                type="text"
-                value={value}
-                onChange={(e) => onChange(field, e.target.value)}
-                className="w-full text-sm"
-                placeholder={`أدخل ${label.replace(':', '')}`}
-              />
+              <div className="relative">
+                <Input
+                  type="text"
+                  value={value}
+                  onChange={(e) => onChange(field, e.target.value)}
+                  className={`w-full text-sm ${isLoading ? 'pr-8' : ''}`}
+                  placeholder={`أدخل ${label.replace(':', '')}`}
+                  disabled={isLoading}
+                />
+                {isLoading && (
+                  <div className="absolute inset-y-0 right-2 flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
             )
           ) : (
             isTextArea ? (
-              <div className="px-3 py-2 rounded-md border bg-muted/50 text-sm min-h-[5rem] whitespace-pre-wrap">
-                {value || <span className="text-muted-foreground italic">لا توجد بيانات</span>}
+              <div className={`px-3 py-2 rounded-md border bg-muted/50 text-sm min-h-[5rem] whitespace-pre-wrap ${isLoading ? 'animate-pulse' : ''}`}>
+                {isLoading ? (
+                  <div className="flex items-center h-full justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <span className="text-muted-foreground ml-2">جاري الاستخراج...</span>
+                  </div>
+                ) : (
+                  value || <span className="text-muted-foreground italic">لا توجد بيانات</span>
+                )}
               </div>
             ) : (
-              <div className="px-3 py-2 rounded-md border bg-muted/50 text-sm">
-                {value || <span className="text-muted-foreground italic">لا توجد بيانات</span>}
+              <div className={`px-3 py-2 rounded-md border bg-muted/50 text-sm ${isLoading ? 'animate-pulse' : ''}`}>
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <span className="text-muted-foreground ml-2">جاري الاستخراج...</span>
+                  </div>
+                ) : (
+                  value || <span className="text-muted-foreground italic">لا توجد بيانات</span>
+                )}
               </div>
             )
           )}

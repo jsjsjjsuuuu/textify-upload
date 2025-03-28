@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2 } from 'lucide-react';
+import { ArrowRight, Info, Trash2, RefreshCw } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -12,10 +12,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   
   // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
@@ -33,7 +35,8 @@ const Index = () => {
     formatDate: formatImageDate,
     clearSessionImages,
     loadUserImages,
-    runCleanupNow
+    runCleanupNow,
+    saveProcessedImage
   } = useImageProcessing();
   
   const {
@@ -48,6 +51,44 @@ const Index = () => {
       await runCleanupNow(user.id);
       // إعادة تحميل الصور بعد التنظيف
       loadUserImages();
+      toast({
+        title: "تم التنظيف",
+        description: "تم تنظيف السجلات القديمة بنجاح",
+      });
+    }
+  };
+  
+  // وظيفة إعادة المعالجة للصورة
+  const handleReprocessImage = async (imageId: string) => {
+    const imageToReprocess = sessionImages.find(img => img.id === imageId);
+    if (!imageToReprocess) {
+      console.error("الصورة غير موجودة:", imageId);
+      return;
+    }
+    
+    try {
+      // تحديث حالة الصورة إلى "جاري المعالجة"
+      handleTextChange(imageId, "status", "processing");
+      
+      // إعادة معالجة الصورة
+      await saveProcessedImage(imageToReprocess);
+      
+      toast({
+        title: "تمت إعادة المعالجة",
+        description: "تمت إعادة معالجة الصورة بنجاح",
+      });
+    } catch (error) {
+      console.error("خطأ في إعادة معالجة الصورة:", error);
+      handleTextChange(imageId, "status", "error");
+      handleTextChange(imageId, "extractedText", `فشل في إعادة المعالجة: ${error.message || "خطأ غير معروف"}`);
+      
+      toast({
+        title: "خطأ في إعادة المعالجة",
+        description: "حدث خطأ أثناء إعادة معالجة الصورة",
+        variant: "destructive"
+      });
+      
+      throw error; // إعادة رمي الخطأ للتعامل معه في المكون الأصلي
     }
   };
   
@@ -58,15 +99,12 @@ const Index = () => {
       <main className="pt-10 pb-20">
         <section className="py-16 px-6">
           <div className="container mx-auto">
-            <motion.div initial={{
-              opacity: 0,
-              y: 20
-            }} animate={{
-              opacity: 1,
-              y: 0
-            }} transition={{
-              duration: 0.6
-            }} className="text-center max-w-3xl mx-auto mb-12">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ duration: 0.6 }} 
+              className="text-center max-w-3xl mx-auto mb-12"
+            >
               <h1 className="apple-header mb-4">معالج الصور والبيانات</h1>
               <p className="text-xl text-muted-foreground mb-8">
                 استخرج البيانات من الصور بسهولة وفعالية باستخدام تقنية الذكاء الاصطناعي المتطورة
@@ -89,8 +127,13 @@ const Index = () => {
                 <AlertDescription className="text-sm text-blue-600 dark:text-blue-300">
                   لتحسين أداء النظام، يتم الاحتفاظ فقط بأحدث 100 سجل. السجلات القديمة يتم حذفها تلقائياً.
                   <div className="mt-2">
-                    <Button size="sm" variant="outline" onClick={handleManualCleanup} className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100">
-                      <Trash2 className="h-3 w-3 mr-1" />
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleManualCleanup} 
+                      className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
                       تنفيذ التنظيف الآن
                     </Button>
                   </div>
@@ -107,7 +150,12 @@ const Index = () => {
                 <div className="p-8">
                   <h2 className="apple-subheader mb-4 text-center">تحميل الصور</h2>
                   <p className="text-muted-foreground text-center mb-6">قم بتحميل صور الإيصالات أو الفواتير وسنقوم باستخراج البيانات منها تلقائياً</p>
-                  <ImageUploader isProcessing={isProcessing} processingProgress={processingProgress} useGemini={useGemini} onFileChange={handleFileChange} />
+                  <ImageUploader 
+                    isProcessing={isProcessing} 
+                    processingProgress={processingProgress} 
+                    useGemini={useGemini} 
+                    onFileChange={handleFileChange} 
+                  />
                 </div>
               </div>
             </div>
@@ -130,6 +178,7 @@ const Index = () => {
                   onSubmit={id => handleSubmitToApi(id)} 
                   formatDate={formatImageDate} 
                   showOnlySession={true}
+                  onReprocess={handleReprocessImage}
                 />
               </div>
             </div>

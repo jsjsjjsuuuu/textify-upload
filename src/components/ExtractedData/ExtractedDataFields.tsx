@@ -16,13 +16,19 @@ interface ExtractedDataFieldsProps {
   editMode: boolean;
   onTempChange: (field: string, value: string) => void;
   hideConfidence?: boolean; // إضافة خيار لإخفاء قيم الثقة
+  confidence?: Record<string, number>; // مصفوفة لقيم الثقة لكل حقل
+  isLoading?: boolean; // حالة التحميل
+  loadingFields?: string[]; // قائمة الحقول التي يتم تحميلها حاليًا
 }
 
 const ExtractedDataFields = ({
   tempData,
   editMode,
   onTempChange,
-  hideConfidence = false
+  hideConfidence = false,
+  confidence = {},
+  isLoading = false,
+  loadingFields = []
 }: ExtractedDataFieldsProps) => {
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -33,6 +39,8 @@ const ExtractedDataFields = ({
         onChange={onTempChange}
         editMode={editMode}
         hideConfidence={hideConfidence}
+        confidence={confidence.companyName}
+        isLoading={isLoading || loadingFields.includes('companyName')}
       />
       <ExtractedDataField
         label="الكود:"
@@ -41,6 +49,8 @@ const ExtractedDataFields = ({
         onChange={onTempChange}
         editMode={editMode}
         hideConfidence={hideConfidence}
+        confidence={confidence.code}
+        isLoading={isLoading || loadingFields.includes('code')}
       />
       <ExtractedDataField
         label="اسم المرسل:"
@@ -49,6 +59,8 @@ const ExtractedDataFields = ({
         onChange={onTempChange}
         editMode={editMode}
         hideConfidence={hideConfidence}
+        confidence={confidence.senderName}
+        isLoading={isLoading || loadingFields.includes('senderName')}
       />
       <ExtractedDataField
         label="رقم الهاتف:"
@@ -57,6 +69,8 @@ const ExtractedDataFields = ({
         onChange={onTempChange}
         editMode={editMode}
         hideConfidence={hideConfidence}
+        confidence={confidence.phoneNumber}
+        isLoading={isLoading || loadingFields.includes('phoneNumber')}
       />
       <ExtractedDataField
         label="المحافظة:"
@@ -65,6 +79,8 @@ const ExtractedDataFields = ({
         onChange={onTempChange}
         editMode={editMode}
         hideConfidence={hideConfidence}
+        confidence={confidence.province}
+        isLoading={isLoading || loadingFields.includes('province')}
       />
       <ExtractedDataField
         label="السعر:"
@@ -73,6 +89,8 @@ const ExtractedDataFields = ({
         onChange={onTempChange}
         editMode={editMode}
         hideConfidence={hideConfidence}
+        confidence={confidence.price}
+        isLoading={isLoading || loadingFields.includes('price')}
       />
       <ExtractedDataField
         label="العنوان:"
@@ -82,6 +100,8 @@ const ExtractedDataFields = ({
         editMode={editMode}
         className="col-span-2"
         hideConfidence={hideConfidence}
+        confidence={confidence.address}
+        isLoading={isLoading || loadingFields.includes('address')}
       />
       <ExtractedDataField
         label="ملاحظات:"
@@ -91,6 +111,8 @@ const ExtractedDataFields = ({
         editMode={editMode}
         className="col-span-2"
         hideConfidence={hideConfidence}
+        confidence={confidence.notes}
+        isLoading={isLoading || loadingFields.includes('notes')}
       />
     </div>
   );

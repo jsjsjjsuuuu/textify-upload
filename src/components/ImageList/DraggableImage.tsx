@@ -4,32 +4,30 @@ import { ImageData } from "@/types/ImageData";
 import ZoomControls from "./ZoomControls";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import ImageErrorDisplay from "../ImagePreview/ImageViewer/ImageErrorDisplay";
 
 interface DraggableImageProps {
   image: ImageData;
   onImageClick: (image: ImageData) => void;
   formatDate: (date: Date) => string;
+  onRetryLoad?: (imageId: string) => void;
 }
 
 const DraggableImage = ({
   image,
   onImageClick,
-  formatDate
+  formatDate,
+  onRetryLoad
 }: DraggableImageProps) => {
   // State for zoom and dragging
   const [zoomLevel, setZoomLevel] = useState(1.5); // تكبير تلقائي بنسبة 50%
   const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({
-    x: 0,
-    y: 0
-  });
-  const [startPos, setStartPos] = useState({
-    x: 0,
-    y: 0
-  });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [imgError, setImgError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [imageUrl, setImageUrl] = useState<string | null>(image.previewUrl);
-  const [retryCount, setRetryCount] = useState(0); // إضافة عداد للمحاولات
+  const [retryCount, setRetryCount] = useState(image.retryCount || 0); // استخدام عداد المحاولات من الصورة
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const { toast } = useToast();
@@ -46,17 +44,20 @@ const DraggableImage = ({
             .getPublicUrl(image.storage_path);
             
           if (data && data.publicUrl) {
-            console.log("تم الحصول على رابط الصورة من التخزين:", data.publicUrl);
+            console.log("تم الحصول على رابط الصورة من التخزين:", data.publicUrl.substring(0, 50) + "...");
             setImageUrl(data.publicUrl);
           } else if (image.previewUrl) {
-            console.log("استخدام عنوان المعاينة الاحتياطي:", image.previewUrl);
+            console.log("استخدام عنوان المعاينة الاحتياطي:", image.previewUrl.substring(0, 50) + "...");
             setImageUrl(image.previewUrl);
           } else {
             console.error("لا يوجد رابط صورة متاح");
             setImgError(true);
+            setErrorMessage("لا يوجد رابط صورة متاح");
           }
         } catch (error) {
           console.error("خطأ في جلب عنوان URL للصورة:", error);
+          setErrorMessage("خطأ في جلب رابط الصورة من الخادم");
+          
           if (image.previewUrl) {
             setImageUrl(image.previewUrl);
           } else {
@@ -67,19 +68,18 @@ const DraggableImage = ({
         setImageUrl(image.previewUrl);
       } else {
         setImgError(true);
+        setErrorMessage("لا يوجد مسار تخزين أو معاينة للصورة");
       }
     };
     
     getImageUrl();
   }, [image.storage_path, image.previewUrl, image.id]);
 
-  // Reset position when component mounts
+  // Reset position when component mounts or when image changes
   useEffect(() => {
-    setPosition({
-      x: 0,
-      y: 0
-    });
-  }, []);
+    setPosition({ x: 0, y: 0 });
+    setZoomLevel(1.5); // إعادة تعيين التكبير إلى 50%
+  }, [image.id]);
 
   // Zoom control handlers
   const handleZoomIn = (e: React.MouseEvent) => {
@@ -95,10 +95,7 @@ const DraggableImage = ({
   const handleResetZoom = (e: React.MouseEvent) => {
     e.stopPropagation();
     setZoomLevel(1.5); // إعادة تعيين إلى تكبير 50%
-    setPosition({
-      x: 0,
-      y: 0
-    });
+    setPosition({ x: 0, y: 0 });
   };
 
   // Mouse drag handlers
@@ -158,151 +155,119 @@ const DraggableImage = ({
   };
   
   const handleImageError = () => {
-    console.error("فشل تحميل الصورة:", imageUrl);
-    
-    if (retryCount < 2) {
-      // محاولة استرداد الصورة باستخدام مصدر بديل
-      setRetryCount(prev => prev + 1);
-      
-      // جرب مصدر مختلف بناءً على ما إذا كنا نستخدم التخزين أو المعاينة
-      if (image.storage_path && imageUrl === image.previewUrl) {
-        const { data } = supabase.storage
-          .from('receipt_images')
-          .getPublicUrl(image.storage_path);
-          
-        if (data && data.publicUrl && data.publicUrl !== imageUrl) {
-          console.log("محاولة استخدام عنوان URL من التخزين:", data.publicUrl);
-          setImageUrl(data.publicUrl);
-          return;
-        }
-      } else if (image.previewUrl && imageUrl !== image.previewUrl) {
-        console.log("محاولة استخدام عنوان URL من المعاينة:", image.previewUrl);
-        setImageUrl(image.previewUrl);
-        return;
-      }
-    }
-    
-    // إذا استنفدنا جميع المحاولات، نعرض رسالة خطأ
+    console.error("فشل تحميل الصورة:", imageUrl?.substring(0, 50) + "...");
     setImgError(true);
+    setErrorMessage("فشل في تحميل الصورة من المصدر");
   };
   
   const handleRetryImage = () => {
+    // زيادة عداد المحاولات
+    setRetryCount(prev => prev + 1);
+    
     if (image.storage_path) {
-      // حاول تحميل الصورة من التخزين مرة أخرى
+      // استخدام نهج أكثر قوة: إضافة طابع زمني عشوائي لتجنب ذاكرة التخزين المؤقت
       const { data } = supabase.storage
         .from('receipt_images')
         .getPublicUrl(image.storage_path);
         
       if (data && data.publicUrl) {
-        // إضافة طابع زمني لتجنب التخزين المؤقت
-        setImageUrl(`${data.publicUrl}?t=${Date.now()}`);
+        const timestamp = new Date().getTime();
+        const randomSuffix = Math.floor(Math.random() * 10000);
+        const freshUrl = `${data.publicUrl}?t=${timestamp}&r=${randomSuffix}`;
+        
+        setImageUrl(freshUrl);
         setImgError(false);
-        setRetryCount(0);
+        setErrorMessage(undefined);
+        
         toast({
           title: "إعادة تحميل",
-          description: "جاري محاولة تحميل الصورة مرة أخرى..."
+          description: "جاري محاولة تحميل الصورة مرة أخرى...",
+          variant: "default"
         });
       }
     } else if (image.previewUrl) {
-      // حاول تحميل الصورة من المعاينة مرة أخرى
-      setImageUrl(`${image.previewUrl}?t=${Date.now()}`);
+      // محاولة استخدام URL للمعاينة مع تجنب التخزين المؤقت
+      const timestamp = new Date().getTime();
+      const randomSuffix = Math.floor(Math.random() * 10000);
+      const freshUrl = `${image.previewUrl}?t=${timestamp}&r=${randomSuffix}`;
+      
+      setImageUrl(freshUrl);
       setImgError(false);
-      setRetryCount(0);
-      toast({
-        title: "إعادة تحميل",
-        description: "جاري محاولة تحميل الصورة مرة أخرى..."
-      });
+      setErrorMessage(undefined);
+    }
+    
+    // استدعاء وظيفة إعادة المحاولة من الخارج إذا كانت موجودة
+    if (onRetryLoad) {
+      onRetryLoad(image.id);
     }
   };
 
+  // تحديد حالة الصورة - إظهار حالة التحميل للصور الجديدة
+  const isLoading = image.status === "processing";
+
   return (
-    <div className="p-3 bg-transparent relative">
+    <div className="p-3 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-sm relative overflow-hidden">
+      {/* أدوات التكبير/التصغير */}
       <ZoomControls 
         onZoomIn={handleZoomIn} 
         onZoomOut={handleZoomOut} 
         onResetZoom={handleResetZoom} 
       />
       
+      {/* حاوية الصورة الرئيسية */}
       <div 
         ref={imageContainerRef} 
-        className="relative w-full h-[420px] overflow-hidden bg-transparent cursor-move flex items-center justify-center" 
+        className="relative w-full h-[420px] overflow-hidden bg-gray-100 dark:bg-gray-900 cursor-move flex items-center justify-center rounded-md" 
         onClick={handleImageClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
       >
-        {imageUrl && !imgError && (
-          <img 
+        {/* الصورة قابلة للسحب */}
+        {!imgError && imageUrl && (
+          <img
             ref={imageRef}
             src={imageUrl}
-            alt="صورة محملة"
-            className="w-full h-full object-contain transition-transform duration-150"
+            alt={`Image ${image.number || ''}`}
+            className={`transform ${isLoading ? 'opacity-40' : 'opacity-100'} transition-opacity duration-300`}
             style={{
-              transform: `scale(${zoomLevel}) translate(${position.x / zoomLevel}px, ${position.y / zoomLevel}px)`,
-              maxHeight: '100%',
-              maxWidth: '100%',
+              transform: `translate(${position.x}px, ${position.y}px) scale(${zoomLevel})`,
               transformOrigin: 'center',
-              pointerEvents: 'none', // Prevents image from capturing mouse events
-              willChange: 'transform' // Optimize for transforms
+              transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+              maxWidth: 'none',
+              maxHeight: 'none'
             }}
             onError={handleImageError}
           />
         )}
         
+        {/* عرض خطأ الصورة مع إمكانية إعادة المحاولة */}
         {imgError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
-              <path d="M10.5 2.5 2 12l8.5 9.5c.69.76 1.81.76 2.5 0L21.5 12 13 2.5c-.69-.76-1.81-.76-2.5 0Z"/>
-              <path d="M12 8v4"/>
-              <path d="M12 16h.01"/>
-            </svg>
-            <p className="mt-2 text-xs text-center text-muted-foreground">الصورة غير متاحة حاليًا</p>
-            <button 
-              onClick={handleRetryImage} 
-              className="mt-2 px-3 py-1 text-xs rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-800 dark:text-blue-100 dark:hover:bg-blue-700"
-            >
-              إعادة المحاولة
-            </button>
-          </div>
+          <ImageErrorDisplay 
+            onRetry={handleRetryImage}
+            errorMessage={errorMessage}
+            retryCount={retryCount}
+          />
         )}
         
-        <div className="absolute top-1 right-1 text-white px-2 py-1 rounded-full text-xs bg-gray-900">
-          صورة {image.number}
-        </div>
-        
-        {image.status === "processing" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
-            <span className="text-xs">جاري المعالجة...</span>
-          </div>
-        )}
-        
-        {image.status === "completed" && (
-          <div className="absolute top-1 left-1 bg-green-500 text-white p-1 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          </div>
-        )}
-        
-        {image.status === "error" && (
-          <div className="absolute top-1 left-1 bg-destructive text-white p-1 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </div>
-        )}
-        
-        {image.submitted && (
-          <div className="absolute bottom-1 right-1 bg-brand-green text-white px-1.5 py-0.5 rounded-md text-[10px]">
-            تم الإرسال
+        {/* مؤشر حالة المعالجة */}
+        {isLoading && !imgError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
+            <div className="p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-center">
+              <div className="w-10 h-10 border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="mt-2 text-sm font-medium">جاري معالجة الصورة...</p>
+            </div>
           </div>
         )}
       </div>
       
-      <div className="text-xs text-muted-foreground mt-1 text-center">
-        {formatDate(image.date)}
+      {/* معلومات الصورة في الأسفل */}
+      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between">
+        <span>
+          {image.file.name} ({(image.file.size / 1024).toFixed(0)} كيلوبايت)
+        </span>
+        <span dir="ltr">{formatDate(new Date(image.date))}</span>
       </div>
     </div>
   );
