@@ -1,3 +1,4 @@
+
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -185,7 +186,7 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
         
         console.log(`تم حذف ${recordIdsToDelete.length} سجل قديم بنجاح`);
         
-        // هـ. إظهار إشعار للمستخدم (اختياري)
+        // هـ. إظهار إشعار للمستخدم
         toast({
           title: "تنظيف البيانات",
           description: `تم حذف ${recordIdsToDelete.length} سجل قديم للحفاظ على أداء النظام`,
