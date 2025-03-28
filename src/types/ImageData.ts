@@ -16,6 +16,8 @@ export interface ImageData {
   submitted?: boolean;
   number?: number;
   extractionMethod?: "ocr" | "gemini";
+  // حقول جديدة لدعم التكامل مع المستخدمين
+  user_id?: string;
   // حقول لدعم عملية Bookmarklet
   bookmarkletStatus?: "ready" | "pending" | "success" | "error";
   bookmarkletMessage?: string;

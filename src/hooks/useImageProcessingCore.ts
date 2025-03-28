@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { useImageState } from "@/hooks/useImageState";
@@ -11,6 +11,7 @@ export const useImageProcessingCore = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [bookmarkletStats, setBookmarkletStats] = useState({ total: 0, ready: 0, success: 0, error: 0 });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -20,7 +21,9 @@ export const useImageProcessingCore = () => {
     addImage, 
     updateImage, 
     deleteImage, 
-    handleTextChange 
+    handleTextChange,
+    setAllImages,
+    removeDuplicates
   } = useImageState();
   
   const { 
@@ -33,6 +36,81 @@ export const useImageProcessingCore = () => {
     updateImage,
     setProcessingProgress
   });
+
+  // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
+  useEffect(() => {
+    if (user) {
+      console.log("تم تسجيل الدخول، جاري جلب صور المستخدم:", user.id);
+      loadUserImages();
+    }
+  }, [user]);
+
+  // وظيفة لتحميل صور المستخدم من قاعدة البيانات
+  const loadUserImages = async () => {
+    if (!user) {
+      console.log("لا يوجد مستخدم مسجل، لا يمكن تحميل الصور");
+      return;
+    }
+
+    setIsLoadingUserImages(true);
+    try {
+      const { data, error } = await supabase
+        .from('images')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("خطأ في جلب صور المستخدم:", error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ أثناء تحميل الصور الخاصة بك",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data && data.length > 0) {
+        console.log(`تم العثور على ${data.length} صورة للمستخدم`);
+        
+        // تحويل بيانات قاعدة البيانات إلى كائنات ImageData
+        const loadedImages: ImageData[] = data.map((item, index) => {
+          // إنشاء كائن File افتراضي للصور المخزنة سابقاً
+          const dummyFile = new File([""], item.file_name, { type: "image/jpeg" });
+          
+          return {
+            id: item.id,
+            file: dummyFile,
+            previewUrl: item.preview_url || "",
+            extractedText: item.extracted_text || "",
+            code: item.code || "",
+            senderName: item.sender_name || "",
+            phoneNumber: item.phone_number || "",
+            price: item.price || "",
+            province: item.province || "",
+            companyName: item.company_name || "",
+            date: new Date(item.created_at),
+            status: item.status as "processing" | "pending" | "completed" | "error" || "completed",
+            submitted: item.submitted || false,
+            number: data.length - index, // ترقيم تنازلي بناءً على ترتيب الاستلام
+            user_id: item.user_id
+          };
+        });
+        
+        setAllImages(loadedImages);
+        toast({
+          title: "تم التحميل",
+          description: `تم تحميل ${data.length} صورة من حسابك`
+        });
+      } else {
+        console.log("لم يتم العثور على صور للمستخدم");
+      }
+    } catch (err) {
+      console.error("خطأ أثناء تحميل صور المستخدم:", err);
+    } finally {
+      setIsLoadingUserImages(false);
+    }
+  };
 
   // وظيفة لحفظ بيانات الصورة في Supabase
   const saveImageToDatabase = async (image: ImageData) => {
@@ -48,6 +126,48 @@ export const useImageProcessingCore = () => {
     console.log("جاري حفظ البيانات في قاعدة البيانات...", image);
 
     try {
+      // التحقق مما إذا كانت الصورة موجودة بالفعل
+      const { data: existingImage } = await supabase
+        .from('images')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('file_name', image.file.name)
+        .maybeSingle();
+
+      if (existingImage) {
+        console.log("الصورة موجودة بالفعل، جاري التحديث:", existingImage.id);
+        
+        const { data: updatedData, error: updateError } = await supabase
+          .from('images')
+          .update({
+            preview_url: image.previewUrl,
+            extracted_text: image.extractedText,
+            company_name: image.companyName || "",
+            sender_name: image.senderName || "",
+            phone_number: image.phoneNumber || "",
+            code: image.code || "",
+            price: image.price || "",
+            province: image.province || "",
+            status: image.status,
+            submitted: image.submitted
+          })
+          .eq('id', existingImage.id)
+          .select();
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        toast({
+          title: "نجاح",
+          description: `تم تحديث البيانات في قاعدة البيانات`,
+        });
+
+        console.log("تم تحديث البيانات بنجاح:", updatedData[0]);
+        return updatedData[0];
+      }
+
+      // إذا لم تكن الصورة موجودة، قم بإدراجها
       const { data, error } = await supabase
         .from('images')
         .insert({
@@ -76,7 +196,7 @@ export const useImageProcessingCore = () => {
       }
 
       // تحديث حالة الصورة ليشير إلى أنها تم حفظها
-      updateImage(image.id, { submitted: true });
+      updateImage(image.id, { submitted: true, user_id: user.id });
 
       toast({
         title: "نجاح",
@@ -162,6 +282,7 @@ export const useImageProcessingCore = () => {
     isProcessing,
     processingProgress,
     isSubmitting,
+    isLoadingUserImages,
     useGemini,
     bookmarkletStats,
     handleFileChange,
@@ -169,6 +290,8 @@ export const useImageProcessingCore = () => {
     handleDelete: deleteImage,
     handleSubmitToApi,
     saveImageToDatabase,
-    saveProcessedImage
+    saveProcessedImage,
+    loadUserImages,
+    removeDuplicates
   };
 };

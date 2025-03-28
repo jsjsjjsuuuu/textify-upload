@@ -8,6 +8,18 @@ export const useImageState = () => {
   const { toast } = useToast();
 
   const addImage = (newImage: ImageData) => {
+    // التحقق مما إذا كانت الصورة موجودة بالفعل (نفس المعرف أو نفس اسم الملف)
+    const isDuplicate = images.some(img => 
+      img.id === newImage.id || 
+      (img.file.name === newImage.file.name && 
+       img.user_id === newImage.user_id)
+    );
+    
+    if (isDuplicate) {
+      console.log("تم تجاهل الصورة المكررة:", newImage.file.name);
+      return;
+    }
+    
     // التأكد من أن الصورة الجديدة تحتوي على حقل status بشكل افتراضي
     const imageWithDefaults: ImageData = {
       status: "pending", // قيمة افتراضية
@@ -61,6 +73,37 @@ export const useImageState = () => {
     });
   };
 
+  // تحديث قائمة الصور كاملة
+  const setAllImages = (newImages: ImageData[]) => {
+    setImages(newImages);
+  };
+
+  // إزالة الصور المكررة
+  const removeDuplicates = () => {
+    const uniqueImages: { [key: string]: ImageData } = {};
+    
+    // استخدام اسم الملف كمفتاح للتخزين المؤقت للصور الفريدة
+    images.forEach(img => {
+      const key = img.file.name;
+      
+      // إذا لم يكن هناك صورة بهذا المفتاح، أو إذا كانت الصورة الحالية أحدث
+      if (!uniqueImages[key] || new Date(img.date) > new Date(uniqueImages[key].date)) {
+        uniqueImages[key] = img;
+      }
+    });
+    
+    // تحويل الكائن إلى مصفوفة
+    const deduplicatedImages = Object.values(uniqueImages);
+    
+    if (deduplicatedImages.length < images.length) {
+      toast({
+        title: "تمت إزالة التكرارات",
+        description: `تم حذف ${images.length - deduplicatedImages.length} صورة مكررة`
+      });
+      setImages(deduplicatedImages);
+    }
+  };
+
   // تنظيف عناوين URL للكائنات عند إلغاء تحميل المكون
   useEffect(() => {
     return () => {
@@ -78,6 +121,8 @@ export const useImageState = () => {
     addImage,
     updateImage,
     deleteImage,
-    handleTextChange
+    handleTextChange,
+    setAllImages,
+    removeDuplicates
   };
 };

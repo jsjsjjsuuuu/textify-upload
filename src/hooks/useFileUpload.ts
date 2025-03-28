@@ -6,6 +6,7 @@ import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useDataFormatting } from "@/hooks/useDataFormatting";
 import { createReliableBlobUrl } from "@/lib/gemini/utils";
 import { saveToLocalStorage } from "@/utils/bookmarklet";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UseFileUploadProps {
   images: ImageData[];
@@ -22,6 +23,7 @@ export const useFileUpload = ({
 }: UseFileUploadProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const { useGemini, processWithGemini } = useGeminiProcessing();
   const { formatPhoneNumber, formatPrice } = useDataFormatting();
@@ -59,6 +61,18 @@ export const useFileUpload = ({
         continue;
       }
       
+      // التحقق من تكرار اسم الملف
+      const isDuplicate = images.some(img => img.file.name === file.name);
+      if (isDuplicate) {
+        toast({
+          title: "صورة مكررة",
+          description: `الصورة ${file.name} موجودة بالفعل وتم تخطيها`,
+          variant: "warning"
+        });
+        console.log("تم تخطي صورة مكررة:", file.name);
+        continue;
+      }
+      
       // إنشاء عنوان URL أكثر موثوقية للكائن
       const previewUrl = createReliableBlobUrl(file);
       console.log("تم إنشاء عنوان URL للمعاينة:", previewUrl);
@@ -79,7 +93,8 @@ export const useFileUpload = ({
         extractedText: "",
         date: new Date(),
         status: "processing",
-        number: startingNumber + i
+        number: startingNumber + i,
+        user_id: user?.id // إضافة معرف المستخدم للصورة الجديدة
       };
       
       addImage(newImage);
@@ -115,6 +130,11 @@ export const useFileUpload = ({
           processedImage.status = "completed";
         } else if (processedImage.status !== "error") {
           processedImage.status = "pending";
+        }
+        
+        // إضافة معرف المستخدم للصورة
+        if (user) {
+          processedImage.user_id = user.id;
         }
         
         updateImage(newImage.id, processedImage);
