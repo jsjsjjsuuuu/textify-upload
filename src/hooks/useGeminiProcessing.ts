@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { extractDataWithGemini, fileToBase64, testGeminiConnection } from "@/lib/gemini";
@@ -7,7 +6,7 @@ import { updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { isPreviewEnvironment } from "@/utils/automationServerUrl";
 
 export const useGeminiProcessing = () => {
-  const [useGemini, setUseGemini] = useState(false);
+  // تم إزالة useState هنا لأننا سنجعل useGemini دائمًا true
   const [connectionTested, setConnectionTested] = useState(false);
   const { toast } = useToast();
 
@@ -19,12 +18,10 @@ export const useGeminiProcessing = () => {
       const defaultApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
       localStorage.setItem("geminiApiKey", defaultApiKey);
       console.log("تم تعيين مفتاح Gemini API افتراضي:", defaultApiKey);
-      setUseGemini(true);
       // اختبار الاتصال بالمفتاح الافتراضي
       testGeminiApiConnection(defaultApiKey);
     } else {
       console.log("استخدام مفتاح Gemini API موجود بطول:", geminiApiKey.length);
-      setUseGemini(true);
       // اختبار الاتصال بالمفتاح الموجود
       if (!connectionTested) {
         testGeminiApiConnection(geminiApiKey);
@@ -240,5 +237,6 @@ export const useGeminiProcessing = () => {
     }
   };
 
-  return { useGemini, processWithGemini };
+  // نقوم بإرجاع useGemini كقيمة ثابتة true لاستخدام Gemini دائمًا
+  return { useGemini: true, processWithGemini };
 };

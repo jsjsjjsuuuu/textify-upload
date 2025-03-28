@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -72,6 +71,9 @@ export const useFileUpload = ({
     batchId: string, 
     retryCount = 0
   ): Promise<boolean> => {
+    // تعريف imageId خارج كتلة try لضمان وصول جميع أجزاء الكود إليه
+    const imageId = crypto.randomUUID();
+    
     try {
       console.log(`معالجة الملف [${index}]: ${file.name}, النوع: ${file.type}, المحاولة: ${retryCount + 1}`);
       
@@ -123,7 +125,6 @@ export const useFileUpload = ({
       const previewUrl = publicUrlData.publicUrl;
       
       // إضافة الصورة إلى القائمة مع حالة "processing"
-      const imageId = crypto.randomUUID();
       const newImage: ImageData = {
         id: imageId,
         file: enhancedFile,
@@ -142,7 +143,7 @@ export const useFileUpload = ({
       console.log("تمت إضافة صورة جديدة إلى الحالة بالمعرف:", newImage.id);
       
       try {
-        // استخدام Gemini للمعالجة
+        // استخدام Gemini للمعالجة - دائمًا، بغض النظر عن قيمة useGemini
         console.log("استخدام Gemini API للاستخراج");
         const processedImage = await processWithGemini(enhancedFile, newImage);
         
@@ -350,9 +351,10 @@ export const useFileUpload = ({
     }
   };
 
+  // نقوم بإرجاع useGemini كقيمة ثابتة true
   return {
     isProcessing,
-    useGemini,
+    useGemini: true, // قيمة ثابتة لاستخدام Gemini دائمًا
     handleFileChange,
     activeUploads
   };

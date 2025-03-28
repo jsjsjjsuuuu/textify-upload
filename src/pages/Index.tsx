@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -25,7 +24,6 @@ const Index = () => {
     isProcessing,
     processingProgress,
     isSubmitting,
-    useGemini,
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
@@ -152,9 +150,9 @@ const Index = () => {
                   <p className="text-muted-foreground text-center mb-6">قم بتحميل صور الإيصالات أو الفواتير وسنقوم باستخراج البيانات منها تلقائياً</p>
                   <ImageUploader 
                     isProcessing={isProcessing} 
-                    processingProgress={processingProgress} 
-                    useGemini={useGemini} 
+                    processingProgress={processingProgress}
                     onFileChange={handleFileChange} 
+                    activeUploads={0}
                   />
                 </div>
               </div>

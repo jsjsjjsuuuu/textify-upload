@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -147,8 +146,8 @@ export const useImageProcessingCore = () => {
   
   const { 
     isProcessing, 
-    useGemini, 
-    handleFileChange 
+    handleFileChange,
+    activeUploads
   } = useFileUpload({
     images,
     addImage,
@@ -175,7 +174,6 @@ export const useImageProcessingCore = () => {
     processingProgress,
     isSubmitting,
     isLoadingUserImages,
-    useGemini,
     bookmarkletStats,
     handleFileChange,
     handleTextChange,

@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ImageUploaderProps {
   isProcessing: boolean;
   processingProgress: number;
-  useGemini: boolean;
   activeUploads?: number;
   onFileChange: (files: FileList | null) => void;
 }
@@ -16,7 +15,6 @@ interface ImageUploaderProps {
 const ImageUploader = ({
   isProcessing,
   processingProgress,
-  useGemini,
   activeUploads = 0,
   onFileChange
 }: ImageUploaderProps) => {
@@ -123,7 +121,7 @@ const ImageUploader = ({
               
               {/* معلومات حول عملية المعالجة */}
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-                يتم استخدام {useGemini ? "Gemini AI" : "OCR"} لاستخراج النص من الصور
+                يتم استخدام Gemini AI لاستخراج النص من الصور
               </p>
             </>
           ) : (
