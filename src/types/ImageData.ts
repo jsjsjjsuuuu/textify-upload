@@ -31,4 +31,4 @@ export interface ImageData {
 }
 
 // إعادة تصدير الواجهات من ملف types.ts لضمان التوافق
-export { BookmarkletItem, BookmarkletExportData };
+export type { BookmarkletItem, BookmarkletExportData };
