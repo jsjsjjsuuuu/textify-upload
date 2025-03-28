@@ -24,9 +24,41 @@ export const useImageProcessingCore = () => {
     deleteImage, 
     handleTextChange,
     setAllImages,
+    addDatabaseImages,
     clearSessionImages,
     removeDuplicates
   } = useImageState();
+  
+  // تعريف وظيفة حفظ الصورة أولاً حتى نتمكن من تمريرها لـ useFileUpload
+  const saveProcessedImage = async (image: ImageData) => {
+    if (!user) {
+      console.log("المستخدم غير مسجل الدخول، لا يمكن حفظ الصورة");
+      return;
+    }
+
+    // التحقق من أن الصورة مكتملة المعالجة وتحتوي على البيانات الأساسية
+    if (image.code && image.senderName && image.phoneNumber) {
+      console.log("حفظ الصورة المعالجة في قاعدة البيانات:", image.id);
+      
+      try {
+        // حفظ البيانات في قاعدة البيانات
+        const savedData = await saveImageToDatabase(image);
+        
+        if (savedData) {
+          // تحديث الصورة بمعلومات أنها تم حفظها
+          updateImage(image.id, { submitted: true });
+          console.log("تم حفظ الصورة بنجاح في قاعدة البيانات:", image.id);
+          
+          // إعادة تحميل الصور بعد الحفظ
+          await loadUserImages();
+        }
+      } catch (error) {
+        console.error("خطأ أثناء حفظ الصورة:", error);
+      }
+    } else {
+      console.log("البيانات غير مكتملة، تم تخطي الحفظ في قاعدة البيانات:", image.id);
+    }
+  };
   
   const { 
     isProcessing, 
@@ -36,7 +68,8 @@ export const useImageProcessingCore = () => {
     images,
     addImage,
     updateImage,
-    setProcessingProgress
+    setProcessingProgress,
+    saveProcessedImage // تمرير وظيفة حفظ الصورة
   });
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
@@ -78,7 +111,7 @@ export const useImageProcessingCore = () => {
         // تحويل بيانات قاعدة البيانات إلى كائنات ImageData
         const loadedImages: ImageData[] = data.map((item, index) => {
           // إنشاء كائن File افتراضي للصور المخزنة سابقاً
-          const dummyFile = new File([""], item.file_name, { type: "image/jpeg" });
+          const dummyFile = new File([""], item.file_name || "unknown.jpg", { type: "image/jpeg" });
           
           return {
             id: item.id,
@@ -99,7 +132,7 @@ export const useImageProcessingCore = () => {
           };
         });
         
-        // بدلاً من استبدال جميع الصور، نضيف السجلات المستوردة إلى مجموعة الصور الكاملة فقط
+        // استخدام الوظيفة الجديدة لإضافة الصور من قاعدة البيانات
         setAllImages(loadedImages);
       } else {
         console.log("لم يتم العثور على صور للمستخدم");
@@ -114,11 +147,7 @@ export const useImageProcessingCore = () => {
   // وظيفة لحفظ بيانات الصورة في Supabase
   const saveImageToDatabase = async (image: ImageData) => {
     if (!user) {
-      toast({
-        title: "خطأ",
-        description: "يجب تسجيل الدخول لحفظ البيانات",
-        variant: "destructive",
-      });
+      console.log("لا يوجد مستخدم مسجل، لا يمكن حفظ البيانات");
       return null;
     }
 
@@ -129,8 +158,7 @@ export const useImageProcessingCore = () => {
       const { data: existingImage } = await supabase
         .from('images')
         .select('id')
-        .eq('user_id', user.id)
-        .eq('file_name', image.file.name)
+        .eq('id', image.id)
         .maybeSingle();
 
       if (existingImage) {
@@ -148,7 +176,7 @@ export const useImageProcessingCore = () => {
             price: image.price || "",
             province: image.province || "",
             status: image.status,
-            submitted: image.submitted
+            submitted: true
           })
           .eq('id', existingImage.id)
           .select();
@@ -157,8 +185,8 @@ export const useImageProcessingCore = () => {
           throw updateError;
         }
 
-        console.log("تم تحديث البيانات بنجاح:", updatedData[0]);
-        return updatedData[0];
+        console.log("تم تحديث البيانات بنجاح:", updatedData?.[0]);
+        return updatedData?.[0];
       }
 
       // إذا لم تكن الصورة موجودة، قم بإدراجها
@@ -176,36 +204,23 @@ export const useImageProcessingCore = () => {
           code: image.code || "",
           price: image.price || "",
           province: image.province || "",
-          status: image.status
+          status: image.status,
+          submitted: true
         })
         .select();
 
       if (error) {
-        toast({
-          title: "خطأ في حفظ البيانات",
-          description: error.message,
-          variant: "destructive",
-        });
         console.error("خطأ في حفظ البيانات:", error);
         return null;
       }
 
       // تحديث حالة الصورة ليشير إلى أنها تم حفظها
-      updateImage(image.id, { submitted: true, user_id: user.id });
+      updateImage(image.id, { submitted: true });
 
-      console.log("تم حفظ البيانات بنجاح:", data[0]);
-      
-      // تحديث الصور العامة لتشمل الصورة المحفوظة
-      setAllImages([...images, data[0] as unknown as ImageData]);
-      
-      return data[0];
+      console.log("تم حفظ البيانات بنجاح:", data?.[0]);
+      return data?.[0];
     } catch (error: any) {
       console.error("خطأ في حفظ البيانات:", error);
-      toast({
-        title: "خطأ",
-        description: error.message,
-        variant: "destructive",
-      });
       return null;
     }
   };
@@ -249,7 +264,7 @@ export const useImageProcessingCore = () => {
 
       // تحديث السجلات بعد الحفظ
       if (savedData) {
-        loadUserImages();
+        await loadUserImages();
       }
 
     } catch (error: any) {
@@ -263,21 +278,6 @@ export const useImageProcessingCore = () => {
       });
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  // حفظ الصورة المعالجة في قاعدة البيانات تلقائياً عند الانتهاء من المعالجة
-  const saveProcessedImage = async (image: ImageData) => {
-    // التحقق من أن الصورة مكتملة المعالجة وتحتوي على البيانات الأساسية
-    if (image.status === "completed" && image.code && image.senderName && image.phoneNumber) {
-      console.log("حفظ الصورة المعالجة تلقائياً:", image.id);
-      // حفظ البيانات في قاعدة البيانات
-      const savedData = await saveImageToDatabase(image);
-      
-      // تحديث السجلات بعد الحفظ
-      if (savedData) {
-        loadUserImages();
-      }
     }
   };
 

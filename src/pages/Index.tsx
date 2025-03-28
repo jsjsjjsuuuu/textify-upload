@@ -4,37 +4,18 @@ import { ArrowRight } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
-import ImageList from '@/components/ImageList';
 import { useDataFormatting } from '@/hooks/useDataFormatting';
 import { motion } from 'framer-motion';
-import { ImageData } from '@/types/ImageData';
 import DirectExportTools from '@/components/DataExport/DirectExportTools';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/utils/dateFormatter";
-import { useEffect as useReactEffect } from 'react';
 import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
 
 const Index = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState("number");
-  const [sortDirection, setSortDirection] = useState("desc");
   
   // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
-    images,
     sessionImages,
     isProcessing,
     processingProgress,
@@ -55,11 +36,6 @@ const Index = () => {
     formatPrice,
     formatProvinceName
   } = useDataFormatting();
-  
-  // وظيفة لمعالجة النقر على الصورة
-  const handleImageClick = (image: ImageData) => {
-    console.log('صورة تم النقر عليها:', image.id);
-  };
   
   return (
     <div className="min-h-screen bg-background">
@@ -114,6 +90,10 @@ const Index = () => {
           <section className="py-16 px-6">
             <div className="container mx-auto">
               <div className="max-w-7xl mx-auto">
+                <h2 className="text-2xl font-bold mb-6">الصور التي تم رفعها</h2>
+                <p className="text-muted-foreground mb-8">
+                  هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.
+                </p>
                 <ImagePreviewContainer 
                   images={sessionImages} 
                   isSubmitting={isSubmitting} 

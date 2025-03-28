@@ -7,19 +7,22 @@ import { useDataFormatting } from "@/hooks/useDataFormatting";
 import { createReliableBlobUrl } from "@/lib/gemini/utils";
 import { saveToLocalStorage } from "@/utils/bookmarklet";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UseFileUploadProps {
   images: ImageData[];
   addImage: (image: ImageData) => void;
   updateImage: (id: string, fields: Partial<ImageData>) => void;
   setProcessingProgress: (progress: number) => void;
+  saveProcessedImage?: (image: ImageData) => Promise<void>; // إضافة وظيفة حفظ الصورة
 }
 
 export const useFileUpload = ({
   images,
   addImage,
   updateImage,
-  setProcessingProgress
+  setProcessingProgress,
+  saveProcessedImage
 }: UseFileUploadProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -139,6 +142,16 @@ export const useFileUpload = ({
         
         updateImage(newImage.id, processedImage);
         console.log("تم تحديث الصورة بالبيانات المستخرجة:", newImage.id);
+        
+        // حفظ الصورة في قاعدة البيانات بعد المعالجة إذا كان المستخدم مسجل الدخول والوظيفة متوفرة
+        if (user && saveProcessedImage && processedImage.status === "completed") {
+          try {
+            await saveProcessedImage({...newImage, ...processedImage});
+            console.log("تم حفظ الصورة في قاعدة البيانات بعد المعالجة:", newImage.id);
+          } catch (err) {
+            console.error("خطأ في حفظ الصورة في قاعدة البيانات:", err);
+          }
+        }
       } catch (error) {
         console.error("خطأ عام في معالجة الصورة:", error);
         updateImage(newImage.id, { status: "error" });
@@ -159,18 +172,14 @@ export const useFileUpload = ({
     setIsProcessing(false);
     console.log("اكتملت معالجة الصور");
     
-    if (processedFiles > 0) {
-      // تم إزالة التنبيه هنا حتى لا تظهر إشعارات إضافية
-      
-      // تحديث إحصائيات التخزين
-      console.log("إعادة حفظ البيانات في localStorage");
-      const completedImages = images.filter(img => 
-        img.status === "completed" && img.code && img.senderName && img.phoneNumber
-      );
-      
-      if (completedImages.length > 0) {
-        saveToLocalStorage(completedImages);
-      }
+    // تحديث إحصائيات التخزين
+    console.log("إعادة حفظ البيانات في localStorage");
+    const completedImages = images.filter(img => 
+      img.status === "completed" && img.code && img.senderName && img.phoneNumber
+    );
+    
+    if (completedImages.length > 0) {
+      saveToLocalStorage(completedImages);
     }
   };
 

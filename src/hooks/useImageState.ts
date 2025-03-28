@@ -102,10 +102,24 @@ export const useImageState = () => {
     });
   };
 
-  // تحديث قائمة الصور كاملة
+  // تحديث قائمة الصور كاملة من قاعدة البيانات
   const setAllImages = (newImages: ImageData[]) => {
+    // الاحتفاظ بالصور المخزنة مسبقاً فقط وليس الصور المؤقتة
     setImages(newImages);
-    // لا نقوم بتحديث sessionImages هنا لأنها تمثل فقط الصور المرفوعة في الجلسة الحالية
+  };
+  
+  // إضافة الصور الثابتة من قاعدة البيانات إلى مصفوفة الصور
+  const addDatabaseImages = (dbImages: ImageData[]) => {
+    // نقوم بإضافة الصور من قاعدة البيانات ولكن نتأكد من عدم تكرارها
+    setImages(prev => {
+      // حذف الصور الموجودة بالفعل بنفس المعرف من القائمة السابقة
+      const filteredImages = prev.filter(img => 
+        !dbImages.some(dbImg => dbImg.id === img.id)
+      );
+      
+      // إضافة الصور الجديدة من قاعدة البيانات
+      return [...filteredImages, ...dbImages];
+    });
   };
   
   // مسح الصور المؤقتة
@@ -162,6 +176,7 @@ export const useImageState = () => {
     deleteImage,
     handleTextChange,
     setAllImages,
+    addDatabaseImages,  // إضافة وظيفة جديدة لإضافة الصور من قاعدة البيانات
     clearSessionImages,
     removeDuplicates
   };

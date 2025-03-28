@@ -27,7 +27,7 @@ const ImagePreviewContainer = ({
   const { toast } = useToast();
 
   const handleImageClick = async (image: ImageData) => {
-    console.log("Image clicked:", image.id, image.previewUrl);
+    console.log("تم النقر على الصورة:", image.id, image.previewUrl);
     // لن يتم عمل أي شيء عند النقر على الصورة - تم إلغاء النافذة المنبثقة
   };
 
