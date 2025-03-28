@@ -99,7 +99,7 @@ const Index = () => {
                   isSubmitting={isSubmitting} 
                   onTextChange={handleTextChange} 
                   onDelete={handleDelete} 
-                  onSubmit={id => handleSubmitToApi(id, sessionImages.find(img => img.id === id)!)} 
+                  onSubmit={id => handleSubmitToApi(id)} 
                   formatDate={formatImageDate} 
                   showOnlySession={true}
                 />
