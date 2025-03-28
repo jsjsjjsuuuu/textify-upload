@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2, RefreshCw } from 'lucide-react';
+import { ArrowRight, Info, Trash2, RefreshCw, Eraser, Settings, AlertOctagon } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -13,6 +13,9 @@ import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContaine
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useGeminiProcessing } from '@/hooks/useGeminiProcessing';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -44,6 +47,14 @@ const Index = () => {
     formatPrice,
     formatProvinceName
   } = useDataFormatting();
+  
+  // الوصول إلى وحدة التحكم في Gemini
+  const { 
+    quotaExceeded, 
+    currentModel, 
+    resetQuotaExceededStatus, 
+    changeGeminiModel 
+  } = useGeminiProcessing();
 
   // وظيفة تنفيذ التنظيف يدوياً
   const handleManualCleanup = async () => {
@@ -109,6 +120,27 @@ const Index = () => {
               <p className="text-xl text-muted-foreground mb-8">
                 استخرج البيانات من الصور بسهولة وفعالية باستخدام تقنية الذكاء الاصطناعي المتطورة
               </p>
+              
+              {quotaExceeded && (
+                <Alert className="mb-6 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                  <AlertOctagon className="h-4 w-4 text-amber-500" />
+                  <AlertDescription className="text-sm text-amber-600 dark:text-amber-300">
+                    تم تجاوز حصة Gemini API المجانية. سيتم محاولة استخدام نماذج أقل كلفة أو OCR.
+                    <div className="mt-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={resetQuotaExceededStatus} 
+                        className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        إعادة تعيين حالة الحصة
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button className="apple-button bg-primary text-primary-foreground" size="lg">
                   ابدأ الآن
@@ -119,6 +151,53 @@ const Index = () => {
                     <ArrowRight className="mr-2 h-4 w-4" />
                   </Link>
                 </Button>
+                
+                {/* قائمة إدارة نموذج Gemini */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="lg" className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100">
+                      <Settings className="h-4 w-4 ml-2" />
+                      إعدادات المعالجة
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-4">
+                      <h3 className="font-medium text-lg">إعدادات المعالجة</h3>
+                      
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium">نموذج Gemini</h4>
+                        <Select
+                          defaultValue={currentModel}
+                          onValueChange={(value) => changeGeminiModel(value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="اختر النموذج" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (الأفضل جودة)</SelectItem>
+                            <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (أقل حصة، أسرع)</SelectItem>
+                            <SelectItem value="gemini-pro">Gemini Pro (الإصدار القديم)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          النموذج المستخدم حاليًا: {currentModel}
+                        </p>
+                      </div>
+                      
+                      <div className="pt-2">
+                        <Button 
+                          onClick={resetQuotaExceededStatus} 
+                          className="w-full bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                          variant="outline"
+                          size="sm"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                          إعادة تعيين حالة الحصة
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
               
               {/* معلومات عن ميزة تنظيف البيانات */}
@@ -133,7 +212,7 @@ const Index = () => {
                       onClick={handleManualCleanup} 
                       className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
                     >
-                      <RefreshCw className="h-3 w-3 mr-1" />
+                      <Eraser className="h-3 w-3 mr-1" />
                       تنفيذ التنظيف الآن
                     </Button>
                   </div>

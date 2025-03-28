@@ -1,27 +1,17 @@
-
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
-import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
-import { useDataFormatting } from "@/hooks/useDataFormatting";
-import { createReliableBlobUrl } from "@/lib/gemini/utils";
-import { saveToLocalStorage } from "@/utils/bookmarklet/storage";
-import { useAuth } from "@/contexts/AuthContext";
 import { v4 as uuidv4 } from 'uuid';
-import { supabase } from "@/integrations/supabase/client";
-import { compressImage, enhanceImageForOCR } from "@/utils/imageCompression";
-import { enhancePhoneNumber, formatIraqiPhoneNumber } from "@/utils/phoneNumberUtils";
+import { useOcrProcessing } from "@/hooks/useOcrProcessing";
+import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 
 interface UseFileUploadProps {
   images: ImageData[];
   addImage: (image: ImageData) => void;
-  updateImage: (id: string, fields: Partial<ImageData>) => void;
+  updateImage: (id: string, updates: Partial<ImageData>) => void;
   setProcessingProgress: (progress: number) => void;
-  saveProcessedImage?: (image: ImageData) => Promise<void>;
+  saveProcessedImage: (image: ImageData) => Promise<void>;
 }
-
-const MAX_CONCURRENT_UPLOADS = 3; // عدد التحميلات المتزامنة المسموح بها
-const MAX_RETRIES = 2;           // الحد الأقصى لإعادة المحاولات
 
 export const useFileUpload = ({
   images,
@@ -31,329 +21,146 @@ export const useFileUpload = ({
   saveProcessedImage
 }: UseFileUploadProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeUploads, setActiveUploads] = useState(0); // تتبع عدد التحميلات النشطة
+  const [activeUploads, setActiveUploads] = useState(0);
   const { toast } = useToast();
-  const { user } = useAuth();
-  
+  const { processWithOcr } = useOcrProcessing();
   const { useGemini, processWithGemini } = useGeminiProcessing();
-  const { formatPhoneNumber, formatPrice } = useDataFormatting();
 
-  // وظيفة جديدة لرفع الصورة إلى Supabase Storage
-  const uploadImageToStorage = async (file: File, userId: string): Promise<string | null> => {
-    try {
-      // ضغط الصورة قبل التحميل للتخزين
-      const compressedFile = await compressImage(file);
-      
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}/${uuidv4()}.${fileExt}`;
-      const storagePath = `${fileName}`;
-      
-      const { data, error } = await supabase.storage
-        .from('receipt_images')
-        .upload(storagePath, compressedFile);
-      
-      if (error) {
-        console.error("خطأ في رفع الصورة إلى التخزين:", error);
-        return null;
-      }
-
-      return storagePath;
-    } catch (error) {
-      console.error("خطأ أثناء رفع الصورة:", error);
-      return null;
+  const handleFileChange = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      toast({
+        title: "لا توجد ملفات",
+        description: "الرجاء تحديد ملف واحد على الأقل",
+        variant: "destructive"
+      });
+      return;
     }
-  };
 
-  // معالجة ملف واحد
-  const processFile = async (
-    file: File, 
-    startingNumber: number, 
-    index: number, 
-    batchId: string, 
-    retryCount = 0
-  ): Promise<boolean> => {
-    try {
-      console.log(`معالجة الملف [${index}]: ${file.name}, النوع: ${file.type}, المحاولة: ${retryCount + 1}`);
-      
-      if (!file.type.startsWith("image/")) {
-        toast({
-          title: "خطأ في نوع الملف",
-          description: "يرجى تحميل صور فقط",
-          variant: "destructive"
-        });
-        console.log("الملف ليس صورة، تخطي");
-        return false;
-      }
-      
-      // تحسين الصورة للتعرف على النصوص
-      const enhancedFile = await enhanceImageForOCR(file);
-      console.log(`تم تحسين الصورة: ${file.name}, الحجم قبل: ${(file.size / 1024).toFixed(2)}KB, بعد: ${(enhancedFile.size / 1024).toFixed(2)}KB`);
-      
-      // إنشاء عنوان URL مؤقت للعرض المبدئي
-      const tempPreviewUrl = createReliableBlobUrl(enhancedFile);
-      console.log("تم إنشاء عنوان URL مؤقت للمعاينة:", tempPreviewUrl?.substring(0, 50) + "...");
-      
-      if (!tempPreviewUrl) {
-        toast({
-          title: "خطأ في تحميل الصورة",
-          description: "فشل في إنشاء معاينة للصورة",
-          variant: "destructive"
-        });
-        return false;
-      }
-      
-      // رفع الصورة إلى Supabase Storage
-      const storagePath = await uploadImageToStorage(enhancedFile, user.id);
-      console.log("تم رفع الصورة إلى التخزين، المسار:", storagePath);
-      
-      if (!storagePath) {
-        toast({
-          title: "خطأ في رفع الصورة",
-          description: "فشل في تخزين الصورة على الخادم",
-          variant: "destructive"
-        });
-        return false;
-      }
-      
-      // الحصول على رابط URL العام للصورة
-      const { data: publicUrlData } = supabase.storage
-        .from('receipt_images')
-        .getPublicUrl(storagePath);
-      
-      const previewUrl = publicUrlData.publicUrl;
-      
-      // إضافة الصورة إلى القائمة مع حالة "processing"
-      const imageId = crypto.randomUUID();
-      const newImage: ImageData = {
-        id: imageId,
-        file: enhancedFile,
-        previewUrl,
-        extractedText: "",
+    setIsProcessing(true);
+    setActiveUploads(files.length);
+
+    const uploadPromises = Array.from(files).map(async (file, index) => {
+      const id = uuidv4();
+      const fileNumber = images.length + index + 1;
+
+      // إنشاء كائن الصورة الأولي
+      const addedImage: ImageData = {
+        id: id,
+        fileNumber: fileNumber,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
         date: new Date(),
+        previewUrl: URL.createObjectURL(file),
+        extractedText: "",
+        code: "",
+        senderName: "",
+        phoneNumber: "",
+        province: "",
+        price: "",
+        companyName: "",
+        confidence: 0,
+        status: "pending",
+        submitted: false,
+        extractionMethod: "pending"
+      };
+
+      addImage(addedImage);
+
+      try {
+        const processedImage = await processFile(file, addedImage);
+        
+        // حفظ الصورة المعالجة في قاعدة البيانات
+        await saveProcessedImage(processedImage);
+        
+        // تحديث حالة المعالجة
+        updateImage(processedImage.id, { status: processedImage.status });
+        
+      } catch (error) {
+        console.error("Error processing file:", error);
+        updateImage(addedImage.id, {
+          status: "error",
+          extractedText: `فشل في معالجة الصورة: ${error.message || "خطأ غير معروف"}`
+        });
+        toast({
+          title: "فشل المعالجة",
+          description: `فشل في معالجة ${file.name}: ${error.message || "خطأ غير معروف"}`,
+          variant: "destructive"
+        });
+      } finally {
+        setActiveUploads(prev => Math.max(0, prev - 1));
+        setProcessingProgress(prevProgress => {
+          const newProgress = Math.max(0, prevProgress + (100 / files.length));
+          return Math.min(newProgress, 100);
+        });
+      }
+    });
+
+    await Promise.all(uploadPromises);
+    setIsProcessing(false);
+    setProcessingProgress(100);
+
+    // إعادة تعيين التقدم بعد اكتمال المعالجة
+    setTimeout(() => {
+      setProcessingProgress(0);
+    }, 2000);
+  }, [addImage, images, saveProcessedImage, setProcessingProgress, toast, updateImage, processWithGemini, processWithOcr, useGemini]);
+
+  const processFile = async (file: File, addedImage: ImageData): Promise<ImageData> => {
+    console.log("بدء معالجة ملف:", file.name);
+
+    try {
+      // تعيين حالة الصورة إلى معالجة
+      let imageToProcess: ImageData = {
+        ...addedImage,
         status: "processing",
-        number: startingNumber + index,
-        user_id: user.id,
-        batch_id: batchId,
-        storage_path: storagePath,
-        retryCount: retryCount
+        extractedText: "جاري معالجة الصورة، يرجى الانتظار..."
       };
       
-      addImage(newImage);
-      console.log("تمت إضافة صورة جديدة إلى الحالة بالمعرف:", newImage.id);
+      // تحديث قائمة الصور بحالة المعالجة
+      updateImage(addedImage.id, { 
+        status: "processing",
+        extractedText: "جاري معالجة الصورة، يرجى الانتظار..." 
+      });
+
+      // محاولة معالجة الصورة باستخدام Gemini أولا إذا كان مفعلا
+      let processedImage: ImageData;
       
-      try {
-        // استخدام Gemini للمعالجة
-        console.log("استخدام Gemini API للاستخراج");
-        const processedImage = await processWithGemini(enhancedFile, newImage);
-        
-        // تنظيف وتحسين رقم الهاتف تلقائيًا بعد المعالجة
-        if (processedImage.phoneNumber) {
-          const originalPhone = processedImage.phoneNumber;
+      if (useGemini) {
+        console.log("محاولة المعالجة باستخدام Gemini AI");
+        try {
+          processedImage = await processWithGemini(file, imageToProcess);
           
-          // استخدام الدالة المحسنة لتنسيق رقم الهاتف
-          processedImage.phoneNumber = formatIraqiPhoneNumber(originalPhone);
-          
-          // تحسين رقم الهاتف باستخدام سياق النص المستخرج
-          processedImage.phoneNumber = enhancePhoneNumber(
-            processedImage.phoneNumber, 
-            processedImage.extractedText || ""
-          );
-          
-          if (originalPhone !== processedImage.phoneNumber) {
-            console.log(`تم تنظيف رقم الهاتف تلقائيًا بعد المعالجة: "${originalPhone}" -> "${processedImage.phoneNumber}"`);
+          // إذا فشلت المعالجة بسبب تجاوز الحصة، حاول استخدام OCR
+          if (processedImage.status === "error" && 
+              processedImage.extractedText?.includes("تجاوز الحصة")) {
+            console.log("فشل Gemini بسبب تجاوز الحصة، جاري محاولة OCR");
+            processedImage = await processWithOcr(file, imageToProcess);
           }
+        } catch (geminiError) {
+          console.error("خطأ في معالجة Gemini، جاري محاولة OCR:", geminiError);
+          processedImage = await processWithOcr(file, imageToProcess);
         }
-        
-        // تحديث حالة الصورة إلى "مكتملة" إذا كانت تحتوي على جميع البيانات الأساسية
-        if (processedImage.code && processedImage.senderName && processedImage.phoneNumber) {
-          processedImage.status = "completed";
-        } else if (processedImage.status !== "error") {
-          processedImage.status = "pending";
-        }
-        
-        // إضافة معلومات إضافية
-        processedImage.user_id = user.id;
-        processedImage.storage_path = storagePath;
-        processedImage.retryCount = retryCount;
-        
-        // تحديث الصورة بالبيانات المستخرجة
-        updateImage(imageId, processedImage);
-        console.log("تم تحديث الصورة بالبيانات المستخرجة:", imageId);
-        
-        return true;
-      } catch (error) {
-        console.error("خطأ في معالجة الصورة:", error);
-        
-        // إعادة المحاولة إذا كان عدد المحاولات أقل من الحد الأقصى
-        if (retryCount < MAX_RETRIES) {
-          console.log(`إعادة محاولة معالجة الصورة (${retryCount + 1}/${MAX_RETRIES})`);
-          
-          // تحديث حالة الصورة إلى "جاري إعادة المحاولة"
-          updateImage(imageId, { 
-            status: "pending",
-            extractedText: `فشل في المحاولة ${retryCount + 1}. جاري إعادة المحاولة...`
-          });
-          
-          // إعادة المحاولة بعد تأخير قصير
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          return await processFile(file, startingNumber, index, batchId, retryCount + 1);
-        }
-        
-        // إذا استنفدت جميع المحاولات، حدّث الحالة إلى "خطأ"
-        updateImage(imageId, { 
-          status: "error",
-          extractedText: `فشل في المعالجة بعد ${MAX_RETRIES + 1} محاولات. ${error.message || "خطأ غير معروف"}`
-        });
-        
-        toast({
-          title: "فشل في استخراج النص",
-          description: `حدث خطأ أثناء معالجة الصورة ${index + 1} بعد ${MAX_RETRIES + 1} محاولات.`,
-          variant: "destructive"
-        });
-        
-        return false;
+      } else {
+        // استخدام OCR فقط
+        console.log("معالجة الصورة باستخدام OCR فقط");
+        processedImage = await processWithOcr(file, imageToProcess);
       }
+
+      console.log("اكتملت معالجة الصورة:", processedImage.status);
+      
+      return processedImage;
     } catch (error) {
-      console.error("خطأ عام في عملية المعالجة:", error);
-      return false;
+      console.error("خطأ في معالجة الملف:", error);
+      
+      // إرجاع الصورة بحالة خطأ
+      return {
+        ...addedImage,
+        status: "error",
+        extractedText: `فشل في معالجة الصورة: ${error.message || "خطأ غير معروف"}`
+      };
     }
   };
 
-  // معالجة الصور بشكل متوازي
-  const processFilesInParallel = async (
-    files: File[], 
-    startingNumber: number, 
-    batchId: string
-  ) => {
-    const totalFiles = files.length;
-    let completedFiles = 0;
-    let queue = [...files];
-    
-    // تعريف وظيفة لمعالجة الصور التالية من القائمة
-    const processNext = async () => {
-      if (queue.length === 0) return;
-      
-      // أخذ الملف التالي من القائمة
-      const nextFile = queue.shift();
-      if (!nextFile) return;
-      
-      // زيادة عدد التحميلات النشطة
-      setActiveUploads(prev => prev + 1);
-      
-      // الحصول على مؤشر الملف الأصلي
-      const fileIndex = files.indexOf(nextFile);
-      
-      try {
-        // معالجة الملف
-        await processFile(nextFile, startingNumber, fileIndex, batchId);
-      } finally {
-        // تقليل عدد التحميلات النشطة
-        setActiveUploads(prev => prev - 1);
-        
-        // زيادة عدد الملفات المكتملة وتحديث التقدم
-        completedFiles++;
-        const progress = Math.round(completedFiles / totalFiles * 100);
-        setProcessingProgress(progress);
-        
-        // معالجة الملف التالي
-        processNext();
-      }
-    };
-    
-    // بدء معالجة عدة ملفات في وقت واحد (حسب الحد الأقصى المحدد)
-    const initialProcesses = Math.min(MAX_CONCURRENT_UPLOADS, files.length);
-    const initialProcessPromises = [];
-    
-    for (let i = 0; i < initialProcesses; i++) {
-      initialProcessPromises.push(processNext());
-    }
-    
-    // انتظار اكتمال جميع العمليات
-    await Promise.all(initialProcessPromises);
-  };
-
-  const handleFileChange = async (files: FileList | null) => {
-    console.log("معالجة الملفات:", files?.length);
-    if (!files || files.length === 0) {
-      console.log("لم يتم اختيار ملفات");
-      return;
-    }
-    
-    if (!user) {
-      toast({
-        title: "خطأ",
-        description: "يجب تسجيل الدخول أولاً لرفع الصور",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsProcessing(true);
-    setProcessingProgress(0);
-    
-    const fileArray = Array.from(files);
-    console.log("معالجة", fileArray.length, "ملفات");
-    
-    // التحقق من الملفات المكررة
-    const uniqueFiles = fileArray.filter(file => {
-      const isDuplicate = images.some(img => img.file.name === file.name);
-      if (isDuplicate) {
-        console.log("تم تخطي صورة مكررة:", file.name);
-      }
-      return !isDuplicate;
-    });
-    
-    if (uniqueFiles.length < fileArray.length) {
-      toast({
-        title: "تم تخطي الصور المكررة",
-        description: `تم تخطي ${fileArray.length - uniqueFiles.length} صور مكررة`,
-        variant: "default"
-      });
-    }
-    
-    if (uniqueFiles.length === 0) {
-      setIsProcessing(false);
-      return;
-    }
-    
-    const startingNumber = images.length > 0 ? Math.max(...images.map(img => img.number || 0)) + 1 : 1;
-    console.log("رقم بداية الصور الجديدة:", startingNumber);
-    
-    // إنشاء معرف فريد للدفعة لربط الصور المرفوعة معًا
-    const batchId = uuidv4();
-    console.log("إنشاء معرف دفعة جديد:", batchId);
-    
-    try {
-      // معالجة الملفات بشكل متوازي
-      await processFilesInParallel(uniqueFiles, startingNumber, batchId);
-      
-      // تحديث إحصائيات التخزين
-      console.log("إعادة حفظ البيانات في localStorage");
-      const completedImages = images.filter(img => 
-        img.status === "completed" && img.code && img.senderName && img.phoneNumber
-      );
-      
-      if (completedImages.length > 0) {
-        saveToLocalStorage(completedImages);
-      }
-    } catch (error) {
-      console.error("خطأ أثناء معالجة الملفات:", error);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء معالجة الصور",
-        variant: "destructive"
-      });
-    } finally {
-      setIsProcessing(false);
-      setActiveUploads(0);
-    }
-  };
-
-  return {
-    isProcessing,
-    useGemini,
-    handleFileChange,
-    activeUploads
-  };
+  return { isProcessing, activeUploads, useGemini, handleFileChange };
 };

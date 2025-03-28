@@ -9,6 +9,8 @@ import { isPreviewEnvironment } from "@/utils/automationServerUrl";
 export const useGeminiProcessing = () => {
   const [useGemini, setUseGemini] = useState(false);
   const [connectionTested, setConnectionTested] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const [currentModel, setCurrentModel] = useState('gemini-1.5-pro');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -29,6 +31,14 @@ export const useGeminiProcessing = () => {
       if (!connectionTested) {
         testGeminiApiConnection(geminiApiKey);
       }
+    }
+    
+    // التحقق من حالة تجاوز الحصة المخزنة
+    const storedQuotaExceeded = localStorage.getItem("geminiQuotaExceeded") === "true";
+    if (storedQuotaExceeded) {
+      setQuotaExceeded(true);
+      setCurrentModel('gemini-1.5-flash'); // التبديل إلى نموذج أقل كلفة
+      console.log("تم اكتشاف تجاوز للحصة سابق، استخدام نموذج بديل:", 'gemini-1.5-flash');
     }
   }, [connectionTested]);
 
@@ -56,6 +66,7 @@ export const useGeminiProcessing = () => {
   const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
     const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
     console.log("استخدام مفتاح Gemini API بطول:", geminiApiKey.length);
+    console.log("استخدام نموذج Gemini:", currentModel);
 
     // في بيئة المعاينة، نحاول استخدام Gemini مع تحذير المستخدم
     if (isPreviewEnvironment()) {
@@ -95,22 +106,29 @@ export const useGeminiProcessing = () => {
         apiKeyLength: geminiApiKey.length,
         imageBase64Length: imageBase64.length,
         enhancedExtraction: true,
-        maxRetries: 3,
-        retryDelayMs: 5000
+        maxRetries: 2,
+        retryDelayMs: 3000,
+        modelVersion: currentModel
       });
       
       const extractionResult = await extractDataWithGemini({
         apiKey: geminiApiKey,
         imageBase64,
         enhancedExtraction: true,
-        maxRetries: 3,  // تقليل عدد المحاولات لتسريع الاستجابة
-        retryDelayMs: 5000,  // زيادة مدة الانتظار بين المحاولات
-        modelVersion: 'gemini-1.5-pro'  // استخدام النموذج الأكثر دقة
+        maxRetries: 2,  // تقليل عدد المحاولات لتسريع الاستجابة
+        retryDelayMs: 3000,  // تقليل مدة الانتظار بين المحاولات عند حدوث الخطأ
+        modelVersion: currentModel  // استخدام النموذج الحالي
       });
       
       console.log("نتيجة استخراج Gemini:", extractionResult);
       
       if (extractionResult.success && extractionResult.data) {
+        // إعادة تعيين حالة تجاوز الحصة عند نجاح الطلب
+        if (quotaExceeded) {
+          setQuotaExceeded(false);
+          localStorage.removeItem("geminiQuotaExceeded");
+        }
+        
         const { parsedData, extractedText } = extractionResult.data;
         
         // تحقق من وجود بيانات تم استخراجها
@@ -200,6 +218,85 @@ export const useGeminiProcessing = () => {
       } else {
         console.log("فشل استخراج Gemini:", extractionResult.message);
         
+        // التحقق من وجود خطأ في تجاوز الحصة
+        if (extractionResult.message && 
+            (extractionResult.message.includes("quota") || 
+             extractionResult.message.includes("429") || 
+             extractionResult.message.includes("rate limit"))) {
+          
+          // حفظ حالة تجاوز الحصة
+          setQuotaExceeded(true);
+          localStorage.setItem("geminiQuotaExceeded", "true");
+          
+          // تبديل النموذج إلى نموذج أقل كلفة
+          const nextModel = 'gemini-1.5-flash';
+          setCurrentModel(nextModel);
+          
+          console.log("تم اكتشاف تجاوز للحصة، محاولة استخدام نموذج بديل:", nextModel);
+          
+          toast({
+            title: "تم تجاوز حصة Gemini API",
+            description: "سنحاول استخدام نموذج بديل. يرجى إعادة المحاولة.",
+            variant: "warning"
+          });
+          
+          // إعادة محاولة مع النموذج البديل
+          try {
+            // تأخير قصير للتأكد من عدم ضرب API بسرعة كبيرة جدًا
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            const retryResult = await extractDataWithGemini({
+              apiKey: geminiApiKey,
+              imageBase64,
+              enhancedExtraction: true,
+              maxRetries: 1,
+              retryDelayMs: 2000,
+              modelVersion: nextModel
+            });
+            
+            if (retryResult.success && retryResult.data) {
+              console.log("نجحت إعادة المحاولة مع النموذج البديل:", nextModel);
+              toast({
+                title: "نجاح المحاولة البديلة",
+                description: "تم استخراج البيانات باستخدام نموذج Gemini بديل",
+              });
+              
+              // معالجة النتائج
+              const { parsedData, extractedText } = retryResult.data;
+              const processedImage = updateImageWithExtractedData(
+                image,
+                extractedText || "",
+                parsedData || {},
+                parsedData?.confidence ? parseInt(String(parsedData.confidence)) : 90,
+                "gemini"
+              );
+              
+              return {
+                ...processedImage,
+                status: "completed" as const
+              };
+            } else {
+              throw new Error("فشلت المحاولة مع النموذج البديل: " + retryResult.message);
+            }
+          } catch (retryError) {
+            console.error("فشلت إعادة المحاولة مع النموذج البديل:", retryError);
+            
+            // الانتقال إلى OCR عند فشل جميع محاولات Gemini
+            toast({
+              title: "تبديل إلى OCR",
+              description: "فشل استخدام Gemini API. سيتم محاولة استخدام OCR البسيط.",
+              variant: "default"
+            });
+            
+            return {
+              ...image,
+              status: "error" as const,
+              extractionMethod: "failed_gemini",
+              extractedText: "فشل استخراج البيانات باستخدام Gemini. تم تجاوز الحصة اليومية. يرجى محاولة استخدام OCR أو الانتظار."
+            };
+          }
+        }
+        
         toast({
           title: "فشل الاستخراج",
           description: "فشل استخراج البيانات: " + extractionResult.message,
@@ -219,7 +316,27 @@ export const useGeminiProcessing = () => {
       // تحسين رسالة الخطأ
       let errorMessage = geminiError.message || 'خطأ غير معروف';
       
-      if (errorMessage.includes('Failed to fetch')) {
+      // التحقق من وجود خطأ في تجاوز الحصة
+      if (errorMessage.includes('429') || 
+          errorMessage.includes('quota') || 
+          errorMessage.includes('rate limit') || 
+          errorMessage.includes('RESOURCE_EXHAUSTED')) {
+        
+        setQuotaExceeded(true);
+        localStorage.setItem("geminiQuotaExceeded", "true");
+        
+        // تبديل النموذج تلقائيًا
+        const nextModel = 'gemini-1.5-flash';
+        setCurrentModel(nextModel);
+        
+        toast({
+          title: "تم تجاوز حصة Gemini API",
+          description: "سيتم الانتقال إلى نموذج أقل كلفة في المرة القادمة. يرجى إعادة المحاولة.",
+          variant: "warning"
+        });
+        
+        errorMessage = 'تم تجاوز الحصة اليومية لـ Gemini API. يرجى المحاولة لاحقًا أو استخدام OCR البسيط بدلاً من ذلك.';
+      } else if (errorMessage.includes('Failed to fetch')) {
         errorMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك والمحاولة مرة أخرى.';
       } else if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
         errorMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى تحميل صورة أصغر حجمًا أو المحاولة مرة أخرى لاحقًا.';
@@ -240,5 +357,36 @@ export const useGeminiProcessing = () => {
     }
   };
 
-  return { useGemini, processWithGemini };
+  // إعادة تعيين حالة تجاوز الحصة يدويًا
+  const resetQuotaExceededStatus = () => {
+    setQuotaExceeded(false);
+    localStorage.removeItem("geminiQuotaExceeded");
+    setCurrentModel('gemini-1.5-pro');
+    toast({
+      title: "تم إعادة تعيين حالة الحصة",
+      description: "سيتم محاولة استخدام النموذج الأساسي مرة أخرى",
+    });
+  };
+
+  // تغيير نموذج Gemini يدويًا
+  const changeGeminiModel = (modelName: string) => {
+    if (['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'].includes(modelName)) {
+      setCurrentModel(modelName);
+      toast({
+        title: "تم تغيير النموذج",
+        description: `تم تعيين نموذج Gemini إلى ${modelName}`,
+      });
+      return true;
+    }
+    return false;
+  };
+
+  return { 
+    useGemini, 
+    processWithGemini, 
+    quotaExceeded, 
+    currentModel, 
+    resetQuotaExceededStatus, 
+    changeGeminiModel 
+  };
 };
