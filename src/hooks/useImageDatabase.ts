@@ -1,4 +1,3 @@
-
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -289,7 +288,7 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
           toast({
             title: "تم الحفظ",
             description: `تم حفظ البيانات في قاعدة البيانات، ولكن فشل إرسال البيانات إلى API: ${apiError.message}`,
-            variant: "warning"
+            variant: "default" // تغيير من "warning" إلى "default"
           });
           
           return true;
