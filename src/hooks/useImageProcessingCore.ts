@@ -43,7 +43,8 @@ export const useImageProcessingCore = () => {
     saveImageToDatabase,
     handleSubmitToApi: submitToApi,
     deleteImageFromDatabase,
-    cleanupOldRecords
+    cleanupOldRecords,
+    runCleanupNow
   } = useImageDatabase(updateImage);
   
   // التحقق من اكتمال البيانات المطلوبة للصورة
@@ -191,6 +192,7 @@ export const useImageProcessingCore = () => {
     },
     clearSessionImages,
     removeDuplicates,
-    validateRequiredFields
+    validateRequiredFields,
+    runCleanupNow // إضافة الوظيفة الجديدة للتنظيف اليدوي
   };
 };

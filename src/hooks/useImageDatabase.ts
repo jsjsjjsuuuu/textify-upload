@@ -114,9 +114,98 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
     }
   };
 
+  // وظيفة لحذف الملفات من Storage
+  const deleteFileFromStorage = async (storagePath: string | null): Promise<boolean> => {
+    if (!storagePath) {
+      console.log("لا يوجد مسار تخزين للحذف");
+      return true; // نعتبر العملية ناجحة لأنه لا يوجد ما يحذف
+    }
+
+    try {
+      console.log(`جاري حذف الملف من التخزين: ${storagePath}`);
+      
+      const { error } = await supabase.storage
+        .from('receipt_images')
+        .remove([storagePath]);
+      
+      if (error) {
+        console.error(`خطأ في حذف الملف ${storagePath} من التخزين:`, error);
+        return false;
+      }
+      
+      console.log(`تم حذف الملف ${storagePath} من التخزين بنجاح`);
+      return true;
+    } catch (error) {
+      console.error(`خطأ غير متوقع أثناء حذف الملف ${storagePath}:`, error);
+      return false;
+    }
+  };
+
+  // وظيفة لتنظيف جميع الملفات القديمة في Storage لمستخدم معين
+  const cleanupStorageFiles = async (userId: string) => {
+    try {
+      console.log(`بدء تنظيف ملفات التخزين للمستخدم: ${userId}`);
+      
+      // 1. الحصول على قائمة الملفات في تخزين المستخدم
+      const { data: files, error } = await supabase.storage
+        .from('receipt_images')
+        .list(userId);
+      
+      if (error) {
+        console.error(`خطأ في جلب قائمة ملفات المستخدم ${userId}:`, error);
+        return;
+      }
+      
+      console.log(`تم العثور على ${files.length} ملف في تخزين المستخدم ${userId}`);
+      
+      // 2. الحصول على قائمة مسارات التخزين الحالية التي يجب الاحتفاظ بها
+      const { data: currentPaths, error: pathError } = await supabase
+        .from('images')
+        .select('storage_path')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(MAX_RECORDS_PER_USER);
+      
+      if (pathError) {
+        console.error(`خطأ في جلب مسارات التخزين الحالية للمستخدم ${userId}:`, pathError);
+        return;
+      }
+      
+      // إنشاء مجموعة من مسارات التخزين التي يجب الاحتفاظ بها
+      const validPaths = new Set(
+        currentPaths
+          .filter(item => item.storage_path)
+          .map(item => {
+            // استخراج اسم الملف فقط من المسار الكامل
+            const pathParts = item.storage_path.split('/');
+            return pathParts[pathParts.length - 1];
+          })
+      );
+      
+      console.log(`عدد مسارات التخزين الصالحة: ${validPaths.size}`);
+      
+      // 3. حذف الملفات التي ليست في قائمة المسارات الصالحة
+      let deletedCount = 0;
+      for (const file of files) {
+        if (!validPaths.has(file.name)) {
+          console.log(`حذف ملف غير مرتبط بسجل: ${userId}/${file.name}`);
+          const deleted = await deleteFileFromStorage(`${userId}/${file.name}`);
+          if (deleted) deletedCount++;
+        }
+      }
+      
+      console.log(`تم حذف ${deletedCount} ملف غير مرتبط بسجلات حالية`);
+      
+    } catch (error) {
+      console.error(`خطأ أثناء تنظيف ملفات التخزين للمستخدم ${userId}:`, error);
+    }
+  };
+
   // وظيفة لتنظيف السجلات القديمة والاحتفاظ فقط بأحدث MAX_RECORDS_PER_USER سجل
   const cleanupOldRecords = async (userId: string) => {
     try {
+      console.log(`بدء عملية تنظيف سجلات المستخدم: ${userId}`);
+      
       // 1. الحصول على عدد السجلات الحالية للمستخدم
       const { count, error: countError } = await supabase
         .from('images')
@@ -157,21 +246,22 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
         // ب. استخراج معرفات السجلات للحذف
         const recordIdsToDelete = oldestRecords.map(record => record.id);
         
-        // ج. حذف الملفات من التخزين أولا (إذا كانت موجودة)
+        // ج. حذف الملفات من التخزين أولاً (إذا كانت موجودة)
+        let deletedFilesCount = 0;
         for (const record of oldestRecords) {
           if (record.storage_path) {
-            const { error: storageError } = await supabase.storage
-              .from('receipt_images')
-              .remove([record.storage_path]);
-              
-            if (storageError) {
-              console.error(`خطأ في حذف الملف ${record.storage_path} من التخزين:`, storageError);
-              // نستمر في الحذف حتى لو فشل حذف بعض الملفات
-            } else {
+            console.log(`محاولة حذف الملف: ${record.storage_path}`);
+            const deleted = await deleteFileFromStorage(record.storage_path);
+            if (deleted) {
+              deletedFilesCount++;
               console.log(`تم حذف الملف ${record.storage_path} من التخزين بنجاح`);
+            } else {
+              console.error(`فشل حذف الملف ${record.storage_path} من التخزين`);
             }
           }
         }
+        
+        console.log(`تم حذف ${deletedFilesCount} ملف من أصل ${oldestRecords.length} سجل`);
         
         // د. حذف السجلات من قاعدة البيانات
         const { error: deleteError } = await supabase
@@ -192,6 +282,12 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
           description: `تم حذف ${recordIdsToDelete.length} سجل قديم للحفاظ على أداء النظام`,
           variant: "default",
         });
+        
+        // و. تنظيف جميع الملفات غير المرتبطة في التخزين
+        await cleanupStorageFiles(userId);
+      } else {
+        // حتى إذا لم يكن هناك سجلات لحذفها، نقوم بتنظيف ملفات التخزين للتأكد
+        await cleanupStorageFiles(userId);
       }
     } catch (error) {
       console.error("خطأ في عملية تنظيف السجلات القديمة:", error);
@@ -217,12 +313,10 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
       
       // إذا كان هناك ملف مخزن في Storage، نقوم بحذفه أولاً
       if (existingImage.storage_path) {
-        const { error: storageError } = await supabase.storage
-          .from('receipt_images')
-          .remove([existingImage.storage_path]);
-          
-        if (storageError) {
-          console.error("خطأ في حذف الملف من التخزين:", storageError);
+        console.log("محاولة حذف الملف من التخزين:", existingImage.storage_path);
+        const deleted = await deleteFileFromStorage(existingImage.storage_path);
+        if (!deleted) {
+          console.error("لم يتم حذف الملف من التخزين بنجاح");
           // نستمر في حذف السجل من قاعدة البيانات حتى لو فشل حذف الملف
         } else {
           console.log("تم حذف الملف من التخزين بنجاح:", existingImage.storage_path);
@@ -406,12 +500,57 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
     }
   };
 
+  // وظيفة لتنفيذ عملية التنظيف الآن بشكل يدوي
+  const runCleanupNow = async (userId: string) => {
+    console.log("بدء تنفيذ عملية التنظيف يدوياً للمستخدم:", userId);
+    
+    try {
+      // إظهار إشعار بدء التنظيف
+      toast({
+        title: "جاري التنظيف",
+        description: "بدء عملية تنظيف الملفات والسجلات القديمة...",
+      });
+      
+      // تنفيذ عملية التنظيف
+      await cleanupOldRecords(userId);
+      
+      // التحقق من النتائج بعد التنظيف
+      const { count, error: countError } = await supabase
+        .from('images')
+        .select('id', { count: 'exact' })
+        .eq('user_id', userId);
+      
+      if (countError) {
+        throw new Error(`خطأ أثناء التحقق من نتائج التنظيف: ${countError.message}`);
+      }
+      
+      // إظهار إشعار اكتمال التنظيف
+      toast({
+        title: "اكتمل التنظيف",
+        description: `تم تنظيف الملفات والسجلات. عدد السجلات الحالي: ${count || 0}`,
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("خطأ أثناء تنفيذ عملية التنظيف يدوياً:", error);
+      
+      toast({
+        title: "خطأ في التنظيف",
+        description: `حدث خطأ أثناء تنظيف الملفات: ${error.message}`,
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+
   return {
     isLoadingUserImages,
     saveImageToDatabase,
     loadUserImages,
     handleSubmitToApi,
     deleteImageFromDatabase,
-    cleanupOldRecords
+    cleanupOldRecords,
+    runCleanupNow // إضافة الوظيفة الجديدة للتنظيف اليدوي
   };
 };

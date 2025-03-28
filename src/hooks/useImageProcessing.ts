@@ -43,6 +43,8 @@ export const useImageProcessing = () => {
     autoExportEnabled,
     defaultSheetId,
     toggleAutoExport,
-    setDefaultSheet
+    setDefaultSheet,
+    // تصدير وظائف إضافية إلى الواجهة
+    runCleanupNow: coreProcessing.runCleanupNow
   };
 };

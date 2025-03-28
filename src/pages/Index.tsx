@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info } from 'lucide-react';
+import { ArrowRight, Info, Trash2 } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -11,9 +11,11 @@ import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
@@ -29,7 +31,9 @@ const Index = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     formatDate: formatImageDate,
-    clearSessionImages
+    clearSessionImages,
+    loadUserImages,
+    runCleanupNow
   } = useImageProcessing();
   
   const {
@@ -37,6 +41,15 @@ const Index = () => {
     formatPrice,
     formatProvinceName
   } = useDataFormatting();
+
+  // وظيفة تنفيذ التنظيف يدوياً
+  const handleManualCleanup = async () => {
+    if (user) {
+      await runCleanupNow(user.id);
+      // إعادة تحميل الصور بعد التنظيف
+      loadUserImages();
+    }
+  };
   
   return (
     <div className="min-h-screen bg-background">
@@ -70,11 +83,17 @@ const Index = () => {
                 </Button>
               </div>
               
-              {/* إضافة معلومات عن ميزة تنظيف البيانات */}
+              {/* معلومات عن ميزة تنظيف البيانات */}
               <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                 <Info className="h-4 w-4 text-blue-500" />
                 <AlertDescription className="text-sm text-blue-600 dark:text-blue-300">
                   لتحسين أداء النظام، يتم الاحتفاظ فقط بأحدث 9 سجلات. السجلات القديمة يتم حذفها تلقائياً.
+                  <div className="mt-2">
+                    <Button size="sm" variant="outline" onClick={handleManualCleanup} className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100">
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      تنفيذ التنظيف الآن
+                    </Button>
+                  </div>
                 </AlertDescription>
               </Alert>
             </motion.div>
