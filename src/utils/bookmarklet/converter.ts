@@ -1,4 +1,3 @@
-
 /**
  * وحدة تحويل البيانات للتصدير
  */
@@ -26,8 +25,7 @@ export const convertImagesToBookmarkletItems = (images: ImageData[]): Bookmarkle
       companyName: img.companyName || '',
       exportDate: new Date().toISOString(),
       status: 'ready',
-      address: img.address || '',
-      notes: img.notes || '',
+      notes: img.notes1 || '',
       recipientName: img.recipientName || '',
       // يمكن إضافة المزيد من الحقول هنا
     }));

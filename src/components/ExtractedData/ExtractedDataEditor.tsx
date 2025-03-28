@@ -38,9 +38,7 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
       phoneNumber: image.phoneNumber || "",
       province: image.province || "",
       price: image.price || "",
-      companyName: image.companyName || "",
-      address: image.address || "",
-      notes: image.notes || ""
+      companyName: image.companyName || ""
     });
   }, [image.id, setTempData]);
 
