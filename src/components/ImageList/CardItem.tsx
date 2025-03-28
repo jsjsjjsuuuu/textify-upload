@@ -7,7 +7,6 @@ import ImageDataForm from "./ImageDataForm";
 import ActionButtons from "./ActionButtons";
 import { AutomationButton } from "@/components/ExtractedData";
 import BatchArrow from "./BatchArrow";
-import { useEffect } from "react";
 
 interface CardItemProps {
   image: ImageData;
@@ -36,13 +35,6 @@ const CardItem = ({
 }: CardItemProps) => {
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
-  
-  // إضافة تسجيل للتصحيح باستخدام useEffect بدلاً من وضعه مباشرة في JSX
-  useEffect(() => {
-    if (showBatchArrow) {
-      console.log('Showing batch arrow for image:', image.id, { isFirstInBatch, isLastInBatch });
-    }
-  }, [image.id, showBatchArrow, isFirstInBatch, isLastInBatch]);
 
   return (
     <motion.div
@@ -51,7 +43,6 @@ const CardItem = ({
       transition={{ duration: 0.3 }}
       className="max-w-5xl mx-auto relative"
     >
-      {/* التأكد من أن الشرط صحيح لإظهار السهم */}
       {showBatchArrow && (
         <BatchArrow isFirst={isFirstInBatch} isLast={isLastInBatch} />
       )}

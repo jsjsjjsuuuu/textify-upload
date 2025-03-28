@@ -2,7 +2,8 @@
 import { ImageData } from "@/types/ImageData";
 import CardItem from "./CardItem";
 import { motion } from "framer-motion";
-import { Fragment, useEffect } from "react";
+import { Fragment } from "react";
+import { ChevronDown } from "lucide-react";
 
 interface ImageListProps {
   images: ImageData[];
@@ -46,15 +47,6 @@ const ImageList = ({
     const dateB = groupedImages[b][0].date.getTime();
     return dateB - dateA;
   });
-  
-  // طباعة معلومات التصحيح
-  useEffect(() => {
-    console.log('Grouped Images:', groupedImages);
-    console.log('Batch IDs:', sortedBatchIds);
-    sortedBatchIds.forEach(batchId => {
-      console.log(`Batch ${batchId} has ${groupedImages[batchId].length} images`);
-    });
-  }, [images]);
 
   return (
     <motion.section 
@@ -66,30 +58,28 @@ const ImageList = ({
         معاينة الصور والنصوص المستخرجة
       </h2>
       
-      <div className="space-y-12"> {/* زيادة المسافة بين المجموعات لجعل الخط أكثر وضوحًا */}
+      <div className="space-y-6">
         {sortedBatchIds.map(batchId => {
           const batchImages = groupedImages[batchId];
           const hasManyImages = batchImages.length > 1;
           
           return (
             <Fragment key={batchId}>
-              <div className="space-y-6"> {/* مساحة بين العناصر داخل المجموعة الواحدة */}
-                {batchImages.map((image, index) => (
-                  <CardItem 
-                    key={image.id} 
-                    image={image} 
-                    isSubmitting={isSubmitting} 
-                    onImageClick={onImageClick} 
-                    onTextChange={onTextChange} 
-                    onDelete={onDelete} 
-                    onSubmit={onSubmit} 
-                    formatDate={formatDate}
-                    showBatchArrow={hasManyImages}
-                    isFirstInBatch={index === 0}
-                    isLastInBatch={index === batchImages.length - 1}
-                  />
-                ))}
-              </div>
+              {batchImages.map((image, index) => (
+                <CardItem 
+                  key={image.id} 
+                  image={image} 
+                  isSubmitting={isSubmitting} 
+                  onImageClick={onImageClick} 
+                  onTextChange={onTextChange} 
+                  onDelete={onDelete} 
+                  onSubmit={onSubmit} 
+                  formatDate={formatDate}
+                  showBatchArrow={hasManyImages}
+                  isFirstInBatch={index === 0}
+                  isLastInBatch={index === batchImages.length - 1}
+                />
+              ))}
               
               {/* إضافة فاصل بين المجموعات */}
               {batchId !== sortedBatchIds[sortedBatchIds.length - 1] && (
