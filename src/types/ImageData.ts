@@ -1,4 +1,3 @@
-
 export interface ImageData {
   id: string;
   file: File;
@@ -29,11 +28,9 @@ export interface ImageData {
   bookmarkletMessage?: string;
   bookmarkletDate?: Date;
   // حقول إضافية لوصف البيانات
-  notes?: string;
   category?: string;
   priority?: "low" | "medium" | "high";
   // حقول إضافية مخصصة للموقع المستهدف
-  address?: string;
   productType?: string;
   orderNumber?: string;
   delegateName?: string; // اسم المندوب

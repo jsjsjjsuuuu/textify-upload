@@ -10,15 +10,13 @@ interface ExtractedDataFieldsProps {
     province: string;
     price: string;
     companyName: string;
-    address: string;
-    notes: string;
   };
   editMode: boolean;
   onTempChange: (field: string, value: string) => void;
-  hideConfidence?: boolean; // إضافة خيار لإخفاء قيم الثقة
-  confidence?: Record<string, number>; // مصفوفة لقيم الثقة لكل حقل
-  isLoading?: boolean; // حالة التحميل
-  loadingFields?: string[]; // قائمة الحقول التي يتم تحميلها حاليًا
+  hideConfidence?: boolean;
+  confidence?: Record<string, number>;
+  isLoading?: boolean;
+  loadingFields?: string[];
 }
 
 const ExtractedDataFields = ({
@@ -91,28 +89,6 @@ const ExtractedDataFields = ({
         hideConfidence={hideConfidence}
         confidence={confidence.price}
         isLoading={isLoading || loadingFields.includes('price')}
-      />
-      <ExtractedDataField
-        label="العنوان:"
-        field="address"
-        value={tempData.address}
-        onChange={onTempChange}
-        editMode={editMode}
-        className="col-span-2"
-        hideConfidence={hideConfidence}
-        confidence={confidence.address}
-        isLoading={isLoading || loadingFields.includes('address')}
-      />
-      <ExtractedDataField
-        label="ملاحظات:"
-        field="notes"
-        value={tempData.notes}
-        onChange={onTempChange}
-        editMode={editMode}
-        className="col-span-2"
-        hideConfidence={hideConfidence}
-        confidence={confidence.notes}
-        isLoading={isLoading || loadingFields.includes('notes')}
       />
     </div>
   );

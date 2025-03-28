@@ -4,7 +4,7 @@ import { ImageData } from "@/types/ImageData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ExtractedDataFields from "@/components/ExtractedData/ExtractedDataFields";
 import { Button } from "@/components/ui/button";
-import { Edit, Check, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 interface ImagePreviewProps {
   image: ImageData;
@@ -12,7 +12,7 @@ interface ImagePreviewProps {
 }
 
 const ImagePreview = ({ image, onTextChange }: ImagePreviewProps) => {
-  const [editMode, setEditMode] = useState(false);
+  // إزالة حالة وضع التعديل حيث سنسمح بالتعديل المباشر دوماً
   const [tempData, setTempData] = useState({
     code: image.code || "",
     senderName: image.senderName || "",
@@ -20,8 +20,6 @@ const ImagePreview = ({ image, onTextChange }: ImagePreviewProps) => {
     province: image.province || "",
     price: image.price || "",
     companyName: image.companyName || "",
-    address: image.address || "",
-    notes: image.notes || ""
   });
 
   // تحديث البيانات المؤقتة عند تغيير الصورة المحددة
@@ -33,25 +31,14 @@ const ImagePreview = ({ image, onTextChange }: ImagePreviewProps) => {
       province: image.province || "",
       price: image.price || "",
       companyName: image.companyName || "",
-      address: image.address || "",
-      notes: image.notes || ""
     });
-    setEditMode(false);
-  }, [image.id, image.code, image.senderName, image.phoneNumber, image.province, image.price, image.companyName, image.address, image.notes]);
+  }, [image.id, image.code, image.senderName, image.phoneNumber, image.province, image.price, image.companyName]);
 
-  // تحديث البيانات المؤقتة عند تغيير القيمة
+  // تحديث البيانات مباشرة عند تغييرها
   const handleTempChange = (field: string, value: string) => {
     setTempData(prev => ({ ...prev, [field]: value }));
-  };
-
-  // حفظ التغييرات على جميع الحقول
-  const saveChanges = () => {
-    Object.entries(tempData).forEach(([field, value]) => {
-      if (image[field] !== value) {
-        onTextChange(image.id, field, value);
-      }
-    });
-    setEditMode(false);
+    // مباشرة تحديث القيمة بدون الحاجة لأي زر تأكيد
+    onTextChange(image.id, field, value);
   };
 
   // نص النص المستخرج لعرض أكثر سهولة
@@ -71,34 +58,11 @@ const ImagePreview = ({ image, onTextChange }: ImagePreviewProps) => {
         <TabsContent value="data" className="pt-2">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium">البيانات المستخرجة</h3>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                if (editMode) {
-                  saveChanges();
-                } else {
-                  setEditMode(true);
-                }
-              }}
-            >
-              {editMode ? (
-                <>
-                  <Check className="w-4 h-4 ml-1.5" />
-                  حفظ
-                </>
-              ) : (
-                <>
-                  <Edit className="w-4 h-4 ml-1.5" />
-                  تعديل
-                </>
-              )}
-            </Button>
           </div>
           
           <ExtractedDataFields
             tempData={tempData}
-            editMode={editMode}
+            editMode={true} // دائماً في وضع التعديل
             onTempChange={handleTempChange}
           />
         </TabsContent>
