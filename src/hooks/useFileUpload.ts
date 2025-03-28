@@ -160,11 +160,7 @@ export const useFileUpload = ({
     console.log("اكتملت معالجة الصور");
     
     if (processedFiles > 0) {
-      toast({
-        title: "تم معالجة الصور بنجاح",
-        description: `تم معالجة ${processedFiles} صورة باستخدام Gemini AI`,
-        variant: "default"
-      });
+      // تم إزالة التنبيه هنا حتى لا تظهر إشعارات إضافية
       
       // تحديث إحصائيات التخزين
       console.log("إعادة حفظ البيانات في localStorage");
