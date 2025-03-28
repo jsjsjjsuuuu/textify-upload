@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ImagePreview from "@/components/ImagePreview/ImagePreview";
-import { Trash2, Save, SendHorizonal, RotateCcw, Filter } from "lucide-react";
+import { Trash2, Save, SendHorizonal, RotateCcw, Filter, Loader, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
@@ -367,7 +367,7 @@ const ImagePreviewContainer = ({
                         {image.status === "error" && "فشل"}
                         {image.status === "processing" && (
                           <span className="flex items-center">
-                            <LoaderCircle className="w-3 h-3 ml-1 animate-spin" />
+                            <Loader className="w-3 h-3 ml-1 animate-spin" />
                             جاري المعالجة
                           </span>
                         )}
@@ -394,7 +394,7 @@ const ImagePreviewContainer = ({
                           />
                         ) : (
                           <div className="flex items-center justify-center h-full w-full">
-                            <ImageIcon className="w-8 h-8 text-gray-400" />
+                            <Image className="w-8 h-8 text-gray-400" />
                           </div>
                         )}
                       </div>
