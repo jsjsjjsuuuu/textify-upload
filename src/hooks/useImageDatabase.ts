@@ -233,11 +233,9 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
 
   // وظيفة إرسال البيانات إلى API وحفظها في قاعدة البيانات
   const handleSubmitToApi = async (id: string, image: ImageData, userId: string | undefined) => {
-    // نستخدم useState في واجهة Hook عادية وليس داخل دالة أخرى
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    let isSubmitting = true;
     
     try {
-      setIsSubmitting(true);
       // إعداد البيانات للإرسال
       const extractedData = {
         company_name: image.companyName || "",
@@ -250,26 +248,55 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
       
       console.log("جاري إرسال البيانات إلى API...", extractedData);
       
-      // إرسال البيانات إلى ويب هوك n8n
-      const response = await fetch("https://ahmed0770.app.n8n.cloud/webhook-test/a9ee", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(extractedData)
-      });
-      
-      const data = await response.json();
-      console.log("تم إرسال البيانات بنجاح:", data);
+      try {
+        // إرسال البيانات إلى ويب هوك n8n
+        const response = await fetch("https://ahmed0770.app.n8n.cloud/webhook-test/a9ee", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(extractedData)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`حدث خطأ أثناء الاستجابة: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log("تم إرسال البيانات بنجاح:", data);
 
-      // حفظ البيانات في قاعدة البيانات Supabase
-      const savedData = await saveImageToDatabase(image, userId);
-      
-      // تحديث حالة الصورة
-      updateImage(id, { status: "completed", submitted: true });
-      
-      toast({
-        title: "نجاح",
-        description: `تم إرسال البيانات بنجاح!`,
-      });
+        // حفظ البيانات في قاعدة البيانات Supabase
+        const savedData = await saveImageToDatabase(image, userId);
+        
+        // تحديث حالة الصورة
+        updateImage(id, { status: "completed", submitted: true });
+        
+        toast({
+          title: "نجاح",
+          description: `تم إرسال البيانات بنجاح!`,
+        });
+        
+        return true;
+      } catch (apiError: any) {
+        console.error("خطأ في اتصال API:", apiError);
+        
+        // نحاول حفظ البيانات في قاعدة البيانات على أي حال
+        console.log("محاولة حفظ البيانات في قاعدة البيانات على الرغم من فشل API...");
+        const savedData = await saveImageToDatabase(image, userId);
+        
+        if (savedData) {
+          // تحديث حالة الصورة
+          updateImage(id, { status: "completed", submitted: true });
+          
+          toast({
+            title: "تم الحفظ",
+            description: `تم حفظ البيانات في قاعدة البيانات، ولكن فشل إرسال البيانات إلى API: ${apiError.message}`,
+            variant: "warning"
+          });
+          
+          return true;
+        } else {
+          throw new Error(`فشل إرسال البيانات إلى API والحفظ في قاعدة البيانات: ${apiError.message}`);
+        }
+      }
     } catch (error: any) {
       console.error("خطأ في إرسال البيانات:", error);
       updateImage(id, { status: "error" });
@@ -279,8 +306,10 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
         description: `فشل إرسال البيانات: ${error.message}`,
         variant: "destructive",
       });
+      
+      return false;
     } finally {
-      setIsSubmitting(false);
+      isSubmitting = false;
     }
   };
 
@@ -289,6 +318,6 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
     saveImageToDatabase,
     loadUserImages,
     handleSubmitToApi,
-    deleteImageFromDatabase // تصدير الوظيفة الجديدة
+    deleteImageFromDatabase
   };
 };

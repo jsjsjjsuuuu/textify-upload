@@ -90,19 +90,23 @@ export const useImageProcessingCore = () => {
     
     setIsSubmitting(true);
     try {
-      // حفظ الصورة في قاعدة البيانات أولاً إذا لم تكن قد تم حفظها بالفعل
-      if (!image.submitted && saveProcessedImage) {
-        await saveProcessedImage(image);
-        console.log("تم حفظ الصورة في قاعدة البيانات عند النقر على زر الإرسال");
+      // محاولة إرسال البيانات إلى API وحفظها في قاعدة البيانات
+      const success = await submitToApi(id, image, user?.id);
+      
+      if (success) {
+        toast({
+          title: "تم الإرسال",
+          description: "تم إرسال البيانات وحفظها بنجاح",
+        });
+        
+        // تحديث الصورة محلياً
+        updateImage(id, { submitted: true, status: "completed" });
+        
+        // إعادة تحميل الصور من قاعدة البيانات للتأكد من التزامن
+        if (user) {
+          loadUserImages(user.id, setAllImages);
+        }
       }
-      
-      // ثم إرسال البيانات إلى API
-      await submitToApi(id, image, user?.id);
-      
-      toast({
-        title: "تم الإرسال",
-        description: "تم إرسال البيانات وحفظها بنجاح",
-      });
     } catch (error) {
       console.error("خطأ في إرسال البيانات:", error);
       toast({
