@@ -36,7 +36,7 @@ export interface BookmarkletItem {
   price: string;
   companyName: string;
   exportDate: string;
-  status: 'ready' | 'success' | 'error';
+  status: 'ready' | 'pending' | 'success' | 'error';
   address?: string;
   notes?: string;
   recipientName?: string;

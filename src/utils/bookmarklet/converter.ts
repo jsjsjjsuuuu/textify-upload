@@ -3,7 +3,8 @@
  * وحدة تحويل البيانات للتصدير
  */
 
-import { ImageData, BookmarkletItem } from "@/types/ImageData";
+import { ImageData } from "@/types/ImageData";
+import { BookmarkletItem } from "@/utils/bookmarklet/types";
 
 /**
  * تحويل بيانات الصور إلى تنسيق قابل للتصدير
