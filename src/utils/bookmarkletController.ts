@@ -1,3 +1,4 @@
+
 import { BookmarkletItem, BookmarkletExportData } from "@/types/ImageData";
 import { getFromLocalStorage, updateItemStatus } from "@/utils/bookmarkletService";
 
@@ -743,4 +744,31 @@ export const findAndClickSaveButton = (): boolean => {
   }
   
   // ترتيب الأزرار المحتملة حسب أولوية النص
-  potentialSave
+  potentialSaveButtons.sort((a, b) => {
+    const aText = a.textContent?.trim().toLowerCase() || '';
+    const bText = b.textContent?.trim().toLowerCase() || '';
+    
+    if (aText === 'حفظ' && bText !== 'حفظ') return -1;
+    if (bText === 'حفظ' && aText !== 'حفظ') return 1;
+    if (aText === 'إضافة' && bText !== 'إضافة') return -1;
+    if (bText === 'إضافة' && aText !== 'إضافة') return 1;
+    
+    return 0;
+  });
+  
+  // محاولة النقر على الزر الأول من القائمة المرتبة
+  if (potentialSaveButtons.length > 0) {
+    try {
+      const button = potentialSaveButtons[0] as HTMLElement;
+      const buttonValue = (button instanceof HTMLInputElement) ? button.value : '';
+      console.log(`[Bookmarklet] محاولة النقر على الزر المحتمل: ${button.textContent || buttonValue}`);
+      button.click();
+      return true;
+    } catch (e) {
+      console.warn("[Bookmarklet] خطأ أثناء النقر على الزر المحتمل:", e);
+    }
+  }
+  
+  console.log("[Bookmarklet] لم يتم العثور على زر حفظ مناسب");
+  return false;
+};
