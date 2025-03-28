@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -192,9 +193,6 @@ export const useImageProcessingCore = () => {
       });
 
       // معالجة الصورة بالطريقة المحددة
-      const { processWithOcr } = useOcrProcessing();
-      const { processWithGemini } = useGeminiProcessing();
-      
       const processedImage = useGemini 
         ? await processWithGemini(image.file, image)
         : await processWithOcr(image.file, image);

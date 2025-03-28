@@ -49,7 +49,6 @@ export async function geminiExtractData(
     return {
       success: true,
       message: "تم استخراج البيانات بنجاح",
-      data: result.data?.parsedData || {},
       data: {
         ...result.data?.parsedData || {},
         extractedText: result.data?.extractedText || "",

@@ -30,22 +30,26 @@ export const useGeminiProcessing = () => {
         throw new Error("فشل في استخراج البيانات باستخدام Gemini");
       }
       
+      // نستخرج النص والبيانات من النتيجة
+      const extractedText = result.data.extractedText || "";
+      const parsedData = result.data;
+      
       console.log("نتيجة Gemini:", { 
-        text: result.extractedText?.substring(0, 100) + "...",
-        data: result.data
+        text: extractedText.substring(0, 100) + "...",
+        data: parsedData
       });
       
       // تحديث بيانات الصورة بالبيانات المستخرجة من Gemini
-      const updatedImage = {
+      const updatedImage: ImageData = {
         ...image,
-        extractedText: result.extractedText || "",
-        code: result.data.code || "",
-        senderName: result.data.senderName || "",
-        phoneNumber: result.data.phoneNumber || "",
-        province: result.data.province || "",
-        price: result.data.price || "",
-        companyName: result.data.companyName || "",
-        confidence: result.confidence || 85,
+        extractedText: extractedText,
+        code: parsedData.code || "",
+        senderName: parsedData.senderName || "",
+        phoneNumber: parsedData.phoneNumber || "",
+        province: parsedData.province || "",
+        price: parsedData.price || "",
+        companyName: parsedData.companyName || "",
+        confidence: result.data.confidence || 85,
         status: "completed" as const,
         extractionMethod: "gemini" as const
       };
