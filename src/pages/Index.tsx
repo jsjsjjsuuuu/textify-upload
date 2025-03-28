@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays } from "lucide-react";
+import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays, Filter, Trash2, RotateCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/utils/dateFormatter";
@@ -32,6 +32,7 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("number");
   const [sortDirection, setSortDirection] = useState("desc");
+  const [alreadySavedIds, setAlreadySavedIds] = useState<Set<string>>(new Set());
   
   // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
@@ -49,7 +50,8 @@ const Index = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     formatDate: formatImageDate,
-    refreshUserImages
+    refreshUserImages,
+    cleanupDuplicates
   } = useImageProcessing();
   
   const {
@@ -77,20 +79,61 @@ const Index = () => {
     refreshUserImages();
   };
   
+  // معالجة تنظيف البيانات المكررة
+  const handleCleanupDuplicates = () => {
+    if (isLoading) {
+      toast.info("جاري تحميل البيانات بالفعل، يرجى الانتظار...");
+      return;
+    }
+    
+    console.log("يدوي: بدء عملية تنظيف السجلات المكررة...");
+    cleanupDuplicates();
+  };
+  
   // عند اكتمال معالجة الصور، حفظها في قاعدة البيانات
   useEffect(() => {
-    const completedImages = images.filter(img => 
-      img.status === "completed" && img.code && img.senderName && img.phoneNumber && !img.submitted
+    // فقط إذا كان المستخدم مسجل الدخول
+    if (!user) return;
+    
+    // تحديث قائمة المعرفات المحفوظة
+    const savedIds = new Set(
+      images
+        .filter(img => img.submitted)
+        .map(img => img.id)
     );
     
-    if (completedImages.length > 0) {
-      completedImages.forEach(async (image) => {
-        // حفظ الصور المكتملة في قاعدة البيانات
-        await saveImageToDatabase(image);
-        console.log("تم حفظ الصورة في قاعدة البيانات:", image.id);
+    // تحديث قائمة المعرفات المحفوظة إذا كان هناك تغيير
+    if (savedIds.size !== alreadySavedIds.size) {
+      setAlreadySavedIds(savedIds);
+    }
+    
+    // بدلاً من حفظ جميع الصور المكتملة مباشرة، تحقق من وجود صور جديدة مكتملة لم يتم حفظها بعد
+    const completedNotSubmittedImages = images.filter(img => 
+      img.status === "completed" && 
+      img.code && 
+      img.senderName && 
+      img.phoneNumber && 
+      !img.submitted &&
+      !alreadySavedIds.has(img.id)
+    );
+    
+    // حفظ الصور الجديدة المكتملة فقط
+    if (completedNotSubmittedImages.length > 0) {
+      console.log(`وجدت ${completedNotSubmittedImages.length} صورة مكتملة وغير محفوظة، جاري الحفظ...`);
+      
+      completedNotSubmittedImages.forEach(async (image) => {
+        // تجنب الحفظ المزدوج باستخدام قائمة المعرفات المحفوظة
+        if (!alreadySavedIds.has(image.id)) {
+          // حفظ الصور المكتملة في قاعدة البيانات
+          await saveImageToDatabase(image);
+          console.log("تم حفظ الصورة في قاعدة البيانات:", image.id);
+          
+          // إضافة المعرف إلى قائمة المعرفات المحفوظة
+          setAlreadySavedIds(prev => new Set([...prev, image.id]));
+        }
       });
     }
-  }, [images]);
+  }, [images, user]);
   
   const handleImageClick = (image: ImageData) => {
     console.log('صورة تم النقر عليها:', image.id);
@@ -278,22 +321,33 @@ const Index = () => {
                 className="space-y-8"
               >
                 {/* عنوان الصفحة */}
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                   <div>
                     <h2 className="text-3xl font-medium tracking-tight">سجلات الوصولات</h2>
                     <p className="text-muted-foreground mt-1">
                       إدارة ومراجعة سجلات الوصولات المستخرجة
                     </p>
                   </div>
-                  <Button
-                    onClick={handleRefreshData}
-                    variant="outline"
-                    disabled={isLoading}
-                    className="flex items-center gap-2"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    {isLoading ? 'جاري التحديث...' : 'تحديث البيانات'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleCleanupDuplicates}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                      title="إزالة السجلات المكررة"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="hidden sm:inline">تنظيف المكررات</span>
+                    </Button>
+                    <Button
+                      onClick={handleRefreshData}
+                      variant="outline"
+                      disabled={isLoading}
+                      className="flex items-center gap-2"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                      {isLoading ? 'جاري التحديث...' : 'تحديث البيانات'}
+                    </Button>
+                  </div>
                 </div>
 
                 {/* فلتر البحث */}

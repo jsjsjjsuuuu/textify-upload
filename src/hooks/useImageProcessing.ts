@@ -37,8 +37,13 @@ export const useImageProcessing = () => {
       const refreshData = async () => {
         try {
           await coreProcessing.refreshUserData();
+          
+          // إزالة التكرار بعد التحديث
+          const duplicatesRemoved = coreProcessing.removeDuplicates();
+          
           // إعادة ترقيم الصور بعد التحديث
           coreProcessing.renumberImages();
+          
           toast.success("تم تحديث بياناتك بنجاح!");
         } catch (error) {
           console.error("فشل تحديث البيانات:", error);
@@ -64,7 +69,27 @@ export const useImageProcessing = () => {
   
   // وظيفة لتحديث البيانات يدويًا
   const refreshUserImages = () => {
+    if (coreProcessing.isLoading) {
+      toast.info("جاري تحميل البيانات بالفعل، يرجى الانتظار...");
+      return;
+    }
+    
+    console.log("طلب تحديث البيانات من المستخدم");
     setUserRequestedRefresh(true);
+  };
+  
+  // إزالة التكرار بشكل يدوي
+  const cleanupDuplicates = () => {
+    const duplicatesRemoved = coreProcessing.removeDuplicates();
+    
+    if (duplicatesRemoved) {
+      toast.success("تم إزالة السجلات المكررة بنجاح");
+    } else {
+      toast.info("لا توجد سجلات مكررة لإزالتها");
+    }
+    
+    // إعادة ترقيم الصور بعد التنظيف
+    coreProcessing.renumberImages();
   };
   
   return {
@@ -74,6 +99,7 @@ export const useImageProcessing = () => {
     defaultSheetId,
     toggleAutoExport,
     setDefaultSheet,
-    refreshUserImages
+    refreshUserImages,
+    cleanupDuplicates
   };
 };

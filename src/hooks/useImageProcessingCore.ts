@@ -13,6 +13,7 @@ export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [lastSavedIds, setLastSavedIds] = useState<Set<string>>(new Set());
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -24,7 +25,8 @@ export const useImageProcessingCore = () => {
     deleteImage, 
     handleTextChange,
     setImages,
-    renumberImages 
+    renumberImages,
+    removeDuplicates
   } = useImageState();
   
   const { 
@@ -71,6 +73,10 @@ export const useImageProcessingCore = () => {
       }
 
       console.log(`تم جلب ${data.length} صورة للمستخدم:`, user.id);
+      
+      // إنشاء مجموعة من معرفات الصور المحفوظة مسبقًا
+      const loadedIds = new Set(data.map(item => item.id));
+      setLastSavedIds(loadedIds);
       
       // تحويل البيانات من Supabase إلى نموذج ImageData
       const convertedImages = data.map((item, index) => {
@@ -124,6 +130,11 @@ export const useImageProcessingCore = () => {
           // استبدال الصور بدلاً من إضافتها لمنع التكرار
           setImages(userImages);
           
+          // تطبيق الترقيم التسلسلي بعد تحميل البيانات
+          setTimeout(() => {
+            renumberImages();
+          }, 100);
+          
           toast({
             title: "تم التحميل",
             description: `تم تحميل ${userImages.length} سجل من بياناتك بنجاح`,
@@ -147,6 +158,12 @@ export const useImageProcessingCore = () => {
         description: "يجب تسجيل الدخول لحفظ البيانات",
         variant: "destructive",
       });
+      return null;
+    }
+
+    // تحقق من أن الصورة ليست محفوظة بالفعل
+    if (image.submitted && lastSavedIds.has(image.id)) {
+      console.log("الصورة محفوظة بالفعل في قاعدة البيانات، تجاهل:", image.id);
       return null;
     }
 
@@ -183,7 +200,7 @@ export const useImageProcessingCore = () => {
             price: image.price || "",
             province: image.province || "",
             status: image.status,
-            submitted: image.submitted || false
+            submitted: true // تعيين حالة الإرسال إلى true عند الحفظ
           })
           .eq('id', image.id)
           .select()
@@ -212,7 +229,7 @@ export const useImageProcessingCore = () => {
             price: image.price || "",
             province: image.province || "",
             status: image.status,
-            submitted: image.submitted || false
+            submitted: true // تعيين حالة الإرسال إلى true عند الحفظ
           })
           .select();
 
@@ -225,6 +242,9 @@ export const useImageProcessingCore = () => {
 
       // تحديث حالة الصورة ليشير إلى أنها تم حفظها
       updateImage(image.id, { submitted: true });
+      
+      // إضافة معرف الصورة إلى قائمة المعرفات المحفوظة
+      setLastSavedIds(prev => new Set(prev).add(image.id));
 
       toast({
         title: "نجاح",
@@ -246,6 +266,16 @@ export const useImageProcessingCore = () => {
 
   // وظيفة إرسال البيانات إلى API وحفظها في قاعدة البيانات
   const handleSubmitToApi = async (id: string, image: ImageData) => {
+    // تجاهل إذا كانت الصورة مرسلة بالفعل
+    if (image.submitted) {
+      console.log("الصورة مرسلة بالفعل، تجاهل:", id);
+      toast({
+        title: "معلومات",
+        description: "تم إرسال هذه البيانات بالفعل",
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       // إعداد البيانات للإرسال
@@ -298,7 +328,8 @@ export const useImageProcessingCore = () => {
   // حفظ الصورة المعالجة في قاعدة البيانات تلقائياً عند الانتهاء من المعالجة
   const saveProcessedImage = async (image: ImageData) => {
     // التحقق من أن الصورة مكتملة المعالجة وتحتوي على البيانات الأساسية
-    if (image.status === "completed" && image.code && image.senderName && image.phoneNumber) {
+    // والتحقق من أنها لم تحفظ من قبل
+    if (image.status === "completed" && image.code && image.senderName && image.phoneNumber && !image.submitted && !lastSavedIds.has(image.id)) {
       console.log("حفظ الصورة المعالجة تلقائياً:", image.id);
       // حفظ البيانات في قاعدة البيانات
       await saveImageToDatabase(image);
@@ -307,12 +338,22 @@ export const useImageProcessingCore = () => {
 
   // إجراء تحميل جديد للبيانات - مفيد عند الرغبة في إعادة تحميل البيانات يدويًا
   const refreshUserData = async () => {
+    if (isLoading) {
+      console.log("جاري بالفعل تحميل البيانات، تجاهل طلب التحديث");
+      return;
+    }
+    
     setDataLoaded(false); // إعادة ضبط حالة التحميل ليتم إعادة تحميل البيانات
     const userImages = await fetchUserImages();
     
     if (userImages.length > 0) {
       // استبدال الصور بدلاً من إضافتها لمنع التكرار
       setImages(userImages);
+      
+      // بعد تعيين الصور، قم بإعادة ترقيمها
+      setTimeout(() => {
+        renumberImages();
+      }, 100);
       
       toast({
         title: "تم التحديث",
@@ -321,6 +362,16 @@ export const useImageProcessingCore = () => {
     }
     
     setDataLoaded(true);
+    
+    // تطبيق إزالة التكرار بعد التحميل
+    const duplicatesRemoved = removeDuplicates();
+    
+    if (duplicatesRemoved) {
+      toast({
+        title: "تم التنظيف",
+        description: "تم إزالة السجلات المكررة بنجاح",
+      });
+    }
   };
 
   return {
@@ -340,6 +391,7 @@ export const useImageProcessingCore = () => {
     saveProcessedImage,
     fetchUserImages,
     refreshUserData,
-    renumberImages
+    renumberImages,
+    removeDuplicates
   };
 };

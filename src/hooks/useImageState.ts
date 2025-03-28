@@ -15,8 +15,13 @@ export const useImageState = () => {
     };
     console.log("إضافة صورة جديدة:", imageWithDefaults.id);
     
-    // التحقق من عدم وجود الصورة بالفعل لمنع التكرار
-    const exists = images.some(img => img.id === imageWithDefaults.id);
+    // تحسين منطق التحقق من التكرار - التحقق من المعرف وعنوان URL للمعاينة
+    const exists = images.some(img => 
+      img.id === imageWithDefaults.id || 
+      (img.previewUrl && img.previewUrl === imageWithDefaults.previewUrl) ||
+      (img.file && img.file.name === imageWithDefaults.file.name && img.file.size === imageWithDefaults.file.size)
+    );
+    
     if (exists) {
       console.log("الصورة موجودة بالفعل، تجاهل الإضافة:", imageWithDefaults.id);
       return;
@@ -80,6 +85,37 @@ export const useImageState = () => {
     });
   };
 
+  // ضمان عدم وجود معرفات مكررة
+  const removeDuplicates = () => {
+    const uniqueImageMap = new Map<string, ImageData>();
+    
+    // استخدام Map لضمان أن كل معرف فريد
+    images.forEach(img => {
+      // إذا كان المعرف موجودًا بالفعل، نحتفظ بالنسخة الأحدث
+      if (uniqueImageMap.has(img.id)) {
+        const existingImg = uniqueImageMap.get(img.id)!;
+        // المقارنة بناءً على التاريخ لتحديد أي صورة أحدث
+        if (img.date > existingImg.date) {
+          uniqueImageMap.set(img.id, img);
+        }
+      } else {
+        uniqueImageMap.set(img.id, img);
+      }
+    });
+    
+    // تحويل Map إلى مصفوفة
+    const uniqueImages = Array.from(uniqueImageMap.values());
+    
+    // تحديث الحالة فقط إذا اختلف عدد الصور
+    if (uniqueImages.length !== images.length) {
+      console.log(`تم إزالة ${images.length - uniqueImages.length} صورة مكررة`);
+      setImages(uniqueImages);
+      return true;
+    }
+    
+    return false;
+  };
+
   // تنظيف عناوين URL للكائنات عند إلغاء تحميل المكون
   useEffect(() => {
     return () => {
@@ -99,6 +135,7 @@ export const useImageState = () => {
     deleteImage,
     handleTextChange,
     setImages, // إضافة الوظيفة الجديدة للتحكم المباشر في مجموعة الصور
-    renumberImages // إضافة وظيفة إعادة ترقيم الصور
+    renumberImages, // إضافة وظيفة إعادة ترقيم الصور
+    removeDuplicates // إضافة وظيفة جديدة لإزالة الصور المكررة
   };
 };
