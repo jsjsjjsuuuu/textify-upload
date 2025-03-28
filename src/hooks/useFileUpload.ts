@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { useState } from 'react';
 import { ImageData } from '@/types/ImageData';
@@ -62,6 +61,9 @@ export const useFileUpload = ({
       
       // إنشاء مصفوفة من وعود معالجة الصور
       const processPromises = files.map(async (file, index) => {
+        // إنشاء معرف فريد للصورة خارج كتلة try/catch
+        const imageId = uuidv4();
+        
         try {
           // عرض تقدم المعالجة
           setProcessingProgress(Math.round((index / files.length) * 50));
@@ -71,9 +73,6 @@ export const useFileUpload = ({
           
           // إنشاء URL مؤقت للمعاينة
           const previewUrl = URL.createObjectURL(compressedFile);
-          
-          // إنشاء معرف فريد للصورة
-          const imageId = uuidv4();
           
           // إنشاء كائن بيانات الصورة الأولية
           const newImage: ImageData = {
