@@ -46,7 +46,7 @@ export const useGeminiProcessing = () => {
         price: result.data.price || "",
         companyName: result.data.companyName || "",
         confidence: result.confidence || 85,
-        status: "completed",
+        status: "completed" as const,
         extractionMethod: "gemini"
       };
       
@@ -63,7 +63,7 @@ export const useGeminiProcessing = () => {
       // في حالة حدوث خطأ مع Gemini، نقوم بتحديث حالة الصورة إلى خطأ
       return {
         ...image,
-        status: "error",
+        status: "error" as const,
         extractedText: "حدث خطأ أثناء معالجة الصورة باستخدام Gemini."
       };
     }

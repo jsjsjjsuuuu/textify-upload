@@ -27,13 +27,15 @@ export const useOcrProcessing = () => {
       console.log("البيانات المستخرجة من OCR:", extractedData);
       
       // تحديث بيانات الصورة بالبيانات المستخرجة
-      return updateImageWithExtractedData(
+      const updatedImage = updateImageWithExtractedData(
         image, 
         result.text, 
         extractedData,
         result.confidence,
         "ocr"
       );
+      
+      return updatedImage;
     } catch (ocrError) {
       console.error("خطأ في معالجة OCR:", ocrError);
       
@@ -45,7 +47,7 @@ export const useOcrProcessing = () => {
       
       return {
         ...image,
-        status: "error",
+        status: "error" as const,
         extractedText: "حدث خطأ أثناء استخراج النص من الصورة."
       };
     }

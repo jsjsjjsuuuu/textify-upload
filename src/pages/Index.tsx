@@ -26,6 +26,7 @@ const Index = () => {
     processingProgress,
     isSubmitting,
     useGemini,
+    toggleGemini,
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
@@ -36,7 +37,8 @@ const Index = () => {
     clearSessionImages,
     loadUserImages,
     runCleanupNow,
-    saveProcessedImage
+    saveProcessedImage,
+    reprocessImage
   } = useImageProcessing();
   
   const {
@@ -155,6 +157,7 @@ const Index = () => {
                     processingProgress={processingProgress} 
                     useGemini={useGemini} 
                     onFileChange={handleFileChange} 
+                    onToggleGemini={toggleGemini}
                   />
                 </div>
               </div>
@@ -178,7 +181,7 @@ const Index = () => {
                   onSubmit={id => handleSubmitToApi(id)} 
                   formatDate={formatImageDate} 
                   showOnlySession={true}
-                  onReprocess={handleReprocessImage}
+                  onReprocess={reprocessImage}
                 />
               </div>
             </div>

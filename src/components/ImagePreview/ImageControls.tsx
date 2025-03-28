@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ImageData } from "@/types/ImageData";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
-import { useGeminiPromptModal } from "@/hooks/useGeminiPromptModal";
+import { useToast } from "@/hooks/use-toast";
 
 interface ImageControlsProps {
   selectedImage: ImageData;
@@ -32,17 +32,28 @@ const ImageControls = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReprocessing, setIsReprocessing] = useState(false);
+  const { toast } = useToast();
   
   const { 
     handleDelete, 
     handleSubmitToApi,
     reprocessImage
   } = useImageProcessing();
+
+  // يمكننا إضافة وظائف مؤقتة بدلاً من useGeminiPromptModal
+  const openCustomPromptModal = () => {
+    toast({
+      title: "ميزة قادمة قريبا",
+      description: "ميزة المطالبات المخصصة قيد التطوير",
+    });
+  };
   
-  const { 
-    openCustomPromptModal,
-    openPredefinedPromptModal
-  } = useGeminiPromptModal(selectedImage);
+  const openPredefinedPromptModal = () => {
+    toast({
+      title: "ميزة قادمة قريبا",
+      description: "ميزة المطالبات المعرفة مسبقًا قيد التطوير",
+    });
+  };
 
   const handleDeleteImage = async () => {
     if (window.confirm("هل أنت متأكد من حذف هذه الصورة؟")) {

@@ -8,12 +8,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useImageStats } from "@/hooks/useImageStats";
 import { useImageDatabase } from "@/hooks/useImageDatabase";
 import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
+import { useOcrProcessing } from "@/hooks/useOcrProcessing";
+import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
+  const { processWithOcr } = useOcrProcessing();
+  const { processWithGemini } = useGeminiProcessing();
   
   const { 
     images, 
@@ -188,21 +192,10 @@ export const useImageProcessingCore = () => {
         retryCount: (image.retryCount || 0) + 1
       });
 
-      // استخدام وظيفة معالجة الصور من useFileUpload
-      const processImageWithOCR = async (file: File, image: ImageData) => {
-        const { processWithOcr } = await import('@/hooks/useOcrProcessing');
-        return processWithOcr(file, image);
-      };
-
-      const processImageWithGemini = async (file: File, image: ImageData) => {
-        const { processWithGemini } = await import('@/hooks/useGeminiProcessing');
-        return processWithGemini(file, image);
-      };
-
       // معالجة الصورة بالطريقة المحددة
       const processedImage = useGemini 
-        ? await processImageWithGemini(image.file, image)
-        : await processImageWithOCR(image.file, image);
+        ? await processWithGemini(image.file, image)
+        : await processWithOcr(image.file, image);
       
       // تحديث الصورة بالبيانات الجديدة
       updateImage(id, processedImage);
@@ -257,6 +250,6 @@ export const useImageProcessingCore = () => {
     removeDuplicates,
     validateRequiredFields,
     runCleanupNow,
-    reprocessImage // إضافة وظيفة إعادة المعالجة
+    reprocessImage
   };
 };
