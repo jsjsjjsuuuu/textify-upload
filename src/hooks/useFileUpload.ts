@@ -200,15 +200,8 @@ export const useFileUpload = ({
         updateImage(newImage.id, processedImage);
         console.log("تم تحديث الصورة بالبيانات المستخرجة:", newImage.id);
         
-        // حفظ الصورة في قاعدة البيانات بعد المعالجة إذا كان المستخدم مسجل الدخول والوظيفة متوفرة
-        if (user && saveProcessedImage && processedImage.status === "completed") {
-          try {
-            await saveProcessedImage({...newImage, ...processedImage});
-            console.log("تم حفظ الصورة في قاعدة البيانات بعد المعالجة:", newImage.id);
-          } catch (err) {
-            console.error("خطأ في حفظ الصورة في قاعدة البيانات:", err);
-          }
-        }
+        // تم إزالة الحفظ التلقائي للصورة في قاعدة البيانات بعد المعالجة
+        // الآن سيتم الحفظ فقط عند النقر على زر "إرسال البيانات"
       } catch (error) {
         console.error("خطأ عام في معالجة الصورة:", error);
         updateImage(newImage.id, { status: "error" });

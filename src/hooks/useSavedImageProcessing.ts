@@ -15,7 +15,7 @@ export const useSavedImageProcessing = (
   
   const { saveImageToDatabase, loadUserImages } = useImageDatabase(updateImage);
   
-  // وظيفة حفظ الصورة المعالجة
+  // وظيفة حفظ الصورة المعالجة عند النقر على زر الإرسال
   const saveProcessedImage = async (image: ImageData) => {
     if (!user) {
       console.log("المستخدم غير مسجل الدخول، لا يمكن حفظ الصورة");
@@ -24,9 +24,10 @@ export const useSavedImageProcessing = (
 
     // التحقق من أن الصورة مكتملة المعالجة وتحتوي على البيانات الأساسية
     if (image.code && image.senderName && image.phoneNumber) {
-      console.log("حفظ الصورة المعالجة في قاعدة البيانات:", image.id);
+      console.log("حفظ الصورة في قاعدة البيانات بواسطة زر الإرسال:", image.id);
       
       try {
+        setIsSubmitting(true);
         // حفظ البيانات في قاعدة البيانات
         const savedData = await saveImageToDatabase(image, user.id);
         
@@ -37,12 +38,29 @@ export const useSavedImageProcessing = (
           
           // إعادة تحميل الصور بعد الحفظ
           await loadUserImages(user.id, setAllImages);
+          
+          toast({
+            title: "تم الحفظ",
+            description: "تم حفظ البيانات في قاعدة البيانات بنجاح",
+          });
         }
       } catch (error) {
         console.error("خطأ أثناء حفظ الصورة:", error);
+        toast({
+          title: "خطأ في الحفظ",
+          description: "حدث خطأ أثناء محاولة حفظ البيانات",
+          variant: "destructive"
+        });
+      } finally {
+        setIsSubmitting(false);
       }
     } else {
       console.log("البيانات غير مكتملة، تم تخطي الحفظ في قاعدة البيانات:", image.id);
+      toast({
+        title: "بيانات غير مكتملة",
+        description: "يرجى ملء جميع الحقول المطلوبة أولاً",
+        variant: "destructive"
+      });
     }
   };
 

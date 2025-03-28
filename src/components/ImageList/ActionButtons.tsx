@@ -8,7 +8,7 @@ interface ActionButtonsProps {
   isCompleted: boolean;
   isSubmitted: boolean;
   isPhoneNumberValid: boolean;
-  isAllFieldsFilled: boolean; // إضافة خاصية جديدة للتحقق من اكتمال الحقول
+  isAllFieldsFilled: boolean;
   onDelete: (id: string) => void;
   onSubmit: (id: string) => void;
 }
@@ -19,10 +19,24 @@ const ActionButtons = ({
   isCompleted,
   isSubmitted,
   isPhoneNumberValid,
-  isAllFieldsFilled, // استلام الخاصية الجديدة
+  isAllFieldsFilled,
   onDelete,
   onSubmit
 }: ActionButtonsProps) => {
+  // عنوان زر توضيحي للإرشاد
+  const getSubmitButtonTitle = () => {
+    if (isSubmitted) {
+      return "تم إرسال البيانات بالفعل";
+    } 
+    if (!isAllFieldsFilled) {
+      return "يجب ملء جميع الحقول أولاً: الكود، اسم المرسل، رقم الهاتف، المحافظة، السعر";
+    }
+    if (!isPhoneNumberValid) {
+      return "يجب أن يكون رقم الهاتف 11 رقم بالضبط";
+    }
+    return "انقر لإرسال البيانات وحفظها في قاعدة البيانات";
+  };
+
   return <div className="flex justify-end gap-2 mt-3">
       <Button 
         variant="outline" 
@@ -40,7 +54,7 @@ const ActionButtons = ({
         className={`${isSubmitted ? 'bg-green-600' : 'bg-brand-green hover:bg-brand-green/90'} text-white transition-colors h-8 text-xs`}
         disabled={!isAllFieldsFilled || isSubmitting || isSubmitted || !isPhoneNumberValid} 
         onClick={() => onSubmit(imageId)}
-        title={!isAllFieldsFilled ? "يجب ملء جميع الحقول أولاً" : ""}
+        title={getSubmitButtonTitle()}
       >
         <Send size={14} className="ml-1 opacity-70" />
         {isSubmitting ? "جاري الإرسال..." : isSubmitted ? "تم الإرسال" : "إرسال البيانات"}

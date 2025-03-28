@@ -69,8 +69,20 @@ export const useImageProcessingCore = () => {
     return true;
   };
 
-  // إعادة هيكلة وظيفة handleSubmitToApi لاستخدام الوظيفة الجديدة
-  const handleSubmitToApi = async (id: string, image: ImageData) => {
+  // إعادة هيكلة وظيفة handleSubmitToApi لتستخدم وظيفة saveProcessedImage
+  const handleSubmitToApi = async (id: string) => {
+    // العثور على الصورة حسب المعرف
+    const image = images.find(img => img.id === id);
+    
+    if (!image) {
+      toast({
+        title: "خطأ",
+        description: "لم يتم العثور على الصورة المحددة",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // التحقق من اكتمال البيانات قبل الإرسال
     if (!validateRequiredFields(image)) {
       return;
@@ -78,7 +90,26 @@ export const useImageProcessingCore = () => {
     
     setIsSubmitting(true);
     try {
+      // حفظ الصورة في قاعدة البيانات أولاً إذا لم تكن قد تم حفظها بالفعل
+      if (!image.submitted && saveProcessedImage) {
+        await saveProcessedImage(image);
+        console.log("تم حفظ الصورة في قاعدة البيانات عند النقر على زر الإرسال");
+      }
+      
+      // ثم إرسال البيانات إلى API
       await submitToApi(id, image, user?.id);
+      
+      toast({
+        title: "تم الإرسال",
+        description: "تم إرسال البيانات وحفظها بنجاح",
+      });
+    } catch (error) {
+      console.error("خطأ في إرسال البيانات:", error);
+      toast({
+        title: "خطأ في الإرسال",
+        description: "حدث خطأ أثناء محاولة إرسال البيانات",
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -117,7 +148,7 @@ export const useImageProcessingCore = () => {
     addImage,
     updateImage,
     setProcessingProgress,
-    saveProcessedImage // تمرير وظيفة حفظ الصورة
+    saveProcessedImage // تمرير وظيفة حفظ الصورة، ولكن لن يتم استخدامها تلقائياً في useFileUpload
   });
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
