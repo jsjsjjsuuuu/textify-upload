@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -174,7 +173,7 @@ export const useImageProcessingCore = () => {
   }, [user]);
 
   // إضافة وظيفة لإعادة معالجة صورة واحدة
-  const reprocessImage = async (id: string) => {
+  const reprocessImage = async (id: string): Promise<ImageData | null> => {
     const image = images.find(img => img.id === id);
     if (!image) {
       toast({
@@ -182,7 +181,7 @@ export const useImageProcessingCore = () => {
         description: "لم يتم العثور على الصورة المحددة",
         variant: "destructive"
       });
-      return;
+      return null;
     }
 
     try {
@@ -193,6 +192,9 @@ export const useImageProcessingCore = () => {
       });
 
       // معالجة الصورة بالطريقة المحددة
+      const { processWithOcr } = useOcrProcessing();
+      const { processWithGemini } = useGeminiProcessing();
+      
       const processedImage = useGemini 
         ? await processWithGemini(image.file, image)
         : await processWithOcr(image.file, image);

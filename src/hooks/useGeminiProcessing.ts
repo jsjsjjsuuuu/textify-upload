@@ -47,7 +47,7 @@ export const useGeminiProcessing = () => {
         companyName: result.data.companyName || "",
         confidence: result.confidence || 85,
         status: "completed" as const,
-        extractionMethod: "gemini"
+        extractionMethod: "gemini" as const
       };
       
       return updatedImage;

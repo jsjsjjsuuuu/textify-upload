@@ -50,8 +50,11 @@ export async function geminiExtractData(
       success: true,
       message: "تم استخراج البيانات بنجاح",
       data: result.data?.parsedData || {},
-      extractedText: result.data?.extractedText || "",
-      confidence: result.data?.confidence || 0
+      data: {
+        ...result.data?.parsedData || {},
+        extractedText: result.data?.extractedText || "",
+        confidence: result.data?.confidence || 0
+      }
     };
   } catch (error) {
     console.error("خطأ في استخراج البيانات باستخدام Gemini:", error);
