@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -7,16 +8,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useImageStats } from "@/hooks/useImageStats";
 import { useImageDatabase } from "@/hooks/useImageDatabase";
 import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
-import { useOcrProcessing } from "@/hooks/useOcrProcessing";
-import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
-  const { processWithOcr } = useOcrProcessing();
-  const { processWithGemini } = useGeminiProcessing();
   
   const { 
     images, 
@@ -151,7 +148,6 @@ export const useImageProcessingCore = () => {
   const { 
     isProcessing, 
     useGemini, 
-    toggleGemini,
     handleFileChange 
   } = useFileUpload({
     images,
@@ -172,56 +168,6 @@ export const useImageProcessingCore = () => {
     }
   }, [user]);
 
-  // إضافة وظيفة لإعادة معالجة صورة واحدة
-  const reprocessImage = async (id: string): Promise<ImageData | null> => {
-    const image = images.find(img => img.id === id);
-    if (!image) {
-      toast({
-        title: "خطأ",
-        description: "لم يتم العثور على الصورة المحددة",
-        variant: "destructive"
-      });
-      return null;
-    }
-
-    try {
-      // تحديث حالة الصورة إلى "قيد المعالجة"
-      updateImage(id, { 
-        status: "processing",
-        retryCount: (image.retryCount || 0) + 1
-      });
-
-      // معالجة الصورة بالطريقة المحددة
-      const processedImage = useGemini 
-        ? await processWithGemini(image.file, image)
-        : await processWithOcr(image.file, image);
-      
-      // تحديث الصورة بالبيانات الجديدة
-      updateImage(id, processedImage);
-      
-      // حفظ الصورة المعالجة في قاعدة البيانات
-      await saveProcessedImage(processedImage);
-      
-      toast({
-        title: "تمت إعادة المعالجة",
-        description: "تمت إعادة معالجة الصورة بنجاح",
-      });
-      
-      return processedImage;
-    } catch (error) {
-      console.error("خطأ في إعادة معالجة الصورة:", error);
-      updateImage(id, { status: "error" });
-      
-      toast({
-        title: "خطأ في المعالجة",
-        description: "حدث خطأ أثناء محاولة إعادة معالجة الصورة",
-        variant: "destructive"
-      });
-      
-      return null;
-    }
-  };
-
   return {
     images,
     sessionImages,
@@ -230,7 +176,6 @@ export const useImageProcessingCore = () => {
     isSubmitting,
     isLoadingUserImages,
     useGemini,
-    toggleGemini,
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
@@ -248,7 +193,6 @@ export const useImageProcessingCore = () => {
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,
-    runCleanupNow,
-    reprocessImage
+    runCleanupNow // إضافة الوظيفة الجديدة للتنظيف اليدوي
   };
 };

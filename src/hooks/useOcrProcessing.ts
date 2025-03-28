@@ -1,7 +1,8 @@
 
+import { useState } from "react";
+import { ImageData } from "@/types/ImageData";
 import { extractTextFromImage } from "@/lib/ocrService";
 import { parseDataFromOCRText, updateImageWithExtractedData } from "@/utils/imageDataParser";
-import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 
 export const useOcrProcessing = () => {
@@ -9,35 +10,23 @@ export const useOcrProcessing = () => {
 
   const processWithOcr = async (file: File, image: ImageData): Promise<ImageData> => {
     try {
-      console.log("بدء معالجة الصورة باستخدام OCR التقليدي:", file.name);
+      console.log("Calling extractTextFromImage for OCR");
+      const result = await extractTextFromImage(file);
+      console.log("OCR result:", result);
       
-      // استخراج النص من الصورة
-      const result = await extractTextFromImage(file, { 
-        language: 'ara+eng', 
-        quality: 'balanced' 
-      });
-      
-      console.log("نتيجة OCR:", { 
-        text: result.text.substring(0, 100) + "...", 
-        confidence: result.confidence 
-      });
-      
-      // تحليل البيانات من النص المستخرج
+      // Try to parse data from OCR text
       const extractedData = parseDataFromOCRText(result.text);
-      console.log("البيانات المستخرجة من OCR:", extractedData);
+      console.log("Parsed data from OCR text:", extractedData);
       
-      // تحديث بيانات الصورة بالبيانات المستخرجة
-      const updatedImage = updateImageWithExtractedData(
+      return updateImageWithExtractedData(
         image, 
         result.text, 
-        extractedData,
-        result.confidence,
+        extractedData, 
+        result.confidence, 
         "ocr"
       );
-      
-      return updatedImage;
     } catch (ocrError) {
-      console.error("خطأ في معالجة OCR:", ocrError);
+      console.error("OCR processing error:", ocrError);
       
       toast({
         title: "فشل في استخراج النص",
@@ -47,8 +36,7 @@ export const useOcrProcessing = () => {
       
       return {
         ...image,
-        status: "error" as const,
-        extractedText: "حدث خطأ أثناء استخراج النص من الصورة."
+        status: "error"
       };
     }
   };

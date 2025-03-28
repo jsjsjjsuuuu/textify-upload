@@ -3,13 +3,12 @@ import { ImageData } from "@/types/ImageData";
 import { enhanceWithLearning } from "./learningSystem";
 import { correctProvinceName, IRAQ_PROVINCES, CITY_PROVINCE_MAP } from "./provinces";
 import { formatPrice } from "@/lib/gemini/utils";
-import { isValidIraqiPhoneNumber, formatIraqiPhoneNumber } from "./phoneNumberUtils";
 
 /**
  * Attempts to parse structured data from OCR text
  */
 export const parseDataFromOCRText = (text: string) => {
-  console.log("تحليل البيانات من نص OCR:", text ? text.substring(0, 200) + "..." : "نص فارغ");
+  console.log("Parsing data from OCR text:", text);
   const result: Record<string, string> = {};
   
   // استخراج اسم الشركة (يكون عادة في أعلى اليسار بخط كبير)
@@ -32,16 +31,16 @@ export const parseDataFromOCRText = (text: string) => {
     }
   }
   
-  // أنماط شائعة لاستخراج البيانات
+  // Common patterns for data extraction
   const patterns = {
-    code: [/كود[:\s]+([0-9]+)/i, /code[:\s]+([0-9]+)/i, /رقم[:\s]+([0-9]+)/i, /رمز[:\s]+([0-9]+)/i],
-    senderName: [/اسم المرسل[:\s]+(.+?)(?:\n|\r|$)/i, /sender[:\s]+(.+?)(?:\n|\r|$)/i, /الاسم[:\s]+(.+?)(?:\n|\r|$)/i, /الراسل[:\s]+(.+?)(?:\n|\r|$)/i],
-    phoneNumber: [/هاتف[:\s]+([0-9\-\s]+)/i, /phone[:\s]+([0-9\-\s]+)/i, /جوال[:\s]+([0-9\-\s]+)/i, /رقم الهاتف[:\s]+([0-9\-\s]+)/i, /رقم[:\s]+([0-9\-\s]+)/i],
-    province: [/محافظة[:\s]+(.+?)(?:\n|\r|$)/i, /province[:\s]+(.+?)(?:\n|\r|$)/i, /المدينة[:\s]+(.+?)(?:\n|\r|$)/i, /المنطقة[:\s]+(.+?)(?:\n|\r|$)/i],
-    price: [/سعر[:\s]+(.+?)(?:\n|\r|$)/i, /price[:\s]+(.+?)(?:\n|\r|$)/i, /المبلغ[:\s]+(.+?)(?:\n|\r|$)/i, /قيمة[:\s]+(.+?)(?:\n|\r|$)/i]
+    code: [/كود[:\s]+([0-9]+)/i, /code[:\s]+([0-9]+)/i, /رقم[:\s]+([0-9]+)/i],
+    senderName: [/اسم المرسل[:\s]+(.+?)(?:\n|\r|$)/i, /sender[:\s]+(.+?)(?:\n|\r|$)/i, /الاسم[:\s]+(.+?)(?:\n|\r|$)/i],
+    phoneNumber: [/هاتف[:\s]+([0-9\-]+)/i, /phone[:\s]+([0-9\-]+)/i, /جوال[:\s]+([0-9\-]+)/i, /رقم الهاتف[:\s]+([0-9\-]+)/i],
+    province: [/محافظة[:\s]+(.+?)(?:\n|\r|$)/i, /province[:\s]+(.+?)(?:\n|\r|$)/i, /المدينة[:\s]+(.+?)(?:\n|\r|$)/i],
+    price: [/سعر[:\s]+(.+?)(?:\n|\r|$)/i, /price[:\s]+(.+?)(?:\n|\r|$)/i, /المبلغ[:\s]+(.+?)(?:\n|\r|$)/i]
   };
   
-  // محاولة مطابقة كل حقل
+  // Try to match each field
   for (const [field, fieldPatterns] of Object.entries(patterns)) {
     for (const pattern of fieldPatterns) {
       const match = text.match(pattern);
@@ -50,11 +49,6 @@ export const parseDataFromOCRText = (text: string) => {
         break;
       }
     }
-  }
-  
-  // تصحيح رقم الهاتف
-  if (result.phoneNumber) {
-    result.phoneNumber = formatIraqiPhoneNumber(result.phoneNumber);
   }
   
   // تصحيح اسم المحافظة
@@ -83,18 +77,16 @@ export const parseDataFromOCRText = (text: string) => {
     }
   }
   
-  // محاولة البحث عن JSON في النص
+  // Also try to look for JSON in the text
   try {
     const jsonMatch = text.match(/{[\s\S]*?}/);
     if (jsonMatch) {
       try {
         const jsonData = JSON.parse(jsonMatch[0]);
-        // دمج أي بيانات صالحة من JSON مع النتائج الموجودة
+        // Merge any valid data from JSON with existing results
         if (jsonData.code) result.code = jsonData.code;
         if (jsonData.senderName) result.senderName = jsonData.senderName;
-        if (jsonData.phoneNumber) {
-          result.phoneNumber = formatIraqiPhoneNumber(jsonData.phoneNumber);
-        }
+        if (jsonData.phoneNumber) result.phoneNumber = jsonData.phoneNumber;
         if (jsonData.province) {
           // تصحيح اسم المحافظة من JSON
           result.province = correctProvinceName(jsonData.province);
@@ -102,21 +94,21 @@ export const parseDataFromOCRText = (text: string) => {
         if (jsonData.price) result.price = jsonData.price;
         if (jsonData.companyName) result.companyName = jsonData.companyName;
       } catch (e) {
-        console.log("فشل في تحليل JSON من النص:", e);
+        console.log("Failed to parse JSON from text:", e);
       }
     }
   } catch (e) {
-    console.log("خطأ في البحث عن JSON في النص:", e);
+    console.log("Error looking for JSON in text:", e);
   }
   
-  // معالجة السعر وفقًا للقواعد الجديدة
+  // Process price according to the new rules
   if (result.price) {
     result.price = formatPrice(result.price);
   }
   
   // تعزيز البيانات المستخرجة من خلال نظام التعلم
   const enhancedResult = enhanceWithLearning(text, result);
-  console.log("تم تعزيز البيانات بنظام التعلم:", enhancedResult);
+  console.log("Enhanced data with learning system:", enhancedResult);
   
   return enhancedResult;
 };
@@ -131,12 +123,12 @@ export const updateImageWithExtractedData = (
   confidence: number = 0,
   method: "ocr" | "gemini" = "ocr"
 ): ImageData => {
-  // تنسيق السعر قبل التحديث
+  // Format the price before updating
   if (parsedData.price) {
     parsedData.price = formatPrice(parsedData.price);
   }
   
-  // حساب درجة الثقة إذا لم يتم توفيرها
+  // Calculate confidence score if not provided
   if (!confidence) {
     confidence = calculateConfidenceScore(parsedData);
   }
@@ -173,37 +165,37 @@ export const calculateConfidenceScore = (data: Record<string, string>): number =
   
   for (const field of fields) {
     if (data[field] && data[field].toString().trim() !== '') {
-      // للكود، تحقق ما إذا كان رقمًا صالحًا
+      // For code, check if it's a valid number
       if (field === 'code') {
         if (/^\d+$/.test(data[field].toString())) {
           score += weights[field];
         } else {
-          score += weights[field] * 0.5; // نصف درجة للكود غير الرقمي
+          score += weights[field] * 0.5; // Half score for non-numeric code
         }
       } 
-      // لرقم الهاتف، تحقق ما إذا كان بالتنسيق الصحيح
+      // For phone number, check if it's in correct format
       else if (field === 'phoneNumber') {
-        const isValid = isValidIraqiPhoneNumber(data[field].toString());
-        if (isValid) {
+        const digits = data[field].toString().replace(/\D/g, '');
+        if (digits.length === 11) {
           score += weights[field];
         } else {
-          score += weights[field] * 0.5; // نصف درجة لتنسيق الهاتف غير الصالح
+          score += weights[field] * 0.5; // Half score for invalid phone format
         }
       } 
-      // للسعر، تحقق ما إذا كان رقمًا صالحًا
+      // For price, check if it's a valid number
       else if (field === 'price') {
-        if (/^\d+(\.\d+)?$/.test(data[field].toString().replace(/[^\d.]/g, ''))) {
+        if (/^\d+(\.\d+)?$/.test(data[field].toString())) {
           score += weights[field];
         } else {
-          score += weights[field] * 0.5; // نصف درجة لتنسيق السعر غير الصالح
+          score += weights[field] * 0.5; // Half score for invalid price format
         }
       } 
-      // للحقول النصية، تحقق من الطول
+      // For text fields, check length
       else {
         if (data[field].toString().length > 2) {
           score += weights[field];
         } else {
-          score += weights[field] * 0.7; // 70% من الدرجة للنص القصير
+          score += weights[field] * 0.7; // 70% score for short text
         }
       }
     }
@@ -211,3 +203,6 @@ export const calculateConfidenceScore = (data: Record<string, string>): number =
   
   return Math.min(Math.round(score), 100);
 };
+
+// Re-export the formatPrice function from utils.ts
+// export { formatPrice } from "@/lib/gemini/utils";

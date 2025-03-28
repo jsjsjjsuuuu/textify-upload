@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -25,7 +26,6 @@ const Index = () => {
     processingProgress,
     isSubmitting,
     useGemini,
-    toggleGemini,
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
@@ -36,8 +36,7 @@ const Index = () => {
     clearSessionImages,
     loadUserImages,
     runCleanupNow,
-    saveProcessedImage,
-    reprocessImage
+    saveProcessedImage
   } = useImageProcessing();
   
   const {
@@ -60,11 +59,36 @@ const Index = () => {
   };
   
   // وظيفة إعادة المعالجة للصورة
-  const handleReprocessImage = async (imageId: string): Promise<void> => {
+  const handleReprocessImage = async (imageId: string) => {
+    const imageToReprocess = sessionImages.find(img => img.id === imageId);
+    if (!imageToReprocess) {
+      console.error("الصورة غير موجودة:", imageId);
+      return;
+    }
+    
     try {
-      await reprocessImage(imageId);
+      // تحديث حالة الصورة إلى "جاري المعالجة"
+      handleTextChange(imageId, "status", "processing");
+      
+      // إعادة معالجة الصورة
+      await saveProcessedImage(imageToReprocess);
+      
+      toast({
+        title: "تمت إعادة المعالجة",
+        description: "تمت إعادة معالجة الصورة بنجاح",
+      });
     } catch (error) {
       console.error("خطأ في إعادة معالجة الصورة:", error);
+      handleTextChange(imageId, "status", "error");
+      handleTextChange(imageId, "extractedText", `فشل في إعادة المعالجة: ${error.message || "خطأ غير معروف"}`);
+      
+      toast({
+        title: "خطأ في إعادة المعالجة",
+        description: "حدث خطأ أثناء إعادة معالجة الصورة",
+        variant: "destructive"
+      });
+      
+      throw error; // إعادة رمي الخطأ للتعامل معه في المكون الأصلي
     }
   };
   
@@ -131,7 +155,6 @@ const Index = () => {
                     processingProgress={processingProgress} 
                     useGemini={useGemini} 
                     onFileChange={handleFileChange} 
-                    onToggleGemini={toggleGemini}
                   />
                 </div>
               </div>

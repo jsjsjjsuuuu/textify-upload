@@ -6,22 +6,19 @@ import { ImageData } from "@/types/ImageData";
 import { useState, useEffect } from "react";
 import { formatPrice } from "@/lib/gemini/utils";
 import { Button } from "@/components/ui/button";
-import { Check, AlertCircle, RefreshCw } from "lucide-react";
+import { Check, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useImageProcessing } from "@/hooks/useImageProcessing";
-
 interface ImageDataFormProps {
   image: ImageData;
   onTextChange: (id: string, field: string, value: string) => void;
 }
-
 const ImageDataForm = ({
   image,
   onTextChange
 }: ImageDataFormProps) => {
-  const { toast } = useToast();
-  const { reprocessImage } = useImageProcessing();
-  const [isReprocessing, setIsReprocessing] = useState(false);
+  const {
+    toast
+  } = useToast();
 
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً بالضبط)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
@@ -110,47 +107,8 @@ const ImageDataForm = ({
         return baseConfidence;
     }
   };
-  
-  // وظيفة لإعادة معالجة الصورة
-  const handleReprocessImage = async () => {
-    if (window.confirm("هل تريد إعادة معالجة هذه الصورة؟ سيتم إعادة استخراج البيانات.")) {
-      setIsReprocessing(true);
-      try {
-        await reprocessImage(image.id);
-        toast({
-          title: "تمت إعادة المعالجة",
-          description: "تمت إعادة معالجة الصورة بنجاح"
-        });
-      } catch (error) {
-        console.error("خطأ في إعادة معالجة الصورة:", error);
-        toast({
-          title: "خطأ في المعالجة",
-          description: "حدث خطأ أثناء محاولة إعادة معالجة الصورة",
-          variant: "destructive"
-        });
-      } finally {
-        setIsReprocessing(false);
-      }
-    }
-  };
-
-  const isImageProcessing = image.status === "processing";
-
   return <div className="p-4">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">البيانات المستخرجة</h3>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950 dark:text-blue-400"
-          onClick={handleReprocessImage}
-          disabled={isReprocessing || isImageProcessing}
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ml-1.5 ${isReprocessing || isImageProcessing ? 'animate-spin' : ''}`} />
-          {isReprocessing ? "جاري المعالجة..." : isImageProcessing ? "قيد المعالجة..." : "إعادة معالجة"}
-        </Button>
-      </div>
+      <h3 className="text-lg font-semibold mb-3 text-gray-900 text-center">البيانات المستخرجة</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
         {/* اسم الشركة */}
@@ -289,5 +247,4 @@ const ImageDataForm = ({
       </div>
     </div>;
 };
-
 export default ImageDataForm;
