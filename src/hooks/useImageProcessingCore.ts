@@ -175,6 +175,7 @@ export const useImageProcessingCore = () => {
       const { data, error } = await supabase
         .from('images')
         .insert({
+          id: image.id, // استخدم نفس المعرف لضمان الانسجام بين الواجهة وقاعدة البيانات
           user_id: user.id,
           file_name: image.file.name,
           preview_url: image.previewUrl,
@@ -208,6 +209,10 @@ export const useImageProcessingCore = () => {
       });
 
       console.log("تم حفظ البيانات بنجاح:", data[0]);
+      
+      // تحديث الصور العامة لتشمل الصورة المحفوظة
+      setAllImages([...images, data[0] as unknown as ImageData]);
+      
       return data[0];
     } catch (error: any) {
       console.error("خطأ في حفظ البيانات:", error);
@@ -257,6 +262,11 @@ export const useImageProcessingCore = () => {
         description: `تم إرسال البيانات بنجاح لـ ${image.file.name}!`,
       });
 
+      // تحديث السجلات بعد الحفظ
+      if (savedData) {
+        loadUserImages();
+      }
+
     } catch (error: any) {
       console.error("خطأ في إرسال البيانات:", error);
       updateImage(id, { status: "error" });
@@ -277,7 +287,12 @@ export const useImageProcessingCore = () => {
     if (image.status === "completed" && image.code && image.senderName && image.phoneNumber) {
       console.log("حفظ الصورة المعالجة تلقائياً:", image.id);
       // حفظ البيانات في قاعدة البيانات
-      await saveImageToDatabase(image);
+      const savedData = await saveImageToDatabase(image);
+      
+      // تحديث السجلات بعد الحفظ
+      if (savedData) {
+        loadUserImages();
+      }
     }
   };
 

@@ -113,8 +113,8 @@ const Index = () => {
     // تطبيق الفرز
     if (sortField && sortDirection) {
       recordImages.sort((a, b) => {
-        let valueA = a[sortField];
-        let valueB = b[sortField];
+        let valueA = a[sortField as keyof ImageData];
+        let valueB = b[sortField as keyof ImageData];
 
         // تعامل خاص مع قيم التاريخ
         if (sortField === "date") {
@@ -147,7 +147,7 @@ const Index = () => {
   };
 
   // أيقونة الحالة
-  const getStatusBadge = (status: string, isSubmitted: boolean) => {
+  const getStatusBadge = (status: string, isSubmitted?: boolean) => {
     if (isSubmitted) {
       return (
         <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30">
