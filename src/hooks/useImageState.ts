@@ -10,22 +10,37 @@ export const useImageState = () => {
   const { toast } = useToast();
 
   const addImage = (newImage: ImageData) => {
-    // التحقق مما إذا كانت الصورة موجودة بالفعل (نفس المعرف أو نفس اسم الملف)
-    const isDuplicate = sessionImages.some(img => 
+    // التحقق مما إذا كانت الصورة موجودة بالفعل - تحسين منطق البحث عن التكرار
+    const isDuplicateSession = sessionImages.some(img => 
       img.id === newImage.id || 
-      (img.file.name === newImage.file.name && 
-       img.user_id === newImage.user_id)
+      (img.file.name === newImage.file.name && img.user_id === newImage.user_id)
     );
     
-    if (isDuplicate) {
+    const isDuplicateAll = images.some(img => 
+      img.id === newImage.id || 
+      (img.file.name === newImage.file.name && img.user_id === newImage.user_id && img.batch_id === newImage.batch_id)
+    );
+    
+    if (isDuplicateSession || isDuplicateAll) {
       console.log("تم تجاهل الصورة المكررة:", newImage.file.name);
+      
+      // إذا كان لدينا نفس المعرف ولكن بحالة مختلفة، نقوم بتحديث الصورة الحالية
+      if (newImage.id && (isDuplicateSession || isDuplicateAll)) {
+        const existingImage = [...images, ...sessionImages].find(img => img.id === newImage.id);
+        if (existingImage && existingImage.status !== newImage.status) {
+          console.log("تحديث حالة الصورة الموجودة:", newImage.id);
+          updateImage(newImage.id, { status: newImage.status });
+        }
+      }
       return;
     }
     
     // التأكد من أن الصورة الجديدة تحتوي على حقل status بشكل افتراضي
     const imageWithDefaults: ImageData = {
       status: "pending", // قيمة افتراضية
-      ...newImage
+      ...newImage,
+      // إضافة timestamp لتسهيل المقارنة
+      added_at: new Date().getTime()
     };
     console.log("إضافة صورة جديدة:", imageWithDefaults.id);
     
@@ -127,16 +142,19 @@ export const useImageState = () => {
     setSessionImages([]);
   };
 
-  // إزالة الصور المكررة
+  // إزالة الصور المكررة - تحسين الخوارزمية
   const removeDuplicates = () => {
     const uniqueImages: { [key: string]: ImageData } = {};
     
-    // استخدام اسم الملف كمفتاح للتخزين المؤقت للصور الفريدة
+    // استخدام مفتاح أكثر دقة للتخزين المؤقت للصور الفريدة
     images.forEach(img => {
-      const key = img.file.name;
+      // استخدام مزيج من اسم الملف ومعرف المستخدم ومعرف الدفعة كمفتاح
+      const key = `${img.file.name}_${img.user_id || ''}_${img.batch_id || ''}`;
       
       // إذا لم يكن هناك صورة بهذا المفتاح، أو إذا كانت الصورة الحالية أحدث
-      if (!uniqueImages[key] || new Date(img.date) > new Date(uniqueImages[key].date)) {
+      if (!uniqueImages[key] || 
+          (img.added_at && uniqueImages[key].added_at && img.added_at > uniqueImages[key].added_at) ||
+          (img.date && uniqueImages[key].date && new Date(img.date) > new Date(uniqueImages[key].date))) {
         uniqueImages[key] = img;
       }
     });
@@ -176,7 +194,7 @@ export const useImageState = () => {
     deleteImage,
     handleTextChange,
     setAllImages,
-    addDatabaseImages,  // إضافة وظيفة جديدة لإضافة الصور من قاعدة البيانات
+    addDatabaseImages,
     clearSessionImages,
     removeDuplicates
   };
