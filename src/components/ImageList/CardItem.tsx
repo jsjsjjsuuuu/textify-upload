@@ -43,6 +43,10 @@ const CardItem = ({
       transition={{ duration: 0.3 }}
       className="max-w-5xl mx-auto relative"
     >
+      {/* إضافة تسجيل للتصحيح */}
+      {showBatchArrow && console.log('Showing batch arrow for image:', image.id, { isFirstInBatch, isLastInBatch })}
+      
+      {/* التأكد من أن الشرط صحيح لإظهار السهم */}
       {showBatchArrow && (
         <BatchArrow isFirst={isFirstInBatch} isLast={isLastInBatch} />
       )}

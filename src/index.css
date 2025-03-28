@@ -4,3 +4,15 @@
 @import './styles/components.css';
 @import './styles/animations.css';
 @import './styles/legacy.css';
+
+/* تحسينات خاصة بالخط العمودي */
+.batch-vertical-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-left: 4px dashed rgba(234, 179, 8, 0.8);
+  transform: translateX(-50%);
+  z-index: 10;
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.6);
+}
