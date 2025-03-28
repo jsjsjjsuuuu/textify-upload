@@ -4,7 +4,7 @@
  */
 
 import { ImageData } from "@/types/ImageData";
-import { BookmarkletItem } from "@/utils/bookmarklet/types";
+import type { BookmarkletItem } from "@/utils/bookmarklet/types";
 
 /**
  * تحويل بيانات الصور إلى تنسيق قابل للتصدير
@@ -15,22 +15,42 @@ export const convertImagesToBookmarkletItems = (images: ImageData[]): Bookmarkle
   }
 
   return images
-    .filter(img => img.code && img.senderName && img.phoneNumber) // تصفية الصور التي تحتوي على البيانات الأساسية
+    .filter(img => {
+      // تحسين عملية التصفية للتأكد من صلاحية البيانات
+      const hasRequiredFields = img.code && img.senderName && img.phoneNumber;
+      const isValidStatus = img.status === "completed" || img.status === "success";
+      return hasRequiredFields && isValidStatus;
+    })
     .map(img => ({
       id: img.id || generateId(),
       code: img.code || '',
       senderName: img.senderName || '',
-      phoneNumber: img.phoneNumber || '',
+      phoneNumber: formatPhoneNumber(img.phoneNumber || ''),
       province: img.province || '',
       price: img.price || '',
       companyName: img.companyName || '',
       exportDate: new Date().toISOString(),
-      status: 'ready',
+      status: 'ready' as const,
       notes: img.notes1 || '',
       recipientName: img.recipientName || '',
       // يمكن إضافة المزيد من الحقول هنا
     }));
 };
+
+// تنسيق رقم الهاتف
+function formatPhoneNumber(phone: string): string {
+  // إزالة كافة الأحرف غير الرقمية
+  const digits = phone.replace(/\D/g, '');
+  
+  // التأكد من أن الرقم يبدأ بـ 964 للعراق (إذا لم يكن كذلك)
+  if (digits.length === 10 && !digits.startsWith('964')) {
+    return `964${digits}`;
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    return `964${digits.substring(1)}`;
+  }
+  
+  return digits;
+}
 
 /**
  * توليد معرف فريد
