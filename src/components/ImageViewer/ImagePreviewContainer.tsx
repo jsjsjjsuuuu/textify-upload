@@ -203,6 +203,169 @@ const ImagePreviewContainer = ({
       </div>
     );
   }
+  
+  // عرض الصور في التبويب المحدد
+  const renderImagesGrid = () => (
+    <div className="grid grid-cols-2 gap-4">
+      <AnimatePresence>
+        {paginatedImages().map((image) => (
+          <motion.div
+            key={image.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className={`relative overflow-hidden rounded-lg cursor-pointer border-2 transition-all ${
+              activeImage?.id === image.id 
+                ? "border-primary dark:border-primary shadow-md" 
+                : "border-transparent dark:border-transparent"
+            } ${
+              selectedImages.includes(image.id)
+                ? "ring-2 ring-blue-500 dark:ring-blue-400"
+                : ""
+            }`}
+            onClick={() => handleImageClick(image)}
+          >
+            {/* Checkbox للتحديد المتعدد */}
+            <div 
+              className="absolute top-2 right-2 z-10 w-5 h-5 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImages(prev => 
+                  prev.includes(image.id) 
+                    ? prev.filter(id => id !== image.id)
+                    : [...prev, image.id]
+                );
+              }}
+            >
+              {selectedImages.includes(image.id) && (
+                <div className="w-3 h-3 bg-blue-500 rounded-sm" />
+              )}
+            </div>
+            
+            {/* حالة الصورة */}
+            <div className={`absolute top-2 left-2 z-10 px-1.5 py-0.5 text-xs rounded-full
+              ${image.status === "completed" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
+              ${image.status === "pending" ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" : ""}
+              ${image.status === "error" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" : ""}
+              ${image.status === "processing" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" : ""}
+            `}>
+              {image.status === "completed" && "مكتملة"}
+              {image.status === "pending" && "قيد الانتظار"}
+              {image.status === "error" && "فشل"}
+              {image.status === "processing" && (
+                <span className="flex items-center">
+                  <Loader className="w-3 h-3 ml-1 animate-spin" />
+                  جاري المعالجة
+                </span>
+              )}
+            </div>
+            
+            {/* صورة مصغرة */}
+            <div className="h-28 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+              {image.previewUrl ? (
+                <img
+                  src={image.previewUrl}
+                  alt={`صورة ${image.number || ""}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // في حالة فشل تحميل الصورة، استبدالها بأيقونة
+                    (e.target as HTMLImageElement).style.display = "none";
+                    const parent = (e.target as HTMLImageElement).parentElement;
+                    if (parent) {
+                      const icon = document.createElement("div");
+                      icon.className = "flex items-center justify-center h-full w-full";
+                      icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><path d="M2 2l20 20"></path><path d="M9 9v0"></path><path d="M6.5 5h11l2 2"></path><path d="M5.5 17.5l1 1"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>';
+                      parent.appendChild(icon);
+                    }
+                  }}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full w-full">
+                  <Image className="w-8 h-8 text-gray-400" />
+                </div>
+              )}
+            </div>
+            
+            {/* معلومات الصورة */}
+            <div className="p-2 text-xs">
+              <p className="font-medium truncate">
+                {image.code || image.senderName || `صورة ${image.number || ""}`}
+              </p>
+              <p className="text-gray-500 dark:text-gray-400 truncate">
+                {image.file?.name || ""}
+              </p>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+  
+  // عرض الصورة النشطة والبيانات
+  const renderActiveImage = () => (
+    activeImage ? (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+          <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+            <h3 className="text-lg font-medium">
+              عرض الصورة والبيانات
+            </h3>
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleDelete}
+                className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+              >
+                <Trash2 className="w-4 h-4 ml-1" />
+                حذف
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleReprocess}
+                disabled={isReprocessing || activeImage.status === "processing"}
+                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+              >
+                <RotateCcw className={`w-4 h-4 ml-1 ${isReprocessing ? "animate-spin" : ""}`} />
+                إعادة معالجة
+              </Button>
+              
+              {activeImage.status === "completed" && !activeImage.submitted && (
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <SendHorizonal className="w-4 h-4 ml-1" />
+                  إرسال
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <ImagePreview
+            image={activeImage}
+            onTextChange={onTextChange}
+          />
+        </div>
+      </motion.div>
+    ) : (
+      <div className="h-full flex items-center justify-center border-2 border-dashed rounded-lg p-8">
+        <p className="text-muted-foreground">
+          اختر صورة من اليسار لعرض التفاصيل
+        </p>
+      </div>
+    )
+  );
 
   // عرض علامات التبويب وعرض الصور المعالجة
   return (
@@ -318,181 +481,59 @@ const ImagePreviewContainer = ({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
             {/* عرض الصور والمعلومات */}
             <div className="order-2 md:order-1">
-              <div className="grid grid-cols-2 gap-4">
-                <AnimatePresence>
-                  {paginatedImages().map((image) => (
-                    <motion.div
-                      key={image.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className={`relative overflow-hidden rounded-lg cursor-pointer border-2 transition-all ${
-                        activeImage?.id === image.id 
-                          ? "border-primary dark:border-primary shadow-md" 
-                          : "border-transparent dark:border-transparent"
-                      } ${
-                        selectedImages.includes(image.id)
-                          ? "ring-2 ring-blue-500 dark:ring-blue-400"
-                          : ""
-                      }`}
-                      onClick={() => handleImageClick(image)}
-                    >
-                      {/* Checkbox للتحديد المتعدد */}
-                      <div 
-                        className="absolute top-2 right-2 z-10 w-5 h-5 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedImages(prev => 
-                            prev.includes(image.id) 
-                              ? prev.filter(id => id !== image.id)
-                              : [...prev, image.id]
-                          );
-                        }}
-                      >
-                        {selectedImages.includes(image.id) && (
-                          <div className="w-3 h-3 bg-blue-500 rounded-sm" />
-                        )}
-                      </div>
-                      
-                      {/* حالة الصورة */}
-                      <div className={`absolute top-2 left-2 z-10 px-1.5 py-0.5 text-xs rounded-full
-                        ${image.status === "completed" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
-                        ${image.status === "pending" ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" : ""}
-                        ${image.status === "error" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" : ""}
-                        ${image.status === "processing" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" : ""}
-                      `}>
-                        {image.status === "completed" && "مكتملة"}
-                        {image.status === "pending" && "قيد الانتظار"}
-                        {image.status === "error" && "فشل"}
-                        {image.status === "processing" && (
-                          <span className="flex items-center">
-                            <Loader className="w-3 h-3 ml-1 animate-spin" />
-                            جاري المعالجة
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* صورة مصغرة */}
-                      <div className="h-28 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-                        {image.previewUrl ? (
-                          <img
-                            src={image.previewUrl}
-                            alt={`صورة ${image.number || ""}`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              // في حالة فشل تحميل الصورة، استبدالها بأيقونة
-                              (e.target as HTMLImageElement).style.display = "none";
-                              const parent = (e.target as HTMLImageElement).parentElement;
-                              if (parent) {
-                                const icon = document.createElement("div");
-                                icon.className = "flex items-center justify-center h-full w-full";
-                                icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><path d="M2 2l20 20"></path><path d="M9 9v0"></path><path d="M6.5 5h11l2 2"></path><path d="M5.5 17.5l1 1"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>';
-                                parent.appendChild(icon);
-                              }
-                            }}
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center h-full w-full">
-                            <Image className="w-8 h-8 text-gray-400" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* معلومات الصورة */}
-                      <div className="p-2 text-xs">
-                        <p className="font-medium truncate">
-                          {image.code || image.senderName || `صورة ${image.number || ""}`}
-                        </p>
-                        <p className="text-gray-500 dark:text-gray-400 truncate">
-                          {image.file.name}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
+              {renderImagesGrid()}
             </div>
             
             {/* عرض الصورة النشطة والبيانات المستخرجة */}
             <div className="order-1 md:order-2 mb-6 md:mb-0">
-              {activeImage ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-                    <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
-                      <h3 className="text-lg font-medium">
-                        عرض الصورة والبيانات
-                      </h3>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={handleDelete}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                        >
-                          <Trash2 className="w-4 h-4 ml-1" />
-                          حذف
-                        </Button>
-                        
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleReprocess}
-                          disabled={isReprocessing || activeImage.status === "processing"}
-                          className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
-                        >
-                          <RotateCcw className={`w-4 h-4 ml-1 ${isReprocessing ? "animate-spin" : ""}`} />
-                          إعادة معالجة
-                        </Button>
-                        
-                        {activeImage.status === "completed" && !activeImage.submitted && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            <SendHorizonal className="w-4 h-4 ml-1" />
-                            إرسال
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <ImagePreview
-                      image={activeImage}
-                      onTextChange={onTextChange}
-                    />
-                  </div>
-                </motion.div>
-              ) : (
-                <div className="h-full flex items-center justify-center border-2 border-dashed rounded-lg p-8">
-                  <p className="text-muted-foreground">
-                    اختر صورة من اليسار لعرض التفاصيل
-                  </p>
-                </div>
-              )}
+              {renderActiveImage()}
             </div>
           </div>
         </TabsContent>
         
         {/* نفس المحتوى لعلامات التبويب الأخرى */}
         <TabsContent value="pending" className="mt-0">
-          {/* نفس المحتوى كما في علامة التبويب "الكل" */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+            <div className="order-2 md:order-1">
+              {renderImagesGrid()}
+            </div>
+            <div className="order-1 md:order-2 mb-6 md:mb-0">
+              {renderActiveImage()}
+            </div>
+          </div>
         </TabsContent>
+        
         <TabsContent value="completed" className="mt-0">
-          {/* نفس المحتوى كما في علامة التبويب "الكل" */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+            <div className="order-2 md:order-1">
+              {renderImagesGrid()}
+            </div>
+            <div className="order-1 md:order-2 mb-6 md:mb-0">
+              {renderActiveImage()}
+            </div>
+          </div>
         </TabsContent>
+        
         <TabsContent value="error" className="mt-0">
-          {/* نفس المحتوى كما في علامة التبويب "الكل" */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+            <div className="order-2 md:order-1">
+              {renderImagesGrid()}
+            </div>
+            <div className="order-1 md:order-2 mb-6 md:mb-0">
+              {renderActiveImage()}
+            </div>
+          </div>
         </TabsContent>
+        
         <TabsContent value="processing" className="mt-0">
-          {/* نفس المحتوى كما في علامة التبويب "الكل" */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+            <div className="order-2 md:order-1">
+              {renderImagesGrid()}
+            </div>
+            <div className="order-1 md:order-2 mb-6 md:mb-0">
+              {renderActiveImage()}
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
