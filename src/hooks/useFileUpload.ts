@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -20,10 +19,11 @@ interface UseFileUploadProps {
   saveProcessedImage?: (image: ImageData) => Promise<void>;
 }
 
-// تعديل معالجة الصور لتتم بشكل متسلسل
+// تحسين معالجة الصور لتتم بشكل متسلسل وبتتبع أفضل
 const MAX_RETRIES = 3;           // عدد محاولات المعالجة لكل صورة
 const RETRY_DELAY_MS = 3000;     // تأخير بين المحاولات
 const PROGRESS_UPDATE_INTERVAL = 1000; // تحديث تقدم العملية كل ثانية
+const MIN_DELAY_BETWEEN_IMAGES = 2000; // تأخير بين معالجة كل صورة (2 ثواني)
 
 export const useFileUpload = ({
   images,
@@ -38,6 +38,7 @@ export const useFileUpload = ({
   const [queueProcessing, setQueueProcessing] = useState(false);
   const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
   const [currentProcessingIndex, setCurrentProcessingIndex] = useState<number>(-1);
+  const [lastProcessedImageTime, setLastProcessedImageTime] = useState<number>(0); // تتبع وقت آخر معالجة
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -73,7 +74,7 @@ export const useFileUpload = ({
   // إضافة تأخير للمحاولات المتكررة
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // معالجة ملف واحد - مع تحسينات
+  // تحسين معالجة ملف واحد مع منطق أفضل للإعادة المحاولة
   const processFile = async (
     file: File, 
     startingNumber: number, 
@@ -89,6 +90,7 @@ export const useFileUpload = ({
       console.log(`معالجة الملف [${index}]: ${file.name}, النوع: ${file.type}, المحاولة: ${retryCount + 1}`);
       setCurrentProcessingIndex(index);
       
+      // التحقق من أنّ الملف صورة
       if (!file.type.startsWith("image/")) {
         toast({
           title: "خطأ في نوع الملف",
@@ -99,13 +101,22 @@ export const useFileUpload = ({
         return false;
       }
       
+      // تأكد من مرور الوقت الكافي منذ آخر معالجة صورة (تجنب التحميل المتزامن)
+      const now = Date.now();
+      const timeSinceLastProcessing = now - lastProcessedImageTime;
+      if (timeSinceLastProcessing < MIN_DELAY_BETWEEN_IMAGES) {
+        const waitTime = MIN_DELAY_BETWEEN_IMAGES - timeSinceLastProcessing;
+        console.log(`الانتظار ${waitTime}ms بين معالجة الصور...`);
+        await delay(waitTime);
+      }
+      setLastProcessedImageTime(Date.now());
+      
       // تحسين الصورة للتعرف على النصوص
       const enhancedFile = await enhanceImageForOCR(file);
       console.log(`تم تحسين الصورة: ${file.name}, الحجم قبل: ${(file.size / 1024).toFixed(2)}KB, بعد: ${(enhancedFile.size / 1024).toFixed(2)}KB`);
       
       // إنشاء عنوان URL مؤقت للعرض المبدئي
       tempPreviewUrl = createReliableBlobUrl(enhancedFile);
-      console.log("تم إنشاء عنوان URL مؤقت للمعاينة:", tempPreviewUrl?.substring(0, 50) + "...");
       
       if (!tempPreviewUrl) {
         toast({
@@ -127,11 +138,15 @@ export const useFileUpload = ({
         number: startingNumber + index,
         user_id: user.id,
         batch_id: batchId,
-        retryCount: retryCount
+        retryCount: retryCount,
+        added_at: Date.now() // تأكد من إضافة طابع زمني
       };
       
       addImage(newImage);
       console.log("تمت إضافة صورة جديدة إلى الحالة بالمعرف:", newImage.id);
+      
+      // تأخير صغير بعد إضافة الصورة للتأكد من تحديث واجهة المستخدم
+      await delay(300);
       
       // رفع الصورة إلى Supabase Storage
       const storagePath = await uploadImageToStorage(enhancedFile, user.id);
@@ -166,7 +181,7 @@ export const useFileUpload = ({
       });
       
       // تأخير صغير قبل معالجة الصورة 
-      await delay(500);
+      await delay(700);
       
       try {
         // استخدام Gemini للمعالجة
@@ -207,6 +222,7 @@ export const useFileUpload = ({
         processedImage.user_id = user.id;
         processedImage.storage_path = storagePath;
         processedImage.retryCount = retryCount;
+        processedImage.added_at = Date.now(); // تأكد من تحديث الطابع الزمني
         
         // تحديث الصورة بالبيانات المستخرجة
         updateImage(imageId, processedImage);
@@ -325,7 +341,7 @@ export const useFileUpload = ({
     }
   }, [processingStartTime, queueProcessing, processingQueue.length, activeUploads, currentProcessingIndex, setProcessingProgress]);
 
-  // معالجة الصور بشكل متسلسل - واحدة تلو الأخرى
+  // تحسين معالجة قائمة الانتظار للتأكد من المعالجة التسلسلية
   const processQueue = useCallback(async () => {
     if (processingQueue.length === 0 || queueProcessing) {
       return;
@@ -348,20 +364,29 @@ export const useFileUpload = ({
       setProcessingQueue([]);
       setActiveUploads(currentQueue.length);
       
-      // معالجة الصور واحدة تلو الأخرى بشكل متسلسل
+      console.log(`بدء معالجة دفعة جديدة: ${currentQueue.length} صور مع معرف دفعة: ${batchId}`);
+      
+      // معالجة الصور واحدة تلو الأخرى بشكل متسلسل بوضوح
       for (let i = 0; i < currentQueue.length; i++) {
+        const file = currentQueue[i];
+        
+        // تعيين مؤشر المعالجة الحالي
         setCurrentProcessingIndex(i);
         
         // تحديث النسبة المئوية للتقدم
         const progress = Math.floor((i / currentQueue.length) * 100);
         setProcessingProgress(Math.max(1, Math.min(99, progress)));
         
+        console.log(`معالجة الصورة ${i + 1} من ${currentQueue.length}: ${file.name}`);
+        
         // معالجة الملف الحالي
-        const file = currentQueue[i];
         await processFile(file, startingNumber, i, batchId);
         
-        // تأخير قصير بين المعالجات
-        await delay(500);
+        // تأخير محدد بين معالجة كل صورة لتجنب التنافس على الموارد
+        if (i < currentQueue.length - 1) {
+          console.log(`الانتظار ${MIN_DELAY_BETWEEN_IMAGES}ms قبل معالجة الصورة التالية...`);
+          await delay(MIN_DELAY_BETWEEN_IMAGES);
+        }
       }
       
       console.log(`اكتملت معالجة الدفعة. ${currentQueue.length} صور تمت معالجتها`);
@@ -385,11 +410,17 @@ export const useFileUpload = ({
         saveToLocalStorage(completedImages);
       }
       
-      // التحقق من وجود قائمة انتظار جديدة
-      if (processingQueue.length > 0) {
-        setTimeout(() => processQueue(), 1000);
+      // إزالة التكرارات بعد الانتهاء من المعالجة
+      if (typeof images.removeDuplicates === 'function') {
+        console.log("إزالة التكرارات بعد الانتهاء من المعالجة...");
+        images.removeDuplicates();
       }
       
+      // التحقق من وجود قائمة انتظار جديدة
+      if (processingQueue.length > 0) {
+        console.log("هناك صور جديدة في قائمة الانتظار، سيتم معالجتها قريبًا...");
+        setTimeout(() => processQueue(), 2000);
+      }
     } catch (error) {
       console.error("خطأ أثناء معالجة قائمة الانتظار:", error);
       clearInterval(progressInterval);
@@ -397,6 +428,12 @@ export const useFileUpload = ({
       setIsProcessing(false);
       setProcessingStartTime(null);
       setCurrentProcessingIndex(-1);
+      
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء معالجة الصور. يرجى المحاولة مرة أخرى.",
+        variant: "destructive"
+      });
     }
   }, [processingQueue, queueProcessing, images, addImage, updateImage, setProcessingProgress, updateProgress]);
 
@@ -481,6 +518,12 @@ export const useFileUpload = ({
     handleFileChange,
     activeUploads,
     queueLength: processingQueue.length,
-    manuallyTriggerProcessingQueue
+    manuallyTriggerProcessingQueue,
+    // إضافة وظيفة جديدة لعمليات التنظيف
+    cleanupDuplicates: () => {
+      if (typeof images.removeDuplicates === 'function') {
+        images.removeDuplicates();
+      }
+    }
   };
 };

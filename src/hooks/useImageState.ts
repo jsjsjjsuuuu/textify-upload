@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +9,7 @@ export const useImageState = () => {
   const { toast } = useToast();
 
   const addImage = (newImage: ImageData) => {
-    // التحقق مما إذا كانت الصورة موجودة بالفعل - تحسين منطق البحث عن التكرار
+    // تحسين منطق البحث عن التكرار - تحقق أكثر دقة
     const isDuplicateSession = sessionImages.some(img => 
       img.id === newImage.id || 
       (img.file.name === newImage.file.name && img.user_id === newImage.user_id)
@@ -24,10 +23,13 @@ export const useImageState = () => {
     if (isDuplicateSession || isDuplicateAll) {
       console.log("تم تجاهل الصورة المكررة:", newImage.file.name);
       
-      // إذا كان لدينا نفس المعرف ولكن بحالة مختلفة، نقوم بتحديث الصورة الحالية
-      if (newImage.id && (isDuplicateSession || isDuplicateAll)) {
-        const existingImage = [...images, ...sessionImages].find(img => img.id === newImage.id);
-        if (existingImage && existingImage.status !== newImage.status) {
+      // إذا كان لدينا نفس المعرف ولكن بحالة مختلفة، نقوم بتحديث الصورة الحالية فقط
+      if (newImage.id) {
+        const existingSessionImage = sessionImages.find(img => img.id === newImage.id);
+        const existingImage = images.find(img => img.id === newImage.id);
+        
+        if ((existingSessionImage && existingSessionImage.status !== newImage.status) ||
+            (existingImage && existingImage.status !== newImage.status)) {
           console.log("تحديث حالة الصورة الموجودة:", newImage.id);
           updateImage(newImage.id, { status: newImage.status });
         }
@@ -35,13 +37,13 @@ export const useImageState = () => {
       return;
     }
     
-    // التأكد من أن الصورة الجديدة تحتوي على حقل status بشكل افتراضي
+    // إضافة طابع زمني لمساعدة في التمييز بين الصور وإزالة التكرارات
     const imageWithDefaults: ImageData = {
       status: "pending", // قيمة افتراضية
       ...newImage,
-      // إضافة timestamp لتسهيل المقارنة
-      added_at: new Date().getTime()
+      added_at: new Date().getTime() // إضافة الطابع الزمني
     };
+    
     console.log("إضافة صورة جديدة:", imageWithDefaults.id);
     
     // إضافة الصورة إلى مجموعة الصور المؤقتة للجلسة الحالية
@@ -142,35 +144,42 @@ export const useImageState = () => {
     setSessionImages([]);
   };
 
-  // إزالة الصور المكررة - تحسين الخوارزمية
+  // تحسين دالة إزالة التكرارات
   const removeDuplicates = () => {
-    const uniqueImages: { [key: string]: ImageData } = {};
+    const uniqueImagesMap = new Map<string, ImageData>();
     
     // استخدام مفتاح أكثر دقة للتخزين المؤقت للصور الفريدة
     images.forEach(img => {
-      // استخدام مزيج من اسم الملف ومعرف المستخدم ومعرف الدفعة كمفتاح
+      // إنشاء مفتاح فريد يتضمن اسم الملف ومعرّف المستخدم والمجموعة
       const key = `${img.file.name}_${img.user_id || ''}_${img.batch_id || ''}`;
       
       // إذا لم يكن هناك صورة بهذا المفتاح، أو إذا كانت الصورة الحالية أحدث
-      if (!uniqueImages[key] || 
-          (img.added_at && uniqueImages[key].added_at && img.added_at > uniqueImages[key].added_at) ||
-          (img.date && uniqueImages[key].date && new Date(img.date) > new Date(uniqueImages[key].date))) {
-        uniqueImages[key] = img;
+      if (!uniqueImagesMap.has(key) || 
+          (img.added_at && uniqueImagesMap.get(key)?.added_at && img.added_at > uniqueImagesMap.get(key)!.added_at!)) {
+        uniqueImagesMap.set(key, img);
       }
     });
     
-    // تحويل الكائن إلى مصفوفة
-    const deduplicatedImages = Object.values(uniqueImages);
+    // تحويل الخريطة إلى مصفوفة
+    const deduplicatedImages = Array.from(uniqueImagesMap.values());
     
     if (deduplicatedImages.length < images.length) {
+      const removedCount = images.length - deduplicatedImages.length;
       toast({
         title: "تمت إزالة التكرارات",
-        description: `تم حذف ${images.length - deduplicatedImages.length} صورة مكررة`
+        description: `تم حذف ${removedCount} صورة مكررة`
       });
+      
       setImages(deduplicatedImages);
+      
+      // تحديث الصور المؤقتة أيضاً
       setSessionImages(prev => prev.filter(img => 
         deduplicatedImages.some(unique => unique.id === img.id)
       ));
+      
+      console.log(`تم إزالة ${removedCount} صورة مكررة. الصور المتبقية: ${deduplicatedImages.length}`);
+    } else {
+      console.log("لا توجد صور مكررة للإزالة");
     }
   };
 
