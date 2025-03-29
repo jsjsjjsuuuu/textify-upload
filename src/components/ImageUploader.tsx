@@ -82,7 +82,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         <Button 
           variant="destructive" 
           size="sm" 
-          className="absolute top-2 right-2 h-8 w-8 p-0" 
+          className="absolute top-2 right-2 h-8 w-8 p-0"
           onClick={onCancelUpload}
           title="إلغاء التحميل"
         >

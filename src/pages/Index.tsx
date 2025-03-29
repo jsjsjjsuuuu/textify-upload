@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause, AlertTriangle } from 'lucide-react';
+import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -10,7 +9,7 @@ import DirectExportTools from '@/components/DataExport/DirectExportTools';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +18,6 @@ const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [showRetryAlert, setShowRetryAlert] = useState(false);
   
   // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
@@ -41,8 +39,8 @@ const Index = () => {
     activeUploads,
     queueLength,
     retryProcessing,
-    pauseProcessing,
-    clearQueue
+    pauseProcessing,  // استخدام وظيفة الإيقاف المؤقت
+    clearQueue       // استخدام وظيفة مسح القائمة
   } = useImageProcessing();
   
   const {
@@ -50,21 +48,6 @@ const Index = () => {
     formatPrice,
     formatProvinceName
   } = useDataFormatting();
-
-  // تحقق من وجود صور في حالة الانتظار لمدة طويلة
-  useEffect(() => {
-    // إذا كانت هناك صور في قائمة الانتظار ولكن عدد المعالجات النشطة صفر
-    // هذا يشير إلى احتمال وجود مشكلة
-    if (queueLength > 0 && activeUploads === 0) {
-      const pendingTimer = setTimeout(() => {
-        setShowRetryAlert(true);
-      }, 10000); // 10 ثوانٍ
-      
-      return () => clearTimeout(pendingTimer);
-    } else {
-      setShowRetryAlert(false);
-    }
-  }, [queueLength, activeUploads]);
 
   // وظيفة تنفيذ التنظيف يدوياً
   const handleManualCleanup = async () => {
@@ -108,6 +91,8 @@ const Index = () => {
         description: "حدث خطأ أثناء إعادة معالجة الصورة",
         variant: "destructive"
       });
+      
+      throw error; // إعادة رمي الخطأ للتعامل معه في المكون الأصلي
     }
   };
 
@@ -118,7 +103,6 @@ const Index = () => {
         title: "إعادة تشغيل",
         description: "تم إعادة تشغيل قائمة المعالجة بنجاح",
       });
-      setShowRetryAlert(false);
     } else {
       toast({
         title: "تنبيه",
@@ -151,16 +135,6 @@ const Index = () => {
       title: "تم المسح",
       description: "تم مسح قائمة انتظار المعالجة",
     });
-    setShowRetryAlert(false);
-  };
-
-  // وظيفة إلغاء التحميل
-  const handleCancelUpload = () => {
-    handleClearQueue();
-    toast({
-      title: "تم الإلغاء",
-      description: "تم إلغاء عملية تحميل الصور",
-    });
   };
   
   return (
@@ -191,41 +165,6 @@ const Index = () => {
                   </Link>
                 </Button>
               </div>
-              
-              {/* تنبيه بوجود صور معلقة في قائمة الانتظار */}
-              {showRetryAlert && (
-                <Alert className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
-                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                  <AlertTitle className="text-yellow-700 dark:text-yellow-300">
-                    توقفت معالجة الصور
-                  </AlertTitle>
-                  <AlertDescription className="text-sm text-yellow-600 dark:text-yellow-300 flex items-center justify-between">
-                    <div>
-                      يبدو أن الصور في قائمة الانتظار لا تتم معالجتها. يرجى إعادة تشغيل المعالجة أو مسح القائمة.
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handleRetryProcessing} 
-                        className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
-                      >
-                        <RefreshCw className="h-3 w-3 ml-1" />
-                        إعادة المحاولة
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handleClearQueue} 
-                        className="text-red-600 border-red-300 bg-red-50 hover:bg-red-100"
-                      >
-                        <Trash2 className="h-3 w-3 ml-1" />
-                        مسح القائمة
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
               
               {/* معلومات حول حالة المعالجة */}
               {(isProcessing || queueLength > 0) && (
@@ -299,8 +238,7 @@ const Index = () => {
                   <ImageUploader 
                     isProcessing={isProcessing} 
                     processingProgress={processingProgress} 
-                    onFileChange={handleFileChange}
-                    onCancelUpload={handleCancelUpload}
+                    onFileChange={handleFileChange} 
                   />
                 </div>
               </div>
