@@ -54,7 +54,7 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
   }, []);
 
   const handleDelete = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<boolean> => {
       const result = await onDelete(id);
       if (result !== false && id === selectedImageId) {
         // إذا تم حذف الصورة المحددة، اختر صورة أخرى
@@ -71,20 +71,22 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
           setSelectedImageId(null);
         }
       }
-      return result;
+      return result === false ? false : true;
     },
     [images, onDelete, selectedImageId]
   );
 
   // إعادة معالجة الصورة
-  const handleReprocessImage = useCallback(async (id: string) => {
-    if (!onReprocess) return;
+  const handleReprocessImage = useCallback(async (id: string): Promise<boolean> => {
+    if (!onReprocess) return false;
     
     setIsReprocessing(true);
     try {
       await onReprocess(id);
+      return true;
     } catch (error) {
       console.error("فشل في إعادة معالجة الصورة:", error);
+      return false;
     } finally {
       setIsReprocessing(false);
     }

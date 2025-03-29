@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 interface ImageDataPanelProps {
   image: ImageData;
   onTextChange: (id: string, field: string, value: string) => void;
-  onDelete: (id: string) => Promise<void> | void;
+  onDelete: (id: string) => Promise<boolean> | void;
   onSubmit: (id: string) => void;
   isSubmitting: boolean;
   reprocessButton?: React.ReactNode;
