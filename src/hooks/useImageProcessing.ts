@@ -18,14 +18,31 @@ export const useImageProcessing = () => {
   
   // التأكد من تعيين مفتاح Gemini عند بدء التشغيل وإعادة تعيين جميع المفاتيح
   useEffect(() => {
-    // تعيين المفتاح الجديد دائمًا
-    localStorage.setItem('geminiApiKey', DEFAULT_GEMINI_API_KEY);
-    console.log("تم تعيين مفتاح Gemini API الرئيسي عند بدء التطبيق");
+    // تعيين المفتاح الجديد دائمًا وإعادة تعيين جميع المفاتيح عند بدء التطبيق
+    const initializeApiKeys = async () => {
+      try {
+        // تعيين مفتاح API الافتراضي
+        localStorage.setItem('geminiApiKey', DEFAULT_GEMINI_API_KEY);
+        console.log("تم تعيين مفتاح Gemini API الرئيسي عند بدء التطبيق");
+        
+        // إعادة تعيين جميع المفاتيح عند بدء التطبيق
+        await resetAllApiKeys();
+        console.log("تم إعادة تعيين جميع مفاتيح API عند بدء التطبيق");
+        
+        // محاولة معالجة الصور المعلقة
+        if (coreProcessing.retryProcessing) {
+          setTimeout(() => {
+            coreProcessing.retryProcessing();
+            console.log("محاولة معالجة الصور المعلقة عند بدء التطبيق");
+          }, 3000);
+        }
+      } catch (error) {
+        console.error("خطأ أثناء تهيئة مفاتيح API:", error);
+      }
+    };
     
-    // إعادة تعيين جميع المفاتيح عند بدء التطبيق
-    resetAllApiKeys();
-    console.log("تم إعادة تعيين جميع مفاتيح API عند بدء التطبيق");
-  }, []);
+    initializeApiKeys();
+  }, [coreProcessing.retryProcessing]);
   
   // حفظ تفضيلات المستخدم في التخزين المحلي
   useEffect(() => {
@@ -76,8 +93,8 @@ export const useImageProcessing = () => {
     isDuplicateImage: coreProcessing.isDuplicateImage,
     clearImageCache: coreProcessing.clearImageCache,
     retryProcessing,
-    pauseProcessing: coreProcessing.pauseProcessing, // تصدير وظيفة الإيقاف المؤقت
-    clearQueue: coreProcessing.clearQueue, // تصدير وظيفة مسح القائمة
+    pauseProcessing: coreProcessing.pauseProcessing,
+    clearQueue: coreProcessing.clearQueue,
     activeUploads: coreProcessing.activeUploads || 0,
     queueLength: coreProcessing.queueLength || 0,
     useGemini: coreProcessing.useGemini || false,
