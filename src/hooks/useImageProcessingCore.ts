@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -103,6 +104,67 @@ export const useImageProcessingCore = () => {
     return true;
   };
 
+  // إنشاء كائن useFileUpload في بداية الملف
+  const fileUploadData = useFileUpload({
+    images,
+    addImage,
+    updateImage,
+    setProcessingProgress,
+    saveProcessedImage,
+    isDuplicateImage,
+    removeDuplicates
+  });
+  
+  // إضافة وظيفة إعادة تشغيل عملية المعالجة عندما تتجمد العملية
+  const retryProcessing = useCallback(() => {
+    if (fileUploadData && fileUploadData.manuallyTriggerProcessingQueue) {
+      console.log("إعادة تشغيل عملية معالجة الصور...");
+      fileUploadData.manuallyTriggerProcessingQueue();
+      toast({
+        title: "تم إعادة التشغيل",
+        description: "تم إعادة تشغيل عملية معالجة الصور بنجاح",
+      });
+      return true;
+    }
+    return false;
+  }, [toast, fileUploadData]);
+
+  // وظيفة مسح ذاكرة التخزين المؤقت للصور المعالجة
+  const clearImageCache = useCallback(() => {
+    clearProcessedImagesCache();
+    if (fileUploadData && fileUploadData.clearProcessedHashesCache) {
+      fileUploadData.clearProcessedHashesCache();
+    }
+    toast({
+      title: "تم المسح",
+      description: "تم مسح ذاكرة التخزين المؤقت للصور المعالجة",
+    });
+  }, [clearProcessedImagesCache, toast, fileUploadData]);
+  
+  // وظيفة إيقاف عملية المعالجة مؤقتًا
+  const pauseProcessing = useCallback(() => {
+    if (fileUploadData && fileUploadData.pauseProcessing) {
+      console.log("إيقاف عملية معالجة الصور مؤقتًا...");
+      fileUploadData.pauseProcessing();
+      toast({
+        title: "تم الإيقاف مؤقتًا",
+        description: "تم إيقاف عملية معالجة الصور مؤقتًا، يمكنك إعادة تشغيلها لاحقًا",
+      });
+      return true;
+    }
+    return false;
+  }, [toast, fileUploadData]);
+
+  const { 
+    isProcessing, 
+    handleFileChange,
+    activeUploads,
+    queueLength,
+    useGemini,
+    pauseProcessing: filePauseProcessing,
+    clearQueue,
+  } = fileUploadData;
+
   // إعادة هيكلة وظيفة handleSubmitToApi لتستخدم وظيفة saveProcessedImage
   const handleSubmitToApi = async (id: string) => {
     // العثور على الصورة حسب المعرف
@@ -176,66 +238,6 @@ export const useImageProcessingCore = () => {
       return false;
     }
   };
-  
-  // إضافة وظيفة إعادة تشغيل عملية المعالجة عندما تتجمد العملية
-  const retryProcessing = useCallback(() => {
-    if (fileUploadData && fileUploadData.manuallyTriggerProcessingQueue) {
-      console.log("إعادة تشغيل عملية معالجة الصور...");
-      fileUploadData.manuallyTriggerProcessingQueue();
-      toast({
-        title: "تم إعادة التشغيل",
-        description: "تم إعادة تشغيل عملية معالجة الصور بنجاح",
-      });
-      return true;
-    }
-    return false;
-  }, [toast, fileUploadData]);
-
-  // وظيفة مسح ذاكرة التخزين المؤقت للصور المعالجة
-  const clearImageCache = useCallback(() => {
-    clearProcessedImagesCache();
-    if (fileUploadData && fileUploadData.clearProcessedHashesCache) {
-      fileUploadData.clearProcessedHashesCache();
-    }
-    toast({
-      title: "تم المسح",
-      description: "تم مسح ذاكرة التخزين المؤقت للصور المعالجة",
-    });
-  }, [clearProcessedImagesCache, toast]);
-  
-  // وظيفة إيقاف عملية المعالجة مؤقتًا
-  const pauseProcessing = useCallback(() => {
-    if (fileUploadData && fileUploadData.pauseProcessing) {
-      console.log("إيقاف عملية معالجة الصور مؤقتًا...");
-      fileUploadData.pauseProcessing();
-      toast({
-        title: "تم الإيقاف مؤقتًا",
-        description: "تم إيقاف عملية معالجة الصور مؤقتًا، يمكنك إعادة تشغيلها لاحقًا",
-      });
-      return true;
-    }
-    return false;
-  }, [toast, fileUploadData]);
-  
-  const fileUploadData = useFileUpload({
-    images,
-    addImage,
-    updateImage,
-    setProcessingProgress,
-    saveProcessedImage,
-    isDuplicateImage,
-    removeDuplicates
-  });
-
-  const { 
-    isProcessing, 
-    handleFileChange,
-    activeUploads,
-    queueLength,
-    useGemini,
-    pauseProcessing: filePauseProcessing,
-    clearQueue,
-  } = fileUploadData;
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
   useEffect(() => {
