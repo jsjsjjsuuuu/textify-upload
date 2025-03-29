@@ -71,6 +71,7 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
           setSelectedImageId(null);
         }
       }
+      return result;
     },
     [images, onDelete, selectedImageId]
   );
