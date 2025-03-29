@@ -49,10 +49,11 @@ export const useFileUpload = ({
   const { processWithGemini } = useGeminiProcessing();
   const { formatPhoneNumber, formatPrice } = useDataFormatting();
 
-  // إضافة مجموعة لتخزين أسماء الملفات المعالجة في الجلسة الحالية
-  const [processedFileNames, setProcessedFileNames] = useState<Set<string>>(new Set());
-  // إضافة مجموعة لتخزين hashes الصور المعالجة
+  // تحسين: استخدام مجموعات لتخزين هاش الصور والملفات المعالجة بدلاً من الاسم فقط
   const [processedHashes, setProcessedHashes] = useState<Set<string>>(new Set());
+  
+  // أضف تخزين مؤقت للجلسة الحالية فقط - سيتم مسحه عند إعادة تحميل الصفحة
+  const [sessionProcessedFiles, setSessionProcessedFiles] = useState<Set<string>>(new Set());
 
   // وظيفة رفع الصورة إلى Supabase Storage
   const uploadImageToStorage = async (file: File, userId: string): Promise<string | null> => {
@@ -98,21 +99,39 @@ export const useFileUpload = ({
     try {
       console.log(`معالجة الملف [${index}]: ${file.name}, النوع: ${file.type}, المحاولة: ${retryCount + 1}`);
       
-      // التحقق إذا كانت الصورة قد تمت معالجتها بالفعل باستخدام اسم الملف
-      if (processedFileNames.has(file.name)) {
-        console.log(`تم تخطي معالجة الصورة المكررة: ${file.name} (تمت معالجتها مسبقاً في هذه الجلسة)`);
+      // إنشاء هاش موحد للصورة يعتمد على الخصائص المتعددة (وليس فقط اسم الملف)
+      const fileHash = generateFileHash(file, user.id, batchId);
+      
+      // التحقق من الهاش في مخزن الجلسة المؤقت - هذا سيمنع معالجة الصور المكررة في نفس الرفع
+      if (sessionProcessedFiles.has(fileHash)) {
+        console.log(`تم تخطي معالجة الصورة المكررة في نفس الجلسة: ${file.name} (هاش: ${fileHash})`);
+        // عدم عرض إشعار للمستخدم للصور المكررة في نفس الجلسة لتجنب الإزعاج
+        return false;
+      }
+      
+      // التحقق من الهاش في قائمة الهاشات المعالجة سابقاً (عبر الجلسات)
+      if (processedHashes.has(fileHash)) {
+        console.log(`تم تخطي معالجة الصورة المكررة من جلسة سابقة: ${file.name} (هاش: ${fileHash})`);
+        // عرض إشعار أكثر وضوحاً للمستخدم
         toast({
           title: "تنبيه",
-          description: `تم تخطي الصورة المكررة: ${file.name}`,
+          description: `تم تخطي صورة مكررة: ${file.name}`,
           variant: "default"
         });
         return false;
       }
       
-      // إضافة اسم الملف إلى قائمة الملفات المعالجة
-      setProcessedFileNames(prev => {
+      // إضافة الهاش إلى قائمة الهاشات المعالجة
+      setProcessedHashes(prev => {
         const newSet = new Set(prev);
-        newSet.add(file.name);
+        newSet.add(fileHash);
+        return newSet;
+      });
+      
+      // إضافة الهاش إلى قائمة الملفات المعالجة في الجلسة الحالية
+      setSessionProcessedFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.add(fileHash);
         return newSet;
       });
       
@@ -164,15 +183,17 @@ export const useFileUpload = ({
         status: "processing",
         number: startingNumber + index,
         user_id: user.id,
-        batch_id: batchId
+        batch_id: batchId,
+        imageHash: fileHash // إضافة الهاش للصورة
       };
       
-      // التحقق مما إذا كانت الصورة موجودة بالفعل في المجموعة باستخدام الـ isDuplicateImage
+      // التحقق من تكرار الصورة باستخدام دالة isDuplicateImage المحسنة
       if (isDuplicateImage && isDuplicateImage(tempImageForCheck, images)) {
         console.log(`تم تخطي معالجة الصورة المكررة: ${file.name} (موجودة بالفعل في مجموعة الصور)`);
+        // عرض إشعار مع تفاصيل أكثر
         toast({
-          title: "تنبيه",
-          description: `تم تخطي الصورة المكررة: ${file.name}`,
+          title: "تم تخطي صورة مكررة",
+          description: `"${file.name}" موجودة بالفعل في المجموعة`,
           variant: "default"
         });
         return false;
@@ -183,24 +204,8 @@ export const useFileUpload = ({
         ...tempImageForCheck,
         extractedText: "جاري تحميل الصورة وتحسينها...",
         retryCount: retryCount,
-        added_at: Date.now() // تأكد من إضافة طابع زمني
+        added_at: Date.now()
       };
-      
-      // إنشاء hash للصورة لاستخدامه في تحديد التكرار
-      const imageHash = [file.name, file.size, user.id, batchId, Date.now()].join('_');
-      
-      // التحقق مما إذا كانت الصورة قد تمت معالجتها بالفعل باستخدام الـ hash
-      if (processedHashes.has(imageHash)) {
-        console.log(`تم تخطي معالجة الصورة المكررة: ${file.name} (hash موجود بالفعل)`);
-        return false;
-      }
-      
-      // إضافة hash الصورة إلى مجموعة الـ hashes المعالجة
-      setProcessedHashes(prev => {
-        const newSet = new Set(prev);
-        newSet.add(imageHash);
-        return newSet;
-      });
       
       addImage(newImage);
       console.log("تمت إضافة صورة جديدة إلى الحالة بالمعرف:", newImage.id);
@@ -283,6 +288,7 @@ export const useFileUpload = ({
         processedImage.storage_path = storagePath;
         processedImage.retryCount = retryCount;
         processedImage.added_at = Date.now(); // تأكد من تحديث الطابع الزمني
+        processedImage.imageHash = fileHash; // تأكد من حفظ الهاش
         
         // تحديث الصورة بالبيانات المستخرجة
         updateImage(imageId, processedImage);
@@ -352,6 +358,22 @@ export const useFileUpload = ({
       
       return false;
     }
+  };
+
+  // إنشاء هاش موحد للملف باستخدام بيانات متعددة
+  const generateFileHash = (file: File, userId: string, batchId: string): string => {
+    // إنشاء هاش يعتمد على اسم الملف وحجمه ونوعه وبعض البيانات الإضافية
+    const hashComponents = [
+      file.name,               // اسم الملف
+      file.size.toString(),    // حجم الملف
+      file.type,               // نوع الملف
+      userId || 'anonymous',   // معرف المستخدم
+      batchId || 'no-batch',   // معرف الدفعة
+      file.lastModified.toString() // وقت آخر تعديل للملف (للتمييز بين الملفات المحدثة)
+    ];
+    
+    // إنشاء هاش بسيط
+    return hashComponents.join('_');
   };
 
   // تحويل رسائل الخطأ التقنية إلى رسائل ودية للمستخدم
@@ -546,55 +568,55 @@ export const useFileUpload = ({
     const fileArray = Array.from(files);
     console.log("معالجة", fileArray.length, "ملفات");
     
-    // تحسين التحقق من الملفات المكررة باستخدام معلومات أكثر تفصيلاً
-    const uniqueFiles = fileArray.filter(file => {
-      // التحقق من اسم الملف في قائمة الملفات المعالجة
-      if (processedFileNames.has(file.name)) {
-        console.log("تم تخطي صورة مكررة (في الجلسة الحالية):", file.name);
-        return false;
+    // إنشاء معرف دفعة جديد لهذه المجموعة من الملفات
+    const currentBatchId = uuidv4();
+    
+    // تحسين التحقق من الملفات المكررة باستخدام الهاش بدلاً من اسم الملف فقط
+    const uniqueFilesByHash = new Map<string, File>();
+    
+    // التحقق من الملفات المكررة في نفس الدفعة أولاً (استخدام هاش)
+    fileArray.forEach(file => {
+      const fileHash = generateFileHash(file, user.id, currentBatchId);
+      
+      // التحقق من عدم وجود ملف بنفس الهاش في هذه الدفعة
+      if (!uniqueFilesByHash.has(fileHash)) {
+        uniqueFilesByHash.set(fileHash, file);
+      } else {
+        console.log(`تجاهل ملف مكرر في نفس الدفعة: ${file.name} (هاش: ${fileHash})`);
       }
-      
-      // التحقق من مجموعة الصور الموجودة حالياً
-      const isDuplicate = images.some(img => 
-        img.file.name === file.name && 
-        Math.abs(img.file.size - file.size) < 1024 // السماح بفارق بسيط في الحجم (1 كيلوبايت)
-      );
-      
-      if (isDuplicate) {
-        console.log("تم تخطي صورة مكررة (موجودة في المجموعة):", file.name);
-      }
-      
-      return !isDuplicate;
     });
     
+    // تحويل الملفات الفريدة إلى مصفوفة
+    const uniqueFiles = Array.from(uniqueFilesByHash.values());
+    
+    // عرض رسالة إذا كان هناك ملفات تم تجاهلها
     if (uniqueFiles.length < fileArray.length) {
       toast({
-        title: "تم تخطي الصور المكررة",
-        description: `تم تخطي ${fileArray.length - uniqueFiles.length} صور مكررة`,
+        title: "تم تخطي الملفات المكررة",
+        description: `تم تجاهل ${fileArray.length - uniqueFiles.length} ملفات مكررة`,
         variant: "default"
       });
     }
     
     if (uniqueFiles.length === 0) {
       setIsProcessing(false);
+      setProcessingProgress(0);
+      toast({
+        title: "لم يتم تحميل أي ملفات",
+        description: "جميع الملفات المحددة مكررة",
+        variant: "default"
+      });
       return;
     }
     
     // إضافة الملفات الفريدة فقط إلى قائمة الانتظار
     setProcessingQueue(prev => [...prev, ...uniqueFiles]);
-    
-    // إضافة أسماء الملفات الجديدة إلى قائمة الملفات المعالجة
-    setProcessedFileNames(prev => {
-      const newSet = new Set(prev);
-      uniqueFiles.forEach(file => newSet.add(file.name));
-      return newSet;
-    });
   };
   
   // إضافة وظيفة لمسح قوائم الصور المعالجة (مفيدة عند إعادة التحميل)
   const clearProcessedLists = useCallback(() => {
-    setProcessedFileNames(new Set());
     setProcessedHashes(new Set());
+    setSessionProcessedFiles(new Set());
     console.log("تم مسح قوائم الصور المعالجة");
   }, []);
 

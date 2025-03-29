@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileImage, LoaderCircle, ImageIcon, AlertTriangle } from "lucide-react";
+import { Upload, FileImage, LoaderCircle, ImageIcon, AlertTriangle, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ImageUploaderProps {
@@ -119,7 +119,7 @@ const ImageUploader = ({
                 <div className="mt-2 flex justify-between text-sm text-gray-500 dark:text-gray-400">
                   <p>{visualProgress}% مكتمل</p>
                   {totalProcessingItems > 0 && (
-                    <p className="text-blue-500 dark:text-blue-400 animate-pulse">
+                    <p className="text-blue-500 dark:text-blue-400">
                       <LoaderCircle className="w-3.5 h-3.5 inline ml-1 animate-spin" />
                       <span className="font-medium">{activeUploads}</span> قيد المعالجة
                       {queueLength > 0 && (
@@ -196,6 +196,12 @@ const ImageUploader = ({
         <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center justify-center">
           <AlertTriangle className="w-3.5 h-3.5 ml-1" />
           تأكد من أن الصور واضحة ومقروءة للحصول على أفضل النتائج
+        </p>
+        
+        {/* إضافة معلومات حول التكرار */}
+        <p className="text-xs text-blue-500 dark:text-blue-400 mt-2 flex items-center justify-center">
+          <Info className="w-3.5 h-3.5 ml-1" />
+          سيتم تخطي الصور المكررة تلقائياً لتجنب المعالجة المتكررة
         </p>
       </div>
     </div>

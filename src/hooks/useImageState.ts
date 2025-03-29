@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
@@ -9,7 +10,7 @@ export const useImageState = () => {
   const { toast } = useToast();
 
   const addImage = (newImage: ImageData) => {
-    // تحسين منطق البحث عن التكرار - فحص أكثر دقة وشمولية
+    // تحسين منطق البحث عن التكرار - استخدام الهاش الفريد للصورة إذا كان متاحًا
     const isDuplicate = isDuplicateImage(newImage, [...images, ...sessionImages]);
     
     if (isDuplicate) {
@@ -29,12 +30,12 @@ export const useImageState = () => {
       return;
     }
     
-    // إضافة طابع زمني وإنشاء رقم فريد (hash) للمساعدة في التمييز بين الصور
+    // إضافة طابع زمني وإنشاء رقم فريد (hash) للمساعدة في التمييز بين الصور إذا لم يكن موجودًا
     const imageWithDefaults: ImageData = {
       status: "pending", // قيمة افتراضية
       ...newImage,
-      added_at: new Date().getTime(), // إضافة الطابع الزمني
-      imageHash: generateImageHash(newImage) // إضافة رقم فريد للصورة
+      added_at: newImage.added_at || new Date().getTime(), // احتفظ بالطابع الزمني الأصلي إذا كان موجودًا
+      imageHash: newImage.imageHash || generateImageHash(newImage) // استخدم الهاش الموجود أو إنشاء واحد جديد
     };
     
     console.log("إضافة صورة جديدة:", imageWithDefaults.id, "Hash:", imageWithDefaults.imageHash);
@@ -48,6 +49,17 @@ export const useImageState = () => {
 
   // إنشاء دالة فحص الصور المكررة
   const isDuplicateImage = (newImage: ImageData, allImages: ImageData[]): boolean => {
+    // استخدم الهاش الفريد أولاً إذا كان متاحًا (أسرع وأكثر دقة)
+    if (newImage.imageHash) {
+      const isDuplicateByHash = allImages.some(img => 
+        img.imageHash === newImage.imageHash && img.imageHash !== undefined
+      );
+      
+      if (isDuplicateByHash) {
+        return true;
+      }
+    }
+    
     // التحقق من تطابق المعرف
     if (newImage.id && allImages.some(img => img.id === newImage.id)) {
       return true;
@@ -86,9 +98,11 @@ export const useImageState = () => {
     const hashParts = [
       image.file.name,
       image.file.size.toString(),
+      image.file.type || '',
       image.user_id || '',
       image.batch_id || '',
       image.date ? image.date.getTime().toString() : '',
+      image.file.lastModified ? image.file.lastModified.toString() : '',
     ];
     
     return hashParts.join('_');
@@ -145,9 +159,18 @@ export const useImageState = () => {
   // الحصول على الصور مرتبة
   const getSortedImages = () => {
     return [...images].sort((a, b) => {
+      // ترتيب الصور حسب الرقم أولاً، ثم حسب وقت الإضافة (من الأحدث للأقدم)
       const aNum = a.number || 0;
       const bNum = b.number || 0;
-      return bNum - aNum;
+      
+      if (bNum !== aNum) {
+        return bNum - aNum;
+      }
+      
+      // إذا كان لهما نفس الرقم، استخدم وقت الإضافة
+      const aTime = a.added_at || 0;
+      const bTime = b.added_at || 0;
+      return bTime - aTime;
     });
   };
   
@@ -156,7 +179,15 @@ export const useImageState = () => {
     return [...sessionImages].sort((a, b) => {
       const aNum = a.number || 0;
       const bNum = b.number || 0;
-      return bNum - aNum;
+      
+      if (bNum !== aNum) {
+        return bNum - aNum;
+      }
+      
+      // إذا كان لهما نفس الرقم، استخدم وقت الإضافة
+      const aTime = a.added_at || 0;
+      const bTime = b.added_at || 0;
+      return bTime - aTime;
     });
   };
 
@@ -187,12 +218,12 @@ export const useImageState = () => {
 
   // تحسين دالة إزالة التكرارات
   const removeDuplicates = () => {
-    // تحسين: استخدام الـ hash الفريد للصورة للتخزين المؤقت
+    // استخدام خريطة لتخزين الصور الفريدة - مفتاح الخريطة هو الهاش
     const uniqueImagesMap = new Map<string, ImageData>();
     
-    // استخدام خصائص متعددة لتحديد التكرار
+    // المرور على جميع الصور وإضافتها إلى الخريطة
     images.forEach(img => {
-      // إنشاء مفتاح فريد يتضمن معلومات الصورة
+      // استخدام الهاش الموجود أو إنشاء واحد جديد
       const key = img.imageHash || generateImageHash(img);
       
       // إذا لم يكن هناك صورة بهذا المفتاح، أو إذا كانت الصورة الحالية أحدث
