@@ -1,4 +1,3 @@
-
 import { formatDate } from "@/utils/dateFormatter";
 import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
 import { useState, useEffect, useCallback } from "react";
@@ -67,7 +66,9 @@ export const useImageProcessing = () => {
     runCleanupNow: coreProcessing.runCleanupNow,
     isDuplicateImage: coreProcessing.isDuplicateImage,
     clearImageCache: coreProcessing.clearImageCache,
-    retryProcessing,
+    retryProcessing: coreProcessing.retryProcessing,
+    pauseProcessing: coreProcessing.pauseProcessing, // تصدير وظيفة الإيقاف المؤقت
+    clearQueue: coreProcessing.clearQueue, // تصدير وظيفة مسح القائمة
     activeUploads: coreProcessing.activeUploads || 0,
     queueLength: coreProcessing.queueLength || 0,
     useGemini: coreProcessing.useGemini || false,

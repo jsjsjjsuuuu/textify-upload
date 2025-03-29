@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -190,7 +189,7 @@ export const useImageProcessingCore = () => {
       return true;
     }
     return false;
-  }, [toast]);
+  }, [toast, fileUploadData]);
 
   // وظيفة مسح ذاكرة التخزين المؤقت للصور المعالجة
   const clearImageCache = useCallback(() => {
@@ -203,6 +202,20 @@ export const useImageProcessingCore = () => {
       description: "تم مسح ذاكرة التخزين المؤقت للصور المعالجة",
     });
   }, [clearProcessedImagesCache, toast]);
+  
+  // وظيفة إيقاف عملية المعالجة مؤقتًا
+  const pauseProcessing = useCallback(() => {
+    if (fileUploadData && fileUploadData.pauseProcessing) {
+      console.log("إيقاف عملية معالجة الصور مؤقتًا...");
+      fileUploadData.pauseProcessing();
+      toast({
+        title: "تم الإيقاف مؤقتًا",
+        description: "تم إيقاف عملية معالجة الصور مؤقتًا، يمكنك إعادة تشغيلها لاحقًا",
+      });
+      return true;
+    }
+    return false;
+  }, [toast, fileUploadData]);
   
   const fileUploadData = useFileUpload({
     images,
@@ -219,7 +232,9 @@ export const useImageProcessingCore = () => {
     handleFileChange,
     activeUploads,
     queueLength,
-    useGemini
+    useGemini,
+    pauseProcessing: filePauseProcessing,
+    clearQueue,
   } = fileUploadData;
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
@@ -262,6 +277,8 @@ export const useImageProcessingCore = () => {
     isDuplicateImage,
     clearImageCache,
     retryProcessing,
+    pauseProcessing,
+    clearQueue,
     activeUploads,
     queueLength
   };

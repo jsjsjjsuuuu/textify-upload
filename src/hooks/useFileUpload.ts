@@ -35,13 +35,14 @@ export const useFileUpload = ({
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
   
-  // استخدام نظام قائمة الانتظار الجديد
+  // استخدام نظام قائمة الانتظار
   const { 
     addToQueue, 
     isProcessing, 
     queueLength, 
     activeUploads,
     manuallyTriggerProcessingQueue,
+    pauseProcessing,
     clearQueue
   } = useImageQueue();
   
@@ -110,7 +111,6 @@ export const useFileUpload = ({
   }, [geminiEnabled, processWithGemini, processWithOcr, saveProcessedImage, updateImage]);
 
   // معالج تغيير الملفات - عند رفع الصور
-  // تم تغيير نوع المعامل من FileList إلى File[]
   const handleFileChange = useCallback(async (files: File[]) => {
     if (!files.length) return;
     
@@ -123,8 +123,18 @@ export const useFileUpload = ({
     // مجموعة لتخزين معرفات الصور المضافة حديثاً
     const addedImageIds: string[] = [];
     
-    let fileNumber = 1;
-    for (const file of files) {
+    // إضافة تأخير بين إضافة كل صورة لضمان ترتيبها الصحيح
+    const addDelay = 50;
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileNumber = i + 1;
+      
+      // تأخير صغير بين إضافة كل صورة
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, addDelay));
+      }
+      
       try {
         // ضغط الصورة أولاً
         const compressedFile = await compressImage(file);
@@ -157,14 +167,13 @@ export const useFileUpload = ({
         addImage(newImage);
         addedImageIds.push(newImage.id);
         
-        // إضافة الصورة إلى قائمة انتظار المعالجة
+        // إضافة الصورة إلى قائمة انتظار المعالجة - المهم هنا أن كل صورة تتم معالجتها بالكامل قبل الانتقال للتالية
         addToQueue(newImage.id, newImage, async () => {
           await processImage(newImage);
         });
         
         // تحديث التقدم
         setProcessingProgress((fileNumber / files.length) * 100);
-        fileNumber++;
       } catch (error) {
         console.error(`خطأ في معالجة الملف ${fileNumber}:`, error);
         toast({
@@ -207,7 +216,9 @@ export const useFileUpload = ({
     useGemini: geminiEnabled,
     toggleGemini,
     manuallyTriggerProcessingQueue,
+    pauseProcessing,
     clearProcessedHashesCache,
+    clearQueue,
     activeUploads,
     queueLength
   };

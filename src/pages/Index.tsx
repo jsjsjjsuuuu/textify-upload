@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2, RefreshCw, Clock } from 'lucide-react';
+import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -38,7 +38,9 @@ const Index = () => {
     saveProcessedImage,
     activeUploads,
     queueLength,
-    retryProcessing
+    retryProcessing,
+    pauseProcessing,  // استخدام وظيفة الإيقاف المؤقت
+    clearQueue       // استخدام وظيفة مسح القائمة
   } = useImageProcessing();
   
   const {
@@ -109,6 +111,31 @@ const Index = () => {
       });
     }
   };
+
+  // إيقاف المعالجة مؤقتًا
+  const handlePauseProcessing = () => {
+    if (pauseProcessing()) {
+      toast({
+        title: "إيقاف مؤقت",
+        description: "تم إيقاف قائمة المعالجة مؤقتًا",
+      });
+    } else {
+      toast({
+        title: "تنبيه",
+        description: "لا توجد عمليات معالجة نشطة حاليًا",
+        variant: "default"
+      });
+    }
+  };
+  
+  // وظيفة مسح القائمة
+  const handleClearQueue = () => {
+    clearQueue();
+    toast({
+      title: "تم المسح",
+      description: "تم مسح قائمة انتظار المعالجة",
+    });
+  };
   
   return (
     <div className="min-h-screen bg-background">
@@ -155,15 +182,26 @@ const Index = () => {
                         </Badge>
                       </div>
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={handleRetryProcessing} 
-                      className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
-                    >
-                      <RefreshCw className="h-3 w-3 ml-1" />
-                      إعادة تشغيل المعالجة
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={handlePauseProcessing} 
+                        className="text-yellow-600 border-yellow-300 bg-yellow-50 hover:bg-yellow-100"
+                      >
+                        <Pause className="h-3 w-3 ml-1" />
+                        إيقاف مؤقت
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={handleRetryProcessing} 
+                        className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
+                      >
+                        <RefreshCw className="h-3 w-3 ml-1" />
+                        إعادة تشغيل
+                      </Button>
+                    </div>
                   </AlertDescription>
                 </Alert>
               )}
