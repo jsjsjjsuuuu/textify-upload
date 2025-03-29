@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
-import { extractDataWithGemini, fileToBase64, testGeminiConnection } from "@/lib/gemini";
+import { extractDataWithGemini, testGeminiModels, fileToBase64 } from "@/lib/gemini";
 import { useToast } from "@/hooks/use-toast";
 import { updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { isPreviewEnvironment } from "@/utils/automationServerUrl";
@@ -12,7 +11,15 @@ const API_RETRY_DELAY_MS = 3000;  // تأخير بين المحاولات (3 ث�
 const API_RATE_LIMIT = 5;         // أقصى عدد طلبات في الفترة الزمنية
 const API_RATE_PERIOD_MS = 60000; // فترة قياس معدل الطلبات (دقيقة واحدة)
 
+const AVAILABLE_MODELS = [
+  'gemini-1.5-flash', 
+  'gemini-2.0-flash', 
+  'gemini-1.5-pro', 
+  'gemini-2.0-pro'
+];
+
 export const useGeminiProcessing = () => {
+  const [currentModel, setCurrentModel] = useState<string>('gemini-1.5-flash');
   const [connectionTested, setConnectionTested] = useState(false);
   const [apiCallCount, setApiCallCount] = useState(0);
   const [apiCallTimestamps, setApiCallTimestamps] = useState<number[]>([]);
@@ -104,6 +111,30 @@ export const useGeminiProcessing = () => {
   // وظيفة مساعدة للتأخير
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+  // اختيار أفضل نموذج عند بدء التطبيق
+  const selectBestModel = async () => {
+    const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
+    
+    try {
+      // اختبار النماذج المتاحة
+      const modelTestResult = await testGeminiModels(geminiApiKey, await fileToBase64(new File([], 'test.jpg')), AVAILABLE_MODELS);
+      
+      if (modelTestResult.bestModel) {
+        setCurrentModel(modelTestResult.bestModel);
+        console.log(`تم اختيار النموذج الأفضل: ${modelTestResult.bestModel}`);
+      }
+    } catch (error) {
+      console.error("خطأ في اختيار النموذج:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!connectionTested) {
+      selectBestModel();
+      setConnectionTested(true);
+    }
+  }, [connectionTested]);
+
   const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
     const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
     console.log("استخدام مفتاح Gemini API بطول:", geminiApiKey.length);
@@ -172,10 +203,11 @@ export const useGeminiProcessing = () => {
           const extractionResult = await extractDataWithGemini({
             apiKey: geminiApiKey,
             imageBase64,
+            modelVersion: currentModel,  // استخدام النموذج الأفضل
             enhancedExtraction: true,
             maxRetries: 2,  // تقليل عدد المحاولات لتسريع الاستجابة
             retryDelayMs: 3000,  // زيادة مدة الانتظار بين المحاولات
-            modelVersion: 'gemini-1.5-pro'  // استخدام النموذج الأكثر دقة
+            // modelVersion: 'gemini-1.5-pro'  // استخدام النموذج الأكثر دقة
           });
           
           console.log("نتيجة استخراج Gemini:", extractionResult);
@@ -290,6 +322,33 @@ export const useGeminiProcessing = () => {
     } catch (geminiError: any) {
       console.error("خطأ في معالجة Gemini:", geminiError);
       
+      // التعامل مع الأخطاء والتبديل التلقائي للنموذج
+      const alternativeModels = AVAILABLE_MODELS.filter(model => model !== currentModel);
+      for (const model of alternativeModels) {
+        try {
+          const fallbackResult = await extractDataWithGemini({
+            apiKey: geminiApiKey,
+            imageBase64: await fileToBase64(file),
+            modelVersion: model,
+            enhancedExtraction: true,
+            maxRetries: 1
+          });
+
+          if (fallbackResult.success) {
+            setCurrentModel(model);
+            return updateImageWithExtractedData(
+              image, 
+              fallbackResult.data.extractedText, 
+              fallbackResult.data.parsedData, 
+              fallbackResult.data.confidence, 
+              "gemini"
+            );
+          }
+        } catch (fallbackError) {
+          console.error(`فشل النموذج البديل ${model}:`, fallbackError);
+        }
+      }
+      
       // تحسين رسالة الخطأ
       let errorMessage = geminiError.message || 'خطأ غير معروف';
       
@@ -314,6 +373,7 @@ export const useGeminiProcessing = () => {
   return { 
     useGemini: true, 
     processWithGemini,
-    apiCallCount
+    apiCallCount,
+    currentModel  // إضافة النموذج الحالي للوصول إليه
   };
 };
