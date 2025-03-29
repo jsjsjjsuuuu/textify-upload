@@ -19,7 +19,7 @@ export const convertImagesToBookmarkletItems = (images: ImageData[]): Bookmarkle
       // تحسين عملية التصفية للتأكد من صلاحية البيانات
       const hasRequiredFields = img.code && img.senderName && img.phoneNumber;
       // تعديل المقارنة لجعلها متوافقة مع الأنواع
-      const isValidStatus = img.status === "completed" || img.status === "processing" || img.status === "pending";
+      const isValidStatus = img.status === "completed" || img.status === "pending" || img.status === "processing";
       return hasRequiredFields && isValidStatus;
     })
     .map(img => ({

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Eraser } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -13,6 +14,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import GeminiApiKeyManager from '@/components/ApiKeyManager/GeminiApiKeyManager';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -51,6 +54,8 @@ const Index = () => {
 
   // إضافة حالة لتتبع عملية التنظيف
   const [isCleaning, setIsCleaning] = useState(false);
+  // إضافة حالة للتحكم في مربع حوار إدارة مفاتيح Gemini API
+  const [apiKeysDialogOpen, setApiKeysDialogOpen] = useState(false);
 
   // وظيفة تنفيذ التنظيف يدوياً
   const handleManualCleanup = async () => {
@@ -185,6 +190,24 @@ const Index = () => {
                     <ArrowRight className="mr-2 h-4 w-4" />
                   </Link>
                 </Button>
+                
+                {/* إضافة زر لإدارة مفاتيح Gemini API */}
+                <Dialog open={apiKeysDialogOpen} onOpenChange={setApiKeysDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="apple-button bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100" size="lg">
+                      إدارة مفاتيح Gemini API
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                      <DialogTitle>إدارة مفاتيح Gemini API</DialogTitle>
+                      <DialogDescription>
+                        أضف أو عدل مفاتيح Gemini API لتوزيع الطلبات وتحسين أداء النظام
+                      </DialogDescription>
+                    </DialogHeader>
+                    <GeminiApiKeyManager />
+                  </DialogContent>
+                </Dialog>
               </div>
               
               {/* أدوات التنظيف وإزالة التكرارات */}

@@ -28,6 +28,7 @@ export interface ImageData {
   bookmarkletMessage?: string; // رسالة خاصة بالبوكماركلت
   notes1?: string; // إضافة حقل ملاحظات 1
   recipientName?: string; // إضافة حقل اسم المستلم
+  usedApiKey?: string; // إضافة حقل للإشارة إلى المفتاح المستخدم في المعالجة
 }
 
 // إعادة تصدير الواجهات من ملف types.ts لضمان التوافق - مع إصلاح الخطأ
