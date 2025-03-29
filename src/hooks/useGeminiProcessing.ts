@@ -12,10 +12,29 @@ const API_RETRY_DELAY_MS = 3000;  // تأخير بين المحاولات (3 ث�
 const API_RATE_LIMIT = 5;         // أقصى عدد طلبات في الفترة الزمنية
 const API_RATE_PERIOD_MS = 60000; // فترة قياس معدل الطلبات (دقيقة واحدة)
 
+// واجهة معلومات مفتاح API
+interface ApiKeyInfo {
+  keyId: number;
+  keyPreview: string;
+  isValid: boolean;
+  callCount: number;
+  recentCalls: number;
+  model: string;
+  failCount: number;
+}
+
 export const useGeminiProcessing = () => {
   const [connectionTested, setConnectionTested] = useState(false);
   const [apiCallCount, setApiCallCount] = useState(0);
   const [apiCallTimestamps, setApiCallTimestamps] = useState<number[]>([]);
+  // تخزين مفاتيح Gemini API المتعددة
+  const [apiKeys, setApiKeys] = useState<string[]>([]);
+  // إحصائيات استخدام المفاتيح
+  const [keyUsageCounts, setKeyUsageCounts] = useState<Record<number, number>>({});
+  const [keyRecentUsage, setKeyRecentUsage] = useState<Record<number, number>>({});
+  const [keyFailCounts, setKeyFailCounts] = useState<Record<number, number>>({});
+  const [keyModels, setKeyModels] = useState<Record<number, string>>({});
+  
   const { toast } = useToast();
 
   // إعادة تعيين عداد الطلبات بشكل دوري
@@ -38,7 +57,45 @@ export const useGeminiProcessing = () => {
     return () => clearInterval(intervalId);
   }, []);
 
+  // تحميل مفاتيح API عند بدء التشغيل
   useEffect(() => {
+    // تحميل المفاتيح المخزنة
+    const loadSavedKeys = () => {
+      try {
+        const storedKeys = localStorage.getItem('geminiApiKeys');
+        if (storedKeys) {
+          const parsedKeys = JSON.parse(storedKeys);
+          if (Array.isArray(parsedKeys)) {
+            setApiKeys(parsedKeys);
+            
+            // تحميل إحصائيات المفاتيح إذا كانت موجودة
+            try {
+              const storedStats = localStorage.getItem('geminiApiKeyStats');
+              if (storedStats) {
+                const stats = JSON.parse(storedStats);
+                setKeyUsageCounts(stats.usage || {});
+                setKeyRecentUsage(stats.recent || {});
+                setKeyFailCounts(stats.fails || {});
+                setKeyModels(stats.models || {});
+              }
+            } catch (e) {
+              console.warn('فشل في تحميل إحصائيات المفاتيح:', e);
+            }
+          }
+        } else {
+          // الرجوع للمفتاح الفردي إذا لم توجد مفاتيح متعددة
+          const singleKey = localStorage.getItem('geminiApiKey');
+          if (singleKey) {
+            setApiKeys([singleKey]);
+          }
+        }
+      } catch (error) {
+        console.error('خطأ في تحميل مفاتيح API:', error);
+      }
+    };
+    
+    loadSavedKeys();
+    
     const geminiApiKey = localStorage.getItem("geminiApiKey");
     
     // إعداد مفتاح API افتراضي إذا لم يكن موجودًا
@@ -55,7 +112,33 @@ export const useGeminiProcessing = () => {
         testGeminiApiConnection(geminiApiKey);
       }
     }
+    
+    // إعادة ضبط عدادات الاستخدام الحديث كل دقيقة
+    const resetRecentUsageInterval = setInterval(() => {
+      setKeyRecentUsage({});
+    }, 60000);
+    
+    return () => {
+      clearInterval(resetRecentUsageInterval);
+    };
   }, [connectionTested]);
+
+  // حفظ الإحصائيات عند تغييرها
+  useEffect(() => {
+    if (Object.keys(keyUsageCounts).length > 0 || Object.keys(keyModels).length > 0) {
+      try {
+        const stats = {
+          usage: keyUsageCounts,
+          recent: keyRecentUsage,
+          fails: keyFailCounts,
+          models: keyModels
+        };
+        localStorage.setItem('geminiApiKeyStats', JSON.stringify(stats));
+      } catch (e) {
+        console.warn('فشل في حفظ إحصائيات المفاتيح:', e);
+      }
+    }
+  }, [keyUsageCounts, keyRecentUsage, keyFailCounts, keyModels]);
 
   // اختبار اتصال Gemini API
   const testGeminiApiConnection = async (apiKey: string) => {
@@ -103,6 +186,76 @@ export const useGeminiProcessing = () => {
 
   // وظيفة مساعدة للتأخير
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // تعيين مفاتيح Gemini API
+  const setGeminiApiKeys = (keys: string[]) => {
+    // تنقية المفاتيح من القيم الفارغة
+    const cleanKeys = keys.filter(key => key.trim() !== '');
+    if (cleanKeys.length === 0) {
+      console.warn('لا يمكن تعيين قائمة مفاتيح فارغة!');
+      return;
+    }
+    
+    setApiKeys(cleanKeys);
+    localStorage.setItem('geminiApiKeys', JSON.stringify(cleanKeys));
+    
+    // تهيئة إحصائيات للمفاتيح الجديدة
+    const newUsage: Record<number, number> = {};
+    const newRecent: Record<number, number> = {};
+    const newFails: Record<number, number> = {};
+    const newModels: Record<number, string> = {};
+    
+    cleanKeys.forEach((_, index) => {
+      newUsage[index] = keyUsageCounts[index] || 0;
+      newRecent[index] = keyRecentUsage[index] || 0;
+      newFails[index] = keyFailCounts[index] || 0;
+      newModels[index] = keyModels[index] || "gemini-1.5-pro";
+    });
+    
+    setKeyUsageCounts(newUsage);
+    setKeyRecentUsage(newRecent);
+    setKeyFailCounts(newFails);
+    setKeyModels(newModels);
+  };
+  
+  // تعيين نموذج لمفتاح API محدد
+  const setApiKeyModel = (keyIndex: number, model: string) => {
+    setKeyModels(prev => ({
+      ...prev,
+      [keyIndex]: model
+    }));
+  };
+  
+  // الحصول على معلومات المفاتيح للعرض
+  const getApiKeysInfo = (): ApiKeyInfo[] => {
+    return apiKeys.map((key, index) => {
+      const isValid = (keyFailCounts[index] || 0) < 3;
+      
+      return {
+        keyId: index,
+        keyPreview: key.substring(0, 5) + '...' + key.substring(key.length - 3),
+        isValid,
+        callCount: keyUsageCounts[index] || 0,
+        recentCalls: keyRecentUsage[index] || 0,
+        model: keyModels[index] || "gemini-1.5-pro",
+        failCount: keyFailCounts[index] || 0
+      };
+    });
+  };
+  
+  // إعادة تعيين إحصائيات المفاتيح
+  const resetKeyStats = () => {
+    setKeyUsageCounts({});
+    setKeyRecentUsage({});
+    setKeyFailCounts({});
+    
+    // حذف الإحصائيات المخزنة
+    try {
+      localStorage.removeItem('geminiApiKeyStats');
+    } catch (e) {
+      console.warn('فشل في حذف إحصائيات المفاتيح المخزنة:', e);
+    }
+  };
 
   const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
     const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
@@ -314,6 +467,11 @@ export const useGeminiProcessing = () => {
   return { 
     useGemini: true, 
     processWithGemini,
-    apiCallCount
+    apiCallCount,
+    setGeminiApiKeys,
+    getApiKeysInfo,
+    setApiKeyModel,
+    resetKeyStats,
+    testGeminiConnection
   };
 };

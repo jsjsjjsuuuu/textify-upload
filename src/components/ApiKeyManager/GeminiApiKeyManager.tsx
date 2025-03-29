@@ -119,7 +119,7 @@ const GeminiApiKeyManager: React.FC = () => {
         toast({
           title: "اتصال ناجح",
           description: `مفتاح API صالح ومتصل بنجاح (${model})`,
-          variant: "success"
+          variant: "default"
         });
       } else {
         toast({
