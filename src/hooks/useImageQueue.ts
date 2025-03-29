@@ -60,8 +60,8 @@ export const useImageQueue = () => {
       
       console.log(`تمت معالجة الصورة بنجاح: ${item.id}, المتبقي في القائمة: ${queue.current.length}`);
       
-      // التأخير بين كل صورة والأخرى لتجنب التحميل الزائد
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // التأخير بين كل صورة والأخرى لتجنب التحميل الزائد وإعطاء فرصة لعرض البيانات
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // معالجة الصورة التالية
       processQueue();
@@ -82,7 +82,7 @@ export const useImageQueue = () => {
         // الانتقال إلى الصورة التالية بعد فترة قصيرة
         setTimeout(() => {
           processQueue();
-        }, 1000);
+        }, 1500);
       } else {
         // إذا لم يكن هناك المزيد من الصور، قم بإيقاف المعالجة
         setIsProcessing(false);

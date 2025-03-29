@@ -79,6 +79,31 @@ const ImageViewer = ({
     );
   };
 
+  // إضافة مؤشر لحالة الصورة
+  const getImageStatusBadge = () => {
+    if (!selectedImage.status) return null;
+    
+    const statusClasses = {
+      pending: "bg-yellow-500/20 text-yellow-700 border-yellow-300",
+      processing: "bg-blue-500/20 text-blue-700 border-blue-300",
+      completed: "bg-green-500/20 text-green-700 border-green-300",
+      error: "bg-red-500/20 text-red-700 border-red-300"
+    };
+    
+    const statusText = {
+      pending: "في انتظار المعالجة",
+      processing: "جاري المعالجة",
+      completed: "تمت المعالجة",
+      error: "فشل في المعالجة"
+    };
+    
+    return (
+      <div className={`absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-medium border ${statusClasses[selectedImage.status]} shadow-sm`}>
+        {statusText[selectedImage.status]}
+      </div>
+    );
+  };
+
   return (
     <div className="col-span-1 bg-transparent rounded-lg p-4 flex flex-col items-center justify-center relative">
       {!imgError ? (
@@ -101,6 +126,7 @@ const ImageViewer = ({
         onResetZoom={onResetZoom}
       />
       
+      {getImageStatusBadge()}
       {getBookmarkletStatusBadge()}
       
       <ImageInfoBadges 
