@@ -25,18 +25,35 @@ export const useGeminiProcessing = () => {
   // تحميل المفاتيح عند التهيئة
   useEffect(() => {
     try {
+      // إضافة المفتاح الجديد بشكل افتراضي إذا لم تكن هناك مفاتيح محفوظة
+      const newApiKey = 'AIzaSyBx3qfrd7NDlQ3VLg06fEO3JRNTuO23myE';
+      
       // محاولة تحميل مفاتيح متعددة
       const storedKeys = localStorage.getItem('geminiApiKeys');
       if (storedKeys) {
         const parsedKeys = JSON.parse(storedKeys);
         if (Array.isArray(parsedKeys)) {
-          setApiKeys(parsedKeys);
+          // التحقق مما إذا كان المفتاح الجديد موجودًا بالفعل
+          if (!parsedKeys.includes(newApiKey)) {
+            // إضافة المفتاح الجديد إلى المفاتيح المخزنة
+            const updatedKeys = [...parsedKeys, newApiKey];
+            localStorage.setItem('geminiApiKeys', JSON.stringify(updatedKeys));
+            setApiKeys(updatedKeys);
+          } else {
+            setApiKeys(parsedKeys);
+          }
         }
       } else {
         // إذا لم تكن هناك مفاتيح متعددة، استخدام المفتاح الفردي
         const singleKey = localStorage.getItem('geminiApiKey');
         if (singleKey) {
-          setApiKeys([singleKey]);
+          // إذا كان المفتاح القديم موجودًا، أضف كلاً من القديم والجديد
+          setApiKeys([singleKey, newApiKey]);
+          localStorage.setItem('geminiApiKeys', JSON.stringify([singleKey, newApiKey]));
+        } else {
+          // إذا لم يكن هناك مفتاح، استخدم المفتاح الجديد فقط
+          setApiKeys([newApiKey]);
+          localStorage.setItem('geminiApiKeys', JSON.stringify([newApiKey]));
         }
       }
       
