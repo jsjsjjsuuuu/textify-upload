@@ -9,15 +9,11 @@ export const useImageStats = () => {
   const [bookmarkletStats, setBookmarkletStats] = useState({ total: 0, ready: 0, success: 0, error: 0 });
   
   // استخدام مرجع للاحتفاظ بقائمة معرفات الصور المعالجة بالفعل
-  const processedImagesRef = useRef<Set<string>>(() => {
-    try {
-      const saved = localStorage.getItem(PROCESSED_IMAGES_KEY);
-      return saved ? new Set(JSON.parse(saved)) : new Set<string>();
-    } catch (e) {
-      console.error("خطأ في استرجاع قائمة الصور المعالجة:", e);
-      return new Set<string>();
-    }
-  });
+  const processedImagesRef = useRef<Set<string>>(
+    typeof localStorage !== 'undefined' && localStorage.getItem(PROCESSED_IMAGES_KEY)
+      ? new Set(JSON.parse(localStorage.getItem(PROCESSED_IMAGES_KEY) || '[]'))
+      : new Set<string>()
+  );
 
   // حفظ قائمة الصور المعالجة في التخزين المحلي
   const saveProcessedImages = () => {

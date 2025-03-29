@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { ImageData } from "@/types/ImageData";
 import { extractTextFromImage } from "@/lib/ocrService";
@@ -12,15 +11,11 @@ export const useOcrProcessing = () => {
   const { toast } = useToast();
   
   // استخدام مرجع للاحتفاظ بقائمة معرفات الصور التي تمت معالجتها بالفعل
-  const processedImagesRef = useRef<Set<string>>(() => {
-    try {
-      const saved = localStorage.getItem(PROCESSED_IMAGES_KEY);
-      return saved ? new Set(JSON.parse(saved)) : new Set<string>();
-    } catch (e) {
-      console.error("خطأ في استرجاع قائمة الصور المعالجة:", e);
-      return new Set<string>();
-    }
-  });
+  const processedImagesRef = useRef<Set<string>>(
+    typeof localStorage !== 'undefined' && localStorage.getItem(PROCESSED_IMAGES_KEY)
+      ? new Set(JSON.parse(localStorage.getItem(PROCESSED_IMAGES_KEY) || '[]'))
+      : new Set<string>()
+  );
 
   // حفظ قائمة الصور المعالجة في التخزين المحلي
   const saveProcessedImages = () => {

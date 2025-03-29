@@ -57,6 +57,7 @@ export const useImageProcessing = () => {
     clearImageCache: coreProcessing.clearImageCache,
     retryProcessing,
     activeUploads: coreProcessing.activeUploads || 0,
-    queueLength: coreProcessing.queueLength || 0
+    queueLength: coreProcessing.queueLength || 0,
+    useGemini: coreProcessing.useGemini || false // إضافة خاصية useGemini
   };
 };

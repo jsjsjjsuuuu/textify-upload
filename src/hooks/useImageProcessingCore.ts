@@ -188,7 +188,7 @@ export const useImageProcessingCore = () => {
         description: "تم إعادة تشغيل عملية معالجة الصور بنجاح",
       });
     }
-  }, []);
+  }, [toast]);
 
   // وظيفة مسح ذاكرة التخزين المؤقت للصور المعالجة
   const clearImageCache = useCallback(() => {
@@ -200,7 +200,7 @@ export const useImageProcessingCore = () => {
       title: "تم المسح",
       description: "تم مسح ذاكرة التخزين المؤقت للصور المعالجة",
     });
-  }, [clearProcessedImagesCache]);
+  }, [clearProcessedImagesCache, toast]);
   
   const fileUploadData = useFileUpload({
     images,
@@ -208,15 +208,16 @@ export const useImageProcessingCore = () => {
     updateImage,
     setProcessingProgress,
     saveProcessedImage,
-    removeDuplicates,
-    isDuplicateImage
+    isDuplicateImage,
+    removeDuplicates
   });
 
   const { 
     isProcessing, 
     handleFileChange,
     activeUploads,
-    queueLength
+    queueLength,
+    useGemini
   } = fileUploadData;
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
@@ -244,6 +245,7 @@ export const useImageProcessingCore = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     saveProcessedImage,
+    useGemini,
     loadUserImages: () => {
       if (user) {
         loadUserImages(user.id, setAllImages);

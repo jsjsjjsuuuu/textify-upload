@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -25,7 +24,6 @@ const Index = () => {
     isProcessing,
     processingProgress,
     isSubmitting,
-    useGemini,
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
@@ -153,7 +151,6 @@ const Index = () => {
                   <ImageUploader 
                     isProcessing={isProcessing} 
                     processingProgress={processingProgress} 
-                    useGemini={useGemini} 
                     onFileChange={handleFileChange} 
                   />
                 </div>

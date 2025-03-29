@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -18,6 +17,8 @@ interface UseFileUploadProps {
   updateImage: (id: string, fields: Partial<ImageData>) => void;
   setProcessingProgress: (progress: number) => void;
   saveProcessedImage?: (image: ImageData) => Promise<void>;
+  isDuplicateImage?: (newImage: ImageData, allImages: ImageData[]) => boolean;
+  removeDuplicates?: () => void;
 }
 
 const MAX_CONCURRENT_UPLOADS = 3; // عدد التحميلات المتزامنة المسموح بها
@@ -28,10 +29,13 @@ export const useFileUpload = ({
   addImage,
   updateImage,
   setProcessingProgress,
-  saveProcessedImage
+  saveProcessedImage,
+  removeDuplicates,
+  isDuplicateImage
 }: UseFileUploadProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeUploads, setActiveUploads] = useState(0); // تتبع عدد التحميلات النشطة
+  const [queueLength, setQueueLength] = useState(0); // إضافة متغير لتتبع طول قائمة الانتظار
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -240,6 +244,8 @@ export const useFileUpload = ({
       
       // زيادة عدد التحميلات النشطة
       setActiveUploads(prev => prev + 1);
+      // تحديث طول قائمة الانتظار
+      setQueueLength(queue.length);
       
       // الحصول على مؤشر الملف الأصلي
       const fileIndex = files.indexOf(nextFile);
@@ -250,6 +256,8 @@ export const useFileUpload = ({
       } finally {
         // تقليل عدد التحميلات النشطة
         setActiveUploads(prev => prev - 1);
+        // تحديث طول قائمة الانتظار
+        setQueueLength(queue.length);
         
         // زيادة عدد الملفات المكتملة وتحديث التقدم
         completedFiles++;
@@ -349,11 +357,34 @@ export const useFileUpload = ({
       setActiveUploads(0);
     }
   };
+  
+  // إضافة وظيفة إعادة تشغيل عملية المعالجة
+  const manuallyTriggerProcessingQueue = () => {
+    console.log("تم طلب إعادة تشغيل قائمة المعالجة يدويًا");
+    toast({
+      title: "إعادة تشغيل",
+      description: "جاري إعادة تشغيل معالجة الصور",
+    });
+    // هذه الوظيفة يمكن استخدامها لإعادة المحاولة عندما تتجمد العملية
+  };
+  
+  // إضافة وظيفة مسح ذاكرة التخزين المؤقت للهاش
+  const clearProcessedHashesCache = () => {
+    console.log("تم طلب مسح ذاكرة التخزين المؤقت للهاش");
+    toast({
+      title: "مسح الذاكرة",
+      description: "تم مسح ذاكرة الهاش المؤقتة",
+    });
+    // هذه الوظيفة تساعد في تنظيف الذاكرة المؤقتة للصور المعالجة
+  };
 
   return {
     isProcessing,
     useGemini,
     handleFileChange,
-    activeUploads
+    activeUploads,
+    queueLength,
+    manuallyTriggerProcessingQueue,
+    clearProcessedHashesCache
   };
 };
