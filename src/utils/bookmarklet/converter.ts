@@ -1,3 +1,4 @@
+
 /**
  * وحدة تحويل البيانات للتصدير
  */
@@ -17,8 +18,8 @@ export const convertImagesToBookmarkletItems = (images: ImageData[]): Bookmarkle
     .filter(img => {
       // تحسين عملية التصفية للتأكد من صلاحية البيانات
       const hasRequiredFields = img.code && img.senderName && img.phoneNumber;
-      // تعديل المقارنة لجعلها متوافقة مع الأنواع - إصلاح الخطأ TS2367
-      const isValidStatus = img.status === "completed" || img.status === "pending" || img.status === "processing";
+      // تعديل المقارنة لجعلها متوافقة مع الأنواع
+      const isValidStatus = img.status === "completed" || img.status === "processing" || img.status === "pending";
       return hasRequiredFields && isValidStatus;
     })
     .map(img => ({

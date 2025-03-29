@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Moon, Sun, UserCog, Key } from 'lucide-react';
+import { Moon, Sun, UserCog } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 const AppHeader = () => {
@@ -63,28 +63,17 @@ const AppHeader = () => {
               السجلات
             </Link>
             
-            {/* إظهار روابط صفحات الإدارة للمسؤولين فقط بشكل صريح */}
+            {/* إظهار رابط صفحة إدارة المستخدمين للمسؤولين فقط بشكل صريح */}
             {isAdmin && (
-              <>
-                <Link
-                  to="/admin/approvals"
-                  className={`transition-colors hover:text-foreground/80 flex items-center ${
-                    pathname === "/admin/approvals" ? "text-foreground font-bold" : "text-foreground/60"
-                  }`}
-                >
-                  <UserCog className="h-4 w-4 ml-1" />
-                  إدارة المستخدمين
-                </Link>
-                <Link
-                  to="/admin/gemini-keys"
-                  className={`transition-colors hover:text-foreground/80 flex items-center ${
-                    pathname === "/admin/gemini-keys" ? "text-foreground font-bold" : "text-foreground/60"
-                  }`}
-                >
-                  <Key className="h-4 w-4 ml-1" />
-                  مفاتيح Gemini
-                </Link>
-              </>
+              <Link
+                to="/admin/approvals"
+                className={`transition-colors hover:text-foreground/80 flex items-center ${
+                  pathname === "/admin/approvals" ? "text-foreground font-bold" : "text-foreground/60"
+                }`}
+              >
+                <UserCog className="h-4 w-4 ml-1" />
+                إدارة المستخدمين
+              </Link>
             )}
           </nav>
         </div>
@@ -117,16 +106,10 @@ const AppHeader = () => {
                   الملف الشخصي
                 </DropdownMenuItem>
                 {isAdmin && (
-                  <>
-                    <DropdownMenuItem onClick={() => navigate('/admin/approvals')}>
-                      <UserCog className="h-4 w-4 ml-1" />
-                      إدارة المستخدمين
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/admin/gemini-keys')}>
-                      <Key className="h-4 w-4 ml-1" />
-                      مفاتيح Gemini API
-                    </DropdownMenuItem>
-                  </>
+                  <DropdownMenuItem onClick={() => navigate('/admin/approvals')}>
+                    <UserCog className="h-4 w-4 ml-1" />
+                    إدارة المستخدمين
+                  </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
