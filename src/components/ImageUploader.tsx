@@ -2,26 +2,26 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileImage, LoaderCircle, ImageIcon, AlertTriangle, Info } from "lucide-react";
+import { Upload, FileImage, LoaderCircle, ImageIcon, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ImageUploaderProps {
   isProcessing: boolean;
   processingProgress: number;
+  useGemini: boolean;
   activeUploads?: number;
-  queueLength?: number;
   onFileChange: (files: FileList | null) => void;
 }
 
 const ImageUploader = ({
   isProcessing,
   processingProgress,
+  useGemini,
   activeUploads = 0,
-  queueLength = 0,
   onFileChange
 }: ImageUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
-  const [dragCounter, setDragCounter] = useState(0);
+  const [dragCounter, setDragCounter] = useState(0); // تعقب عدد أحداث السحب للتعامل مع السحب المتداخل
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -62,12 +62,6 @@ const ImageUploader = ({
       fileInputRef.current.click();
     }
   };
-  
-  // حساب الإجمالي الكلي للصور قيد المعالجة
-  const totalProcessingItems = activeUploads + queueLength;
-  
-  // إضافة تأخير للتجسيد المرئي للتقدم - هذا يضمن أن المستخدم يرى أن هناك تقدمًا دائمًا
-  const visualProgress = processingProgress === 0 && isProcessing ? 5 : processingProgress;
   
   return (
     <div className="w-full max-w-md mx-auto">
@@ -115,34 +109,22 @@ const ImageUploader = ({
               </h3>
               
               <div className="w-full max-w-md">
-                <Progress value={visualProgress} className="h-2" />
+                <Progress value={processingProgress} className="h-2" />
                 <div className="mt-2 flex justify-between text-sm text-gray-500 dark:text-gray-400">
-                  <p>{visualProgress}% مكتمل</p>
-                  {totalProcessingItems > 0 && (
-                    <p className="text-blue-500 dark:text-blue-400">
+                  <p>{processingProgress}% مكتمل</p>
+                  {activeUploads > 0 && (
+                    <p className="text-blue-500 dark:text-blue-400 animate-pulse">
                       <LoaderCircle className="w-3.5 h-3.5 inline ml-1 animate-spin" />
-                      <span className="font-medium">{activeUploads}</span> قيد المعالجة
-                      {queueLength > 0 && (
-                        <span className="mx-1">| <span className="font-medium">{queueLength}</span> في الانتظار</span>
-                      )}
+                      {activeUploads} قيد المعالجة
                     </p>
                   )}
                 </div>
               </div>
               
-              {/* تحسين معلومات حول عملية المعالجة */}
+              {/* معلومات حول عملية المعالجة */}
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-                {visualProgress === 0 ? 
-                  "جاري تحضير الصور للمعالجة..." : 
-                  "يتم استخدام Gemini AI لاستخراج النص من الصور"}
+                يتم استخدام {useGemini ? "Gemini AI" : "OCR"} لاستخراج النص من الصور
               </p>
-              
-              {/* إضافة معلومات عن الصبر في حالة التعليق */}
-              {(visualProgress < 10 && isProcessing) && (
-                <p className="text-xs text-amber-500 mt-1 animate-pulse">
-                  قد تستغرق عملية المعالجة بعض الوقت، يرجى الانتظار...
-                </p>
-              )}
             </>
           ) : (
             <>
@@ -196,12 +178,6 @@ const ImageUploader = ({
         <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center justify-center">
           <AlertTriangle className="w-3.5 h-3.5 ml-1" />
           تأكد من أن الصور واضحة ومقروءة للحصول على أفضل النتائج
-        </p>
-        
-        {/* إضافة معلومات حول التكرار */}
-        <p className="text-xs text-blue-500 dark:text-blue-400 mt-2 flex items-center justify-center">
-          <Info className="w-3.5 h-3.5 ml-1" />
-          سيتم تخطي الصور المكررة تلقائياً لتجنب المعالجة المتكررة
         </p>
       </div>
     </div>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -144,20 +145,16 @@ export const useImageProcessingCore = () => {
     }
   };
   
-  // استدعاء useFileUpload مع تحسين آلية التعامل مع الصور وتمرير وظيفة removeDuplicates
   const { 
     isProcessing, 
-    handleFileChange,
-    activeUploads,
-    queueLength,
-    manuallyTriggerProcessingQueue
+    useGemini, 
+    handleFileChange 
   } = useFileUpload({
     images,
     addImage,
     updateImage,
     setProcessingProgress,
-    saveProcessedImage,
-    removeDuplicates  // تمرير وظيفة إزالة التكرارات
+    saveProcessedImage
   });
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
@@ -171,22 +168,6 @@ export const useImageProcessingCore = () => {
     }
   }, [user]);
 
-  // إعادة تشغيل معالجة قائمة انتظار الصور إذا توقفت
-  useEffect(() => {
-    // إذا كان هناك صور في حالة معالجة لأكثر من دقيقة، حاول إعادة تشغيل المعالجة
-    const checkStuckImages = () => {
-      if (isProcessing && processingProgress === 0 && queueLength > 0) {
-        console.log("تم اكتشاف معالجة متوقفة، محاولة إعادة تشغيل المعالجة");
-        manuallyTriggerProcessingQueue();
-      }
-    };
-    
-    // التحقق كل 30 ثانية
-    const intervalId = setInterval(checkStuckImages, 30000);
-    
-    return () => clearInterval(intervalId);
-  }, [isProcessing, processingProgress, queueLength, manuallyTriggerProcessingQueue]);
-
   return {
     images,
     sessionImages,
@@ -194,6 +175,7 @@ export const useImageProcessingCore = () => {
     processingProgress,
     isSubmitting,
     isLoadingUserImages,
+    useGemini,
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
@@ -211,10 +193,6 @@ export const useImageProcessingCore = () => {
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,
-    runCleanupNow,
-    activeUploads,
-    queueLength,
-    // إضافة وظيفة إعادة تشغيل المعالجة يدويًا
-    retryProcessing: manuallyTriggerProcessingQueue
+    runCleanupNow // إضافة الوظيفة الجديدة للتنظيف اليدوي
   };
 };
