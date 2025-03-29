@@ -1,6 +1,6 @@
 
 import { User } from "@supabase/supabase-js";
-import { BookmarkletItem, BookmarkletExportData } from "@/utils/bookmarklet/types";
+import type { BookmarkletItem, BookmarkletExportData } from "@/utils/bookmarklet/types";
 
 export interface ImageData {
   id: string;
@@ -30,5 +30,5 @@ export interface ImageData {
   recipientName?: string; // إضافة حقل اسم المستلم
 }
 
-// إعادة تصدير الواجهات من ملف types.ts لضمان التوافق
+// إعادة تصدير الواجهات من ملف types.ts لضمان التوافق - مع إصلاح الخطأ
 export type { BookmarkletItem, BookmarkletExportData };

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2, RefreshCw, Broom } from 'lucide-react';
+import { ArrowRight, Info, Trash2, RefreshCw, Eraser } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -212,7 +212,7 @@ const Index = () => {
                         disabled={isCleaning}
                         className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
                       >
-                        <Broom className="h-3 w-3 mr-1" />
+                        <Eraser className="h-3 w-3 mr-1" />
                         إزالة الصور المكررة
                       </Button>
                     </div>
@@ -279,7 +279,7 @@ const Index = () => {
                       disabled={isCleaning}
                       className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
                     >
-                      <Broom className="h-4 w-4 mr-2" />
+                      <Eraser className="h-4 w-4 mr-2" />
                       إزالة التكرارات
                     </Button>
                   </div>
