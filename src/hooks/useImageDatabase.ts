@@ -61,6 +61,54 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
         return updatedData?.[0];
       }
 
+      // تعديل هنا: تحقق من وجود سجل بنفس اسم الملف للمستخدم الحالي
+      const { data: existingByFileName, error: fileNameCheckError } = await supabase
+        .from('images')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('file_name', image.file.name)
+        .maybeSingle();
+        
+      if (fileNameCheckError) {
+        console.error("خطأ في التحقق من تكرار اسم الملف:", fileNameCheckError);
+      }
+      
+      // إذا كان هناك سجل بنفس اسم الملف، قم بتحديثه بدلاً من إضافة سجل جديد
+      if (existingByFileName) {
+        console.log("تم العثور على ملف بنفس الاسم، جاري التحديث:", existingByFileName.id);
+        
+        const { data: updatedData, error: updateError } = await supabase
+          .from('images')
+          .update({
+            preview_url: image.previewUrl,
+            extracted_text: image.extractedText,
+            company_name: image.companyName || "",
+            sender_name: image.senderName || "",
+            phone_number: image.phoneNumber || "",
+            code: image.code || "",
+            price: image.price || "",
+            province: image.province || "",
+            status: image.status,
+            submitted: true,
+            batch_id: image.batch_id || "default",
+            storage_path: image.storage_path || null
+          })
+          .eq('id', existingByFileName.id)
+          .select();
+
+        if (updateError) {
+          console.error("خطأ في تحديث السجل الموجود:", updateError);
+          throw updateError;
+        }
+
+        console.log("تم تحديث السجل الموجود بنجاح:", updatedData?.[0]);
+        
+        // تحديث معرف الصورة المحلية ليتوافق مع السجل في قاعدة البيانات
+        updateImage(image.id, { id: existingByFileName.id });
+        
+        return updatedData?.[0];
+      }
+
       // إذا لم تكن الصورة موجودة، قم بإدراجها
       const { data, error } = await supabase
         .from('images')
@@ -84,13 +132,55 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
         .select();
 
       if (error) {
-        console.error("خطأ في حفظ البيانات:", error);
-        toast({
-          title: "خطأ",
-          description: `فشل حفظ البيانات: ${error.message}`,
-          variant: "destructive",
-        });
-        return null;
+        // إذا كان الخطأ بسبب تكرار المفتاح، نحاول تحديث السجل الموجود
+        if (error.code === '23505') { // رمز خطأ تكرار المفتاح في PostgreSQL
+          console.warn("خطأ تكرار المفتاح، جاري محاولة التحديث بدلاً من الإدراج");
+          
+          // إنشاء معرف جديد للصورة
+          const newId = crypto.randomUUID();
+          console.log("استخدام معرف جديد:", newId);
+          
+          // محاولة إدراج السجل باستخدام معرف جديد
+          const { data: retryData, error: retryError } = await supabase
+            .from('images')
+            .insert({
+              id: newId,
+              user_id: userId,
+              file_name: `${new Date().getTime()}_${image.file.name}`, // إضافة طابع زمني لضمان فرادة اسم الملف
+              preview_url: image.previewUrl,
+              extracted_text: image.extractedText,
+              company_name: image.companyName || "",
+              sender_name: image.senderName || "",
+              phone_number: image.phoneNumber || "",
+              code: image.code || "",
+              price: image.price || "",
+              province: image.province || "",
+              status: image.status,
+              submitted: true,
+              batch_id: image.batch_id || "default",
+              storage_path: image.storage_path || null
+            })
+            .select();
+            
+          if (retryError) {
+            console.error("فشلت محاولة إعادة الإدراج:", retryError);
+            throw retryError;
+          }
+          
+          // تحديث معرف الصورة في الواجهة
+          updateImage(image.id, { id: newId });
+          
+          console.log("تم إدراج السجل بنجاح باستخدام معرف جديد:", retryData?.[0]);
+          return retryData?.[0];
+        } else {
+          console.error("خطأ في حفظ البيانات:", error);
+          toast({
+            title: "خطأ",
+            description: `فشل حفظ البيانات: ${error.message}`,
+            variant: "destructive",
+          });
+          return null;
+        }
       }
 
       // تحديث حالة الصورة ليشير إلى أنها تم حفظها
