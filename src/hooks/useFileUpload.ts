@@ -21,10 +21,10 @@ interface UseFileUploadProps {
 }
 
 // تحسين معالجة الصور لتتم بشكل متسلسل وبتتبع أفضل
-const MAX_RETRIES = 5;           // زيادة عدد محاولات المعالجة من 3 إلى 5
-const RETRY_DELAY_MS = 5000;     // زيادة التأخير بين المحاولات من 3000 إلى 5000
+const MAX_RETRIES = 3;           // عدد محاولات المعالجة لكل صورة
+const RETRY_DELAY_MS = 3000;     // تأخير بين المحاولات
 const PROGRESS_UPDATE_INTERVAL = 1000; // تحديث تقدم العملية كل ثانية
-const MIN_DELAY_BETWEEN_IMAGES = 3000; // زيادة التأخير بين معالجة كل صورة من 2000 إلى 3000
+const MIN_DELAY_BETWEEN_IMAGES = 2000; // تأخير بين معالجة كل صورة (2 ثواني)
 
 export const useFileUpload = ({
   images,
@@ -148,7 +148,7 @@ export const useFileUpload = ({
       console.log("تمت إضافة صورة جديدة إلى الحالة بالمعرف:", newImage.id);
       
       // تأخير صغير بعد إضافة الصورة للتأكد من تحديث واجهة المستخدم
-      await delay(500); // زيادة من 300 إلى 500
+      await delay(300);
       
       // رفع الصورة إلى Supabase Storage
       const storagePath = await uploadImageToStorage(enhancedFile, user.id);
@@ -186,44 +186,9 @@ export const useFileUpload = ({
       await delay(700);
       
       try {
-        // استخدام Gemini للمعالجة مع معالجة أفضل للأخطاء
+        // استخدام Gemini للمعالجة
         console.log(`استخدام Gemini API للاستخراج للصورة ${file.name}`);
         
-        // تحقق من وجود صورة مكررة تمت معالجتها بنجاح قبل الاستمرار
-        const existingProcessedImage = images.find(img => 
-          img.file.name === enhancedFile.name && 
-          img.status === "completed" && 
-          img.code && 
-          img.senderName && 
-          img.phoneNumber
-        );
-        
-        if (existingProcessedImage) {
-          console.log(`تم العثور على نسخة مكتملة المعالجة من الصورة ${file.name}، استخدام بياناتها...`);
-          
-          // نسخ البيانات من الصورة المعالجة مسبقاً
-          const clonedData = {
-            code: existingProcessedImage.code,
-            senderName: existingProcessedImage.senderName,
-            phoneNumber: existingProcessedImage.phoneNumber,
-            province: existingProcessedImage.province,
-            price: existingProcessedImage.price,
-            companyName: existingProcessedImage.companyName,
-            status: "completed" as const,
-            extractedText: existingProcessedImage.extractedText,
-            previewUrl,
-            storage_path: storagePath,
-            user_id: user.id,
-            added_at: Date.now()
-          };
-          
-          updateImage(imageId, clonedData);
-          console.log("تم تحديث الصورة بالبيانات المنسوخة من الصورة المكتملة:", imageId);
-          
-          return true;
-        }
-        
-        // إذا لم تكن هناك نسخة مكتملة، نستمر في المعالجة العادية
         const processedImage = await processWithGemini(enhancedFile, {
           ...newImage,
           previewUrl,
@@ -269,44 +234,29 @@ export const useFileUpload = ({
       } catch (processingError: any) {
         console.error(`خطأ في معالجة الصورة ${file.name}:`, processingError);
         
-        // تحسين تحليل نوع الخطأ وزيادة فترات الانتظار
+        // التحقق من نوع الخطأ
         const errorMessage = processingError.message || "خطأ غير معروف";
         
-        // تحليل أكثر تفصيلاً لأنواع الأخطاء
+        // التحقق من وجود أخطاء تتعلق بحصة API
         const isQuotaError = errorMessage.includes('quota') || 
-                             errorMessage.includes('rate limit') || 
-                             errorMessage.includes('too many requests');
-                             
-        const isNetworkError = errorMessage.includes('network') || 
-                               errorMessage.includes('connection') || 
-                               errorMessage.includes('timeout') ||
-                               errorMessage.includes('fetch') ||
-                               errorMessage.includes('ECONNREFUSED');
-                               
-        const isServerError = errorMessage.includes('500') || 
-                              errorMessage.includes('502') || 
-                              errorMessage.includes('503') || 
-                              errorMessage.includes('504');
+                            errorMessage.includes('rate limit') || 
+                            errorMessage.includes('too many requests');
         
-        // تصعيد التأخير بشكل أكبر لأنواع الأخطاء المختلفة
-        let nextRetryDelay = RETRY_DELAY_MS;
-        
+        // زيادة التأخير في حالة أخطاء الحصة
         if (isQuotaError) {
-          nextRetryDelay = RETRY_DELAY_MS * 4; // تأخير طويل جدًا لأخطاء الحصة (20 ثانية)
-        } else if (isNetworkError) {
-          nextRetryDelay = RETRY_DELAY_MS * 2; // تأخير طويل لأخطاء الشبكة (10 ثواني)
-        } else if (isServerError) {
-          nextRetryDelay = RETRY_DELAY_MS * 3; // تأخير طويل للأخطاء على جانب الخادم (15 ثانية)
+          await delay(RETRY_DELAY_MS * 2); // تأخير أطول لأخطاء الحصة
         }
         
         // إعادة المحاولة إذا كان عدد المحاولات أقل من الحد الأقصى
         if (retryCount < MAX_RETRIES) {
+          const nextRetryDelay = isQuotaError ? RETRY_DELAY_MS * 3 : RETRY_DELAY_MS;
+          
           console.log(`إعادة محاولة معالجة الصورة ${file.name} بعد ${nextRetryDelay}ms (${retryCount + 1}/${MAX_RETRIES})`);
           
-          // تحديث حالة الصورة إلى "جاري إعادة المحاولة" مع معلومات عن نوع الخطأ
+          // تحديث حالة الصورة إلى "جاري إعادة المحاولة"
           updateImage(imageId, { 
             status: "pending",
-            extractedText: `فشل في المحاولة ${retryCount + 1}: ${getFriendlyErrorMessage(errorMessage).substring(0, 100)}. جاري إعادة المحاولة بعد ${nextRetryDelay / 1000} ثوانٍ...`
+            extractedText: `فشل في المحاولة ${retryCount + 1}. جاري إعادة المحاولة بعد ${nextRetryDelay / 1000} ثوانٍ...`
           });
           
           // إعادة المحاولة بعد تأخير
@@ -323,10 +273,9 @@ export const useFileUpload = ({
           extractedText: `فشل في المعالجة بعد ${MAX_RETRIES + 1} محاولات. ${friendlyErrorMessage}`
         });
         
-        // رسالة أكثر تفصيلاً للمستخدم
         toast({
           title: "فشل في استخراج النص",
-          description: `فشل في معالجة الصورة "${file.name}" بعد ${MAX_RETRIES + 1} محاولات. ${friendlyErrorMessage.substring(0, 100)}`,
+          description: `فشل في معالجة الصورة "${file.name}" بعد ${MAX_RETRIES + 1} محاولات.`,
           variant: "destructive"
         });
         
@@ -335,12 +284,11 @@ export const useFileUpload = ({
     } catch (error: any) {
       console.error(`خطأ عام في عملية معالجة الصورة ${file.name}:`, error);
       
-      // تحسين تحديث حالة الخطأ مع معلومات أكثر تفصيلاً
+      // إذا كانت الصورة قد تمت إضافتها، قم بتحديث حالتها
       if (imageId) {
-        const errorMessage = error.message || "خطأ غير معروف";
         updateImage(imageId, {
           status: "error",
-          extractedText: `خطأ عام: ${getFriendlyErrorMessage(errorMessage)}`
+          extractedText: `خطأ عام: ${error.message || "خطأ غير معروف"}`
         });
       }
       
@@ -348,18 +296,14 @@ export const useFileUpload = ({
     }
   };
 
-  // تحسين رسائل الخطأ لتكون أكثر فائدة وتفصيلاً
+  // تحويل رسائل الخطأ التقنية إلى رسائل ودية للمستخدم
   const getFriendlyErrorMessage = (errorMessage: string): string => {
     if (errorMessage.includes('quota') || errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {
-      return "تم تجاوز الحد المسموح من طلبات API. قد تكون وصلت لحد الاستخدام اليومي. حاول مرة أخرى لاحقاً.";
+      return "تم تجاوز الحد المسموح من طلبات API. حاول مرة أخرى بعد قليل.";
     } else if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
-      return "انتهت مهلة الاتصال. تأكد من استقرار اتصالك بالإنترنت وأن حجم الصورة ليس كبيرًا جدًا.";
-    } else if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('connection')) {
-      return "مشكلة في الاتصال بالخادم. تأكد من اتصالك بالإنترنت واستقراره.";
-    } else if (errorMessage.includes('500') || errorMessage.includes('502') || errorMessage.includes('503')) {
-      return "خطأ في خادم API. يرجى المحاولة مرة أخرى لاحقًا عندما يكون الخادم متاحًا.";
-    } else if (errorMessage.includes('authentication') || errorMessage.includes('unauthorized') || errorMessage.includes('403')) {
-      return "مشكلة في المصادقة مع خادم API. تأكد من تكوين مفتاح API بشكل صحيح.";
+      return "انتهت مهلة الاتصال. تأكد من استقرار اتصالك بالإنترنت.";
+    } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+      return "مشكلة في الاتصال بالخادم. تأكد من اتصالك بالإنترنت.";
     } else if (errorMessage.length > 100) {
       // اختصار الرسائل الطويلة
       return errorMessage.substring(0, 100) + "...";
@@ -502,32 +446,6 @@ export const useFileUpload = ({
     // تأكد من أن هناك صورًا في قائمة الانتظار
     if (processingQueue.length === 0) {
       console.log("لا توجد صور في قائمة الانتظار للمعالجة");
-      
-      // يمكننا أيضًا إعادة تشغيل معالجة الصور في حالة الخطأ
-      const failedImages = images.filter(img => img.status === "error");
-      if (failedImages.length > 0) {
-        console.log(`العثور على ${failedImages.length} صورة في حالة خطأ، محاولة إعادة معالجتها...`);
-        
-        // إعادة وضع الصور في قائمة الانتظار
-        const filesToReprocess = failedImages.map(img => img.file);
-        setProcessingQueue(prev => [...prev, ...filesToReprocess]);
-        
-        // تحديث حالة الصور
-        failedImages.forEach(img => {
-          updateImage(img.id, { 
-            status: "pending", 
-            extractedText: "في قائمة الانتظار للمعالجة مرة أخرى..." 
-          });
-        });
-        
-        toast({
-          title: "إعادة المعالجة",
-          description: `تمت إضافة ${failedImages.length} صورة فاشلة إلى قائمة انتظار المعالجة.`,
-        });
-        
-        return;
-      }
-      
       return;
     }
     
@@ -539,7 +457,7 @@ export const useFileUpload = ({
     setTimeout(() => {
       processQueue();
     }, 500);
-  }, [processingQueue, processQueue, images, updateImage]);
+  }, [processingQueue, processQueue]);
 
   // استخدام useEffect لبدء معالجة القائمة عندما تتغير
   useEffect(() => {
@@ -591,15 +509,6 @@ export const useFileUpload = ({
       setIsProcessing(false);
       return;
     }
-    
-    // قبل إضافة الملفات للمعالجة، نقوم بتشغيل وظيفة إزالة التكرارات
-    if (removeDuplicates && typeof removeDuplicates === 'function') {
-      console.log("تشغيل آلية إزالة التكرارات قبل إضافة الصور الجديدة...");
-      removeDuplicates();
-    }
-    
-    // تأخير صغير للتأكد من اكتمال إزالة التكرارات
-    await delay(300);
     
     // إضافة الملفات الجديدة إلى قائمة الانتظار
     setProcessingQueue(prev => [...prev, ...uniqueFiles]);

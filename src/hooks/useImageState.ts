@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
@@ -9,61 +8,30 @@ export const useImageState = () => {
   const [sessionImages, setSessionImages] = useState<ImageData[]>([]);
   const { toast } = useToast();
 
-  // تحسين آلية إضافة صورة جديدة مع تحقق أفضل من التكرارات
   const addImage = (newImage: ImageData) => {
-    // تحسين منطق البحث عن التكرار - تحقق أكثر دقة مع تجنب الانضمام المتعدد
-    // إنشاء معرف فريد للصورة يتضمن المزيد من البيانات المميزة
-    const generateUniqueImageKey = (img: ImageData) => {
-      const fileNameComponent = img.file?.name || 'unknown';
-      const userComponent = img.user_id || 'anonymous';
-      const batchComponent = img.batch_id || 'default';
-      // إضافة حجم الملف والنوع كمؤشرات إضافية لتحقيق تفرد أكبر
-      const fileSizeComponent = img.file?.size?.toString() || '0';
-      const fileTypeComponent = img.file?.type || 'unknown';
-      
-      return `${fileNameComponent}_${userComponent}_${batchComponent}_${fileSizeComponent}_${fileTypeComponent}`;
-    };
-    
-    const newImageKey = generateUniqueImageKey(newImage);
-    
+    // تحسين منطق البحث عن التكرار - تحقق أكثر دقة
     const isDuplicateSession = sessionImages.some(img => 
-      img.id === newImage.id || generateUniqueImageKey(img) === newImageKey
+      img.id === newImage.id || 
+      (img.file.name === newImage.file.name && img.user_id === newImage.user_id)
     );
     
     const isDuplicateAll = images.some(img => 
-      img.id === newImage.id || generateUniqueImageKey(img) === newImageKey
+      img.id === newImage.id || 
+      (img.file.name === newImage.file.name && img.user_id === newImage.user_id && img.batch_id === newImage.batch_id)
     );
     
     if (isDuplicateSession || isDuplicateAll) {
-      console.log("تم تجاهل الصورة المكررة:", newImage.file.name, "مع المعرف:", newImageKey);
+      console.log("تم تجاهل الصورة المكررة:", newImage.file.name);
       
       // إذا كان لدينا نفس المعرف ولكن بحالة مختلفة، نقوم بتحديث الصورة الحالية فقط
       if (newImage.id) {
-        const existingSessionImage = sessionImages.find(img => 
-          img.id === newImage.id || generateUniqueImageKey(img) === newImageKey
-        );
-        const existingImage = images.find(img => 
-          img.id === newImage.id || generateUniqueImageKey(img) === newImageKey
-        );
+        const existingSessionImage = sessionImages.find(img => img.id === newImage.id);
+        const existingImage = images.find(img => img.id === newImage.id);
         
-        // تحسين منطق التحديث بالمقارنة مع الطابع الزمني
-        // فقط تحديث الصورة إذا كانت الصورة الجديدة أحدث أو إذا تغيرت الحالة
-        const shouldUpdate = (
-          (existingSessionImage && 
-           (existingSessionImage.status !== newImage.status || 
-            (newImage.added_at && existingSessionImage.added_at && newImage.added_at > existingSessionImage.added_at))) ||
-          (existingImage && 
-           (existingImage.status !== newImage.status ||
-            (newImage.added_at && existingImage.added_at && newImage.added_at > existingImage.added_at)))
-        );
-        
-        if (shouldUpdate) {
-          console.log("تحديث الصورة الموجودة:", newImage.id, "الحالة الجديدة:", newImage.status);
-          updateImage(newImage.id, { 
-            status: newImage.status,
-            extractedText: newImage.extractedText || existingImage?.extractedText || existingSessionImage?.extractedText,
-            added_at: newImage.added_at
-          });
+        if ((existingSessionImage && existingSessionImage.status !== newImage.status) ||
+            (existingImage && existingImage.status !== newImage.status)) {
+          console.log("تحديث حالة الصورة الموجودة:", newImage.id);
+          updateImage(newImage.id, { status: newImage.status });
         }
       }
       return;
@@ -76,7 +44,7 @@ export const useImageState = () => {
       added_at: new Date().getTime() // إضافة الطابع الزمني
     };
     
-    console.log("إضافة صورة جديدة:", imageWithDefaults.id, "مع المعرف:", newImageKey);
+    console.log("إضافة صورة جديدة:", imageWithDefaults.id);
     
     // إضافة الصورة إلى مجموعة الصور المؤقتة للجلسة الحالية
     setSessionImages(prev => [imageWithDefaults, ...prev]);
@@ -178,33 +146,16 @@ export const useImageState = () => {
 
   // تحسين دالة إزالة التكرارات
   const removeDuplicates = () => {
-    // إنشاء وظيفة منفصلة لإنشاء مفاتيح فريدة متسقة مع الإضافة
-    const generateUniqueImageKey = (img: ImageData) => {
-      const fileNameComponent = img.file?.name || 'unknown';
-      const userComponent = img.user_id || 'anonymous';
-      const batchComponent = img.batch_id || 'default';
-      const fileSizeComponent = img.file?.size?.toString() || '0';
-      const fileTypeComponent = img.file?.type || 'unknown';
-      
-      return `${fileNameComponent}_${userComponent}_${batchComponent}_${fileSizeComponent}_${fileTypeComponent}`;
-    };
-    
     const uniqueImagesMap = new Map<string, ImageData>();
     
     // استخدام مفتاح أكثر دقة للتخزين المؤقت للصور الفريدة
     images.forEach(img => {
-      // إنشاء مفتاح فريد باستخدام الوظيفة المشتركة
-      const key = generateUniqueImageKey(img);
+      // إنشاء مفتاح فريد يتضمن اسم الملف ومعرّف المستخدم والمجموعة
+      const key = `${img.file.name}_${img.user_id || ''}_${img.batch_id || ''}`;
       
       // إذا لم يكن هناك صورة بهذا المفتاح، أو إذا كانت الصورة الحالية أحدث
-      // أو إذا كانت الصورة القديمة في حالة خطأ والجديدة لا
-      const existingImage = uniqueImagesMap.get(key);
-      
-      const shouldReplace = !existingImage || 
-        (img.added_at && existingImage.added_at && img.added_at > existingImage.added_at) ||
-        (existingImage.status === 'error' && img.status !== 'error');
-      
-      if (shouldReplace) {
+      if (!uniqueImagesMap.has(key) || 
+          (img.added_at && uniqueImagesMap.get(key)?.added_at && img.added_at > uniqueImagesMap.get(key)!.added_at!)) {
         uniqueImagesMap.set(key, img);
       }
     });
@@ -221,24 +172,10 @@ export const useImageState = () => {
       
       setImages(deduplicatedImages);
       
-      // تحديث الصور المؤقتة أيضاً باستخدام نفس منطق التفرد
-      const sessionUniqueMap = new Map<string, ImageData>();
-      
-      sessionImages.forEach(img => {
-        const key = generateUniqueImageKey(img);
-        const existingImage = sessionUniqueMap.get(key);
-
-        // نحتفظ فقط بالصورة الأحدث أو التي ليست في حالة خطأ
-        const shouldReplace = !existingImage || 
-          (img.added_at && existingImage.added_at && img.added_at > existingImage.added_at) ||
-          (existingImage.status === 'error' && img.status !== 'error');
-        
-        if (shouldReplace) {
-          sessionUniqueMap.set(key, img);
-        }
-      });
-      
-      setSessionImages(Array.from(sessionUniqueMap.values()));
+      // تحديث الصور المؤقتة أيضاً
+      setSessionImages(prev => prev.filter(img => 
+        deduplicatedImages.some(unique => unique.id === img.id)
+      ));
       
       console.log(`تم إزالة ${removedCount} صورة مكررة. الصور المتبقية: ${deduplicatedImages.length}`);
     } else {
