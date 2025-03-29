@@ -13,6 +13,7 @@ import Records from './pages/Records';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AdminApproval from './pages/AdminApproval';
+import GeminiApiSettings from './pages/GeminiApiSettings';
 import ProtectedRoute from './components/ProtectedRoute';
 
 /**
@@ -47,10 +48,15 @@ export const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      {/* صفحة إدارة المستخدمين - للمسؤولين فقط مع تعطيل requireApproval للمسؤولين */}
+      {/* صفحات إدارة النظام - للمسؤولين فقط */}
       <Route path="/admin/approvals" element={
         <ProtectedRoute adminOnly={true} requireApproval={false} redirectTo="/">
           <AdminApproval />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/gemini-keys" element={
+        <ProtectedRoute adminOnly={true} requireApproval={false} redirectTo="/">
+          <GeminiApiSettings />
         </ProtectedRoute>
       } />
       
