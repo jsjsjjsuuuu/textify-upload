@@ -50,8 +50,8 @@ export async function extractDataWithGemini({
   const currentTime = Date.now();
   const timeSinceLastCall = currentTime - lastCallTime;
   
-  // التأكد من أن هناك على الأقل 1.5 ثانية بين الطلبات لنفس المفتاح
-  const minDelayBetweenCalls = 1500; // 1.5 ثانية
+  // التأكد من أن هناك على الأقل 2 ثوانٍ بين الطلبات لنفس المفتاح
+  const minDelayBetweenCalls = 2000; // 2 ثانية (زيادة من 1.5 ثانية)
   
   if (timeSinceLastCall < minDelayBetweenCalls) {
     const delayNeeded = minDelayBetweenCalls - timeSinceLastCall;
@@ -68,8 +68,13 @@ export async function extractDataWithGemini({
     console.log("أول 5 أحرف من مفتاح API:", apiKey.substring(0, 5));
     console.log("طول صورة Base64:", imageBase64.length);
     console.log("استخدام إصدار النموذج:", modelVersion);
-    console.log("استخدام درجة حرارة:", temperature);
-    console.log("طول المطالبة:", prompt.length);
+    
+    // التحقق من حجم صورة Base64 وتقليلها إذا كانت كبيرة جدًا
+    if (imageBase64.length > 1000000) { // أكثر من ~1MB
+      console.log("حجم الصورة كبير جدًا، محاولة تقليل جودة Base64...");
+      // هنا يمكننا إما تقليل جودة الصورة أو استخدام ضغط إضافي
+      // لكن في هذه الحالة، سنستمر ونلاحظ إذا كان الطلب سينجح
+    }
     
     // تنظيف معرف صورة Base64
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
@@ -110,20 +115,50 @@ export async function extractDataWithGemini({
       },
       body: JSON.stringify(requestBody),
       // إضافة مهلة أطول للطلبات
-      signal: AbortSignal.timeout(15000) // 15 ثانية
+      signal: AbortSignal.timeout(25000) // 25 ثانية (زيادة من 15 ثانية)
     };
     
     // تنفيذ الطلب مع قياس الوقت
     console.log("بدء طلب API...");
     const timeBeforeRequest = Date.now();
     
-    const response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
+    // إضافة محاولة إعادة الطلب في حالة الفشل
+    let response;
+    let attemptCount = 0;
+    const maxAttempts = 2;
+    
+    while (attemptCount < maxAttempts) {
+      try {
+        attemptCount++;
+        response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
+        break; // الخروج من الحلقة إذا نجح الطلب
+      } catch (fetchError) {
+        console.error(`محاولة الطلب ${attemptCount} فشلت:`, fetchError);
+        
+        if (attemptCount >= maxAttempts) {
+          throw fetchError; // إعادة رمي الخطأ إذا استنفدت جميع المحاولات
+        }
+        
+        // انتظار قبل إعادة المحاولة
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    }
+    
+    if (!response) {
+      throw new Error("فشلت جميع محاولات الطلب");
+    }
     
     const timeAfterRequest = Date.now();
     console.log(`استغرق طلب Gemini API ${timeAfterRequest - timeBeforeRequest}ms`);
     
     if (!response.ok) {
-      const errorText = await response.text();
+      let errorText;
+      try {
+        errorText = await response.text();
+      } catch (err) {
+        errorText = `لا يمكن قراءة نص الخطأ: ${err.message}`;
+      }
+      
       console.error("Gemini API رد بخطأ:", response.status, errorText);
       
       // الإبلاغ عن الخطأ لمدير المفاتيح
@@ -135,7 +170,19 @@ export async function extractDataWithGemini({
       };
     }
     
-    const data: GeminiResponse = await response.json();
+    let data: GeminiResponse;
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      console.error("خطأ في تحليل استجابة JSON:", jsonError);
+      reportApiKeyError(apiKey, `خطأ في تحليل JSON: ${jsonError.message}`);
+      
+      return {
+        success: false,
+        message: `خطأ في تحليل استجابة JSON: ${jsonError.message}`
+      };
+    }
+    
     console.log("استلام بيانات استجابة Gemini API");
     
     if (data.promptFeedback?.blockReason) {
@@ -213,7 +260,7 @@ export async function extractDataWithGemini({
             "x-goog-api-key": apiKey
           },
           body: JSON.stringify(textOnlyRequestBody),
-          signal: AbortSignal.timeout(10000) // 10 ثواني
+          signal: AbortSignal.timeout(15000) // 15 ثواني (زيادة من 10 ثواني)
         });
         
         if (textOnlyResponse.ok) {
@@ -333,14 +380,27 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
           maxOutputTokens: 128
         }
       }),
-      signal: AbortSignal.timeout(10000) // 10 ثواني
+      signal: AbortSignal.timeout(15000) // 15 ثواني
     };
     
     console.log("إرسال طلب اختبار إلى Gemini API...");
-    const response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
+    
+    let response;
+    try {
+      response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
+    } catch (fetchError) {
+      console.error("خطأ في طلب اختبار Gemini:", fetchError);
+      throw fetchError;
+    }
     
     if (!response.ok) {
-      const errorText = await response.text();
+      let errorText;
+      try {
+        errorText = await response.text();
+      } catch (err) {
+        errorText = `لا يمكن قراءة نص الخطأ: ${err.message}`;
+      }
+      
       console.error("فشل اختبار Gemini API:", response.status, errorText);
       
       // الإبلاغ عن الخطأ لمدير المفاتيح

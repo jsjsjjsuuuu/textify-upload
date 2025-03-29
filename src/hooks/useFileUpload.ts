@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useImageQueue } from "@/hooks/useImageQueue"; // استيراد نظام قائمة الانتظار
-import { getApiKeyStats } from "@/lib/gemini"; // استيراد وظيفة إحصائيات المفاتيح
+import { getApiKeyStats, resetAllApiKeys } from "@/lib/gemini"; // استيراد وظيفة إحصائيات المفاتيح
 
 interface FileUploadProps {
   images: ImageData[];
@@ -60,6 +60,9 @@ export const useFileUpload = ({
     lastResetTime: Date.now()
   });
   
+  // تتبع المحاولات المتكررة لكل صورة
+  const retryAttemptsMap = useRef<Map<string, number>>(new Map());
+  
   // مسح كاش الهاشات
   const clearProcessedHashesCache = useCallback(() => {
     processedHashes.current.clear();
@@ -70,6 +73,8 @@ export const useFileUpload = ({
       failed: 0,
       lastResetTime: Date.now()
     };
+    // إعادة تعيين خريطة المحاولات
+    retryAttemptsMap.current.clear();
     // إعادة تعيين مفاتيح API
     resetApiKeys();
     
@@ -89,23 +94,23 @@ export const useFileUpload = ({
     const { successful, failed, totalAttempted } = processingStats.current;
     const successRatio = totalAttempted > 0 ? successful / totalAttempted : 1;
     
-    // تعديل التأخير بناءً على عدد المفاتيح النشطة ونسبة النجاح
-    let baseDelay = 2000; // تأخير أساسي: 2 ثوانٍ
+    // التأخير الأساسي - تم زيادته للتأكد من عدم تجاوز حدود API
+    let baseDelay = 3000; // 3 ثوانٍ كحد أدنى
     
     // زيادة التأخير إذا كان هناك الكثير من المفاتيح المحظورة
     if (apiKeysRatio < 0.5) {
-      baseDelay = 5000; // 5 ثوانٍ إذا كان أكثر من نصف المفاتيح محظورة
+      baseDelay = 7000; // 7 ثوانٍ إذا كان أكثر من نصف المفاتيح محظورة
     } else if (apiKeysRatio < 0.75) {
-      baseDelay = 3500; // 3.5 ثوانٍ إذا كان أكثر من ربع المفاتيح محظورة
+      baseDelay = 5000; // 5 ثوانٍ إذا كان أكثر من ربع المفاتيح محظورة
     }
     
     // زيادة التأخير إذا كانت نسبة النجاح منخفضة
     if (totalAttempted > 5 && successRatio < 0.6) {
-      baseDelay += 2000; // إضافة 2 ثوانٍ إذا كانت نسبة النجاح أقل من 60%
+      baseDelay += 3000; // إضافة 3 ثوانٍ إذا كانت نسبة النجاح أقل من 60%
     }
     
     // زيادة التأخير بشكل عشوائي قليلاً لتجنب أنماط طلب متوقعة
-    const randomVariation = Math.floor(Math.random() * 1000); // 0-1000 مللي ثانية
+    const randomVariation = Math.floor(Math.random() * 2000); // 0-2000 مللي ثانية
     
     return baseDelay + randomVariation;
   }, []);
@@ -121,8 +126,21 @@ export const useFileUpload = ({
       // تحديث حالة الصورة إلى "جاري المعالجة"
       updateImage(image.id, {
         status: "processing",
-        extractedText: "جاري استخراج النص من الصورة..."
+        extractedText: "جاري استخراج النص من الصورة...",
+        processingAttempts: (image.processingAttempts || 0) + 1
       });
+      
+      // تسجيل محاولة المعالجة
+      const currentAttempt = retryAttemptsMap.current.get(image.id) || 0;
+      retryAttemptsMap.current.set(image.id, currentAttempt + 1);
+      
+      // التحقق من عدد المحاولات - إذا تجاوز الحد، أعد تعيين مفاتيح API
+      if (currentAttempt >= 3 && currentAttempt % 3 === 0) {
+        console.log(`عدد كبير من المحاولات للصورة ${image.id}, إعادة تعيين مفاتيح API...`);
+        resetApiKeys();
+        // تأخير قصير بعد إعادة التعيين
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
       
       // التحقق من وجود الملف
       if (!image.file) {
@@ -132,10 +150,78 @@ export const useFileUpload = ({
       // معالجة الصورة بناءً على الطريقة المختارة
       let processedImage: ImageData;
       
+      // التحقق من حجم الملف وطباعة معلومات تشخيصية
+      const fileSizeMB = image.file.size / (1024 * 1024);
+      console.log(`حجم ملف الصورة: ${fileSizeMB.toFixed(2)} ميجابايت`);
+      
       // استخدام Gemini إذا كان مفعلاً
       if (geminiEnabled) {
-        console.log(`معالجة الصورة ${image.id} باستخدام Gemini`);
-        processedImage = await processWithGemini(image.file, image);
+        console.log(`معالجة الصورة ${image.id} باستخدام Gemini (المحاولة رقم ${currentAttempt + 1})`);
+        
+        // إذا كان حجم الصورة كبيرًا جدًا، حاول ضغطها أكثر قبل الإرسال إلى Gemini
+        if (fileSizeMB > 3) {
+          try {
+            console.log(`ضغط الصورة ${image.id} قبل المعالجة (الحجم الأصلي: ${fileSizeMB.toFixed(2)} MB)`);
+            const compressedFile = await compressImage(image.file, { 
+              maxSizeMB: 1, 
+              maxWidthOrHeight: 1200,
+              useWebWorker: true,
+              initialQuality: 0.7
+            });
+            const newSizeMB = compressedFile.size / (1024 * 1024);
+            console.log(`تم ضغط الصورة إلى ${newSizeMB.toFixed(2)} MB`);
+            
+            // تحديث الملف المضغوط
+            image = { ...image, file: compressedFile };
+          } catch (compressionError) {
+            console.error(`خطأ في ضغط الصورة ${image.id}:`, compressionError);
+            // استمر بالملف الأصلي إذا فشل الضغط
+          }
+        }
+        
+        // محاولة معالجة الصورة مع إعادة التشغيل التلقائي في حالة الفشل
+        const maxGeminiAttempts = 2;
+        let geminiAttempt = 0;
+        let lastError = null;
+        
+        while (geminiAttempt < maxGeminiAttempts) {
+          try {
+            geminiAttempt++;
+            processedImage = await processWithGemini(image.file, image);
+            lastError = null;
+            break; // الخروج من الحلقة إذا نجحت المعالجة
+          } catch (geminiError) {
+            console.error(`فشلت محاولة Gemini ${geminiAttempt}/${maxGeminiAttempts}:`, geminiError);
+            lastError = geminiError;
+            
+            if (geminiAttempt < maxGeminiAttempts) {
+              // تأخير قبل المحاولة التالية
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              
+              // تحديث حالة الصورة لتعكس إعادة المحاولة
+              updateImage(image.id, {
+                status: "processing",
+                extractedText: `جاري إعادة محاولة المعالجة (${geminiAttempt + 1}/${maxGeminiAttempts})...`
+              });
+            }
+          }
+        }
+        
+        // إذا فشلت جميع محاولات Gemini، جرب OCR كبديل
+        if (lastError !== null) {
+          console.log(`فشلت جميع محاولات Gemini، جاري تجربة OCR كبديل للصورة ${image.id}`);
+          updateImage(image.id, {
+            status: "processing",
+            extractedText: "فشلت معالجة Gemini. جاري تجربة OCR كبديل..."
+          });
+          
+          try {
+            processedImage = await processWithOcr(image.file, image);
+          } catch (ocrError) {
+            console.error(`فشلت كل من Gemini و OCR للصورة ${image.id}:`, ocrError);
+            throw new Error(`فشلت جميع طرق المعالجة: ${lastError.message}`);
+          }
+        }
       } else {
         console.log(`معالجة الصورة ${image.id} باستخدام OCR`);
         processedImage = await processWithOcr(image.file, image);
@@ -185,7 +271,13 @@ export const useFileUpload = ({
       
       // حفظ البيانات المستخرجة والصورة المعالجة - فقط إذا كان هناك بيانات مستخرجة
       if (hasExtractedData) {
-        await saveProcessedImage(processedImage);
+        try {
+          await saveProcessedImage(processedImage);
+          console.log(`تم حفظ الصورة ${image.id} في قاعدة البيانات بنجاح`);
+        } catch (saveError) {
+          console.error(`خطأ في حفظ الصورة ${image.id} في قاعدة البيانات:`, saveError);
+          // لا نريد إفشال العملية بأكملها إذا فشل الحفظ فقط
+        }
       } else {
         console.log(`تخطي حفظ الصورة ${image.id} لأنه لم يتم استخراج بيانات`);
       }
@@ -212,7 +304,7 @@ export const useFileUpload = ({
       // إعادة رمي الخطأ للتعامل معه في وظيفة القائمة
       throw error;
     }
-  }, [geminiEnabled, processWithGemini, processWithOcr, saveProcessedImage, updateImage, calculateIdealDelay]);
+  }, [geminiEnabled, processWithGemini, processWithOcr, saveProcessedImage, updateImage, calculateIdealDelay, resetApiKeys]);
 
   // معالج تغيير الملفات - عند رفع الصور
   const handleFileChange = useCallback(async (files: File[]) => {
@@ -239,7 +331,7 @@ export const useFileUpload = ({
     
     // إذا كان هناك الكثير من المفاتيح المحظورة، قم بإعادة تعيينها
     if (apiStats.rateLimited > apiStats.active && processingStats.current.lastResetTime < Date.now() - 300000) {
-      resetApiKeys();
+      resetAllApiKeys();
       processingStats.current.lastResetTime = Date.now();
       toast({
         title: "إعادة تعيين",
@@ -330,9 +422,9 @@ export const useFileUpload = ({
     
     for (let i = 0; i < addedImageIds.length; i++) {
       const imageId = addedImageIds[i];
-      const image = images.find(img => img.id === imageId);
+      const imageToProcess = images.find(img => img.id === imageId);
       
-      if (!image) {
+      if (!imageToProcess) {
         console.error(`لم يتم العثور على الصورة ${imageId}`);
         continue;
       }
@@ -342,56 +434,67 @@ export const useFileUpload = ({
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      // إضافة الصورة إلى قائمة انتظار المعالجة - المهم هنا أن كل صورة تتم معالجتها بالكامل قبل الانتقال للتالية
-      addToQueue(image.id, image, async () => {
-        await processImage(image);
-      });
+      // إنشاء وظيفة معالجة الصورة
+      const processThisImage = async () => {
+        try {
+          await processImage(imageToProcess);
+        } catch (error) {
+          console.error(`خطأ في معالجة الصورة ${imageId}:`, error);
+        }
+      };
+      
+      // إضافة الصورة إلى قائمة المعالجة
+      addToQueue(imageId, imageToProcess, processThisImage);
+      console.log(`تمت إضافة الصورة ${imageId} إلى قائمة المعالجة (${i + 1}/${addedImageIds.length})`);
       
       // تحديث التقدم
-      setProcessingProgress(50 + ((i + 1) / addedImageIds.length) * 50); // من 50% إلى 100%
+      setProcessingProgress(50 + (i + 1) / addedImageIds.length * 50); // من 50% إلى 100%
     }
     
-    // إظهار رسالة نجاح
+    // إذا كان هناك صور تمت إضافتها، أظهر إشعارًا
     if (addedImageIds.length > 0) {
       toast({
-        title: "تم الرفع",
-        description: `تم إضافة ${addedImageIds.length} صورة إلى قائمة المعالجة`,
+        title: "تم إضافة الصور",
+        description: `تمت إضافة ${addedImageIds.length} صور إلى قائمة المعالجة`,
       });
+      
+      // تأكد من بدء المعالجة
+      setTimeout(() => {
+        manuallyTriggerProcessingQueue();
+      }, 2000);
     }
     
-    // إعادة تعيين شريط التقدم
-    setProcessingProgress(0);
+    setProcessingProgress(100);
+    
+    // إعادة التقدم إلى 0 بعد فترة
+    setTimeout(() => {
+      setProcessingProgress(0);
+    }, 2000);
   }, [
     addImage, 
-    addToQueue, 
-    isDuplicateImage, 
     images, 
-    processImage, 
+    isDuplicateImage, 
     removeDuplicates, 
     setProcessingProgress, 
-    toast,
-    clearQueue,
-    pauseProcessing,
-    isProcessing,
-    resetApiKeys
+    addToQueue, 
+    isProcessing, 
+    pauseProcessing, 
+    clearQueue, 
+    manuallyTriggerProcessingQueue, 
+    processImage,
+    toast
   ]);
 
-  // تبديل استخدام Gemini
-  const toggleGemini = useCallback((value: boolean) => {
-    setGeminiEnabled(value);
-  }, []);
-
-  return {
+  return { 
+    isProcessing, 
     handleFileChange,
-    isProcessing,
-    useGemini: geminiEnabled,
-    toggleGemini,
-    manuallyTriggerProcessingQueue,
-    pauseProcessing,
-    clearProcessedHashesCache,
-    clearQueue,
     activeUploads,
     queueLength,
-    getProcessingState
+    useGemini: geminiEnabled,
+    pauseProcessing,
+    clearQueue,
+    manuallyTriggerProcessingQueue,
+    getProcessingState,
+    clearProcessedHashesCache
   };
 };
