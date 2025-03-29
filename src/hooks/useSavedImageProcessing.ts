@@ -16,7 +16,7 @@ export const useSavedImageProcessing = (
   const { saveImageToDatabase, loadUserImages } = useImageDatabase(updateImage);
   
   // وظيفة حفظ الصورة المعالجة عند النقر على زر الإرسال
-  const saveProcessedImage = async (image: ImageData) => {
+  const saveProcessedImage = async (image: ImageData): Promise<void> => {
     if (!user) {
       console.log("المستخدم غير مسجل الدخول، لا يمكن حفظ الصورة");
       return;
@@ -86,7 +86,7 @@ export const useSavedImageProcessing = (
             description: "تم حفظ البيانات في قاعدة البيانات بنجاح",
           });
           
-          return savedData;
+          return; // تعديل هنا لضمان إرجاع void
         }
       } catch (error) {
         console.error("خطأ أثناء حفظ الصورة:", error);

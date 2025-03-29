@@ -11,6 +11,7 @@ interface ExtractedDataActionsProps {
   onCopyText: () => void;
   onAutoExtract: () => void;
   hasExtractedText: boolean;
+  isProcessing?: boolean; // إضافة الخاصية الجديدة كاختيارية
 }
 
 const ExtractedDataActions = ({ 
@@ -19,7 +20,8 @@ const ExtractedDataActions = ({
   onCancel, 
   onCopyText, 
   onAutoExtract,
-  hasExtractedText
+  hasExtractedText,
+  isProcessing = false // تعيين قيمة افتراضية
 }: ExtractedDataActionsProps) => {
   const { toast } = useToast();
 
@@ -76,6 +78,7 @@ const ExtractedDataActions = ({
               variant="outline" 
               onClick={handleCopy}
               className="h-8"
+              disabled={isProcessing}
             >
               <Copy size={16} className="ml-1" />
               نسخ
@@ -85,7 +88,7 @@ const ExtractedDataActions = ({
               variant="outline" 
               onClick={handleAutoExtract}
               className="h-8"
-              disabled={!hasExtractedText}
+              disabled={!hasExtractedText || isProcessing}
             >
               <Wand2 size={16} className="ml-1" />
               إعادة استخراج
@@ -95,6 +98,7 @@ const ExtractedDataActions = ({
               variant="outline" 
               onClick={onEditToggle}
               className="h-8"
+              disabled={isProcessing}
             >
               <Edit2 size={16} className="ml-1" />
               تعديل

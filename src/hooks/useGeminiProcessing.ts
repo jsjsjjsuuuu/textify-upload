@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ImageData } from "@/types/ImageData";
 import { 
   extractDataWithGemini, 
