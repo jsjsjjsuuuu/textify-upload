@@ -1,670 +1,494 @@
 
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
-import { extractDataWithGemini, fileToBase64, testGeminiConnection } from "@/lib/gemini";
 import { useToast } from "@/hooks/use-toast";
-import { updateImageWithExtractedData } from "@/utils/imageDataParser";
-import { isPreviewEnvironment } from "@/utils/automationServerUrl";
+import { extractDataWithGemini, testGeminiApiConnection, testGeminiModels } from "@/lib/geminiService";
+import { fileToBase64 } from "@/lib/gemini";
 
-// ثوابت لإدارة الطلبات وتتبع القيود
-const MAX_API_RETRIES = 3;        // عدد إعادة المحاولات
-const API_RETRY_DELAY_MS = 3000;  // تأخير بين المحاولات (3 ثواني)
-const API_RATE_LIMIT = 5;         // أقصى عدد طلبات في الفترة الزمنية
-const API_RATE_PERIOD_MS = 60000; // فترة قياس معدل الطلبات (دقيقة واحدة)
-
-// واجهة لمفتاح API مع تتبع استخدامه
-interface ApiKeyState {
-  key: string;
-  callCount: number;
-  timestamps: number[];
-  isValid: boolean;
-  model: string;
-  failCount: number;
+// واجهة تكوين Gemini
+interface GeminiConfig {
+  apiKeys: string[];
+  defaultModel: string;
+  keyModels: Record<number, string>;
+  keyUsageCounts: Record<number, number>;
+  keyRecentUsage: Record<number, number>;
+  keyFailCounts: Record<number, number>;
+  lastSuccessfulKeyIndex: number | null;
 }
 
 export const useGeminiProcessing = () => {
-  const [connectionTested, setConnectionTested] = useState(false);
-  const [apiCallCount, setApiCallCount] = useState(0);
-  const [apiKeys, setApiKeys] = useState<ApiKeyState[]>([]);
-  const [currentKeyIndex, setCurrentKeyIndex] = useState(0);
+  const [config, setConfig] = useState<GeminiConfig>({
+    apiKeys: [],
+    defaultModel: "gemini-1.5-pro", // النموذج الافتراضي
+    keyModels: {},
+    keyUsageCounts: {},
+    keyRecentUsage: {},
+    keyFailCounts: {},
+    lastSuccessfulKeyIndex: null
+  });
+  
   const { toast } = useToast();
-
-  // تهيئة قائمة مفاتيح API
+  
+  // استرجاع المفاتيح المخزنة عند التحميل
   useEffect(() => {
-    // محاولة استرداد قائمة المفاتيح المخزنة
-    const storedKeys = localStorage.getItem("geminiApiKeys");
-    
-    if (storedKeys) {
+    const loadSavedKeys = () => {
       try {
-        // محاولة تحميل المفاتيح المخزنة
-        const parsedKeys: string[] = JSON.parse(storedKeys);
+        // محاولة استرداد المفاتيح المتعددة
+        const storedApiKeys = localStorage.getItem('geminiApiKeys');
+        if (storedApiKeys) {
+          const parsedKeys = JSON.parse(storedApiKeys);
+          if (Array.isArray(parsedKeys) && parsedKeys.length > 0) {
+            // استرجاع إحصائيات المفاتيح
+            let storedKeyUsage = {};
+            let storedKeyRecentUsage = {};
+            let storedKeyFailCounts = {};
+            let storedKeyModels = {};
+            
+            try {
+              const storedStats = localStorage.getItem('geminiApiKeyStats');
+              if (storedStats) {
+                const parsedStats = JSON.parse(storedStats);
+                storedKeyUsage = parsedStats.usage || {};
+                storedKeyRecentUsage = parsedStats.recent || {};
+                storedKeyFailCounts = parsedStats.fails || {};
+                storedKeyModels = parsedStats.models || {};
+              }
+            } catch (e) {
+              console.warn('فشل في تحميل إحصائيات المفاتيح:', e);
+            }
+            
+            // تهيئة إحصائيات للمفاتيح الجديدة
+            const initKeyUsage = {};
+            const initKeyRecentUsage = {};
+            const initKeyFailCounts = {};
+            const initKeyModels = {};
+            
+            parsedKeys.forEach((_, index) => {
+              initKeyUsage[index] = storedKeyUsage[index] || 0;
+              initKeyRecentUsage[index] = storedKeyRecentUsage[index] || 0;
+              initKeyFailCounts[index] = storedKeyFailCounts[index] || 0;
+              initKeyModels[index] = storedKeyModels[index] || "gemini-1.5-pro";
+            });
+            
+            // تحديث التكوين
+            setConfig({
+              apiKeys: parsedKeys,
+              defaultModel: "gemini-1.5-pro",
+              keyModels: initKeyModels,
+              keyUsageCounts: initKeyUsage,
+              keyRecentUsage: initKeyRecentUsage,
+              keyFailCounts: initKeyFailCounts,
+              lastSuccessfulKeyIndex: null
+            });
+            
+            console.log(`تم تحميل ${parsedKeys.length} مفاتيح API`);
+            return;
+          }
+        }
         
-        if (Array.isArray(parsedKeys) && parsedKeys.length > 0) {
-          // تحويل المفاتيح إلى كائنات ApiKeyState
-          const initializedKeys = parsedKeys.map(key => ({
-            key,
-            callCount: 0,
-            timestamps: [],
-            isValid: true,
-            model: 'gemini-1.5-pro', // النموذج الافتراضي
-            failCount: 0
-          }));
-          
-          setApiKeys(initializedKeys);
-          console.log(`تم تحميل ${initializedKeys.length} مفاتيح Gemini API من التخزين المحلي`);
-          
-          // اختبار جميع المفاتيح بالتوازي
-          initializedKeys.forEach((keyState, index) => {
-            testGeminiApiConnection(keyState.key, index);
+        // الرجوع للمفتاح الفردي إذا لم توجد مفاتيح متعددة
+        const singleApiKey = localStorage.getItem('geminiApiKey');
+        if (singleApiKey) {
+          setConfig({
+            apiKeys: [singleApiKey],
+            defaultModel: "gemini-1.5-pro",
+            keyModels: { 0: "gemini-1.5-pro" },
+            keyUsageCounts: { 0: 0 },
+            keyRecentUsage: { 0: 0 },
+            keyFailCounts: { 0: 0 },
+            lastSuccessfulKeyIndex: null
           });
-          
-          return;
+          console.log('تم تحميل مفتاح API واحد');
+        } else {
+          console.log('لم يتم العثور على مفاتيح API');
         }
       } catch (error) {
-        console.error("خطأ في تحليل مفاتيح Gemini API المخزنة:", error);
+        console.error('خطأ في تحميل مفاتيح API:', error);
       }
-    }
-    
-    // استخدام المفتاح الافتراضي إذا لم تكن هناك مفاتيح مخزنة
-    const defaultApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
-    
-    // تهيئة مصفوفة المفاتيح بالمفتاح الافتراضي
-    const initialKey: ApiKeyState = {
-      key: defaultApiKey,
-      callCount: 0,
-      timestamps: [],
-      isValid: true,
-      model: 'gemini-1.5-pro',
-      failCount: 0
     };
     
-    setApiKeys([initialKey]);
-    console.log("استخدام مفتاح Gemini API افتراضي:", defaultApiKey.substring(0, 5) + "...");
+    loadSavedKeys();
     
-    // اختبار الاتصال بالمفتاح الافتراضي
-    testGeminiApiConnection(defaultApiKey, 0);
-  }, []);
-
-  // إضافة أو تحديث قائمة المفاتيح
-  const updateApiKeys = (newKeys: string[]) => {
-    if (!newKeys || newKeys.length === 0) {
-      toast({
-        title: "خطأ",
-        description: "يرجى توفير مفتاح API واحد على الأقل",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // تحويل المفاتيح الجديدة إلى كائنات ApiKeyState
-    const newKeyStates = newKeys.map(key => ({
-      key,
-      callCount: 0,
-      timestamps: [],
-      isValid: true,
-      model: 'gemini-1.5-pro',
-      failCount: 0
-    }));
-    
-    setApiKeys(newKeyStates);
-    setCurrentKeyIndex(0);
-    
-    // حفظ المفاتيح في التخزين المحلي
-    localStorage.setItem("geminiApiKeys", JSON.stringify(newKeys));
-    
-    // اختبار المفاتيح الجديدة
-    newKeyStates.forEach((keyState, index) => {
-      testGeminiApiConnection(keyState.key, index);
-    });
-    
-    toast({
-      title: "تم التحديث",
-      description: `تم تحديث ${newKeyStates.length} مفاتيح Gemini API بنجاح`,
-    });
-  };
-
-  // إعادة تعيين عداد الطلبات بشكل دوري
-  useEffect(() => {
-    const now = Date.now();
-    
-    // إزالة الطوابع الزمنية القديمة لجميع المفاتيح
-    const cleanupTimestamps = () => {
-      setApiKeys(prevKeys => 
-        prevKeys.map(keyState => {
-          const currentTime = Date.now();
-          return {
-            ...keyState,
-            timestamps: keyState.timestamps.filter(timestamp => 
-              currentTime - timestamp < API_RATE_PERIOD_MS
-            )
-          };
-        })
-      );
-    };
-    
-    // تنظيف الطوابع الزمنية كل 10 ثوانٍ
-    const intervalId = setInterval(cleanupTimestamps, 10000);
+    // إعادة ضبط عدادات الاستخدام الحديث كل 60 ثانية
+    const intervalId = setInterval(() => {
+      setConfig(prev => ({
+        ...prev,
+        keyRecentUsage: Object.fromEntries(
+          Object.entries(prev.keyRecentUsage).map(([key]) => [key, 0])
+        )
+      }));
+    }, 60000);
     
     return () => clearInterval(intervalId);
   }, []);
-
-  // اختبار اتصال Gemini API
-  const testGeminiApiConnection = async (apiKey: string, keyIndex: number) => {
-    try {
-      console.log(`اختبار اتصال Gemini API للمفتاح #${keyIndex + 1}...`);
-      const result = await testGeminiConnection(apiKey);
-      
-      setApiKeys(prevKeys => {
-        const updatedKeys = [...prevKeys];
-        if (updatedKeys[keyIndex]) {
-          updatedKeys[keyIndex] = {
-            ...updatedKeys[keyIndex],
-            isValid: result.success,
-            failCount: result.success ? 0 : (updatedKeys[keyIndex].failCount + 1)
-          };
-        }
-        return updatedKeys;
-      });
-      
-      if (result.success) {
-        console.log(`اتصال Gemini API ناجح للمفتاح #${keyIndex + 1}`);
-        setConnectionTested(true);
-      } else {
-        console.warn(`فشل اختبار اتصال Gemini API للمفتاح #${keyIndex + 1}:`, result.message);
-        toast({
-          title: "تحذير",
-          description: `فشل اختبار اتصال Gemini API للمفتاح #${keyIndex + 1}: ${result.message}`,
-          variant: "default"
-        });
-      }
-    } catch (error) {
-      console.error(`خطأ في اختبار اتصال Gemini API للمفتاح #${keyIndex + 1}:`, error);
-      setApiKeys(prevKeys => {
-        const updatedKeys = [...prevKeys];
-        if (updatedKeys[keyIndex]) {
-          updatedKeys[keyIndex] = {
-            ...updatedKeys[keyIndex],
-            isValid: false,
-            failCount: updatedKeys[keyIndex].failCount + 1
-          };
-        }
-        return updatedKeys;
-      });
-    }
-  };
-
-  // اختيار المفتاح الأفضل للاستخدام
-  const selectBestApiKey = (): { key: string, index: number, model: string } => {
-    // إذا لم تكن هناك مفاتيح صالحة، إرجاع المفتاح الحالي
-    const validKeys = apiKeys.filter(k => k.isValid);
-    if (validKeys.length === 0) {
-      return { 
-        key: apiKeys[currentKeyIndex]?.key || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8", 
-        index: currentKeyIndex, 
-        model: apiKeys[currentKeyIndex]?.model || 'gemini-1.5-pro'
-      };
-    }
-    
-    // اختيار المفتاح مع أقل عدد استدعاءات حديثة
-    const sortedKeys = [...validKeys].sort((a, b) => 
-      a.timestamps.filter(t => Date.now() - t < API_RATE_PERIOD_MS).length - 
-      b.timestamps.filter(t => Date.now() - t < API_RATE_PERIOD_MS).length
-    );
-    
-    // اختيار المفتاح الأول (مع أقل عدد استدعاءات)
-    const bestKey = sortedKeys[0];
-    const bestKeyIndex = apiKeys.findIndex(k => k.key === bestKey.key);
-    
-    return { 
-      key: bestKey.key, 
-      index: bestKeyIndex, 
-      model: bestKey.model 
-    };
-  };
-
-  // تسجيل استخدام مفتاح
-  const trackApiKeyUsage = (keyIndex: number) => {
-    const now = Date.now();
-    
-    setApiKeys(prevKeys => {
-      const updatedKeys = [...prevKeys];
-      if (updatedKeys[keyIndex]) {
-        updatedKeys[keyIndex] = {
-          ...updatedKeys[keyIndex],
-          callCount: updatedKeys[keyIndex].callCount + 1,
-          timestamps: [...updatedKeys[keyIndex].timestamps, now]
-        };
-      }
-      return updatedKeys;
-    });
-    
-    setApiCallCount(count => count + 1);
-  };
-
-  // تحديث حالة صلاحية المفتاح
-  const updateApiKeyValidity = (keyIndex: number, isValid: boolean, errorMessage?: string) => {
-    setApiKeys(prevKeys => {
-      const updatedKeys = [...prevKeys];
-      if (updatedKeys[keyIndex]) {
-        updatedKeys[keyIndex] = {
-          ...updatedKeys[keyIndex],
-          isValid,
-          failCount: isValid ? 0 : (updatedKeys[keyIndex].failCount + 1)
-        };
-      }
-      return updatedKeys;
-    });
-    
-    if (!isValid && errorMessage) {
-      console.warn(`مفتاح API رقم ${keyIndex + 1} غير صالح:`, errorMessage);
-      
-      // إعلام المستخدم فقط إذا كانت هناك مشكلة مع جميع المفاتيح
-      const allKeysFailing = apiKeys.every(k => !k.isValid || k.failCount > 0);
-      if (allKeysFailing) {
-        toast({
-          title: "تحذير",
-          description: `جميع مفاتيح API غير صالحة. يرجى التحقق من إعدادات Gemini API.`,
-          variant: "destructive"
-        });
-      }
-    }
-  };
-
-  // التحقق من وضع معدل الاستخدام لمفتاح محدد
-  const checkKeyRateLimit = (keyIndex: number): { allowed: boolean, waitTimeMs: number } => {
-    if (keyIndex < 0 || keyIndex >= apiKeys.length) {
-      return { allowed: false, waitTimeMs: API_RATE_PERIOD_MS };
-    }
-    
-    const now = Date.now();
-    const keyState = apiKeys[keyIndex];
-    const recentCalls = keyState.timestamps.filter(timestamp => now - timestamp < API_RATE_PERIOD_MS);
-    
-    if (recentCalls.length >= API_RATE_LIMIT) {
-      // حساب وقت الانتظار المطلوب
-      const oldestCall = Math.min(...recentCalls);
-      const waitTimeMs = API_RATE_PERIOD_MS - (now - oldestCall) + 100; // 100ms إضافية للأمان
-      
-      return { allowed: false, waitTimeMs };
-    }
-    
-    return { allowed: true, waitTimeMs: 0 };
-  };
   
-  // وظيفة مساعدة للتأخير
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
-    // اختيار أفضل مفتاح API للاستخدام
-    const { key: selectedApiKey, index: selectedKeyIndex, model: selectedModel } = selectBestApiKey();
-    console.log(`استخدام مفتاح Gemini API #${selectedKeyIndex + 1} (${selectedApiKey.substring(0, 5)}...) مع نموذج ${selectedModel}`);
-    
-    // تحديث مؤشر المفتاح الحالي
-    setCurrentKeyIndex(selectedKeyIndex);
-
-    // في بيئة المعاينة، نحاول استخدام Gemini مع تحذير المستخدم
-    if (isPreviewEnvironment()) {
-      console.log("تشغيل في بيئة معاينة (Lovable). محاولة استخدام Gemini قد تواجه قيود CORS.");
+  // حفظ إحصائيات المفاتيح بعد كل تحديث
+  useEffect(() => {
+    if (config.apiKeys.length > 0) {
+      try {
+        const stats = {
+          usage: config.keyUsageCounts,
+          recent: config.keyRecentUsage,
+          fails: config.keyFailCounts,
+          models: config.keyModels
+        };
+        localStorage.setItem('geminiApiKeyStats', JSON.stringify(stats));
+      } catch (e) {
+        console.warn('فشل في حفظ إحصائيات المفاتيح:', e);
+      }
     }
-
-    try {
-      // الكشف عن حجم الملف وتقديم تحذير إذا كان كبيرًا جدًا
-      const fileSizeMB = file.size / (1024 * 1024);
-      if (fileSizeMB > 5) {
-        console.warn(`حجم الصورة كبير: ${fileSizeMB.toFixed(1)}MB، قد تستغرق المعالجة وقتًا أطول`);
-      }
-      
-      console.log("تحويل الملف إلى base64");
-      const imageBase64 = await fileToBase64(file);
-      console.log("تم تحويل الملف إلى base64، بطول:", imageBase64.length);
-      
-      // تحديث الصورة لتظهر أنها قيد المعالجة
-      const updatedImage: ImageData = { 
-        ...image, 
-        status: "processing" as const,
-        extractedText: "جاري معالجة الصورة واستخراج البيانات...",
-        usedApiKey: `API Key #${selectedKeyIndex + 1} (${selectedApiKey.substring(0, 5)}...)`
-      };
-      
-      // التحقق من معدل استخدام API للمفتاح الحالي
-      for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
-        const { allowed, waitTimeMs } = checkKeyRateLimit(selectedKeyIndex);
-        
-        if (!allowed) {
-          console.warn(`تجاوز معدل الاستخدام لـ Gemini API (المفتاح #${selectedKeyIndex + 1}). محاولة اختيار مفتاح آخر...`);
-          
-          // محاولة العثور على مفتاح آخر متاح
-          const availableKeyIndices = apiKeys
-            .map((keyState, idx) => ({ keyState, idx }))
-            .filter(({ keyState }) => keyState.isValid)
-            .filter(({ idx }) => {
-              const { allowed } = checkKeyRateLimit(idx);
-              return allowed;
-            })
-            .map(({ idx }) => idx);
-          
-          if (availableKeyIndices.length > 0) {
-            // استخدام مفتاح آخر متاح
-            const nextKeyIndex = availableKeyIndices[0];
-            const nextApiKey = apiKeys[nextKeyIndex].key;
-            const nextModel = apiKeys[nextKeyIndex].model;
-            
-            console.log(`التحول إلى مفتاح Gemini API #${nextKeyIndex + 1} (${nextApiKey.substring(0, 5)}...) مع نموذج ${nextModel}`);
-            setCurrentKeyIndex(nextKeyIndex);
-            
-            // استدعاء نفس الوظيفة مع المفتاح الجديد
-            const updatedImageWithNewKey: ImageData = { 
-              ...updatedImage, 
-              usedApiKey: `API Key #${nextKeyIndex + 1} (${nextApiKey.substring(0, 5)}...)` 
-            };
-            
-            return processWithGemini(file, updatedImageWithNewKey);
-          }
-          
-          // إذا لم يكن هناك مفتاح آخر متاح، الانتظار
-          console.warn(`لا توجد مفاتيح متاحة أخرى. الانتظار ${waitTimeMs}ms قبل المحاولة التالية`);
-          
-          // تحديث حالة الصورة للإشارة إلى الانتظار
-          if (attempt === 0) {
-            // نحدث النص فقط في المحاولة الأولى لتجنب التحديثات المتكررة
-            const waitTimeSeconds = Math.ceil(waitTimeMs / 1000);
-            const updatedImageWithWait: ImageData = {
-              ...updatedImage,
-              extractedText: `الانتظار ${waitTimeSeconds} ثوانٍ بسبب تجاوز معدل الاستخدام...`
-            };
-            return updatedImageWithWait;
-          }
-          
-          // الانتظار قبل المحاولة التالية
-          await delay(waitTimeMs);
-          continue;
-        }
-        
-        // إضافة معلومات تشخيصية أكثر
-        console.log("بدء استدعاء extractDataWithGemini");
-        console.log("إعدادات الاستخراج:", {
-          apiKeyLength: selectedApiKey.length,
-          imageBase64Length: imageBase64.length,
-          enhancedExtraction: true,
-          maxRetries: 2,
-          retryDelayMs: 3000,
-          model: selectedModel,
-          attempt: attempt + 1
-        });
-        
-        // تسجيل استدعاء API
-        trackApiKeyUsage(selectedKeyIndex);
-        
-        try {
-          const extractionResult = await extractDataWithGemini({
-            apiKey: selectedApiKey,
-            imageBase64,
-            enhancedExtraction: true,
-            maxRetries: 2,  // تقليل عدد المحاولات لتسريع الاستجابة
-            retryDelayMs: 3000,  // زيادة مدة الانتظار بين المحاولات
-            modelVersion: selectedModel  // استخدام النموذج المحدد
-          });
-          
-          console.log("نتيجة استخراج Gemini:", extractionResult);
-          
-          if (extractionResult.success && extractionResult.data) {
-            const { parsedData, extractedText } = extractionResult.data;
-            
-            // تحقق من وجود بيانات تم استخراجها
-            if (parsedData && Object.keys(parsedData).length > 0) {
-              console.log("Gemini نجح في استخراج البيانات:", parsedData);
-              
-              // التحقق من البيانات المستخرجة
-              console.log("البيانات المستخرجة المفصلة:", {
-                code: parsedData.code,
-                senderName: parsedData.senderName,
-                phoneNumber: parsedData.phoneNumber,
-                province: parsedData.province,
-                price: parsedData.price,
-                companyName: parsedData.companyName
-              });
-              
-              // تحديث صلاحية المفتاح
-              updateApiKeyValidity(selectedKeyIndex, true);
-              
-              // تحديث الصورة بالبيانات المستخرجة
-              const processedImage = updateImageWithExtractedData(
-                image,
-                extractedText || "",
-                parsedData || {},
-                parsedData.confidence ? parseInt(String(parsedData.confidence)) : 95,
-                "gemini"
-              );
-              
-              // تعيين الحالة استنادًا إلى وجود البيانات الرئيسية
-              let finalImage: ImageData = {
-                ...processedImage,
-                usedApiKey: `API Key #${selectedKeyIndex + 1} (${selectedApiKey.substring(0, 5)}...)`
-              };
-              
-              if (finalImage.code || finalImage.senderName || finalImage.phoneNumber) {
-                finalImage = {
-                  ...finalImage,
-                  status: "completed" as const
-                };
-              } else {
-                finalImage = {
-                  ...finalImage,
-                  status: "pending" as const
-                };
-              }
-              
-              return finalImage;
-            } else {
-              console.log("Gemini أرجع بيانات فارغة");
-              
-              // إذا كان هناك نص مستخرج ولكن لا يوجد بيانات منظمة
-              if (extractedText && extractedText.length > 10) {
-                return {
-                  ...image,
-                  status: "pending" as const,
-                  extractedText: extractedText,
-                  usedApiKey: `API Key #${selectedKeyIndex + 1} (${selectedApiKey.substring(0, 5)}...)`
-                };
-              } else {
-                return {
-                  ...image,
-                  status: "pending" as const,
-                  extractedText: "لم يتم استخراج نص. حاول مرة أخرى بصورة أوضح.",
-                  usedApiKey: `API Key #${selectedKeyIndex + 1} (${selectedApiKey.substring(0, 5)}...)`
-                };
-              }
-            }
-          } else {
-            console.log("فشل استخراج Gemini:", extractionResult.message);
-            
-            // تحديث صلاحية المفتاح إذا كانت هناك مشكلة
-            const isQuotaError = extractionResult.message?.includes('quota') || 
-                                extractionResult.message?.includes('rate limit');
-            
-            if (isQuotaError) {
-              updateApiKeyValidity(selectedKeyIndex, false, extractionResult.message);
-              
-              // محاولة استخدام مفتاح آخر
-              if (apiKeys.length > 1) {
-                console.log("محاولة استخدام مفتاح آخر بسبب تجاوز الحصة");
-                
-                // البحث عن مفتاح صالح آخر
-                const otherValidKeyIndex = apiKeys.findIndex((k, idx) => 
-                  idx !== selectedKeyIndex && k.isValid
-                );
-                
-                if (otherValidKeyIndex >= 0) {
-                  const nextApiKey = apiKeys[otherValidKeyIndex].key;
-                  console.log(`التحول إلى مفتاح Gemini API #${otherValidKeyIndex + 1} (${nextApiKey.substring(0, 5)}...)`);
-                  setCurrentKeyIndex(otherValidKeyIndex);
-                  
-                  // استدعاء نفس الوظيفة مع المفتاح الجديد
-                  const updatedImageWithNewKey: ImageData = { 
-                    ...updatedImage, 
-                    usedApiKey: `API Key #${otherValidKeyIndex + 1} (${nextApiKey.substring(0, 5)}...)` 
-                  };
-                  
-                  return processWithGemini(file, updatedImageWithNewKey);
-                }
-              }
-            }
-            
-            if (attempt < MAX_API_RETRIES - 1) {
-              console.log(`إعادة المحاولة ${attempt + 2}/${MAX_API_RETRIES} بعد ${API_RETRY_DELAY_MS}ms`);
-              await delay(API_RETRY_DELAY_MS);
-              continue;
-            }
-            
-            // إعادة الصورة مع حالة خطأ
-            return {
-              ...image,
-              status: "error" as const,
-              extractedText: "فشل استخراج النص: " + extractionResult.message,
-              usedApiKey: `API Key #${selectedKeyIndex + 1} (${selectedApiKey.substring(0, 5)}...)`
-            };
-          }
-        } catch (apiError: any) {
-          console.error(`خطأ في استدعاء Gemini API (المحاولة ${attempt + 1}/${MAX_API_RETRIES}):`, apiError);
-          
-          // التحقق من نوع الخطأ
-          const isRateLimitError = apiError.message?.includes('quota') || 
-                                  apiError.message?.includes('rate limit') || 
-                                  apiError.message?.includes('too many requests');
-          
-          if (isRateLimitError) {
-            // تحديث صلاحية المفتاح
-            updateApiKeyValidity(selectedKeyIndex, false, apiError.message);
-            
-            // محاولة استخدام مفتاح آخر
-            if (apiKeys.length > 1) {
-              console.log("محاولة استخدام مفتاح آخر بسبب خطأ معدل الاستخدام");
-              
-              // البحث عن مفتاح صالح آخر
-              const otherValidKeyIndex = apiKeys.findIndex((k, idx) => 
-                idx !== selectedKeyIndex && k.isValid
-              );
-              
-              if (otherValidKeyIndex >= 0) {
-                const nextApiKey = apiKeys[otherValidKeyIndex].key;
-                console.log(`التحول إلى مفتاح Gemini API #${otherValidKeyIndex + 1} (${nextApiKey.substring(0, 5)}...)`);
-                setCurrentKeyIndex(otherValidKeyIndex);
-                
-                // استدعاء نفس الوظيفة مع المفتاح الجديد
-                const updatedImageWithNewKey: ImageData = { 
-                  ...updatedImage, 
-                  usedApiKey: `API Key #${otherValidKeyIndex + 1} (${nextApiKey.substring(0, 5)}...)` 
-                };
-                
-                return processWithGemini(file, updatedImageWithNewKey);
-              }
-            }
-            
-            // زيادة فترة الانتظار لأخطاء معدل الاستخدام
-            await delay(API_RETRY_DELAY_MS * 2);
-          } else {
-            await delay(API_RETRY_DELAY_MS);
-          }
-          
-          // استمرار في الحلقة للمحاولة التالية إذا لم نصل إلى الحد الأقصى
-          if (attempt < MAX_API_RETRIES - 1) {
-            continue;
-          }
-          
-          // أقصى عدد من المحاولات، إرجاع خطأ
-          throw apiError;
-        }
-      }
-      
-      // إذا وصلنا إلى هنا، فقد استنفدنا جميع المحاولات
-      return {
-        ...image,
-        status: "error" as const,
-        extractedText: "فشل استخراج النص بعد استنفاد جميع المحاولات",
-        usedApiKey: `API Key #${selectedKeyIndex + 1} (${selectedApiKey.substring(0, 5)}...)`
-      };
-    } catch (geminiError: any) {
-      console.error("خطأ في معالجة Gemini:", geminiError);
-      
-      // تحسين رسالة الخطأ
-      let errorMessage = geminiError.message || 'خطأ غير معروف';
-      
-      if (errorMessage.includes('Failed to fetch')) {
-        errorMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك والمحاولة مرة أخرى.';
-      } else if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
-        errorMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى تحميل صورة أصغر حجمًا أو المحاولة مرة أخرى لاحقًا.';
-      } else if (errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
-        errorMessage = 'تم تجاوز حصة API. يرجى الانتظار بضع دقائق والمحاولة مرة أخرى.';
-        
-        // تحديث صلاحية المفتاح
-        updateApiKeyValidity(selectedKeyIndex, false, errorMessage);
-      }
-      
-      // إعادة الصورة مع حالة خطأ
-      return {
-        ...image,
-        status: "error" as const,
-        extractedText: "خطأ في المعالجة: " + errorMessage,
-        usedApiKey: `API Key #${selectedKeyIndex + 1} (${selectedApiKey.substring(0, 5)}...)`
-      };
-    }
-  };
-
-  // إضافة واجهة برمجية لتعيين مفاتيح API
+  }, [config.keyUsageCounts, config.keyRecentUsage, config.keyFailCounts, config.keyModels]);
+  
+  // تحديث مفاتيح API
   const setGeminiApiKeys = (keys: string[]) => {
-    if (!keys || keys.length === 0) {
-      toast({
-        title: "خطأ",
-        description: "يرجى توفير مفتاح API واحد على الأقل",
-        variant: "destructive"
-      });
+    // تنقية المفاتيح الفارغة
+    const cleanedKeys = keys.filter(key => key.trim() !== '');
+    
+    if (cleanedKeys.length === 0) {
+      console.warn('محاولة تعيين قائمة مفاتيح فارغة!');
       return;
     }
     
-    // تحديث المفاتيح
-    updateApiKeys(keys);
+    // الاحتفاظ بإحصائيات المفاتيح الموجودة
+    const newKeyUsage = {};
+    const newKeyRecentUsage = {};
+    const newKeyFailCounts = {};
+    const newKeyModels = {};
+    
+    cleanedKeys.forEach((_, index) => {
+      // نقل الإحصائيات إذا كان المفتاح موجوداً من قبل
+      if (index < config.apiKeys.length) {
+        newKeyUsage[index] = config.keyUsageCounts[index] || 0;
+        newKeyRecentUsage[index] = config.keyRecentUsage[index] || 0;
+        newKeyFailCounts[index] = config.keyFailCounts[index] || 0;
+        newKeyModels[index] = config.keyModels[index] || "gemini-1.5-pro";
+      } else {
+        // تهيئة إحصائيات للمفاتيح الجديدة
+        newKeyUsage[index] = 0;
+        newKeyRecentUsage[index] = 0;
+        newKeyFailCounts[index] = 0;
+        newKeyModels[index] = "gemini-1.5-pro";
+      }
+    });
+    
+    // تحديث التكوين
+    setConfig({
+      apiKeys: cleanedKeys,
+      defaultModel: config.defaultModel,
+      keyModels: newKeyModels,
+      keyUsageCounts: newKeyUsage,
+      keyRecentUsage: newKeyRecentUsage,
+      keyFailCounts: newKeyFailCounts,
+      lastSuccessfulKeyIndex: null
+    });
+    
+    // تخزين المفاتيح
+    localStorage.setItem('geminiApiKeys', JSON.stringify(cleanedKeys));
+    console.log(`تم تحديث مفاتيح API. العدد الجديد: ${cleanedKeys.length}`);
   };
   
-  // إضافة واجهة برمجية للحصول على معلومات المفاتيح
-  const getApiKeysInfo = () => {
-    return apiKeys.map((keyState, index) => ({
-      keyId: index,
-      keyPreview: keyState.key.substring(0, 5) + '...',
-      isValid: keyState.isValid,
-      callCount: keyState.callCount,
-      recentCalls: keyState.timestamps.filter(t => Date.now() - t < API_RATE_PERIOD_MS).length,
-      model: keyState.model,
-      failCount: keyState.failCount
+  // تعيين نموذج لمفتاح معين
+  const setApiKeyModel = (keyIndex: number, model: string) => {
+    setConfig(prev => ({
+      ...prev,
+      keyModels: {
+        ...prev.keyModels,
+        [keyIndex]: model
+      }
     }));
   };
   
-  // تعيين نموذج لمفتاح محدد
-  const setApiKeyModel = (keyIndex: number, model: string) => {
-    if (keyIndex < 0 || keyIndex >= apiKeys.length) {
-      return;
+  // اختيار أفضل مفتاح للاستخدام
+  const selectBestApiKey = (): { key: string, keyIndex: number, model: string } => {
+    if (config.apiKeys.length === 0) {
+      throw new Error('لا توجد مفاتيح API متاحة');
     }
     
-    setApiKeys(prevKeys => {
-      const updatedKeys = [...prevKeys];
-      if (updatedKeys[keyIndex]) {
-        updatedKeys[keyIndex] = {
-          ...updatedKeys[keyIndex],
-          model
-        };
-      }
-      return updatedKeys;
-    });
+    // إذا كان هناك مفتاح ناجح سابق، نحاول استخدامه مرة أخرى
+    if (config.lastSuccessfulKeyIndex !== null && 
+        config.keyRecentUsage[config.lastSuccessfulKeyIndex] < 5 &&
+        config.keyFailCounts[config.lastSuccessfulKeyIndex] < 3) {
+      const keyIndex = config.lastSuccessfulKeyIndex;
+      return { 
+        key: config.apiKeys[keyIndex], 
+        keyIndex, 
+        model: config.keyModels[keyIndex] || config.defaultModel 
+      };
+    }
     
-    console.log(`تم تعيين نموذج مفتاح API #${keyIndex + 1} إلى ${model}`);
+    // اختيار مفتاح مع أقل استخدام حديث وأقل إخفاقات
+    let bestKeyIndex = 0;
+    let lowestCombinedScore = Infinity;
+    
+    for (let i = 0; i < config.apiKeys.length; i++) {
+      // تجاهل المفاتيح التي تجاوزت عتبة الإخفاق
+      if (config.keyFailCounts[i] >= 5) {
+        continue;
+      }
+      
+      // حساب مجموع الاستخدام الحديث وعدد الإخفاقات
+      const recentUsage = config.keyRecentUsage[i] || 0;
+      const failCount = config.keyFailCounts[i] || 0;
+      const combinedScore = (recentUsage * 2) + (failCount * 5);
+      
+      if (combinedScore < lowestCombinedScore) {
+        lowestCombinedScore = combinedScore;
+        bestKeyIndex = i;
+      }
+    }
+    
+    // إذا كانت جميع المفاتيح تجاوزت عتبة الإخفاق، نختار عشوائياً
+    if (lowestCombinedScore === Infinity) {
+      bestKeyIndex = Math.floor(Math.random() * config.apiKeys.length);
+      console.warn('جميع المفاتيح لديها إخفاقات عالية، اختيار مفتاح عشوائي:', bestKeyIndex);
+    }
+    
+    return { 
+      key: config.apiKeys[bestKeyIndex], 
+      keyIndex: bestKeyIndex, 
+      model: config.keyModels[bestKeyIndex] || config.defaultModel 
+    };
   };
-
-  // نقوم بإرجاع useGemini كقيمة ثابتة true لاستخدام Gemini دائمًا
-  return { 
-    useGemini: true, 
-    processWithGemini,
-    apiCallCount,
+  
+  // تسجيل نجاح استخدام مفتاح
+  const recordKeySuccess = (keyIndex: number) => {
+    setConfig(prev => ({
+      ...prev,
+      keyUsageCounts: {
+        ...prev.keyUsageCounts,
+        [keyIndex]: (prev.keyUsageCounts[keyIndex] || 0) + 1
+      },
+      keyRecentUsage: {
+        ...prev.keyRecentUsage,
+        [keyIndex]: (prev.keyRecentUsage[keyIndex] || 0) + 1
+      },
+      lastSuccessfulKeyIndex: keyIndex
+    }));
+  };
+  
+  // تسجيل فشل استخدام مفتاح
+  const recordKeyFailure = (keyIndex: number) => {
+    setConfig(prev => ({
+      ...prev,
+      keyFailCounts: {
+        ...prev.keyFailCounts,
+        [keyIndex]: (prev.keyFailCounts[keyIndex] || 0) + 1
+      }
+    }));
+  };
+  
+  // الحصول على معلومات المفاتيح للعرض في واجهة المستخدم
+  const getApiKeysInfo = () => {
+    return config.apiKeys.map((apiKey, index) => {
+      // تحديد صلاحية المفتاح بناءً على عدد الإخفاقات
+      const isValid = (config.keyFailCounts[index] || 0) < 3;
+      
+      return {
+        keyId: index,
+        keyPreview: apiKey.substring(0, 5) + '...' + apiKey.substring(apiKey.length - 3),
+        isValid,
+        callCount: config.keyUsageCounts[index] || 0,
+        recentCalls: config.keyRecentUsage[index] || 0,
+        model: config.keyModels[index] || config.defaultModel,
+        failCount: config.keyFailCounts[index] || 0
+      };
+    });
+  };
+  
+  // معالجة الصورة باستخدام Gemini API
+  const processWithGemini = async (
+    file: File, 
+    imageData: ImageData
+  ): Promise<Partial<ImageData>> => {
+    if (!file || !imageData) {
+      throw new Error('ملف الصورة أو بيانات الصورة مفقودة');
+    }
+    
+    // اختيار أفضل مفتاح API
+    let { key: apiKey, keyIndex, model } = selectBestApiKey();
+    
+    try {
+      console.log(`استخدام المفتاح [${keyIndex}] مع النموذج [${model}] لمعالجة الصورة ${file.name}`);
+      
+      // تحويل الصورة إلى Base64
+      const imageBase64 = await fileToBase64(file);
+      if (!imageBase64) {
+        throw new Error('فشل في تحويل الصورة إلى تنسيق Base64');
+      }
+      
+      // استخدام Gemini API لاستخراج البيانات
+      const result = await extractDataWithGemini({
+        apiKey,
+        imageBase64,
+        modelVersion: model,
+        enhancedExtraction: true
+      });
+      
+      if (!result.success) {
+        throw new Error(`فشل في استخراج البيانات: ${result.message}`);
+      }
+      
+      if (!result.data) {
+        throw new Error('لم يتم العثور على بيانات مستخرجة');
+      }
+      
+      // تسجيل نجاح استخدام المفتاح
+      recordKeySuccess(keyIndex);
+      
+      // إرجاع البيانات المستخرجة
+      return {
+        code: result.data.code,
+        senderName: result.data.senderName,
+        phoneNumber: result.data.phoneNumber,
+        province: result.data.province,
+        price: result.data.price,
+        companyName: result.data.companyName,
+        extractedText: result.data.extractedText,
+        status: "completed",
+        confidence: result.data.confidence || 0,
+        extractionMethod: "gemini",
+        usedApiKey: apiKey.substring(0, 5) + '...' + apiKey.substring(apiKey.length - 3) // تخزين معلومات عن المفتاح المستخدم
+      };
+    } catch (error) {
+      console.error(`خطأ في معالجة الصورة باستخدام Gemini [المفتاح ${keyIndex}]:`, error);
+      
+      // تسجيل فشل استخدام المفتاح
+      recordKeyFailure(keyIndex);
+      
+      // التحقق مما إذا كان الخطأ يتعلق بقيود معدل الاستخدام أو حصة API
+      const errorMessage = error.message || '';
+      const isRateLimitError = 
+        errorMessage.includes('quota') || 
+        errorMessage.includes('rate limit') || 
+        errorMessage.includes('too many requests');
+      
+      // إذا كان الخطأ يتعلق بقيود معدل الاستخدام وهناك مفاتيح أخرى، حاول استخدام مفتاح آخر
+      if (isRateLimitError && config.apiKeys.length > 1) {
+        console.log(`تم تجاوز حدود معدل الاستخدام للمفتاح ${keyIndex}، محاولة مفتاح آخر...`);
+        
+        // استبعاد المفتاح الحالي
+        const availableKeyIndices = Array.from(
+          { length: config.apiKeys.length }, 
+          (_, i) => i
+        ).filter(i => 
+          i !== keyIndex && 
+          (config.keyFailCounts[i] || 0) < 3 && 
+          (config.keyRecentUsage[i] || 0) < 5
+        );
+        
+        if (availableKeyIndices.length > 0) {
+          // اختيار مفتاح جديد عشوائياً من المفاتيح المتاحة
+          const newKeyIndex = availableKeyIndices[Math.floor(Math.random() * availableKeyIndices.length)];
+          const newApiKey = config.apiKeys[newKeyIndex];
+          const newModel = config.keyModels[newKeyIndex] || config.defaultModel;
+          
+          console.log(`محاولة المفتاح البديل [${newKeyIndex}] مع النموذج [${newModel}]`);
+          
+          try {
+            // تحويل الصورة إلى Base64 مرة أخرى
+            const imageBase64 = await fileToBase64(file);
+            if (!imageBase64) {
+              throw new Error('فشل في تحويل الصورة إلى تنسيق Base64');
+            }
+            
+            // استخدام المفتاح الجديد
+            const result = await extractDataWithGemini({
+              apiKey: newApiKey,
+              imageBase64,
+              modelVersion: newModel,
+              enhancedExtraction: true
+            });
+            
+            if (!result.success) {
+              throw new Error(`فشل في استخراج البيانات باستخدام المفتاح البديل: ${result.message}`);
+            }
+            
+            if (!result.data) {
+              throw new Error('لم يتم العثور على بيانات مستخرجة باستخدام المفتاح البديل');
+            }
+            
+            // تسجيل نجاح استخدام المفتاح البديل
+            recordKeySuccess(newKeyIndex);
+            
+            // إرجاع البيانات المستخرجة
+            return {
+              code: result.data.code,
+              senderName: result.data.senderName,
+              phoneNumber: result.data.phoneNumber,
+              province: result.data.province,
+              price: result.data.price,
+              companyName: result.data.companyName,
+              extractedText: result.data.extractedText,
+              status: "completed",
+              confidence: result.data.confidence || 0,
+              extractionMethod: "gemini",
+              usedApiKey: newApiKey.substring(0, 5) + '...' + newApiKey.substring(newApiKey.length - 3)
+            };
+          } catch (fallbackError) {
+            console.error(`فشل المفتاح البديل [${newKeyIndex}] أيضاً:`, fallbackError);
+            recordKeyFailure(newKeyIndex);
+          }
+        }
+      }
+      
+      // إذا وصلنا إلى هنا، فقد فشلت جميع المحاولات
+      return {
+        extractedText: `فشل في استخراج البيانات: ${errorMessage}`,
+        status: "error"
+      };
+    }
+  };
+  
+  // اختبار اتصال Gemini
+  const testGeminiConnection = async (apiKey: string, model: string = "gemini-1.5-pro"): Promise<boolean> => {
+    try {
+      const result = await testGeminiApiConnection(apiKey, model);
+      return result.success;
+    } catch (error) {
+      console.error('خطأ في اختبار اتصال Gemini:', error);
+      return false;
+    }
+  };
+  
+  // اختبار نماذج Gemini المختلفة
+  const testModelAvailability = async (apiKey: string): Promise<Record<string, boolean>> => {
+    try {
+      return await testGeminiModels(apiKey);
+    } catch (error) {
+      console.error('خطأ في اختبار نماذج Gemini:', error);
+      return {
+        'gemini-1.5-pro': false,
+        'gemini-1.5-flash': false,
+        'gemini-pro': false
+      };
+    }
+  };
+  
+  // إعادة تعيين إحصائيات المفاتيح
+  const resetKeyStats = () => {
+    setConfig(prev => ({
+      ...prev,
+      keyUsageCounts: Object.fromEntries(
+        Object.keys(prev.keyUsageCounts).map(key => [key, 0])
+      ),
+      keyRecentUsage: Object.fromEntries(
+        Object.keys(prev.keyRecentUsage).map(key => [key, 0])
+      ),
+      keyFailCounts: Object.fromEntries(
+        Object.keys(prev.keyFailCounts).map(key => [key, 0])
+      ),
+      lastSuccessfulKeyIndex: null
+    }));
+  };
+  
+  return {
+    apiKeys: config.apiKeys,
     setGeminiApiKeys,
+    processWithGemini,
+    testGeminiConnection,
+    testModelAvailability,
     getApiKeysInfo,
-    setApiKeyModel
+    setApiKeyModel,
+    resetKeyStats
   };
 };

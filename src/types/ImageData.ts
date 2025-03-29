@@ -22,14 +22,15 @@ export interface ImageData {
   user_id?: string;
   storage_path?: string;
   batch_id?: string;
-  added_at?: number; // إضافة حقل للطابع الزمني
-  retryCount?: number; // إضافة حقل لعدد مرات إعادة المحاولة
+  added_at?: number; // طابع زمني للإضافة
+  retryCount?: number; // عدد مرات إعادة المحاولة
   bookmarkletStatus?: "ready" | "pending" | "success" | "error"; // حالة استخدام البوكماركلت
   bookmarkletMessage?: string; // رسالة خاصة بالبوكماركلت
-  notes1?: string; // إضافة حقل ملاحظات 1
-  recipientName?: string; // إضافة حقل اسم المستلم
-  usedApiKey?: string; // إضافة حقل للإشارة إلى المفتاح المستخدم في المعالجة
+  notes1?: string; // ملاحظات 1
+  recipientName?: string; // اسم المستلم
+  usedApiKey?: string; // مفتاح API المستخدم في المعالجة
+  processingId?: string; // معرف فريد للعملية
 }
 
-// إعادة تصدير الواجهات من ملف types.ts لضمان التوافق - مع إصلاح الخطأ
+// إعادة تصدير الواجهات من ملف types.ts لضمان التوافق
 export type { BookmarkletItem, BookmarkletExportData };

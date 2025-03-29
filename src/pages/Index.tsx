@@ -1,366 +1,242 @@
 
-import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2, RefreshCw, Eraser } from 'lucide-react';
-import AppHeader from '@/components/AppHeader';
-import { useImageProcessing } from '@/hooks/useImageProcessing';
-import ImageUploader from '@/components/ImageUploader';
-import { useDataFormatting } from '@/hooks/useDataFormatting';
-import { motion } from 'framer-motion';
-import DirectExportTools from '@/components/DataExport/DirectExportTools';
-import { Button } from '@/components/ui/button';
-import { Link, useNavigate } from 'react-router-dom';
-import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
-import GeminiApiKeyManager from '@/components/ApiKeyManager/GeminiApiKeyManager';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Eraser, RefreshCw, KeyRound } from "lucide-react";
+import { converter } from "@/utils/bookmarklet/converter";
+import { ImageData } from "@/types/ImageData";
+import { saveToLocalStorage } from "@/utils/bookmarklet/storage";
+import { Link } from "react-router-dom";
+import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
+import ImageUploader from "@/components/ImageUploader";
+import ImageList from "@/components/ImageList";
+import { useToast } from "@/hooks/use-toast";
+import ImageControls from "@/components/ImageControls";
 
-const Index = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+export default function Index() {
+  const [exportLoading, setExportLoading] = useState<boolean>(false);
   const { toast } = useToast();
   
-  // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
-    sessionImages,
+    images,
     isProcessing,
     processingProgress,
-    isSubmitting,
-    bookmarkletStats,
     handleFileChange,
     handleTextChange,
     handleDelete,
     handleSubmitToApi,
-    saveImageToDatabase,
-    formatDate: formatImageDate,
-    clearSessionImages,
     loadUserImages,
-    runCleanupNow,
-    saveProcessedImage,
-    activeUploads,
-    queueLength,
-    retryProcessing,
     removeDuplicates,
-    validateRequiredFields
-  } = useImageProcessing();
+    retryProcessing,
+    activeUploads,
+    queueLength
+  } = useImageProcessingCore();
   
-  const {
-    formatPhoneNumber,
-    formatPrice,
-    formatProvinceName
-  } = useDataFormatting();
-
-  // إضافة حالة لتتبع عملية التنظيف
-  const [isCleaning, setIsCleaning] = useState(false);
-  // إضافة حالة للتحكم في مربع حوار إدارة مفاتيح Gemini API
-  const [apiKeysDialogOpen, setApiKeysDialogOpen] = useState(false);
-
-  // وظيفة تنفيذ التنظيف يدوياً
-  const handleManualCleanup = async () => {
-    if (user) {
-      setIsCleaning(true);
-      try {
-        await runCleanupNow(user.id);
-        // إعادة تحميل الصور بعد التنظيف
-        loadUserImages();
+  // الحصول على عدد الصور المكتملة
+  const completedImages = images.filter(img => 
+    img.status === "completed" && img.code && img.senderName && img.phoneNumber
+  ).length;
+  
+  // وظيفة لتصدير البيانات كـ JSON
+  const handleExportJSON = () => {
+    try {
+      setExportLoading(true);
+      
+      // استخراج الصور المكتملة فقط
+      const validImages = images.filter(img => 
+        img.status === "completed" && img.code && img.senderName && img.phoneNumber
+      );
+      
+      if (validImages.length === 0) {
         toast({
-          title: "تم التنظيف",
-          description: "تم تنظيف السجلات القديمة بنجاح",
-        });
-      } catch (error) {
-        console.error("خطأ أثناء تنظيف السجلات:", error);
-        toast({
-          title: "خطأ في التنظيف",
-          description: "حدث خطأ أثناء محاولة تنظيف السجلات القديمة",
+          title: "تعذر التصدير",
+          description: "لا توجد صور مكتملة للتصدير",
           variant: "destructive"
         });
-      } finally {
-        setIsCleaning(false);
+        return;
       }
-    }
-  };
-  
-  // وظيفة إزالة التكرارات يدوياً
-  const handleRemoveDuplicates = () => {
-    setIsCleaning(true);
-    try {
-      removeDuplicates();
+      
+      // تحويل الصور إلى صيغة قابلة للتصدير
+      const items = converter.imagesToBookmarkletItems(validImages);
+      
+      // تحويل البيانات إلى JSON
+      const jsonData = converter.toJSON(items);
+      
+      // إنشاء وتنزيل الملف
+      const blob = new Blob([jsonData], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `export_${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // تنظيف
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      // حفظ البيانات محليًا أيضًا
+      saveToLocalStorage(validImages);
+      
       toast({
-        title: "تمت إزالة التكرارات",
-        description: "تم فحص الصور وإزالة التكرارات بنجاح"
+        title: "تم التصدير بنجاح",
+        description: `تم تصدير ${validImages.length} صور بتنسيق JSON`,
       });
     } catch (error) {
-      console.error("خطأ أثناء إزالة التكرارات:", error);
+      console.error("خطأ في تصدير البيانات:", error);
       toast({
-        title: "خطأ في إزالة التكرارات",
-        description: "حدث خطأ أثناء محاولة إزالة الصور المكررة",
+        title: "خطأ في التصدير",
+        description: "حدث خطأ أثناء تصدير البيانات",
         variant: "destructive"
       });
     } finally {
-      setIsCleaning(false);
+      setExportLoading(false);
     }
   };
   
-  // وظيفة إعادة المعالجة للصورة
-  const handleReprocessImage = async (imageId: string) => {
-    const imageToReprocess = sessionImages.find(img => img.id === imageId);
-    if (!imageToReprocess) {
-      console.error("الصورة غير موجودة:", imageId);
-      return;
-    }
-    
+  // وظيفة لتصدير البيانات كـ CSV
+  const handleExportCSV = () => {
     try {
-      // تحديث حالة الصورة إلى "جاري المعالجة"
-      handleTextChange(imageId, "status", "processing");
+      setExportLoading(true);
       
-      // إعادة معالجة الصورة
-      await saveProcessedImage(imageToReprocess);
+      // استخراج الصور المكتملة فقط
+      const validImages = images.filter(img => 
+        img.status === "completed" && img.code && img.senderName && img.phoneNumber
+      );
+      
+      if (validImages.length === 0) {
+        toast({
+          title: "تعذر التصدير",
+          description: "لا توجد صور مكتملة للتصدير",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // تحويل الصور إلى صيغة قابلة للتصدير
+      const items = converter.imagesToBookmarkletItems(validImages);
+      
+      // تحويل البيانات إلى CSV
+      const csvData = converter.toCSV(items);
+      
+      // إنشاء وتنزيل الملف
+      const blob = new Blob([csvData], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `export_${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // تنظيف
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      // حفظ البيانات محليًا أيضًا
+      saveToLocalStorage(validImages);
       
       toast({
-        title: "تمت إعادة المعالجة",
-        description: "تمت إعادة معالجة الصورة بنجاح",
+        title: "تم التصدير بنجاح",
+        description: `تم تصدير ${validImages.length} صور بتنسيق CSV`,
       });
     } catch (error) {
-      console.error("خطأ في إعادة معالجة الصورة:", error);
-      handleTextChange(imageId, "status", "error");
-      handleTextChange(imageId, "extractedText", `فشل في إعادة المعالجة: ${error.message || "خطأ غير معروف"}`);
-      
+      console.error("خطأ في تصدير البيانات:", error);
       toast({
-        title: "خطأ في إعادة المعالجة",
-        description: "حدث خطأ أثناء إعادة معالجة الصورة",
+        title: "خطأ في التصدير",
+        description: "حدث خطأ أثناء تصدير البيانات",
         variant: "destructive"
       });
-      
-      throw error; // إعادة رمي الخطأ للتعامل معه في المكون الأصلي
+    } finally {
+      setExportLoading(false);
     }
   };
   
-  // وظيفة لإعادة تشغيل المعالجة إذا تجمدت
-  const handleRetryProcessing = () => {
-    if (isProcessing && processingProgress === 0) {
-      toast({
-        title: "إعادة المحاولة",
-        description: "جارٍ إعادة تشغيل معالجة الصور..."
-      });
-      
-      // استدعاء وظيفة إعادة تشغيل المعالجة
-      retryProcessing();
-    }
+  // تنظيف التكرارات وإعادة تحميل الصور
+  const handleCleanupDuplicates = () => {
+    // تنظيف التكرارات
+    removeDuplicates();
+    
+    // إعادة تحميل الصور بعد التنظيف
+    setTimeout(() => loadUserImages(), 1000);
+    
+    toast({
+      title: "تم التنظيف",
+      description: "تم تنظيف الصور المكررة وإعادة تحميل الصور",
+    });
   };
-  
-  // إعادة تشغيل المعالجة تلقائيًا إذا كانت متوقفة لفترة طويلة
-  useEffect(() => {
-    if (isProcessing && processingProgress === 0 && queueLength > 0) {
-      // إذا لم يتغير التقدم لمدة 20 ثانية، نحاول إعادة تشغيل المعالجة
-      const timeoutId = setTimeout(() => {
-        console.log("تم اكتشاف عملية معالجة متوقفة، محاولة إعادة التشغيل تلقائيًا");
-        retryProcessing();
-      }, 20000);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [isProcessing, processingProgress, queueLength, retryProcessing]);
   
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader />
+    <div className="container py-4 mx-auto">
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-xl text-center">استخراج البيانات من الصور</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ImageUploader 
+            isProcessing={isProcessing} 
+            processingProgress={processingProgress} 
+            onFileChange={handleFileChange}
+            activeUploads={activeUploads}
+            queueLength={queueLength}
+          />
+        </CardContent>
+      </Card>
       
-      <main className="pt-10 pb-20">
-        <section className="py-16 px-6">
-          <div className="container mx-auto">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ duration: 0.6 }} 
-              className="text-center max-w-3xl mx-auto mb-12"
-            >
-              <h1 className="apple-header mb-4">معالج الصور والبيانات</h1>
-              <p className="text-xl text-muted-foreground mb-8">
-                استخرج البيانات من الصور بسهولة وفعالية باستخدام تقنية الذكاء الاصطناعي المتطورة
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button className="apple-button bg-primary text-primary-foreground" size="lg">
-                  ابدأ الآن
-                </Button>
-                <Button variant="outline" className="apple-button" size="lg" asChild>
-                  <Link to="/records">
-                    استعراض السجلات
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                
-                {/* إضافة زر لإدارة مفاتيح Gemini API */}
-                <Dialog open={apiKeysDialogOpen} onOpenChange={setApiKeysDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="apple-button bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100" size="lg">
-                      إدارة مفاتيح Gemini API
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle>إدارة مفاتيح Gemini API</DialogTitle>
-                      <DialogDescription>
-                        أضف أو عدل مفاتيح Gemini API لتوزيع الطلبات وتحسين أداء النظام
-                      </DialogDescription>
-                    </DialogHeader>
-                    <GeminiApiKeyManager />
-                  </DialogContent>
-                </Dialog>
-              </div>
-              
-              {/* أدوات التنظيف وإزالة التكرارات */}
-              <div className="mt-6">
-                <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                  <Info className="h-4 w-4 text-blue-500" />
-                  <AlertDescription className="text-sm text-blue-600 dark:text-blue-300">
-                    <div className="mb-2">أدوات صيانة البيانات لتحسين أداء النظام ومعالجة الصور المكررة</div>
-                    <div className="flex flex-wrap gap-2 justify-center mt-3">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handleManualCleanup} 
-                        disabled={isCleaning}
-                        className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
-                      >
-                        <RefreshCw className={`h-3 w-3 mr-1 ${isCleaning ? 'animate-spin' : ''}`} />
-                        تنظيف السجلات القديمة
-                      </Button>
-                      
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handleRemoveDuplicates}
-                        disabled={isCleaning}
-                        className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
-                      >
-                        <Eraser className="h-3 w-3 mr-1" />
-                        إزالة الصور المكررة
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-        
-        <section className="py-16 px-6 bg-transparent">
-          <div className="container mx-auto bg-transparent">
-            <div className="max-w-3xl mx-auto">
-              <div className="bg-card rounded-2xl shadow-lg overflow-hidden">
-                <div className="p-8">
-                  <h2 className="apple-subheader mb-4 text-center">تحميل الصور</h2>
-                  <p className="text-muted-foreground text-center mb-6">قم بتحميل صور الإيصالات أو الفواتير وسنقوم باستخراج البيانات منها تلقائياً</p>
-                  <ImageUploader 
-                    isProcessing={isProcessing} 
-                    processingProgress={processingProgress}
-                    onFileChange={handleFileChange} 
-                    activeUploads={activeUploads}
-                    queueLength={queueLength}
-                  />
-                  
-                  {/* إضافة زر لإعادة المحاولة إذا كانت المعالجة متوقفة */}
-                  {isProcessing && processingProgress === 0 && (
-                    <div className="mt-4 text-center">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleRetryProcessing}
-                        className="animate-pulse"
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        إعادة تشغيل المعالجة
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {sessionImages.length > 0 && (
-          <section className="py-16 px-6">
-            <div className="container mx-auto">
-              <div className="max-w-7xl mx-auto">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-2xl font-bold mb-2">الصور التي تم رفعها</h2>
-                    <p className="text-muted-foreground mb-8">
-                      هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.
-                    </p>
-                  </div>
-                  
-                  {/* إضافة زر لإزالة التكرارات في محتوى الصفحة */}
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleRemoveDuplicates}
-                      disabled={isCleaning}
-                      className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
-                    >
-                      <Eraser className="h-4 w-4 mr-2" />
-                      إزالة التكرارات
-                    </Button>
-                  </div>
-                </div>
-                
-                <ImagePreviewContainer 
-                  images={sessionImages} 
-                  isSubmitting={isSubmitting} 
-                  onTextChange={handleTextChange} 
-                  onDelete={handleDelete} 
-                  onSubmit={id => handleSubmitToApi(id)} 
-                  formatDate={formatImageDate} 
-                  showOnlySession={true}
-                  onReprocess={handleReprocessImage}
-                />
-              </div>
-            </div>
-          </section>
-        )}
-          
-        {/* عرض رابط للسجلات */}
-        <section className="py-16 px-6 bg-gray-50 dark:bg-gray-800/20">
-          <div className="container mx-auto">
-            <div className="max-w-7xl mx-auto text-center">
-              <h2 className="text-3xl font-medium tracking-tight mb-6">سجلات الوصولات</h2>
-              <p className="text-muted-foreground mb-8">
-                يمكنك الاطلاع على جميع سجلات الوصولات والبيانات المستخرجة في صفحة السجلات
-              </p>
-              <Button size="lg" className="apple-button" asChild>
-                <Link to="/records">
-                  عرض جميع السجلات
-                  <ArrowRight className="mr-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-      </main>
+      {/* إضافة عناصر التحكم في الصور */}
+      <ImageControls 
+        totalImages={images.length}
+        completedImages={completedImages}
+        onExportJSON={handleExportJSON}
+        onExportCSV={handleExportCSV}
+        onRefreshImages={loadUserImages}
+        onCleanupDuplicates={handleCleanupDuplicates}
+      />
       
-      <footer className="border-t py-8 bg-transparent">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground">
-              نظام استخراج البيانات - &copy; {new Date().getFullYear()}
+      {/* معلومات عن معالجة الصور */}
+      {isProcessing && processingProgress > 0 && (
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm">
+          <p className="text-blue-700 dark:text-blue-300 text-center">
+            جاري معالجة الصور ({processingProgress}% مكتمل)
+            {activeUploads > 0 && <span> - {activeUploads} صورة قيد المعالجة</span>}
+            {queueLength > 0 && <span> - {queueLength} صورة في الانتظار</span>}
+          </p>
+        </div>
+      )}
+      
+      {/* إضافة زر إعادة المحاولة إذا كانت هناك صور في حالة خطأ */}
+      {images.some(img => img.status === "error") && (
+        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+          <div className="flex justify-between items-center">
+            <p className="text-yellow-700 dark:text-yellow-300 text-sm">
+              يوجد {images.filter(img => img.status === "error").length} صورة فشلت في المعالجة
             </p>
-            <div className="flex gap-4">
-              <Link to="/records" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                السجلات
-              </Link>
-              <Link to="/profile" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                الملف الشخصي
-              </Link>
-            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => retryProcessing()}
+              className="bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50 border-yellow-300"
+            >
+              <RefreshCw className="w-4 h-4 ml-2" />
+              إعادة محاولة معالجة الصور الفاشلة
+            </Button>
           </div>
         </div>
-      </footer>
+      )}
+      
+      {/* قائمة الصور */}
+      <ImageList 
+        images={images} 
+        onTextChange={handleTextChange} 
+        onDelete={handleDelete} 
+        onSubmit={handleSubmitToApi}
+      />
+      
+      {/* رسالة إذا لم تكن هناك صور */}
+      {images.length === 0 && (
+        <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+          <p className="mb-4">لا توجد صور حالياً. قم بتحميل الصور للبدء في استخراج البيانات.</p>
+        </div>
+      )}
     </div>
   );
-};
-
-export default Index;
+}
