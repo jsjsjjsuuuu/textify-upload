@@ -37,12 +37,24 @@ export const useSavedImageProcessing = (
       });
       
       try {
+        // تعيين حالة الإرسال
         setIsSubmitting(true);
+        
+        // قبل الحفظ، نتأكد من أن البيانات منسقة بشكل صحيح
+        // مثلاً، تنسيق رقم الهاتف إذا لم يكن في الصيغة الصحيحة
+        const formattedImage = {
+          ...image,
+          phoneNumber: formatPhoneNumber(image.phoneNumber)
+        };
+        
         // حفظ البيانات في قاعدة البيانات
-        const savedData = await saveImageToDatabase(image, user.id);
+        const savedData = await saveImageToDatabase(formattedImage, user.id);
         
         if (savedData) {
           console.log("البيانات المستردة من قاعدة البيانات بعد الحفظ:", savedData);
+          
+          // تأخير قبل تحديث واجهة المستخدم لضمان اكتمال العملية
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
           // تحديث الصورة بمعلومات أنها تم حفظها والبيانات المحدثة من قاعدة البيانات
           const updatedFields: Partial<ImageData> = { 
@@ -61,21 +73,20 @@ export const useSavedImageProcessing = (
           // طباعة البيانات المحدثة للتحقق منها
           console.log("تحديث الصورة بالبيانات التالية:", updatedFields);
           
-          // انتظار فترة قصيرة قبل تحديث واجهة المستخدم
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
           // تحديث الصورة في حالة التطبيق
           updateImage(image.id, updatedFields);
           
           console.log("تم حفظ الصورة بنجاح في قاعدة البيانات:", image.id);
           
-          // إعادة تحميل الصور بعد الحفظ
+          // إعادة تحميل الصور بعد الحفظ لضمان تحديث البيانات في واجهة المستخدم
           await loadUserImages(user.id, setAllImages);
           
           toast({
             title: "تم الحفظ",
             description: "تم حفظ البيانات في قاعدة البيانات بنجاح",
           });
+          
+          return savedData;
         }
       } catch (error) {
         console.error("خطأ أثناء حفظ الصورة:", error);
@@ -84,6 +95,8 @@ export const useSavedImageProcessing = (
           description: "حدث خطأ أثناء محاولة حفظ البيانات",
           variant: "destructive"
         });
+        
+        throw error; // إعادة رمي الخطأ للتعامل معه في الاستدعاء
       } finally {
         setIsSubmitting(false);
       }
@@ -95,6 +108,26 @@ export const useSavedImageProcessing = (
         variant: "destructive"
       });
     }
+  };
+
+  // وظيفة مساعدة لتنسيق رقم الهاتف
+  const formatPhoneNumber = (phone?: string): string => {
+    if (!phone) return '';
+    
+    // إزالة جميع الأحرف غير الرقمية
+    let cleaned = phone.replace(/\D/g, '');
+    
+    // التأكد من أن الرقم يبدأ بـ 0
+    if (cleaned.length === 10 && !cleaned.startsWith('0')) {
+      cleaned = '0' + cleaned;
+    }
+    
+    // التأكد من الطول الصحيح (11 رقم)
+    if (cleaned.length > 11) {
+      cleaned = cleaned.substring(0, 11);
+    }
+    
+    return cleaned;
   };
 
   return {

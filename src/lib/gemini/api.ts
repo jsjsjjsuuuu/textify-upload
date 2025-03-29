@@ -8,6 +8,10 @@ import {
   fetchWithRetry, 
   getConnectionTimeout 
 } from "@/utils/automationServerUrl";
+import { reportApiKeyError } from "./apiKeyManager";
+
+// تتبع آخر استدعاء API لكل مفتاح
+const lastApiCallTime = new Map<string, number>();
 
 /**
  * استخراج البيانات من الصور باستخدام Gemini API
@@ -17,10 +21,10 @@ export async function extractDataWithGemini({
   imageBase64,
   extractionPrompt,
   temperature = 0.1,
-  modelVersion = 'gemini-1.5-pro',
+  modelVersion = 'gemini-1.5-flash', // استخدام النموذج الأسرع افتراضياً
   enhancedExtraction = true,
-  maxRetries = 3,
-  retryDelayMs = 5000
+  maxRetries = 2, // تقليل عدد المحاولات
+  retryDelayMs = 3000 // تقليل مدة الانتظار
 }: GeminiExtractParams): Promise<ApiResult> {
   if (!apiKey) {
     console.error("Gemini API Key مفقود");
@@ -41,6 +45,23 @@ export async function extractDataWithGemini({
     }
   }
 
+  // إنشاء تأخير بين الطلبات لنفس المفتاح
+  const lastCallTime = lastApiCallTime.get(apiKey) || 0;
+  const currentTime = Date.now();
+  const timeSinceLastCall = currentTime - lastCallTime;
+  
+  // التأكد من أن هناك على الأقل 1.5 ثانية بين الطلبات لنفس المفتاح
+  const minDelayBetweenCalls = 1500; // 1.5 ثانية
+  
+  if (timeSinceLastCall < minDelayBetweenCalls) {
+    const delayNeeded = minDelayBetweenCalls - timeSinceLastCall;
+    console.log(`تأخير ${delayNeeded}ms قبل استدعاء API للمفتاح: ${apiKey.substring(0, 5)}...`);
+    await new Promise(resolve => setTimeout(resolve, delayNeeded));
+  }
+  
+  // تحديث وقت آخر استدعاء
+  lastApiCallTime.set(apiKey, Date.now());
+
   try {
     console.log("إرسال طلب إلى Gemini API...");
     console.log("طول مفتاح API:", apiKey.length);
@@ -48,14 +69,10 @@ export async function extractDataWithGemini({
     console.log("طول صورة Base64:", imageBase64.length);
     console.log("استخدام إصدار النموذج:", modelVersion);
     console.log("استخدام درجة حرارة:", temperature);
-    console.log("استخدام المطالبة:", prompt.substring(0, 100) + "...");
-    console.log("الحد الأقصى للمحاولات:", maxRetries);
+    console.log("طول المطالبة:", prompt.length);
     
     // تنظيف معرف صورة Base64
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-    
-    // محاولة استخراج النص فقط أولاً للتأكد من أن الصورة يمكن قراءتها
-    console.log("محاولة استخراج النص الأولي فقط...");
     
     // إنشاء محتوى الطلب
     const requestBody: GeminiRequest = {
@@ -74,7 +91,7 @@ export async function extractDataWithGemini({
       ],
       generationConfig: {
         temperature: temperature,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 800, // تقليل حد الإخراج لتسريع الاستجابة
         topK: 40,
         topP: 0.95
       }
@@ -84,21 +101,22 @@ export async function extractDataWithGemini({
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent`;
     console.log("إرسال طلب إلى نقطة نهاية Gemini API:", endpoint);
     
-    // إنشاء خيارات الطلب
+    // إنشاء خيارات الطلب مع مهلة زمنية أقصر
     const fetchOptions = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-goog-api-key": apiKey
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      // إضافة مهلة أطول للطلبات
+      signal: AbortSignal.timeout(15000) // 15 ثانية
     };
     
-    // تنفيذ الطلب مع محاولات إعادة المحاولة
+    // تنفيذ الطلب مع قياس الوقت
     console.log("بدء طلب API...");
     const timeBeforeRequest = Date.now();
     
-    // استخدام fetch مباشرة للتبسيط
     const response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
     
     const timeAfterRequest = Date.now();
@@ -107,6 +125,10 @@ export async function extractDataWithGemini({
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Gemini API رد بخطأ:", response.status, errorText);
+      
+      // الإبلاغ عن الخطأ لمدير المفاتيح
+      reportApiKeyError(apiKey, `${response.status}: ${errorText}`);
+      
       return {
         success: false,
         message: `خطأ من Gemini API: ${response.status} - ${errorText}`
@@ -114,10 +136,14 @@ export async function extractDataWithGemini({
     }
     
     const data: GeminiResponse = await response.json();
-    console.log("بيانات استجابة Gemini API:", JSON.stringify(data).substring(0, 200) + "...");
+    console.log("استلام بيانات استجابة Gemini API");
     
     if (data.promptFeedback?.blockReason) {
       console.error("Gemini حظر الطلب:", data.promptFeedback.blockReason);
+      
+      // الإبلاغ عن الخطأ لمدير المفاتيح
+      reportApiKeyError(apiKey, `حظر الاستعلام: ${data.promptFeedback.blockReason}`);
+      
       return {
         success: false,
         message: `تم حظر الاستعلام: ${data.promptFeedback.blockReason}`
@@ -125,7 +151,11 @@ export async function extractDataWithGemini({
     }
 
     if (!data.candidates || data.candidates.length === 0) {
-      console.error("لا توجد مرشحات في استجابة Gemini:", data);
+      console.error("لا توجد مرشحات في استجابة Gemini");
+      
+      // الإبلاغ عن الخطأ لمدير المفاتيح
+      reportApiKeyError(apiKey, "لم يتم إنشاء أي استجابة من Gemini");
+      
       return {
         success: false,
         message: "لم يتم إنشاء أي استجابة من Gemini"
@@ -133,7 +163,11 @@ export async function extractDataWithGemini({
     }
 
     if (!data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
-      console.error("أجزاء المحتوى مفقودة في استجابة Gemini:", data);
+      console.error("أجزاء المحتوى مفقودة في استجابة Gemini");
+      
+      // الإبلاغ عن الخطأ لمدير المفاتيح
+      reportApiKeyError(apiKey, "استجابة Gemini غير مكتملة");
+      
       return {
         success: false,
         message: "استجابة Gemini غير مكتملة"
@@ -141,7 +175,7 @@ export async function extractDataWithGemini({
     }
 
     const extractedText = data.candidates[0].content.parts[0].text || '';
-    console.log("النص المستخرج من Gemini:", extractedText.substring(0, 200) + (extractedText.length > 200 ? "..." : ""));
+    console.log("تم استلام النص المستخرج من Gemini بطول:", extractedText.length);
     
     // التحقق من وجود نص مستخرج
     if (!extractedText) {
@@ -168,13 +202,18 @@ export async function extractDataWithGemini({
           ]
         };
         
+        // تأخير قبل طلب آخر
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // استخدام الطلب البسيط
         const textOnlyResponse = await fetch(`${endpoint}?key=${apiKey}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "x-goog-api-key": apiKey
           },
-          body: JSON.stringify(textOnlyRequestBody)
+          body: JSON.stringify(textOnlyRequestBody),
+          signal: AbortSignal.timeout(10000) // 10 ثواني
         });
         
         if (textOnlyResponse.ok) {
@@ -182,7 +221,7 @@ export async function extractDataWithGemini({
           
           if (textOnlyData.candidates?.[0]?.content?.parts?.[0]?.text) {
             const rawExtractedText = textOnlyData.candidates[0].content.parts[0].text;
-            console.log("تم استخراج النص الخام بنجاح:", rawExtractedText.substring(0, 200));
+            console.log("تم استخراج النص الخام بنجاح، الطول:", rawExtractedText.length);
             
             return {
               success: true,
@@ -194,6 +233,9 @@ export async function extractDataWithGemini({
               }
             };
           }
+        } else {
+          // الإبلاغ عن الخطأ لمدير المفاتيح
+          reportApiKeyError(apiKey, "فشل طلب النص فقط");
         }
       } catch (textOnlyError) {
         console.error("فشلت محاولة النص فقط:", textOnlyError);
@@ -208,8 +250,7 @@ export async function extractDataWithGemini({
     // تحليل الاستجابة واستخراج البيانات المنظمة
     try {
       const { parsedData, confidenceScore } = parseGeminiResponse(extractedText);
-      console.log("البيانات المحللة من Gemini:", parsedData);
-      console.log("درجة الثقة:", confidenceScore);
+      console.log("تم تحليل البيانات من Gemini بنجاح");
       
       return {
         success: true,
@@ -236,6 +277,9 @@ export async function extractDataWithGemini({
     console.error("خطأ عند استخدام Gemini API:", error);
     const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
     
+    // الإبلاغ عن الخطأ لمدير المفاتيح
+    reportApiKeyError(apiKey, errorMessage);
+    
     // تحسين رسائل الخطأ
     let userFriendlyMessage = `حدث خطأ أثناء معالجة الطلب: ${errorMessage}`;
     
@@ -245,6 +289,8 @@ export async function extractDataWithGemini({
       userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN إذا كنت تواجه قيود جغرافية.';
     } else if (errorMessage.includes('CORS')) {
       userFriendlyMessage = 'تم منع الطلب بسبب قيود CORS. حاول استخدام الموقع الرئيسي بدلاً من بيئة المعاينة.';
+    } else if (errorMessage.includes('quota') || errorMessage.includes('limit')) {
+      userFriendlyMessage = 'تم تجاوز حد الاستخدام. جاري تبديل المفتاح تلقائياً.';
     }
     
     return {
@@ -286,7 +332,8 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
           temperature: 0.1,
           maxOutputTokens: 128
         }
-      })
+      }),
+      signal: AbortSignal.timeout(10000) // 10 ثواني
     };
     
     console.log("إرسال طلب اختبار إلى Gemini API...");
@@ -295,11 +342,18 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("فشل اختبار Gemini API:", response.status, errorText);
+      
+      // الإبلاغ عن الخطأ لمدير المفاتيح
+      reportApiKeyError(apiKey, `فشل الاختبار: ${response.status} - ${errorText}`);
+      
       return {
         success: false,
         message: `خطأ من Gemini API: ${response.status} - ${errorText}`
       };
     }
+    
+    // تحديث وقت آخر استدعاء
+    lastApiCallTime.set(apiKey, Date.now());
     
     return {
       success: true,
@@ -308,6 +362,9 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
   } catch (error) {
     console.error("خطأ عند اختبار اتصال Gemini API:", error);
     const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+    
+    // الإبلاغ عن الخطأ لمدير المفاتيح
+    reportApiKeyError(apiKey, `خطأ الاختبار: ${errorMessage}`);
     
     let userFriendlyMessage = `حدث خطأ أثناء اختبار اتصال Gemini API: ${errorMessage}`;
     
