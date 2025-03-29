@@ -121,7 +121,7 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
           {confidenceDisplay}
 
           <LearningNotifications 
-            correctionsMade={correctionsMade} 
+            correctionsMade={correctionsMade.length > 0} 
             isLearningActive={isLearningActive} 
           />
 

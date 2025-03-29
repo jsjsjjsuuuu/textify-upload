@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 import { parseDataFromOCRText } from "@/utils/imageDataParser";
-import { saveCorrectionToLearningSystem } from "@/utils/learningSystem";
+import { addCorrection } from "@/utils/learningSystem";
 
 export const useDataExtraction = (
   image: ImageData,
@@ -80,7 +80,20 @@ export const useDataExtraction = (
       // إذا كان التعلم نشطًا، حفظ التصحيحات
       if (isLearningActive && correctionsMade.length > 0) {
         for (const correction of correctionsMade) {
-          saveCorrectionToLearningSystem(image.extractedText, correction.field, correction.value);
+          // استخدم وظيفة addCorrection بدلاً من saveCorrectionToLearningSystem
+          if (image.extractedText) {
+            const originalData: Record<string, string> = {};
+            const correctedData: Record<string, string> = {};
+            
+            // تجميع البيانات الأصلية
+            originalData[correction.field] = image[correction.field as keyof ImageData] as string || '';
+            
+            // تجميع البيانات المصححة
+            correctedData[correction.field] = correction.value;
+            
+            // إضافة التصحيح إلى نظام التعلم
+            addCorrection(image.extractedText, originalData, correctedData);
+          }
         }
         toast({
           title: "تم حفظ التصحيحات",
