@@ -35,7 +35,7 @@ export const useFileUpload = ({
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
   
-  // استخدام نظام قائمة الانتظار الجديد
+  // استخدام نظام قائمة الانتظار المحسن
   const { 
     addToQueue, 
     isProcessing, 
@@ -110,21 +110,27 @@ export const useFileUpload = ({
   }, [geminiEnabled, processWithGemini, processWithOcr, saveProcessedImage, updateImage]);
 
   // معالج تغيير الملفات - عند رفع الصور
-  // تم تغيير نوع المعامل من FileList إلى File[]
+  // تم تحسين المنطق لمعالجة الصور واحدة تلو الأخرى
   const handleFileChange = useCallback(async (files: File[]) => {
     if (!files.length) return;
     
     const batchId = uuidv4(); // إنشاء معرف مجموعة للملفات المرفوعة معاً
     console.log(`تم استلام ${files.length} ملفات، معرف المجموعة: ${batchId}`);
 
-    // التحقق من التطويق العنكبوتي للصور قبل المعالجة
+    // التحقق من التكرار قبل المعالجة
     removeDuplicates();
+    
+    // مسح أي معالجة سابقة قد تكون متوقفة
+    clearQueue();
     
     // مجموعة لتخزين معرفات الصور المضافة حديثاً
     const addedImageIds: string[] = [];
     
-    let fileNumber = 1;
-    for (const file of files) {
+    // معالجة كل ملف على حدة وإضافته إلى قائمة الانتظار
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileNumber = i + 1;
+      
       try {
         // ضغط الصورة أولاً
         const compressedFile = await compressImage(file);
@@ -159,12 +165,16 @@ export const useFileUpload = ({
         
         // إضافة الصورة إلى قائمة انتظار المعالجة
         addToQueue(newImage.id, newImage, async () => {
-          await processImage(newImage);
+          try {
+            await processImage(newImage);
+            // تحديث التقدم بعد معالجة كل صورة
+            setProcessingProgress((fileNumber / files.length) * 100);
+            return Promise.resolve();
+          } catch (error) {
+            console.error(`فشل في معالجة الصورة ${newImage.id}:`, error);
+            return Promise.reject(error);
+          }
         });
-        
-        // تحديث التقدم
-        setProcessingProgress((fileNumber / files.length) * 100);
-        fileNumber++;
       } catch (error) {
         console.error(`خطأ في معالجة الملف ${fileNumber}:`, error);
         toast({
@@ -182,12 +192,10 @@ export const useFileUpload = ({
         description: `تم إضافة ${addedImageIds.length} صورة إلى قائمة المعالجة`,
       });
     }
-    
-    // إعادة تعيين شريط التقدم
-    setProcessingProgress(0);
   }, [
     addImage, 
     addToQueue, 
+    clearQueue,
     isDuplicateImage, 
     images, 
     processImage, 
@@ -209,6 +217,7 @@ export const useFileUpload = ({
     manuallyTriggerProcessingQueue,
     clearProcessedHashesCache,
     activeUploads,
-    queueLength
+    queueLength,
+    retryProcessing: manuallyTriggerProcessingQueue // تصدير وظيفة إعادة المحاولة
   };
 };

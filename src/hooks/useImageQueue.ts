@@ -16,40 +16,49 @@ export const useImageQueue = () => {
     process: () => Promise<void>;
   }[]>([]);
   const { toast } = useToast();
+  const processingRef = useRef<boolean>(false); // مرجع لتتبع حالة المعالجة الفعلية
 
   // إضافة صورة إلى قائمة الانتظار
   const addToQueue = useCallback((id: string, image: ImageData, process: () => Promise<void>) => {
+    console.log(`إضافة الصورة ${id} إلى قائمة الانتظار`);
     queue.current.push({ id, image, process });
     setQueueLength(queue.current.length);
     
     // إذا لم تكن هناك معالجة جارية، ابدأ معالجة القائمة
-    if (!isProcessing) {
+    if (!processingRef.current) {
       processQueue();
     }
-  }, [isProcessing]);
+  }, []);
 
   // معالجة الصورة التالية في قائمة الانتظار
   const processQueue = useCallback(async () => {
+    // التحقق من وجود عناصر في القائمة
     if (queue.current.length === 0) {
+      console.log("قائمة المعالجة فارغة، توقف عن المعالجة");
       setIsProcessing(false);
       setActiveUploads(0);
+      processingRef.current = false;
       return;
     }
 
+    // تعيين حالة المعالجة إلى نشطة
     setIsProcessing(true);
+    processingRef.current = true;
     setActiveUploads(1); // دائمًا معالجة صورة واحدة في المرة
 
     try {
+      // الحصول على العنصر الأول من القائمة
       const item = queue.current[0];
       console.log(`بدء معالجة الصورة: ${item.id}, المتبقي في القائمة: ${queue.current.length - 1}`);
       
+      // معالجة الصورة
       await item.process();
       
       // إزالة العنصر من القائمة بعد المعالجة الناجحة
       queue.current.shift();
       setQueueLength(queue.current.length);
       
-      console.log(`تمت معالجة الصورة: ${item.id}, المتبقي في القائمة: ${queue.current.length}`);
+      console.log(`تمت معالجة الصورة بنجاح: ${item.id}, المتبقي في القائمة: ${queue.current.length}`);
       
       // التأخير بين كل صورة والأخرى لتجنب التحميل الزائد
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -78,19 +87,22 @@ export const useImageQueue = () => {
         // إذا لم يكن هناك المزيد من الصور، قم بإيقاف المعالجة
         setIsProcessing(false);
         setActiveUploads(0);
+        processingRef.current = false;
       }
     }
   }, [toast]);
 
   // إعادة تشغيل المعالجة يدويًا إذا توقفت
   const manuallyTriggerProcessingQueue = useCallback(() => {
-    if (queue.current.length > 0 && !isProcessing) {
+    if (queue.current.length > 0 && !processingRef.current) {
       console.log("إعادة تشغيل معالجة قائمة الصور يدويًا");
       processQueue();
+      return true;
     } else {
       console.log("لا توجد صور في قائمة الانتظار أو المعالجة قيد التقدم بالفعل");
+      return false;
     }
-  }, [isProcessing, processQueue]);
+  }, [processQueue]);
 
   // مسح قائمة الانتظار
   const clearQueue = useCallback(() => {
@@ -98,6 +110,7 @@ export const useImageQueue = () => {
     setQueueLength(0);
     setIsProcessing(false);
     setActiveUploads(0);
+    processingRef.current = false;
   }, []);
 
   return {
