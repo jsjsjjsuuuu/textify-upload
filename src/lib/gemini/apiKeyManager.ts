@@ -9,7 +9,12 @@ const API_KEYS = [
   "AIzaSyCzHmpOdtuRu07jP0P4GNlCMeQB_InKT7E",
   "AIzaSyCw3ET1HuGtfJtuY1ABK4GdLuOHtkqceKo",
   "AIzaSyCp7rVtu_IAdBSICRSd5RmNCvdrkiXQ7SI",
-  "AIzaSyBUwu7p61Rk1BHYJb5sa-CUMuN_6ImuQOc" // المفتاح الافتراضي السابق
+  "AIzaSyBUwu7p61Rk1BHYJb5sa-CUMuN_6ImuQOc", // المفتاح الافتراضي السابق
+  // إضافة مفاتيح إضافية للتناوب
+  "AIzaSyDi_K0m6y-t62a_fqxFV8DToF9sVpmm7YI",
+  "AIzaSyCn-oXnIxQWiYy-wYI5-UpHbr_P-3Ni68Y",
+  "AIzaSyDGPa1F9XH4nh3rxtwCnBBHMEDVHrygUUk",
+  "AIzaSyBL8PnaeEL4tKUCJzrVPFDk5-UJGD9M4vQ"
 ];
 
 // مؤشر للمفتاح الحالي
@@ -121,21 +126,22 @@ export const reportApiKeyError = (apiKey: string, errorMessage: string): void =>
     errorMessage.includes("too many requests") ||
     errorMessage.includes("exceeded") ||
     errorMessage.includes("limit") || 
-    errorMessage.includes("dailyLimit");
+    errorMessage.includes("dailyLimit") ||
+    errorMessage.includes("429"); // كود حالة تجاوز الحد للطلبات
   
   if (isRateLimitError) {
     console.log(`تم وضع علامة على مفتاح API ${apiKey.substring(0, 5)}... كمفتاح تجاوز الحد`);
     usage.rateLimit = true;
-    // تعيين فترة تهدئة للمفتاح - 5 دقائق للأخطاء المتعلقة بتجاوز الحد
-    usage.cooldownUntil = Date.now() + 5 * 60 * 1000;
+    // زيادة فترة التهدئة للمفتاح - 15 دقيقة للأخطاء المتعلقة بتجاوز الحد
+    usage.cooldownUntil = Date.now() + 15 * 60 * 1000;
   }
   
   // إذا كان هناك عدد كبير من الأخطاء، ضع علامة على المفتاح كمفتاح تجاوز الحد
   if (usage.errors >= 3) {
     console.log(`تم وضع علامة على مفتاح API ${apiKey.substring(0, 5)}... كمفتاح به أخطاء متكررة`);
     usage.rateLimit = true;
-    // تعيين فترة تهدئة أقصر للأخطاء العامة - 2 دقيقة
-    usage.cooldownUntil = Date.now() + 2 * 60 * 1000;
+    // زيادة فترة التهدئة للأخطاء العامة - 5 دقائق
+    usage.cooldownUntil = Date.now() + 5 * 60 * 1000;
   }
 };
 

@@ -11,7 +11,7 @@ interface ExtractedDataActionsProps {
   onCopyText: () => void;
   onAutoExtract: () => void;
   hasExtractedText: boolean;
-  isProcessing?: boolean; // إضافة الخاصية الجديدة كاختيارية
+  isProcessing?: boolean; // إضافة الخاصية كاختيارية
 }
 
 const ExtractedDataActions = ({ 

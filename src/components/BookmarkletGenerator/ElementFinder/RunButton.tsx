@@ -26,6 +26,9 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
     console.log("🔌 جاري التحقق من اتصال خادم الأتمتة...");
     
     try {
+      // إضافة تأخير قبل الاتصال بالخادم لمنح وقت للتهيئة
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // فحص سريع لاتصال نقطة نهاية ping
       const pingResponse = await fetch(`${serverUrl}/api/ping`, {
         method: 'GET',
@@ -50,6 +53,9 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
         return;
       }
       
+      // إضافة تأخير إضافي قبل التحقق من نقطة النهاية
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // استخدام نقطة النهاية /api/automate بدلاً من /api/automation/execute
       try {
         // استخدام HEAD بدلاً من OPTIONS للتحقق بشكل أخف
@@ -71,6 +77,9 @@ const RunButton: React.FC<RunButtonProps> = ({ isRunning, onRun }) => {
       
       console.log("✅ تم التحقق من اتصال الخادم بنجاح");
       console.log("🌐 جاري الاتصال بنقطة نهاية API: /api/automate");
+      
+      // إضافة تأخير نهائي قبل البدء
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // إظهار رسالة للمستخدم لتوضيح ما سيحدث
       if (!isRunning) {
