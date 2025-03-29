@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -53,6 +52,7 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
     setSelectedImageId(id);
   }, []);
 
+  // تعديل الدالة لتتناسب مع نوع البيانات المتوقع
   const handleDelete = useCallback(
     async (id: string) => {
       const result = await onDelete(id);
@@ -71,22 +71,26 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
           setSelectedImageId(null);
         }
       }
+      return true; // إضافة قيمة إرجاع boolean للتوافق مع النوع المطلوب
     },
     [images, onDelete, selectedImageId]
   );
 
-  // إعادة معالجة الصورة
+  // تعديل دالة إعادة المعالجة لتتناسب مع نوع البيانات المتوقع
   const handleReprocessImage = useCallback(async (id: string) => {
-    if (!onReprocess) return;
+    if (!onReprocess) return true; // إرجاع true عند عدم وجود دالة إعادة معالجة
     
     setIsReprocessing(true);
     try {
       await onReprocess(id);
+      // تحديث حالة الصورة بعد إعادة المعالجة بنجاح
     } catch (error) {
       console.error("فشل في إعادة معالجة الصورة:", error);
+      // معالجة الخطأ هنا
     } finally {
       setIsReprocessing(false);
     }
+    return true; // إرجاع true عند النجاح
   }, [onReprocess]);
 
   // الصورة المحددة حالياً
