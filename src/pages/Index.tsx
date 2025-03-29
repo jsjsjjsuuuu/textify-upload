@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2, RefreshCw, Eraser, Settings, AlertOctagon } from 'lucide-react';
+import { ArrowRight, Info, Trash2, RefreshCw, Broom } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -13,9 +12,7 @@ import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContaine
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useGeminiProcessing } from '@/hooks/useGeminiProcessing';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -28,7 +25,6 @@ const Index = () => {
     isProcessing,
     processingProgress,
     isSubmitting,
-    useGemini,
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
@@ -39,7 +35,12 @@ const Index = () => {
     clearSessionImages,
     loadUserImages,
     runCleanupNow,
-    saveProcessedImage
+    saveProcessedImage,
+    activeUploads,
+    queueLength,
+    retryProcessing,
+    removeDuplicates,
+    validateRequiredFields
   } = useImageProcessing();
   
   const {
@@ -47,25 +48,53 @@ const Index = () => {
     formatPrice,
     formatProvinceName
   } = useDataFormatting();
-  
-  // الوصول إلى وحدة التحكم في Gemini
-  const { 
-    quotaExceeded, 
-    currentModel, 
-    resetQuotaExceededStatus, 
-    changeGeminiModel 
-  } = useGeminiProcessing();
+
+  // إضافة حالة لتتبع عملية التنظيف
+  const [isCleaning, setIsCleaning] = useState(false);
 
   // وظيفة تنفيذ التنظيف يدوياً
   const handleManualCleanup = async () => {
     if (user) {
-      await runCleanupNow(user.id);
-      // إعادة تحميل الصور بعد التنظيف
-      loadUserImages();
+      setIsCleaning(true);
+      try {
+        await runCleanupNow(user.id);
+        // إعادة تحميل الصور بعد التنظيف
+        loadUserImages();
+        toast({
+          title: "تم التنظيف",
+          description: "تم تنظيف السجلات القديمة بنجاح",
+        });
+      } catch (error) {
+        console.error("خطأ أثناء تنظيف السجلات:", error);
+        toast({
+          title: "خطأ في التنظيف",
+          description: "حدث خطأ أثناء محاولة تنظيف السجلات القديمة",
+          variant: "destructive"
+        });
+      } finally {
+        setIsCleaning(false);
+      }
+    }
+  };
+  
+  // وظيفة إزالة التكرارات يدوياً
+  const handleRemoveDuplicates = () => {
+    setIsCleaning(true);
+    try {
+      removeDuplicates();
       toast({
-        title: "تم التنظيف",
-        description: "تم تنظيف السجلات القديمة بنجاح",
+        title: "تمت إزالة التكرارات",
+        description: "تم فحص الصور وإزالة التكرارات بنجاح"
       });
+    } catch (error) {
+      console.error("خطأ أثناء إزالة التكرارات:", error);
+      toast({
+        title: "خطأ في إزالة التكرارات",
+        description: "حدث خطأ أثناء محاولة إزالة الصور المكررة",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCleaning(false);
     }
   };
   
@@ -103,6 +132,32 @@ const Index = () => {
     }
   };
   
+  // وظيفة لإعادة تشغيل المعالجة إذا تجمدت
+  const handleRetryProcessing = () => {
+    if (isProcessing && processingProgress === 0) {
+      toast({
+        title: "إعادة المحاولة",
+        description: "جارٍ إعادة تشغيل معالجة الصور..."
+      });
+      
+      // استدعاء وظيفة إعادة تشغيل المعالجة
+      retryProcessing();
+    }
+  };
+  
+  // إعادة تشغيل المعالجة تلقائيًا إذا كانت متوقفة لفترة طويلة
+  useEffect(() => {
+    if (isProcessing && processingProgress === 0 && queueLength > 0) {
+      // إذا لم يتغير التقدم لمدة 20 ثانية، نحاول إعادة تشغيل المعالجة
+      const timeoutId = setTimeout(() => {
+        console.log("تم اكتشاف عملية معالجة متوقفة، محاولة إعادة التشغيل تلقائيًا");
+        retryProcessing();
+      }, 20000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isProcessing, processingProgress, queueLength, retryProcessing]);
+  
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
@@ -120,27 +175,6 @@ const Index = () => {
               <p className="text-xl text-muted-foreground mb-8">
                 استخرج البيانات من الصور بسهولة وفعالية باستخدام تقنية الذكاء الاصطناعي المتطورة
               </p>
-              
-              {quotaExceeded && (
-                <Alert className="mb-6 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-                  <AlertOctagon className="h-4 w-4 text-amber-500" />
-                  <AlertDescription className="text-sm text-amber-600 dark:text-amber-300">
-                    تم تجاوز حصة Gemini API المجانية. سيتم محاولة استخدام نماذج أقل كلفة أو OCR.
-                    <div className="mt-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={resetQuotaExceededStatus} 
-                        className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
-                      >
-                        <RefreshCw className="h-3 w-3 mr-1" />
-                        إعادة تعيين حالة الحصة
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-              
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button className="apple-button bg-primary text-primary-foreground" size="lg">
                   ابدأ الآن
@@ -151,73 +185,40 @@ const Index = () => {
                     <ArrowRight className="mr-2 h-4 w-4" />
                   </Link>
                 </Button>
-                
-                {/* قائمة إدارة نموذج Gemini */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="lg" className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100">
-                      <Settings className="h-4 w-4 ml-2" />
-                      إعدادات المعالجة
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80">
-                    <div className="space-y-4">
-                      <h3 className="font-medium text-lg">إعدادات المعالجة</h3>
-                      
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium">نموذج Gemini</h4>
-                        <Select
-                          defaultValue={currentModel}
-                          onValueChange={(value) => changeGeminiModel(value)}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="اختر النموذج" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (الأفضل جودة)</SelectItem>
-                            <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash (أقل حصة، أسرع)</SelectItem>
-                            <SelectItem value="gemini-pro">Gemini Pro (الإصدار القديم)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                          النموذج المستخدم حاليًا: {currentModel}
-                        </p>
-                      </div>
-                      
-                      <div className="pt-2">
-                        <Button 
-                          onClick={resetQuotaExceededStatus} 
-                          className="w-full bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-                          variant="outline"
-                          size="sm"
-                        >
-                          <RefreshCw className="h-3.5 w-3.5 mr-2" />
-                          إعادة تعيين حالة الحصة
-                        </Button>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
               </div>
               
-              {/* معلومات عن ميزة تنظيف البيانات */}
-              <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                <Info className="h-4 w-4 text-blue-500" />
-                <AlertDescription className="text-sm text-blue-600 dark:text-blue-300">
-                  لتحسين أداء النظام، يتم الاحتفاظ فقط بأحدث 100 سجل. السجلات القديمة يتم حذفها تلقائياً.
-                  <div className="mt-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={handleManualCleanup} 
-                      className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
-                    >
-                      <Eraser className="h-3 w-3 mr-1" />
-                      تنفيذ التنظيف الآن
-                    </Button>
-                  </div>
-                </AlertDescription>
-              </Alert>
+              {/* أدوات التنظيف وإزالة التكرارات */}
+              <div className="mt-6">
+                <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                  <Info className="h-4 w-4 text-blue-500" />
+                  <AlertDescription className="text-sm text-blue-600 dark:text-blue-300">
+                    <div className="mb-2">أدوات صيانة البيانات لتحسين أداء النظام ومعالجة الصور المكررة</div>
+                    <div className="flex flex-wrap gap-2 justify-center mt-3">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={handleManualCleanup} 
+                        disabled={isCleaning}
+                        className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
+                      >
+                        <RefreshCw className={`h-3 w-3 mr-1 ${isCleaning ? 'animate-spin' : ''}`} />
+                        تنظيف السجلات القديمة
+                      </Button>
+                      
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={handleRemoveDuplicates}
+                        disabled={isCleaning}
+                        className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
+                      >
+                        <Broom className="h-3 w-3 mr-1" />
+                        إزالة الصور المكررة
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              </div>
             </motion.div>
           </div>
         </section>
@@ -231,10 +232,26 @@ const Index = () => {
                   <p className="text-muted-foreground text-center mb-6">قم بتحميل صور الإيصالات أو الفواتير وسنقوم باستخراج البيانات منها تلقائياً</p>
                   <ImageUploader 
                     isProcessing={isProcessing} 
-                    processingProgress={processingProgress} 
-                    useGemini={useGemini} 
+                    processingProgress={processingProgress}
                     onFileChange={handleFileChange} 
+                    activeUploads={activeUploads}
+                    queueLength={queueLength}
                   />
+                  
+                  {/* إضافة زر لإعادة المحاولة إذا كانت المعالجة متوقفة */}
+                  {isProcessing && processingProgress === 0 && (
+                    <div className="mt-4 text-center">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleRetryProcessing}
+                        className="animate-pulse"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        إعادة تشغيل المعالجة
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -245,10 +262,29 @@ const Index = () => {
           <section className="py-16 px-6">
             <div className="container mx-auto">
               <div className="max-w-7xl mx-auto">
-                <h2 className="text-2xl font-bold mb-6">الصور التي تم رفعها</h2>
-                <p className="text-muted-foreground mb-8">
-                  هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.
-                </p>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-2">الصور التي تم رفعها</h2>
+                    <p className="text-muted-foreground mb-8">
+                      هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.
+                    </p>
+                  </div>
+                  
+                  {/* إضافة زر لإزالة التكرارات في محتوى الصفحة */}
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleRemoveDuplicates}
+                      disabled={isCleaning}
+                      className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
+                    >
+                      <Broom className="h-4 w-4 mr-2" />
+                      إزالة التكرارات
+                    </Button>
+                  </div>
+                </div>
+                
                 <ImagePreviewContainer 
                   images={sessionImages} 
                   isSubmitting={isSubmitting} 

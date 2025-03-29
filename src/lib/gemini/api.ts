@@ -104,38 +104,12 @@ export async function extractDataWithGemini({
     const timeAfterRequest = Date.now();
     console.log(`استغرق طلب Gemini API ${timeAfterRequest - timeBeforeRequest}ms`);
     
-    // التحقق من خطأ 429 (تجاوز معدل الطلبات/الحصة)
-    if (response.status === 429) {
-      const errorText = await response.text();
-      console.error("تم تجاوز حصة Gemini API:", errorText);
-      return {
-        success: false,
-        message: "تم تجاوز الحصة اليومية المجانية. يرجى المحاولة لاحقًا أو استخدام نموذج مختلف.",
-        quotaExceeded: true,
-        errorCode: 429
-      };
-    }
-    
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Gemini API رد بخطأ:", response.status, errorText);
-      
-      // التحقق من خطأ الحصة من الرسالة
-      if (errorText.includes("quota") || 
-          errorText.includes("rate limit") || 
-          errorText.includes("RESOURCE_EXHAUSTED")) {
-        return {
-          success: false,
-          message: "تم تجاوز الحصة اليومية المجانية. يرجى المحاولة لاحقًا أو استخدام نموذج مختلف.",
-          quotaExceeded: true,
-          errorCode: response.status
-        };
-      }
-      
       return {
         success: false,
-        message: `خطأ من Gemini API: ${response.status} - ${errorText}`,
-        errorCode: response.status
+        message: `خطأ من Gemini API: ${response.status} - ${errorText}`
       };
     }
     
@@ -203,16 +177,6 @@ export async function extractDataWithGemini({
           body: JSON.stringify(textOnlyRequestBody)
         });
         
-        // التحقق من خطأ تجاوز الحصة
-        if (textOnlyResponse.status === 429) {
-          return {
-            success: false,
-            message: "تم تجاوز الحصة اليومية المجانية. يرجى المحاولة لاحقًا أو استخدام نموذج مختلف.",
-            quotaExceeded: true,
-            errorCode: 429
-          };
-        }
-        
         if (textOnlyResponse.ok) {
           const textOnlyData: GeminiResponse = await textOnlyResponse.json();
           
@@ -274,16 +238,8 @@ export async function extractDataWithGemini({
     
     // تحسين رسائل الخطأ
     let userFriendlyMessage = `حدث خطأ أثناء معالجة الطلب: ${errorMessage}`;
-    let quotaExceeded = false;
     
-    // التحقق من خطأ تجاوز الحصة
-    if (errorMessage.includes('429') || 
-        errorMessage.includes('quota') ||
-        errorMessage.includes('rate limit') ||
-        errorMessage.includes('RESOURCE_EXHAUSTED')) {
-      userFriendlyMessage = 'تم تجاوز الحصة اليومية المجانية لـ Gemini API. يرجى المحاولة لاحقًا أو استخدام نموذج مختلف.';
-      quotaExceeded = true;
-    } else if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError') || errorMessage.includes('AbortError')) {
+    if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError') || errorMessage.includes('AbortError')) {
       userFriendlyMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى إعادة المحاولة مرة أخرى لاحقًا أو تحميل صورة بحجم أصغر.';
     } else if (errorMessage.includes('Failed to fetch')) {
       userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN إذا كنت تواجه قيود جغرافية.';
@@ -293,9 +249,7 @@ export async function extractDataWithGemini({
     
     return {
       success: false,
-      message: userFriendlyMessage,
-      quotaExceeded,
-      errorCode: quotaExceeded ? 429 : undefined
+      message: userFriendlyMessage
     };
   }
 }
@@ -312,7 +266,6 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
   }
 
   try {
-    // استخدام نموذج flash بدلاً من pro لتقليل استهلاك الحصة أثناء الاختبار
     const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
     
     const fetchOptions = {
@@ -339,31 +292,9 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
     console.log("إرسال طلب اختبار إلى Gemini API...");
     const response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
     
-    // التحقق من خطأ تجاوز الحصة
-    if (response.status === 429) {
-      console.error("تم تجاوز حصة Gemini API عند الاختبار");
-      return {
-        success: false,
-        message: "تم تجاوز الحصة اليومية المجانية. يرجى المحاولة لاحقًا.",
-        quotaExceeded: true
-      };
-    }
-    
     if (!response.ok) {
       const errorText = await response.text();
       console.error("فشل اختبار Gemini API:", response.status, errorText);
-      
-      // التحقق من خطأ الحصة من الرسالة
-      if (errorText.includes("quota") || 
-          errorText.includes("rate limit") || 
-          errorText.includes("RESOURCE_EXHAUSTED")) {
-        return {
-          success: false,
-          message: "تم تجاوز الحصة اليومية المجانية. يرجى المحاولة لاحقًا.",
-          quotaExceeded: true
-        };
-      }
-      
       return {
         success: false,
         message: `خطأ من Gemini API: ${response.status} - ${errorText}`
@@ -379,15 +310,8 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
     const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
     
     let userFriendlyMessage = `حدث خطأ أثناء اختبار اتصال Gemini API: ${errorMessage}`;
-    let quotaExceeded = false;
     
-    if (errorMessage.includes('429') || 
-        errorMessage.includes('quota') || 
-        errorMessage.includes('rate limit') ||
-        errorMessage.includes('RESOURCE_EXHAUSTED')) {
-      userFriendlyMessage = 'تم تجاوز الحصة اليومية المجانية لـ Gemini API. يرجى المحاولة لاحقًا.';
-      quotaExceeded = true;
-    } else if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
+    if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
       userFriendlyMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى المحاولة مرة أخرى لاحقًا.';
     } else if (errorMessage.includes('Failed to fetch')) {
       userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN.';
@@ -395,8 +319,7 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
     
     return {
       success: false,
-      message: userFriendlyMessage,
-      quotaExceeded
+      message: userFriendlyMessage
     };
   }
 }

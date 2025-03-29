@@ -28,8 +28,8 @@ export const useSavedImageProcessing = (
       
       try {
         setIsSubmitting(true);
-        // حفظ البيانات في قاعدة البيانات
-        const savedData = await saveImageToDatabase(image, user.id);
+        // حفظ البيانات في قاعدة البيانات - تمرير الصورة فقط
+        const savedData = await saveImageToDatabase(image);
         
         if (savedData) {
           // تحديث الصورة بمعلومات أنها تم حفظها
