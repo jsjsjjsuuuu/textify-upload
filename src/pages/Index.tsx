@@ -12,6 +12,8 @@ import ImageUploader from "@/components/ImageUploader";
 import ImageList from "@/components/ImageList";
 import { useToast } from "@/hooks/use-toast";
 import ImageControls from "@/components/ImageControls";
+import { formatDistanceToNow } from "date-fns";
+import { ar } from "date-fns/locale";
 
 export default function Index() {
   const [exportLoading, setExportLoading] = useState<boolean>(false);
@@ -20,6 +22,7 @@ export default function Index() {
   const {
     images,
     isProcessing,
+    isSubmitting,
     processingProgress,
     handleFileChange,
     handleTextChange,
@@ -36,6 +39,21 @@ export default function Index() {
   const completedImages = images.filter(img => 
     img.status === "completed" && img.code && img.senderName && img.phoneNumber
   ).length;
+  
+  // تنسيق التاريخ بالعربية
+  const formatDate = (date: Date) => {
+    try {
+      return formatDistanceToNow(date, { addSuffix: true, locale: ar });
+    } catch (error) {
+      return "تاريخ غير صالح";
+    }
+  };
+  
+  // وظيفة لمعالجة النقر على الصورة
+  const handleImageClick = (id: string) => {
+    console.log("تم النقر على الصورة:", id);
+    // يمكن إضافة المزيد من المنطق هنا في المستقبل
+  };
   
   // وظيفة لتصدير البيانات كـ JSON
   const handleExportJSON = () => {
@@ -229,6 +247,9 @@ export default function Index() {
         onTextChange={handleTextChange} 
         onDelete={handleDelete} 
         onSubmit={handleSubmitToApi}
+        isSubmitting={isSubmitting}
+        onImageClick={handleImageClick}
+        formatDate={formatDate}
       />
       
       {/* رسالة إذا لم تكن هناك صور */}

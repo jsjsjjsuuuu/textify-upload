@@ -1,4 +1,3 @@
-
 import { GeminiExtractParams, GeminiRequest, GeminiResponse } from "./types";
 import { ApiResult } from "../apiService";
 import { parseGeminiResponse } from "./parsers";
@@ -257,7 +256,7 @@ export async function extractDataWithGemini({
 /**
  * إضافة دالة لاختبار الاتصال بـ Gemini API
  */
-export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
+export async function testGeminiConnection(apiKey: string, model: string = "gemini-1.5-flash"): Promise<ApiResult> {
   if (!apiKey) {
     return {
       success: false,
@@ -266,7 +265,7 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
   }
 
   try {
-    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
     
     const fetchOptions = {
       method: "POST",
