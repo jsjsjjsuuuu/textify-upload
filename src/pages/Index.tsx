@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';

@@ -110,6 +110,7 @@ export const useFileUpload = ({
   }, [geminiEnabled, processWithGemini, processWithOcr, saveProcessedImage, updateImage]);
 
   // معالج تغيير الملفات - عند رفع الصور
+  // تم تغيير نوع المعامل من FileList إلى File[]
   const handleFileChange = useCallback(async (files: File[]) => {
     if (!files.length) return;
     

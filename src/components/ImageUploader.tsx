@@ -1,3 +1,4 @@
+
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { FilePlus, Image, Loader2, X } from 'lucide-react';
@@ -6,12 +7,13 @@ import { cn } from "@/lib/utils";
 interface ImageUploaderProps {
   isProcessing: boolean;
   processingProgress: number;
-  onFileChange: (files: FileList | null) => void;
+  onFileChange: (files: File[]) => void; // تغيير النوع من FileList إلى File[]
 }
 
 const ImageUploader: React.FC<ImageUploaderProps> = ({ isProcessing, processingProgress, onFileChange }) => {
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    onFileChange(createFileList(acceptedFiles));
+    // الآن نقوم بتمرير المصفوفة مباشرة لأن واجهة الاستدعاء متوافقة
+    onFileChange(acceptedFiles);
   }, [onFileChange]);
 
   const {getRootProps, getInputProps, isDragActive} = useDropzone({
@@ -22,12 +24,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ isProcessing, processingP
     multiple: true,
     disabled: isProcessing,
   });
-
-  const createFileList = (files: File[]): FileList => {
-    const dataTransfer = new DataTransfer();
-    files.forEach(file => dataTransfer.items.add(file));
-    return dataTransfer.files;
-  };
 
   return (
     <div
