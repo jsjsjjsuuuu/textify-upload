@@ -28,6 +28,7 @@ export interface ImageData {
   bookmarkletMessage?: string; // رسالة خاصة بالبوكماركلت
   notes1?: string; // إضافة حقل ملاحظات 1
   recipientName?: string; // إضافة حقل اسم المستلم
+  imageHash?: string; // إضافة حقل للرقم الفريد (hash) للصورة لتسهيل التحقق من التكرار
 }
 
 // إعادة تصدير الواجهات من ملف types.ts لضمان التوافق

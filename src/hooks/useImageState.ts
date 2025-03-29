@@ -9,18 +9,10 @@ export const useImageState = () => {
   const { toast } = useToast();
 
   const addImage = (newImage: ImageData) => {
-    // تحسين منطق البحث عن التكرار - تحقق أكثر دقة
-    const isDuplicateSession = sessionImages.some(img => 
-      img.id === newImage.id || 
-      (img.file.name === newImage.file.name && img.user_id === newImage.user_id)
-    );
+    // تحسين منطق البحث عن التكرار - فحص أكثر دقة وشمولية
+    const isDuplicate = isDuplicateImage(newImage, [...images, ...sessionImages]);
     
-    const isDuplicateAll = images.some(img => 
-      img.id === newImage.id || 
-      (img.file.name === newImage.file.name && img.user_id === newImage.user_id && img.batch_id === newImage.batch_id)
-    );
-    
-    if (isDuplicateSession || isDuplicateAll) {
+    if (isDuplicate) {
       console.log("تم تجاهل الصورة المكررة:", newImage.file.name);
       
       // إذا كان لدينا نفس المعرف ولكن بحالة مختلفة، نقوم بتحديث الصورة الحالية فقط
@@ -37,20 +29,69 @@ export const useImageState = () => {
       return;
     }
     
-    // إضافة طابع زمني لمساعدة في التمييز بين الصور وإزالة التكرارات
+    // إضافة طابع زمني وإنشاء رقم فريد (hash) للمساعدة في التمييز بين الصور
     const imageWithDefaults: ImageData = {
       status: "pending", // قيمة افتراضية
       ...newImage,
-      added_at: new Date().getTime() // إضافة الطابع الزمني
+      added_at: new Date().getTime(), // إضافة الطابع الزمني
+      imageHash: generateImageHash(newImage) // إضافة رقم فريد للصورة
     };
     
-    console.log("إضافة صورة جديدة:", imageWithDefaults.id);
+    console.log("إضافة صورة جديدة:", imageWithDefaults.id, "Hash:", imageWithDefaults.imageHash);
     
     // إضافة الصورة إلى مجموعة الصور المؤقتة للجلسة الحالية
     setSessionImages(prev => [imageWithDefaults, ...prev]);
     
     // إضافة الصورة إلى مجموعة جميع الصور
     setImages(prev => [imageWithDefaults, ...prev]);
+  };
+
+  // إنشاء دالة فحص الصور المكررة
+  const isDuplicateImage = (newImage: ImageData, allImages: ImageData[]): boolean => {
+    // التحقق من تطابق المعرف
+    if (newImage.id && allImages.some(img => img.id === newImage.id)) {
+      return true;
+    }
+    
+    // التحقق من تطابق اسم الملف والمستخدم والدفعة
+    if (allImages.some(img => 
+      img.file.name === newImage.file.name && 
+      img.user_id === newImage.user_id && 
+      img.batch_id === newImage.batch_id
+    )) {
+      return true;
+    }
+    
+    // التحقق من تطابق اسم الملف والحجم والوقت
+    if (allImages.some(img => 
+      img.file.name === newImage.file.name && 
+      img.file.size === newImage.file.size &&
+      Math.abs((img.date?.getTime() || 0) - (newImage.date?.getTime() || 0)) < 5000 // 5 ثوانٍ فرق
+    )) {
+      return true;
+    }
+    
+    // التحقق من تشابه previewUrl (تحقق إضافي)
+    if (newImage.previewUrl && allImages.some(img => 
+      img.previewUrl === newImage.previewUrl && img.previewUrl !== ''
+    )) {
+      return true;
+    }
+    
+    return false;
+  };
+  
+  // إنشاء رقم فريد (hash) للصورة باستخدام بيانات الصورة المتاحة
+  const generateImageHash = (image: ImageData): string => {
+    const hashParts = [
+      image.file.name,
+      image.file.size.toString(),
+      image.user_id || '',
+      image.batch_id || '',
+      image.date ? image.date.getTime().toString() : '',
+    ];
+    
+    return hashParts.join('_');
   };
 
   const updateImage = (id: string, updatedFields: Partial<ImageData>) => {
@@ -146,12 +187,13 @@ export const useImageState = () => {
 
   // تحسين دالة إزالة التكرارات
   const removeDuplicates = () => {
+    // تحسين: استخدام الـ hash الفريد للصورة للتخزين المؤقت
     const uniqueImagesMap = new Map<string, ImageData>();
     
-    // استخدام مفتاح أكثر دقة للتخزين المؤقت للصور الفريدة
+    // استخدام خصائص متعددة لتحديد التكرار
     images.forEach(img => {
-      // إنشاء مفتاح فريد يتضمن اسم الملف ومعرّف المستخدم والمجموعة
-      const key = `${img.file.name}_${img.user_id || ''}_${img.batch_id || ''}`;
+      // إنشاء مفتاح فريد يتضمن معلومات الصورة
+      const key = img.imageHash || generateImageHash(img);
       
       // إذا لم يكن هناك صورة بهذا المفتاح، أو إذا كانت الصورة الحالية أحدث
       if (!uniqueImagesMap.has(key) || 
@@ -205,6 +247,7 @@ export const useImageState = () => {
     setAllImages,
     addDatabaseImages,
     clearSessionImages,
-    removeDuplicates
+    removeDuplicates,
+    isDuplicateImage
   };
 };

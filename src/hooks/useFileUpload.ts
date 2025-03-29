@@ -17,7 +17,8 @@ interface UseFileUploadProps {
   updateImage: (id: string, fields: Partial<ImageData>) => void;
   setProcessingProgress: (progress: number) => void;
   saveProcessedImage?: (image: ImageData) => Promise<void>;
-  removeDuplicates?: () => void; // إضافة الوظيفة كخاصية اختيارية في الواجهة
+  removeDuplicates?: () => void; 
+  isDuplicateImage?: (newImage: ImageData, allImages: ImageData[]) => boolean;
 }
 
 // تحسين معالجة الصور لتتم بشكل متسلسل وبتتبع أفضل
@@ -32,7 +33,8 @@ export const useFileUpload = ({
   updateImage,
   setProcessingProgress,
   saveProcessedImage,
-  removeDuplicates
+  removeDuplicates,
+  isDuplicateImage
 }: UseFileUploadProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeUploads, setActiveUploads] = useState(0); 
@@ -46,6 +48,11 @@ export const useFileUpload = ({
   
   const { processWithGemini } = useGeminiProcessing();
   const { formatPhoneNumber, formatPrice } = useDataFormatting();
+
+  // إضافة مجموعة لتخزين أسماء الملفات المعالجة في الجلسة الحالية
+  const [processedFileNames, setProcessedFileNames] = useState<Set<string>>(new Set());
+  // إضافة مجموعة لتخزين hashes الصور المعالجة
+  const [processedHashes, setProcessedHashes] = useState<Set<string>>(new Set());
 
   // وظيفة رفع الصورة إلى Supabase Storage
   const uploadImageToStorage = async (file: File, userId: string): Promise<string | null> => {
@@ -90,6 +97,25 @@ export const useFileUpload = ({
     
     try {
       console.log(`معالجة الملف [${index}]: ${file.name}, النوع: ${file.type}, المحاولة: ${retryCount + 1}`);
+      
+      // التحقق إذا كانت الصورة قد تمت معالجتها بالفعل باستخدام اسم الملف
+      if (processedFileNames.has(file.name)) {
+        console.log(`تم تخطي معالجة الصورة المكررة: ${file.name} (تمت معالجتها مسبقاً في هذه الجلسة)`);
+        toast({
+          title: "تنبيه",
+          description: `تم تخطي الصورة المكررة: ${file.name}`,
+          variant: "default"
+        });
+        return false;
+      }
+      
+      // إضافة اسم الملف إلى قائمة الملفات المعالجة
+      setProcessedFileNames(prev => {
+        const newSet = new Set(prev);
+        newSet.add(file.name);
+        return newSet;
+      });
+      
       setCurrentProcessingIndex(index);
       
       // التحقق من أنّ الملف صورة
@@ -129,20 +155,52 @@ export const useFileUpload = ({
         return false;
       }
       
-      // إضافة الصورة إلى القائمة أولاً مع حالة "processing" لعرض العملية للمستخدم
-      const newImage: ImageData = {
+      // إنشاء صورة جديدة للفحص
+      const tempImageForCheck: ImageData = {
         id: imageId,
         file: enhancedFile,
         previewUrl: tempPreviewUrl,
-        extractedText: "جاري تحميل الصورة وتحسينها...",
         date: new Date(),
         status: "processing",
         number: startingNumber + index,
         user_id: user.id,
-        batch_id: batchId,
+        batch_id: batchId
+      };
+      
+      // التحقق مما إذا كانت الصورة موجودة بالفعل في المجموعة باستخدام الـ isDuplicateImage
+      if (isDuplicateImage && isDuplicateImage(tempImageForCheck, images)) {
+        console.log(`تم تخطي معالجة الصورة المكررة: ${file.name} (موجودة بالفعل في مجموعة الصور)`);
+        toast({
+          title: "تنبيه",
+          description: `تم تخطي الصورة المكررة: ${file.name}`,
+          variant: "default"
+        });
+        return false;
+      }
+      
+      // إضافة الصورة إلى القائمة أولاً مع حالة "processing" لعرض العملية للمستخدم
+      const newImage: ImageData = {
+        ...tempImageForCheck,
+        extractedText: "جاري تحميل الصورة وتحسينها...",
         retryCount: retryCount,
         added_at: Date.now() // تأكد من إضافة طابع زمني
       };
+      
+      // إنشاء hash للصورة لاستخدامه في تحديد التكرار
+      const imageHash = [file.name, file.size, user.id, batchId, Date.now()].join('_');
+      
+      // التحقق مما إذا كانت الصورة قد تمت معالجتها بالفعل باستخدام الـ hash
+      if (processedHashes.has(imageHash)) {
+        console.log(`تم تخطي معالجة الصورة المكررة: ${file.name} (hash موجود بالفعل)`);
+        return false;
+      }
+      
+      // إضافة hash الصورة إلى مجموعة الـ hashes المعالجة
+      setProcessedHashes(prev => {
+        const newSet = new Set(prev);
+        newSet.add(imageHash);
+        return newSet;
+      });
       
       addImage(newImage);
       console.log("تمت إضافة صورة جديدة إلى الحالة بالمعرف:", newImage.id);
@@ -488,12 +546,24 @@ export const useFileUpload = ({
     const fileArray = Array.from(files);
     console.log("معالجة", fileArray.length, "ملفات");
     
-    // التحقق من الملفات المكررة
+    // تحسين التحقق من الملفات المكررة باستخدام معلومات أكثر تفصيلاً
     const uniqueFiles = fileArray.filter(file => {
-      const isDuplicate = images.some(img => img.file.name === file.name);
-      if (isDuplicate) {
-        console.log("تم تخطي صورة مكررة:", file.name);
+      // التحقق من اسم الملف في قائمة الملفات المعالجة
+      if (processedFileNames.has(file.name)) {
+        console.log("تم تخطي صورة مكررة (في الجلسة الحالية):", file.name);
+        return false;
       }
+      
+      // التحقق من مجموعة الصور الموجودة حالياً
+      const isDuplicate = images.some(img => 
+        img.file.name === file.name && 
+        Math.abs(img.file.size - file.size) < 1024 // السماح بفارق بسيط في الحجم (1 كيلوبايت)
+      );
+      
+      if (isDuplicate) {
+        console.log("تم تخطي صورة مكررة (موجودة في المجموعة):", file.name);
+      }
+      
       return !isDuplicate;
     });
     
@@ -510,9 +580,23 @@ export const useFileUpload = ({
       return;
     }
     
-    // إضافة الملفات الجديدة إلى قائمة الانتظار
+    // إضافة الملفات الفريدة فقط إلى قائمة الانتظار
     setProcessingQueue(prev => [...prev, ...uniqueFiles]);
+    
+    // إضافة أسماء الملفات الجديدة إلى قائمة الملفات المعالجة
+    setProcessedFileNames(prev => {
+      const newSet = new Set(prev);
+      uniqueFiles.forEach(file => newSet.add(file.name));
+      return newSet;
+    });
   };
+  
+  // إضافة وظيفة لمسح قوائم الصور المعالجة (مفيدة عند إعادة التحميل)
+  const clearProcessedLists = useCallback(() => {
+    setProcessedFileNames(new Set());
+    setProcessedHashes(new Set());
+    console.log("تم مسح قوائم الصور المعالجة");
+  }, []);
 
   return {
     isProcessing,
@@ -521,7 +605,7 @@ export const useFileUpload = ({
     activeUploads,
     queueLength: processingQueue.length,
     manuallyTriggerProcessingQueue,
-    // إضافة وظيفة جديدة لعمليات التنظيف
+    clearProcessedLists,
     cleanupDuplicates: () => {
       if (removeDuplicates && typeof removeDuplicates === 'function') {
         removeDuplicates();
