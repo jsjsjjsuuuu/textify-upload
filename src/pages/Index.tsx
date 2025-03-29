@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -9,7 +8,7 @@ import { motion } from 'framer-motion';
 import DirectExportTools from '@/components/DataExport/DirectExportTools';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
-import ImagePreviewContainer from '@/components/ImagePreview/ImagePreviewContainer';
+import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';

@@ -85,16 +85,6 @@ export const useFileUpload = ({
         processedImage = await processWithOcr(image.file, image);
       }
       
-      // تأكد من أن البيانات المستخرجة مكتملة
-      console.log(`البيانات المستخرجة للصورة ${image.id}:`, {
-        code: processedImage.code,
-        senderName: processedImage.senderName,
-        phoneNumber: processedImage.phoneNumber,
-        province: processedImage.province,
-        price: processedImage.price,
-        companyName: processedImage.companyName
-      });
-      
       // حفظ البيانات المستخرجة والصورة المعالجة
       await saveProcessedImage(processedImage);
       
@@ -102,20 +92,6 @@ export const useFileUpload = ({
       if (processedImage.imageHash) {
         processedHashes.current.add(processedImage.imageHash);
       }
-      
-      // تحديث حالة الصورة بعد المعالجة
-      updateImage(image.id, {
-        status: "completed",
-        extractedText: processedImage.extractedText,
-        code: processedImage.code || "",
-        senderName: processedImage.senderName || "",
-        phoneNumber: processedImage.phoneNumber || "",
-        province: processedImage.province || "",
-        price: processedImage.price || "",
-        companyName: processedImage.companyName || "",
-        confidence: processedImage.confidence || 0,
-        extractionMethod: processedImage.extractionMethod || "ocr"
-      });
       
       console.log(`تمت معالجة الصورة بنجاح: ${image.id}`);
       return processedImage;
@@ -138,7 +114,7 @@ export const useFileUpload = ({
   const handleFileChange = useCallback(async (files: File[]) => {
     if (!files.length) return;
     
-    const batchId = uuidv4(); // إنشاء معرف مجموعة للملفات المرفوعة معًا
+    const batchId = uuidv4(); // إنشاء معرف مجموعة للملفات المرفوعة معاً
     console.log(`تم استلام ${files.length} ملفات، معرف المجموعة: ${batchId}`);
 
     // التحقق من التكرار قبل المعالجة
@@ -190,13 +166,9 @@ export const useFileUpload = ({
         // إضافة الصورة إلى قائمة انتظار المعالجة
         addToQueue(newImage.id, newImage, async () => {
           try {
-            console.log(`بدء معالجة الصورة من القائمة: ${newImage.id}`);
             await processImage(newImage);
             // تحديث التقدم بعد معالجة كل صورة
             setProcessingProgress((fileNumber / files.length) * 100);
-            // انتظار قصير للتأكد من تحديث واجهة المستخدم
-            await new Promise(resolve => setTimeout(resolve, 500));
-            console.log(`اكتملت معالجة الصورة من القائمة: ${newImage.id}`);
             return Promise.resolve();
           } catch (error) {
             console.error(`فشل في معالجة الصورة ${newImage.id}:`, error);
