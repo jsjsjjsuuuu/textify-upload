@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2, RefreshCw } from 'lucide-react';
+import { ArrowRight, Info, Trash2, RefreshCw, Clock } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -12,6 +13,7 @@ import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContaine
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -34,7 +36,10 @@ const Index = () => {
     clearSessionImages,
     loadUserImages,
     runCleanupNow,
-    saveProcessedImage
+    saveProcessedImage,
+    activeUploads,
+    queueLength,
+    retryProcessing
   } = useImageProcessing();
   
   const {
@@ -89,6 +94,22 @@ const Index = () => {
       throw error; // إعادة رمي الخطأ للتعامل معه في المكون الأصلي
     }
   };
+
+  // إعادة تشغيل المعالجة إذا توقفت عن العمل
+  const handleRetryProcessing = () => {
+    if (retryProcessing()) {
+      toast({
+        title: "إعادة تشغيل",
+        description: "تم إعادة تشغيل قائمة المعالجة بنجاح",
+      });
+    } else {
+      toast({
+        title: "تنبيه",
+        description: "لا توجد صور في قائمة الانتظار حالياً",
+        variant: "default"
+      });
+    }
+  };
   
   return (
     <div className="min-h-screen bg-background">
@@ -119,6 +140,35 @@ const Index = () => {
                 </Button>
               </div>
               
+              {/* معلومات حول حالة المعالجة */}
+              {(isProcessing || queueLength > 0) && (
+                <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                  <Clock className="h-4 w-4 text-blue-500 animate-spin" />
+                  <AlertDescription className="text-sm text-blue-600 dark:text-blue-300 flex items-center justify-between">
+                    <div>
+                      جاري معالجة الصور... 
+                      <div className="mt-1 space-x-2 rtl:space-x-reverse">
+                        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                          الصور النشطة: {activeUploads}
+                        </Badge>
+                        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                          في قائمة الانتظار: {queueLength}
+                        </Badge>
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleRetryProcessing} 
+                      className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
+                    >
+                      <RefreshCw className="h-3 w-3 ml-1" />
+                      إعادة تشغيل المعالجة
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               {/* معلومات عن ميزة تنظيف البيانات */}
               <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                 <Info className="h-4 w-4 text-blue-500" />
@@ -131,7 +181,7 @@ const Index = () => {
                       onClick={handleManualCleanup} 
                       className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
                     >
-                      <RefreshCw className="h-3 w-3 mr-1" />
+                      <RefreshCw className="h-3 w-3 ml-1" />
                       تنفيذ التنظيف الآن
                     </Button>
                   </div>
@@ -163,7 +213,20 @@ const Index = () => {
           <section className="py-16 px-6">
             <div className="container mx-auto">
               <div className="max-w-7xl mx-auto">
-                <h2 className="text-2xl font-bold mb-6">الصور التي تم رفعها</h2>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold">الصور التي تم رفعها</h2>
+                  
+                  {(isProcessing || queueLength > 0) && (
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                        الصور النشطة: {activeUploads}
+                      </Badge>
+                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                        في قائمة الانتظار: {queueLength}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
                 <p className="text-muted-foreground mb-8">
                   هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.
                 </p>

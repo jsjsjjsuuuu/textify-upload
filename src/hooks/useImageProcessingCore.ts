@@ -187,7 +187,9 @@ export const useImageProcessingCore = () => {
         title: "تم إعادة التشغيل",
         description: "تم إعادة تشغيل عملية معالجة الصور بنجاح",
       });
+      return true;
     }
+    return false;
   }, [toast]);
 
   // وظيفة مسح ذاكرة التخزين المؤقت للصور المعالجة
@@ -258,9 +260,9 @@ export const useImageProcessingCore = () => {
     validateRequiredFields,
     runCleanupNow,
     isDuplicateImage,
-    clearImageCache, // إضافة وظيفة مسح ذاكرة التخزين المؤقت
-    retryProcessing, // إضافة وظيفة إعادة تشغيل المعالجة
-    activeUploads,   // إضافة عدد التحميلات النشطة
-    queueLength      // إضافة طول قائمة الانتظار
+    clearImageCache,
+    retryProcessing,
+    activeUploads,
+    queueLength
   };
 };

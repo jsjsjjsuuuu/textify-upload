@@ -1,3 +1,4 @@
+
 import { formatDate } from "@/utils/dateFormatter";
 import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
 import { useState, useEffect, useCallback } from "react";
@@ -47,8 +48,12 @@ export const useImageProcessing = () => {
   // يمكن إعادة تشغيل عملية المعالجة عندما تتوقف
   const retryProcessing = useCallback(() => {
     if (coreProcessing.retryProcessing) {
+      console.log("إعادة تشغيل عملية معالجة الصور...");
       coreProcessing.retryProcessing();
+      
+      return true;
     }
+    return false;
   }, [coreProcessing]);
   
   return {
@@ -65,6 +70,7 @@ export const useImageProcessing = () => {
     retryProcessing,
     activeUploads: coreProcessing.activeUploads || 0,
     queueLength: coreProcessing.queueLength || 0,
-    useGemini: coreProcessing.useGemini || false // إضافة خاصية useGemini
+    useGemini: coreProcessing.useGemini || false,
+    saveProcessedImage: coreProcessing.saveProcessedImage || (async () => {})
   };
 };
