@@ -438,10 +438,10 @@ export const useGeminiProcessing = () => {
     }
   };
   
-  // اختبار اتصال Gemini
-  const testGeminiConnection = async (apiKey: string, model: string = "gemini-1.5-pro"): Promise<boolean> => {
+  // تعديل هنا: تغيير اسم وظيفة اختبار الاتصال لتجنب التضارب مع الوظيفة المستوردة
+  const checkGeminiConnection = async (apiKey: string, model: string = "gemini-1.5-pro"): Promise<boolean> => {
     try {
-      // تعديل هنا: نقوم بالوصول إلى خاصية success من النتيجة
+      // استدعاء الوظيفة المستوردة من المكتبة
       const result = await testGeminiConnection(apiKey, model);
       return result.success; // استخدام خاصية success من النتيجة
     } catch (error) {
@@ -453,11 +453,11 @@ export const useGeminiProcessing = () => {
   // اختبار نماذج Gemini المختلفة
   const testModelAvailability = async (apiKey: string): Promise<Record<string, boolean>> => {
     try {
-      const result = await testGeminiModels(apiKey, "test", ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"]);
+      const modelResults = await testGeminiModels(apiKey, "test", ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"]);
       
       // تحويل النتائج إلى الصيغة المطلوبة Record<string, boolean>
       const modelAvailability: Record<string, boolean> = {};
-      result.results.forEach(modelResult => {
+      modelResults.results.forEach(modelResult => {
         modelAvailability[modelResult.model] = modelResult.success;
       });
       
@@ -493,7 +493,7 @@ export const useGeminiProcessing = () => {
     apiKeys: config.apiKeys,
     setGeminiApiKeys,
     processWithGemini,
-    testGeminiConnection,
+    testGeminiConnection: checkGeminiConnection, // تصدير الوظيفة المعدلة بنفس الاسم الأصلي
     testModelAvailability,
     getApiKeysInfo,
     setApiKeyModel,
