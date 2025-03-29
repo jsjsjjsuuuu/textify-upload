@@ -86,6 +86,31 @@ export const useFileUpload = ({
         processedImage = await processWithOcr(image.file, image);
       }
       
+      console.log("البيانات المستخرجة من الصورة:", {
+        code: processedImage.code,
+        senderName: processedImage.senderName,
+        phoneNumber: processedImage.phoneNumber,
+        province: processedImage.province,
+        price: processedImage.price,
+        companyName: processedImage.companyName
+      });
+      
+      // تحديث الواجهة بالبيانات المستخرجة قبل الحفظ في قاعدة البيانات
+      updateImage(image.id, {
+        status: "completed",
+        code: processedImage.code,
+        senderName: processedImage.senderName,
+        phoneNumber: processedImage.phoneNumber,
+        province: processedImage.province,
+        price: processedImage.price,
+        companyName: processedImage.companyName,
+        extractedText: processedImage.extractedText,
+        confidence: processedImage.confidence
+      });
+      
+      // إضافة تأخير قبل حفظ البيانات للسماح بعرض البيانات في الواجهة
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // حفظ البيانات المستخرجة والصورة المعالجة
       await saveProcessedImage(processedImage);
       
@@ -124,13 +149,19 @@ export const useFileUpload = ({
     const addedImageIds: string[] = [];
     
     // إضافة تأخير بين إضافة كل صورة لضمان ترتيبها الصحيح
-    const addDelay = 50;
+    const addDelay = 200; // زيادة التأخير بين الصور
+    
+    // تنظيف قائمة المعالجة قبل إضافة صور جديدة إذا كان هناك الكثير من الصور
+    if (files.length > 5) {
+      clearQueue();
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const fileNumber = i + 1;
       
-      // تأخير صغير بين إضافة كل صورة
+      // تأخير أكبر بين إضافة كل صورة
       if (i > 0) {
         await new Promise(resolve => setTimeout(resolve, addDelay));
       }
@@ -167,6 +198,9 @@ export const useFileUpload = ({
         addImage(newImage);
         addedImageIds.push(newImage.id);
         
+        // إضافة تأخير بين إضافة الصورة وإضافتها إلى قائمة المعالجة
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         // إضافة الصورة إلى قائمة انتظار المعالجة - المهم هنا أن كل صورة تتم معالجتها بالكامل قبل الانتقال للتالية
         addToQueue(newImage.id, newImage, async () => {
           await processImage(newImage);
@@ -202,7 +236,8 @@ export const useFileUpload = ({
     processImage, 
     removeDuplicates, 
     setProcessingProgress, 
-    toast
+    toast,
+    clearQueue
   ]);
 
   // تبديل استخدام Gemini

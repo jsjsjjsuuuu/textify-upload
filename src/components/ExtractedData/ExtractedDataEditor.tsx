@@ -18,6 +18,8 @@ interface ExtractedDataEditorProps {
 
 const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) => {
   const [editMode, setEditMode] = useState(false);
+  const [loadedImageId, setLoadedImageId] = useState<string>("");
+  
   const {
     tempData,
     setTempData,
@@ -30,25 +32,52 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
     handleTempChange
   } = useDataExtraction(image, onTextChange, editMode, setEditMode);
 
-  // تحديث البيانات المؤقتة عند تغيير الصورة
+  // وظيفة تنفيذ عند تغيير الصورة
   useEffect(() => {
-    console.log("تحديث البيانات المؤقتة في ExtractedDataEditor:", {
-      code: image.code,
-      senderName: image.senderName,
-      phoneNumber: image.phoneNumber,
-      province: image.province,
-      price: image.price,
-      companyName: image.companyName
-    });
-    
-    setTempData({
-      code: image.code || "",
-      senderName: image.senderName || "",
-      phoneNumber: image.phoneNumber || "",
-      province: image.province || "",
-      price: image.price || "",
-      companyName: image.companyName || ""
-    });
+    // إذا تغيرت الصورة عن الصورة المحملة سابقًا، قم بتحديث البيانات
+    if (image.id !== loadedImageId) {
+      console.log("تحديث البيانات المؤقتة في ExtractedDataEditor لصورة جديدة:", image.id);
+      console.log("البيانات الجديدة:", {
+        code: image.code || "",
+        senderName: image.senderName || "",
+        phoneNumber: image.phoneNumber || "",
+        province: image.province || "",
+        price: image.price || "",
+        companyName: image.companyName || ""
+      });
+      
+      // تعيين البيانات المؤقتة
+      setTempData({
+        code: image.code || "",
+        senderName: image.senderName || "",
+        phoneNumber: image.phoneNumber || "",
+        province: image.province || "",
+        price: image.price || "",
+        companyName: image.companyName || ""
+      });
+      
+      // تحديث معرف الصورة المحملة
+      setLoadedImageId(image.id);
+    } else if (
+      // تحديث البيانات إذا تغيرت قيم الصورة ولكن بقي نفس المعرف
+      image.code !== tempData.code ||
+      image.senderName !== tempData.senderName ||
+      image.phoneNumber !== tempData.phoneNumber ||
+      image.province !== tempData.province ||
+      image.price !== tempData.price ||
+      image.companyName !== tempData.companyName
+    ) {
+      console.log("تحديث البيانات المؤقتة لأن البيانات تغيرت للصورة:", image.id);
+      
+      setTempData({
+        code: image.code || "",
+        senderName: image.senderName || "",
+        phoneNumber: image.phoneNumber || "",
+        province: image.province || "",
+        price: image.price || "",
+        companyName: image.companyName || ""
+      });
+    }
   }, [
     image.id, 
     image.code, 
@@ -57,7 +86,9 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
     image.province, 
     image.price, 
     image.companyName, 
-    setTempData
+    setTempData,
+    loadedImageId,
+    tempData
   ]);
 
   // التحقق من اكتمال البيانات المطلوبة

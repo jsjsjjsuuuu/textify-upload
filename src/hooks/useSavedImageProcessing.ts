@@ -23,8 +23,18 @@ export const useSavedImageProcessing = (
     }
 
     // التحقق من أن الصورة مكتملة المعالجة وتحتوي على البيانات الأساسية
-    if (image.code && image.senderName && image.phoneNumber) {
-      console.log("حفظ الصورة في قاعدة البيانات بواسطة زر الإرسال:", image.id);
+    const hasRequiredData = image.code || image.senderName || image.phoneNumber;
+    
+    if (hasRequiredData) {
+      console.log("حفظ الصورة في قاعدة البيانات:", image.id);
+      console.log("البيانات التي سيتم حفظها:", {
+        code: image.code,
+        senderName: image.senderName,
+        phoneNumber: image.phoneNumber,
+        province: image.province,
+        price: image.price,
+        companyName: image.companyName
+      });
       
       try {
         setIsSubmitting(true);
@@ -32,17 +42,31 @@ export const useSavedImageProcessing = (
         const savedData = await saveImageToDatabase(image, user.id);
         
         if (savedData) {
+          console.log("البيانات المستردة من قاعدة البيانات بعد الحفظ:", savedData);
+          
           // تحديث الصورة بمعلومات أنها تم حفظها والبيانات المحدثة من قاعدة البيانات
-          updateImage(image.id, { 
-            submitted: true,
-            code: savedData.code || image.code,
-            senderName: savedData.sender_name || image.senderName,
-            phoneNumber: savedData.phone_number || image.phoneNumber,
-            province: savedData.province || image.province,
-            price: savedData.price || image.price,
-            companyName: savedData.company_name || image.companyName,
-            extractedText: savedData.extracted_text || image.extractedText
-          });
+          const updatedFields: Partial<ImageData> = { 
+            submitted: true
+          };
+          
+          // التحقق من كل حقل قبل تحديثه
+          if (savedData.code) updatedFields.code = savedData.code;
+          if (savedData.sender_name) updatedFields.senderName = savedData.sender_name;
+          if (savedData.phone_number) updatedFields.phoneNumber = savedData.phone_number;
+          if (savedData.province) updatedFields.province = savedData.province;
+          if (savedData.price) updatedFields.price = savedData.price;
+          if (savedData.company_name) updatedFields.companyName = savedData.company_name;
+          if (savedData.extracted_text) updatedFields.extractedText = savedData.extracted_text;
+          
+          // طباعة البيانات المحدثة للتحقق منها
+          console.log("تحديث الصورة بالبيانات التالية:", updatedFields);
+          
+          // انتظار فترة قصيرة قبل تحديث واجهة المستخدم
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // تحديث الصورة في حالة التطبيق
+          updateImage(image.id, updatedFields);
+          
           console.log("تم حفظ الصورة بنجاح في قاعدة البيانات:", image.id);
           
           // إعادة تحميل الصور بعد الحفظ
