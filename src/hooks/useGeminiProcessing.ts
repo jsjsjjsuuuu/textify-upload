@@ -16,7 +16,7 @@ export const useGeminiProcessing = () => {
     
     // إعداد مفتاح API افتراضي إذا لم يكن موجودًا
     if (!geminiApiKey) {
-      const defaultApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
+      const defaultApiKey = "AIzaSyBUwu7p61Rk1BHYJb5sa-CUMuN_6ImuQOc";
       localStorage.setItem("geminiApiKey", defaultApiKey);
       console.log("تم تعيين مفتاح Gemini API افتراضي:", defaultApiKey);
       setUseGemini(true);
@@ -54,7 +54,7 @@ export const useGeminiProcessing = () => {
   };
 
   const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
-    const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
+    const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyBUwu7p61Rk1BHYJb5sa-CUMuN_6ImuQOc";
     console.log("استخدام مفتاح Gemini API بطول:", geminiApiKey.length);
 
     // في بيئة المعاينة، نحاول استخدام Gemini مع تحذير المستخدم
