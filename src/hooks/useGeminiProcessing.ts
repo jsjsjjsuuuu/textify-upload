@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
@@ -442,8 +441,9 @@ export const useGeminiProcessing = () => {
   // اختبار اتصال Gemini
   const testGeminiConnection = async (apiKey: string, model: string = "gemini-1.5-pro"): Promise<boolean> => {
     try {
+      // تعديل هنا: نقوم بالوصول إلى خاصية success من النتيجة
       const result = await testGeminiConnection(apiKey, model);
-      return result.success;
+      return result.success; // استخدام خاصية success من النتيجة
     } catch (error) {
       console.error('خطأ في اختبار اتصال Gemini:', error);
       return false;

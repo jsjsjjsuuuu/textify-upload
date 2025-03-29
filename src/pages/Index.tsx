@@ -49,9 +49,9 @@ export default function Index() {
     }
   };
   
-  // وظيفة لمعالجة النقر على الصورة
-  const handleImageClick = (id: string) => {
-    console.log("تم النقر على الصورة:", id);
+  // وظيفة لمعالجة النقر على الصورة - تعديل ليتوافق مع النوع المتوقع
+  const handleImageClick = (image: ImageData) => {
+    console.log("تم النقر على الصورة:", image.id);
     // يمكن إضافة المزيد من المنطق هنا في المستقبل
   };
   
