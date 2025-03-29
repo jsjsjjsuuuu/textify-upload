@@ -4,7 +4,7 @@ import { ApiResult } from "../apiService";
 import { extractDataWithGemini } from "./api";
 
 // المفتاح الرئيسي الجديد
-const DEFAULT_GEMINI_API_KEY = "AIzaSyCzHmpOdtuRu07jP0P4GNlCMeQB_InKT7E";
+const DEFAULT_GEMINI_API_KEY = "AIzaSyBUwu7p61Rk1BHYJb5sa-CUMuN_6ImuQOc";
 
 /**
  * وظيفة لاختبار نماذج Gemini المختلفة ومقارنة النتائج

@@ -7,7 +7,7 @@ import { updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { isPreviewEnvironment } from "@/utils/automationServerUrl";
 
 // المفتاح الرئيسي الجديد للاستخدام في جميع أنحاء التطبيق
-const DEFAULT_GEMINI_API_KEY = "AIzaSyCzHmpOdtuRu07jP0P4GNlCMeQB_InKT7E";
+const DEFAULT_GEMINI_API_KEY = "AIzaSyBUwu7p61Rk1BHYJb5sa-CUMuN_6ImuQOc";
 
 export const useGeminiProcessing = () => {
   const [useGemini, setUseGemini] = useState(false);
@@ -25,11 +25,16 @@ export const useGeminiProcessing = () => {
       // اختبار الاتصال بالمفتاح الافتراضي
       testGeminiApiConnection(DEFAULT_GEMINI_API_KEY);
     } else {
+      // تحديث المفتاح القديم بالجديد
+      if (geminiApiKey !== DEFAULT_GEMINI_API_KEY) {
+        localStorage.setItem("geminiApiKey", DEFAULT_GEMINI_API_KEY);
+        console.log("تم تحديث مفتاح Gemini API إلى المفتاح الجديد:", DEFAULT_GEMINI_API_KEY);
+      }
       console.log("استخدام مفتاح Gemini API موجود بطول:", geminiApiKey.length);
       setUseGemini(true);
       // اختبار الاتصال بالمفتاح الموجود
       if (!connectionTested) {
-        testGeminiApiConnection(geminiApiKey);
+        testGeminiApiConnection(DEFAULT_GEMINI_API_KEY);
       }
     }
   }, [connectionTested]);
@@ -56,7 +61,8 @@ export const useGeminiProcessing = () => {
   };
 
   const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
-    const geminiApiKey = localStorage.getItem("geminiApiKey") || DEFAULT_GEMINI_API_KEY;
+    // استخدام المفتاح الجديد دائمًا
+    const geminiApiKey = DEFAULT_GEMINI_API_KEY;
     console.log("استخدام مفتاح Gemini API بطول:", geminiApiKey.length);
 
     // في بيئة المعاينة، نحاول استخدام Gemini مع تحذير المستخدم
