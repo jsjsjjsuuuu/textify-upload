@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,7 +112,7 @@ const GeminiApiKeyManager: React.FC = () => {
       const apiKey = apiKeys[keyIndex];
       const model = apiKeysInfo.find(info => info.keyId === keyIndex)?.model || "gemini-1.5-pro";
       
-      const result = await testGeminiConnection(apiKey, model);
+      const result = await testGeminiConnection(apiKey);
       
       if (result) {
         toast({
