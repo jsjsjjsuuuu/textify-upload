@@ -32,6 +32,15 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
 
   // تحديث البيانات المؤقتة عند تغيير الصورة
   useEffect(() => {
+    console.log("تحديث البيانات المؤقتة في ExtractedDataEditor:", {
+      code: image.code,
+      senderName: image.senderName,
+      phoneNumber: image.phoneNumber,
+      province: image.province,
+      price: image.price,
+      companyName: image.companyName
+    });
+    
     setTempData({
       code: image.code || "",
       senderName: image.senderName || "",
@@ -40,7 +49,16 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
       price: image.price || "",
       companyName: image.companyName || ""
     });
-  }, [image.id, setTempData]);
+  }, [
+    image.id, 
+    image.code, 
+    image.senderName, 
+    image.phoneNumber, 
+    image.province, 
+    image.price, 
+    image.companyName, 
+    setTempData
+  ]);
 
   // التحقق من اكتمال البيانات المطلوبة
   const isAllDataComplete = useMemo(() => {

@@ -32,8 +32,17 @@ export const useSavedImageProcessing = (
         const savedData = await saveImageToDatabase(image, user.id);
         
         if (savedData) {
-          // تحديث الصورة بمعلومات أنها تم حفظها
-          updateImage(image.id, { submitted: true });
+          // تحديث الصورة بمعلومات أنها تم حفظها والبيانات المحدثة من قاعدة البيانات
+          updateImage(image.id, { 
+            submitted: true,
+            code: savedData.code || image.code,
+            senderName: savedData.sender_name || image.senderName,
+            phoneNumber: savedData.phone_number || image.phoneNumber,
+            province: savedData.province || image.province,
+            price: savedData.price || image.price,
+            companyName: savedData.company_name || image.companyName,
+            extractedText: savedData.extracted_text || image.extractedText
+          });
           console.log("تم حفظ الصورة بنجاح في قاعدة البيانات:", image.id);
           
           // إعادة تحميل الصور بعد الحفظ

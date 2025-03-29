@@ -1,3 +1,4 @@
+
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,6 +59,21 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
         // بعد التحديث، تأكد من عدم تجاوز الحد الأقصى للسجلات
         await cleanupOldRecords(userId);
         
+        // هنا نقوم بتحديث الصورة في الواجهة بالبيانات المحدثة
+        if (updatedData && updatedData[0]) {
+          updateImage(image.id, {
+            extractedText: updatedData[0].extracted_text,
+            companyName: updatedData[0].company_name,
+            senderName: updatedData[0].sender_name,
+            phoneNumber: updatedData[0].phone_number,
+            code: updatedData[0].code,
+            price: updatedData[0].price,
+            province: updatedData[0].province,
+            status: updatedData[0].status as "processing" | "pending" | "completed" | "error",
+            submitted: true
+          });
+        }
+        
         return updatedData?.[0];
       }
 
@@ -104,7 +120,20 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
         console.log("تم تحديث السجل الموجود بنجاح:", updatedData?.[0]);
         
         // تحديث معرف الصورة المحلية ليتوافق مع السجل في قاعدة البيانات
-        updateImage(image.id, { id: existingByFileName.id });
+        if (updatedData && updatedData[0]) {
+          updateImage(image.id, { 
+            id: existingByFileName.id,
+            extractedText: updatedData[0].extracted_text,
+            companyName: updatedData[0].company_name,
+            senderName: updatedData[0].sender_name,
+            phoneNumber: updatedData[0].phone_number,
+            code: updatedData[0].code,
+            price: updatedData[0].price,
+            province: updatedData[0].province,
+            status: updatedData[0].status as "processing" | "pending" | "completed" | "error",
+            submitted: true
+          });
+        }
         
         return updatedData?.[0];
       }
@@ -168,7 +197,20 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
           }
           
           // تحديث معرف الصورة في الواجهة
-          updateImage(image.id, { id: newId });
+          if (retryData && retryData[0]) {
+            updateImage(image.id, { 
+              id: newId,
+              extractedText: retryData[0].extracted_text,
+              companyName: retryData[0].company_name,
+              senderName: retryData[0].sender_name,
+              phoneNumber: retryData[0].phone_number,
+              code: retryData[0].code,
+              price: retryData[0].price,
+              province: retryData[0].province,
+              status: retryData[0].status as "processing" | "pending" | "completed" | "error",
+              submitted: true
+            });
+          }
           
           console.log("تم إدراج السجل بنجاح باستخدام معرف جديد:", retryData?.[0]);
           return retryData?.[0];
@@ -184,7 +226,19 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
       }
 
       // تحديث حالة الصورة ليشير إلى أنها تم حفظها
-      updateImage(image.id, { submitted: true });
+      if (data && data[0]) {
+        updateImage(image.id, { 
+          submitted: true,
+          extractedText: data[0].extracted_text,
+          companyName: data[0].company_name,
+          senderName: data[0].sender_name,
+          phoneNumber: data[0].phone_number,
+          code: data[0].code,
+          price: data[0].price,
+          province: data[0].province,
+          status: data[0].status as "processing" | "pending" | "completed" | "error"
+        });
+      }
 
       console.log("تم حفظ البيانات بنجاح:", data?.[0]);
       
@@ -474,6 +528,9 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
             previewUrl = publicUrlData.publicUrl;
           }
           
+          // طباعة بيانات الصورة من قاعدة البيانات للتأكد من وجود البيانات
+          console.log(`صورة ${index+1} - المعرف: ${item.id}, النص المستخرج: ${item.extracted_text?.substring(0, 20)}..., الكود: ${item.code}, الاسم: ${item.sender_name}`);
+          
           return {
             id: item.id,
             file: dummyFile,
@@ -640,6 +697,6 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
     handleSubmitToApi,
     deleteImageFromDatabase,
     cleanupOldRecords,
-    runCleanupNow // إضافة الوظيفة الجديدة للتنظيف اليدوي
+    runCleanupNow
   };
 };
