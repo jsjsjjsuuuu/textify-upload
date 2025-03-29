@@ -1,7 +1,7 @@
 
 import { formatDate } from "@/utils/dateFormatter";
 import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export const useImageProcessing = () => {
   const coreProcessing = useImageProcessingCore();
@@ -37,6 +37,13 @@ export const useImageProcessing = () => {
     setDefaultSheetId(sheetId);
   };
   
+  // يمكن إعادة تشغيل عملية المعالجة عندما تتوقف
+  const retryProcessing = useCallback(() => {
+    if (coreProcessing.retryProcessing) {
+      coreProcessing.retryProcessing();
+    }
+  }, [coreProcessing]);
+  
   return {
     ...coreProcessing,
     formatDate,
@@ -45,6 +52,11 @@ export const useImageProcessing = () => {
     toggleAutoExport,
     setDefaultSheet,
     // تصدير وظائف إضافية إلى الواجهة
-    runCleanupNow: coreProcessing.runCleanupNow
+    runCleanupNow: coreProcessing.runCleanupNow,
+    isDuplicateImage: coreProcessing.isDuplicateImage,
+    clearImageCache: coreProcessing.clearImageCache,
+    retryProcessing,
+    activeUploads: coreProcessing.activeUploads || 0,
+    queueLength: coreProcessing.queueLength || 0
   };
 };

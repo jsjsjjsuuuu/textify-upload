@@ -1,3 +1,4 @@
+
 export interface ImageData {
   id: string;
   file: File;
@@ -61,6 +62,12 @@ export interface ImageData {
   exchangeStatus?: string; // استبدال
   orderStatus?: string; // حالة الطلب
   paymentStatus?: string; // حالة الدفع
+  
+  // حقول جديدة لمنع تكرار المعالجة
+  imageHash?: string;     // قيمة هاش فريدة للصورة
+  added_at?: number;      // وقت إضافة الصورة (timestamp)
+  processed?: boolean;    // هل تمت معالجة الصورة بالفعل
+  processingAttempts?: number; // عدد محاولات المعالجة
 }
 
 // واجهة لتصدير البيانات إلى Bookmarklet

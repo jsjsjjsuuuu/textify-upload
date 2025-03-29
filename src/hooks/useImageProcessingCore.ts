@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { useImageState } from "@/hooks/useImageState";
@@ -32,7 +32,10 @@ export const useImageProcessingCore = () => {
     processingProgress,
     setProcessingProgress,
     bookmarkletStats,
-    setBookmarkletStats
+    setBookmarkletStats,
+    isImageProcessed,
+    markImageAsProcessed,
+    clearProcessedImagesCache
   } = useImageStats();
   
   const { saveProcessedImage } = useSavedImageProcessing(updateImage, setAllImages);
@@ -47,6 +50,36 @@ export const useImageProcessingCore = () => {
     runCleanupNow
   } = useImageDatabase(updateImage);
   
+  // التحقق مما إذا كانت الصورة مكررة بناءً على خصائص متعددة
+  const isDuplicateImage = useCallback((newImage: ImageData, allImages: ImageData[]): boolean => {
+    // التحقق من التكرار باستخدام المعرف
+    if (allImages.some(img => img.id === newImage.id)) {
+      return true;
+    }
+
+    // التحقق من التكرار باستخدام اسم الملف والحجم (قد يكون نفس الملف)
+    if (allImages.some(img => 
+      img.file && newImage.file && 
+      img.file.name === newImage.file.name && 
+      img.file.size === newImage.file.size &&
+      img.user_id === newImage.user_id
+    )) {
+      return true;
+    }
+    
+    // التحقق مما إذا كانت الصورة قد تمت معالجتها بالفعل
+    if (newImage.id && isImageProcessed(newImage.id)) {
+      return true;
+    }
+    
+    // إذا كان هناك هاش للصورة، استخدمه للمقارنة
+    if (newImage.imageHash && allImages.some(img => img.imageHash === newImage.imageHash)) {
+      return true;
+    }
+
+    return false;
+  }, [isImageProcessed]);
+
   // التحقق من اكتمال البيانات المطلوبة للصورة
   const validateRequiredFields = (image: ImageData): boolean => {
     if (!image.code || !image.senderName || !image.phoneNumber || !image.province || !image.price) {
@@ -145,17 +178,46 @@ export const useImageProcessingCore = () => {
     }
   };
   
-  const { 
-    isProcessing, 
-    useGemini, 
-    handleFileChange 
-  } = useFileUpload({
+  // إضافة وظيفة إعادة تشغيل عملية المعالجة عندما تتجمد العملية
+  const retryProcessing = useCallback(() => {
+    if (fileUploadData && fileUploadData.manuallyTriggerProcessingQueue) {
+      console.log("إعادة تشغيل عملية معالجة الصور...");
+      fileUploadData.manuallyTriggerProcessingQueue();
+      toast({
+        title: "تم إعادة التشغيل",
+        description: "تم إعادة تشغيل عملية معالجة الصور بنجاح",
+      });
+    }
+  }, []);
+
+  // وظيفة مسح ذاكرة التخزين المؤقت للصور المعالجة
+  const clearImageCache = useCallback(() => {
+    clearProcessedImagesCache();
+    if (fileUploadData && fileUploadData.clearProcessedHashesCache) {
+      fileUploadData.clearProcessedHashesCache();
+    }
+    toast({
+      title: "تم المسح",
+      description: "تم مسح ذاكرة التخزين المؤقت للصور المعالجة",
+    });
+  }, [clearProcessedImagesCache]);
+  
+  const fileUploadData = useFileUpload({
     images,
     addImage,
     updateImage,
     setProcessingProgress,
-    saveProcessedImage
+    saveProcessedImage,
+    removeDuplicates,
+    isDuplicateImage
   });
+
+  const { 
+    isProcessing, 
+    handleFileChange,
+    activeUploads,
+    queueLength
+  } = fileUploadData;
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
   useEffect(() => {
@@ -175,7 +237,6 @@ export const useImageProcessingCore = () => {
     processingProgress,
     isSubmitting,
     isLoadingUserImages,
-    useGemini,
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
@@ -193,6 +254,11 @@ export const useImageProcessingCore = () => {
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,
-    runCleanupNow // إضافة الوظيفة الجديدة للتنظيف اليدوي
+    runCleanupNow,
+    isDuplicateImage,
+    clearImageCache, // إضافة وظيفة مسح ذاكرة التخزين المؤقت
+    retryProcessing, // إضافة وظيفة إعادة تشغيل المعالجة
+    activeUploads,   // إضافة عدد التحميلات النشطة
+    queueLength      // إضافة طول قائمة الانتظار
   };
 };
