@@ -2,6 +2,7 @@
 import { formatDate } from "@/utils/dateFormatter";
 import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
 import { useState, useEffect, useCallback } from "react";
+import { DEFAULT_GEMINI_API_KEY } from "@/lib/gemini";
 
 export const useImageProcessing = () => {
   const coreProcessing = useImageProcessingCore();
@@ -14,6 +15,15 @@ export const useImageProcessing = () => {
   const [defaultSheetId, setDefaultSheetId] = useState<string>(
     localStorage.getItem('defaultSheetId') || ''
   );
+  
+  // التأكد من تعيين مفتاح Gemini عند بدء التشغيل
+  useEffect(() => {
+    // تعيين المفتاح الافتراضي إذا لم يتم تعيينه
+    if (!localStorage.getItem('geminiApiKey')) {
+      localStorage.setItem('geminiApiKey', DEFAULT_GEMINI_API_KEY);
+      console.log("تم تعيين مفتاح Gemini API الافتراضي عند بدء التطبيق");
+    }
+  }, []);
   
   // حفظ تفضيلات المستخدم في التخزين المحلي
   useEffect(() => {

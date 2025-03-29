@@ -3,13 +3,16 @@ import { GeminiExtractParams } from "./types";
 import { ApiResult } from "../apiService";
 import { extractDataWithGemini } from "./api";
 
+// المفتاح الرئيسي الجديد
+const DEFAULT_GEMINI_API_KEY = "AIzaSyCzHmpOdtuRu07jP0P4GNlCMeQB_InKT7E";
+
 /**
  * وظيفة لاختبار نماذج Gemini المختلفة ومقارنة النتائج
  */
 export async function testGeminiModels(
-  apiKey: string, 
+  apiKey: string = DEFAULT_GEMINI_API_KEY, 
   imageBase64: string, 
-  models: string[] = ['gemini-2.0-flash', 'gemini-2.0-pro', 'gemini-1.5-flash']
+  models: string[] = ['gemini-1.5-pro', 'gemini-1.5-flash']
 ): Promise<{
   results: Array<{
     model: string;

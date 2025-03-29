@@ -1,9 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { extractDataWithGemini, fileToBase64, testGeminiConnection } from "@/lib/gemini";
 import { useToast } from "@/hooks/use-toast";
 import { updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { isPreviewEnvironment } from "@/utils/automationServerUrl";
+
+// المفتاح الرئيسي الجديد للاستخدام في جميع أنحاء التطبيق
+const DEFAULT_GEMINI_API_KEY = "AIzaSyCzHmpOdtuRu07jP0P4GNlCMeQB_InKT7E";
 
 export const useGeminiProcessing = () => {
   const [useGemini, setUseGemini] = useState(false);
@@ -15,12 +19,11 @@ export const useGeminiProcessing = () => {
     
     // إعداد مفتاح API افتراضي إذا لم يكن موجودًا
     if (!geminiApiKey) {
-      const defaultApiKey = "AIzaSyCzHmpOdtuRu07jP0P4GNlCMeQB_InKT7E";
-      localStorage.setItem("geminiApiKey", defaultApiKey);
-      console.log("تم تعيين مفتاح Gemini API افتراضي:", defaultApiKey);
+      localStorage.setItem("geminiApiKey", DEFAULT_GEMINI_API_KEY);
+      console.log("تم تعيين مفتاح Gemini API افتراضي:", DEFAULT_GEMINI_API_KEY);
       setUseGemini(true);
       // اختبار الاتصال بالمفتاح الافتراضي
-      testGeminiApiConnection(defaultApiKey);
+      testGeminiApiConnection(DEFAULT_GEMINI_API_KEY);
     } else {
       console.log("استخدام مفتاح Gemini API موجود بطول:", geminiApiKey.length);
       setUseGemini(true);
@@ -53,7 +56,7 @@ export const useGeminiProcessing = () => {
   };
 
   const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
-    const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCzHmpOdtuRu07jP0P4GNlCMeQB_InKT7E";
+    const geminiApiKey = localStorage.getItem("geminiApiKey") || DEFAULT_GEMINI_API_KEY;
     console.log("استخدام مفتاح Gemini API بطول:", geminiApiKey.length);
 
     // في بيئة المعاينة، نحاول استخدام Gemini مع تحذير المستخدم
