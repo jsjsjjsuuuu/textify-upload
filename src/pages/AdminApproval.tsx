@@ -20,7 +20,9 @@ const AdminApproval = () => {
   
   const {
     users,
+    detailedUsers,
     isLoading,
+    isLoadingDetails,
     activeTab,
     filterPlan,
     filterStatus,
@@ -48,6 +50,7 @@ const AdminApproval = () => {
     setConfirmPassword,
     setPasswordError,
     fetchUsers,
+    fetchUserDetails,
     approveUser,
     rejectUser,
     resetUserPassword,
@@ -163,6 +166,8 @@ const AdminApproval = () => {
                 userCounts={userCounts}
                 filteredUsers={filteredUsers}
                 isLoading={isLoading}
+                isLoadingDetails={isLoadingDetails}
+                detailedUsers={detailedUsers}
                 onSearchChange={setSearchQuery}
                 onPlanFilterChange={setFilterPlan}
                 onStatusFilterChange={setFilterStatus}
@@ -175,6 +180,7 @@ const AdminApproval = () => {
                 onUserDataChange={handleEditChange}
                 onDateSelect={handleDateSelect}
                 onEmailChange={updateUserEmail}
+                onFetchDetails={fetchUserDetails}
               />
             </AdminTabs>
           </CardHeader>

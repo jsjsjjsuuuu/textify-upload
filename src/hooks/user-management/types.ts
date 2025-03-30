@@ -5,7 +5,9 @@ import { UserProfile } from '@/types/UserProfile';
 export interface UserManagementState {
   // حالة المستخدمين والتحميل
   users: UserProfile[];
+  detailedUsers: {[key: string]: UserProfile};
   isLoading: boolean;
+  isLoadingDetails: {[key: string]: boolean};
   fetchAttempted: boolean;
   fetchError: string | null;
   
@@ -33,6 +35,7 @@ export interface UserManagementState {
 export interface UserManagementActions {
   // عمليات جلب البيانات
   fetchUsers: () => Promise<void>;
+  fetchUserDetails: (userId: string) => Promise<UserProfile | null>;
   
   // عمليات التصفية
   setActiveTab: (tab: string) => void;
@@ -68,7 +71,7 @@ export interface UserManagementActions {
   setShowConfirmReset: (show: boolean) => void;
   setUserToReset: (userId: string | null) => void;
   setPasswordError: (error: string | null) => void;
-  resetUserPassword: (userId: string, newPassword: string) => Promise<boolean>; // تغيير نوع الإرجاع من void إلى boolean مهم
+  resetUserPassword: (userId: string, newPassword: string) => Promise<boolean>;
   prepareUserPasswordReset: (userId: string) => void;
   resetPasswordStates: () => void;
   validatePassword: () => boolean;

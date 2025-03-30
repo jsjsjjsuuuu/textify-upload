@@ -11,11 +11,14 @@ export const useUserManagement = (): UserManagement => {
   // استدعاء الخطافات الفرعية
   const { 
     users, 
+    detailedUsers,
     setUsers, 
     isLoading, 
+    isLoadingDetails,
     fetchAttempted, 
     fetchError, 
     fetchUsers, 
+    fetchUserDetails,
     ErrorAlert 
   } = useFetchUsers();
 
@@ -79,7 +82,9 @@ export const useUserManagement = (): UserManagement => {
   return {
     // حالة المستخدمين والتحميل
     users,
+    detailedUsers,
     isLoading,
+    isLoadingDetails,
     fetchAttempted,
     fetchError,
     
@@ -117,10 +122,11 @@ export const useUserManagement = (): UserManagement => {
     
     // وظائف المستخدمين
     fetchUsers,
+    fetchUserDetails,
     addNewUser,
     approveUser,
     rejectUser,
-    resetUserPassword, // نوع الإرجاع متوافق الآن مع التعريف في types.ts كـ Promise<boolean>
+    resetUserPassword,
     updateUserEmail,
     saveUserData,
     startEditing,

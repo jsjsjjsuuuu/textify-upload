@@ -22,6 +22,8 @@ interface UserManagementPanelProps {
   };
   filteredUsers: UserProfile[];
   isLoading: boolean;
+  isLoadingDetails?: {[key: string]: boolean};
+  detailedUsers?: {[key: string]: UserProfile};
   onSearchChange: (value: string) => void;
   onPlanFilterChange: (value: string) => void;
   onStatusFilterChange: (value: string) => void;
@@ -34,6 +36,7 @@ interface UserManagementPanelProps {
   onUserDataChange: (field: string, value: any) => void;
   onDateSelect: (date: Date | undefined) => void;
   onEmailChange: (userId: string, newEmail: string) => void;
+  onFetchDetails?: (userId: string) => Promise<UserProfile | null>;
 }
 
 const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
@@ -48,6 +51,8 @@ const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
   userCounts,
   filteredUsers,
   isLoading,
+  isLoadingDetails = {},
+  detailedUsers = {},
   onSearchChange,
   onPlanFilterChange,
   onStatusFilterChange,
@@ -59,7 +64,8 @@ const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
   onSave,
   onUserDataChange,
   onDateSelect,
-  onEmailChange
+  onEmailChange,
+  onFetchDetails
 }) => {
   return (
     <>
@@ -94,9 +100,12 @@ const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
           <UserTable 
             users={filteredUsers}
             isLoading={isLoading}
+            isLoadingDetails={isLoadingDetails}
+            detailedUsers={detailedUsers}
             onEdit={onEdit}
             onApprove={onApprove}
             onReject={onReject}
+            onFetchDetails={onFetchDetails}
           />
         )}
       </UserTabsFilter>
