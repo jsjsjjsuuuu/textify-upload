@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserProfile } from '@/types/UserProfile';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import React from 'react';
 
 export const useUserManagement = () => {
@@ -681,21 +682,21 @@ export const useUserManagement = () => {
     if (!fetchError) return null;
     
     return (
-      
-        <Alert variant="destructive" className="mb-4">
-          
-            خطأ في جلب البيانات
-          
-          
-            {fetchError}
-            
-              
-                إعادة المحاولة
-              
-            
-          
-        
-      
+      <Alert variant="destructive" className="mb-4">
+        <AlertTitle>خطأ في جلب البيانات</AlertTitle>
+        <AlertDescription>
+          {fetchError}
+          <div className="mt-2">
+            <Button 
+              onClick={fetchUsers} 
+              variant="link"
+              className="p-0 h-auto text-sm"
+            >
+              إعادة المحاولة
+            </Button>
+          </div>
+        </AlertDescription>
+      </Alert>
     );
   };
 
