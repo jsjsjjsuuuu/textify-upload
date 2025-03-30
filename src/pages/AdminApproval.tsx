@@ -28,6 +28,7 @@ const AdminApproval = () => {
     isEditingUser,
     editedUserData,
     newPassword,
+    confirmPassword,
     showPassword,
     isProcessing,
     selectedDate,
@@ -35,14 +36,17 @@ const AdminApproval = () => {
     userToReset,
     fetchAttempted,
     fetchError,
+    passwordError,
     setActiveTab,
     setFilterPlan,
     setFilterStatus,
     setSearchQuery,
     setNewPassword,
+    setConfirmPassword,
     setShowPassword,
     setShowConfirmReset,
     setUserToReset,
+    setPasswordError,
     fetchUsers,
     approveUser,
     rejectUser,
@@ -56,6 +60,7 @@ const AdminApproval = () => {
     getUserCounts,
     prepareUserPasswordReset,
     handleDateSelect,
+    validatePassword,
     ErrorAlert,
   } = useUserManagement();
 
@@ -77,7 +82,7 @@ const AdminApproval = () => {
     }
   }, [user, userProfile, fetchAttempted, users.length]);
 
-  // التعامل مع تأكيد إعادة تعيين كلمة المرور
+  // التعامل مع تأكيد إعادة تعيين كلمة المرور - تم التبسيط
   const handleConfirmReset = () => {
     if (userToReset && newPassword) {
       // طباعة سجل تصحيح لمساعدة في تشخيص المشكلة
@@ -85,8 +90,7 @@ const AdminApproval = () => {
         userToReset,
         userToResetType: typeof userToReset,
         userToResetLength: userToReset.length,
-        passwordLength: newPassword.length,
-        passwordEmpty: !newPassword.trim()
+        passwordLength: newPassword.length
       });
       
       // تنفيذ عملية إعادة تعيين كلمة المرور
@@ -154,9 +158,11 @@ const AdminApproval = () => {
                 isEditingUser={isEditingUser}
                 editedUserData={editedUserData}
                 newPassword={newPassword}
+                confirmPassword={confirmPassword}
                 showPassword={showPassword}
                 isProcessing={isProcessing}
                 selectedDate={selectedDate}
+                passwordError={passwordError}
                 userCounts={userCounts}
                 filteredUsers={filteredUsers}
                 isLoading={isLoading}
@@ -171,10 +177,12 @@ const AdminApproval = () => {
                 onSave={saveUserData}
                 onShowPasswordToggle={() => setShowPassword(!showPassword)}
                 onNewPasswordChange={setNewPassword}
+                onConfirmPasswordChange={setConfirmPassword}
                 onUserDataChange={handleEditChange}
                 onDateSelect={handleDateSelect}
                 onPasswordReset={() => prepareUserPasswordReset(editedUserData!.id)}
                 onEmailChange={updateUserEmail}
+                validatePassword={validatePassword}
               />
             </AdminTabs>
           </CardHeader>
@@ -188,6 +196,7 @@ const AdminApproval = () => {
         onCancel={() => {
           setUserToReset(null);
           setNewPassword('');
+          setConfirmPassword('');
         }}
         onConfirm={handleConfirmReset}
         isProcessing={isProcessing}
