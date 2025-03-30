@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -59,7 +58,7 @@ export const usePasswordManagement = () => {
     setLastResetResult(null);
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - تستخدم الوظيفة المحدثة admin_reset_user_password
+  // وظيفة إعادة تعيين كلمة المرور - باستخدام Edge Function
   const resetUserPassword = async (userId: string, password: string): Promise<boolean> => {
     if (!userId) {
       console.error('[usePasswordManagement] معرف المستخدم غير صالح:', userId);
@@ -81,38 +80,46 @@ export const usePasswordManagement = () => {
       console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
       console.log('[usePasswordManagement] طول كلمة المرور المستخدمة:', password.length);
       
-      // استخدام وظيفة admin_reset_user_password المحسنة
+      // استخدام Edge Function بدلاً من RPC
       const startTime = Date.now();
-      const { data, error } = await supabase.rpc('admin_reset_user_password', {
-        user_id_str: userId,
-        new_password: password
+      
+      // الحصول على رمز المصادقة للمستخدم الحالي
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('جلسة المستخدم غير صالحة');
+      }
+
+      // استدعاء Edge Function
+      const { data, error } = await supabase.functions.invoke('reset-password', {
+        body: {
+          userId: userId,
+          newPassword: password
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
+      
       const timeTaken = Date.now() - startTime;
       
       console.log('[usePasswordManagement] نتيجة إعادة تعيين كلمة المرور:', { 
-        success: data === true, 
-        error: error ? error.message : null,
+        success: data?.success === true, 
+        error: error ? error.message : (data?.error || null),
         timeTaken: `${timeTaken}ms`
       });
       
-      if (error) {
-        console.error('[usePasswordManagement] خطأ في إعادة تعيين كلمة المرور:', error);
-        toast.error(`فشلت عملية إعادة تعيين كلمة المرور: ${error.message}`);
+      if (error || !data || data.success !== true) {
+        const errorMessage = error?.message || data?.error || 'فشلت عملية إعادة تعيين كلمة المرور';
+        console.error('[usePasswordManagement] خطأ في إعادة تعيين كلمة المرور:', errorMessage);
+        toast.error(`فشلت عملية إعادة تعيين كلمة المرور: ${errorMessage}`);
         setLastResetResult(false);
         return false;
       }
       
-      if (data === true) {
-        toast.success('تم إعادة تعيين كلمة المرور بنجاح');
-        resetPasswordStates();
-        setLastResetResult(true);
-        return true;
-      } else {
-        console.error('[usePasswordManagement] فشلت عملية إعادة تعيين كلمة المرور، البيانات المستلمة:', data);
-        toast.error('فشلت عملية إعادة تعيين كلمة المرور');
-        setLastResetResult(false);
-        return false;
-      }
+      toast.success('تم إعادة تعيين كلمة المرور بنجاح');
+      resetPasswordStates();
+      setLastResetResult(true);
+      return true;
     } catch (error: any) {
       console.error('[usePasswordManagement] خطأ في إعادة تعيين كلمة المرور:', error);
       toast.error(`حدث خطأ أثناء إعادة تعيين كلمة المرور: ${error.message || 'خطأ غير معروف'}`);

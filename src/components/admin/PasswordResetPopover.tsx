@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,25 +44,33 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
       console.log('محاولة إعادة تعيين كلمة المرور للمستخدم بواسطة معرف:', user.id);
       console.log('طول كلمة المرور المستخدمة:', newPassword.length);
       
-      // استخدام الوظيفة المحدثة admin_reset_user_password
-      const { data, error } = await supabase.rpc('admin_reset_user_password', {
-        user_id_str: user.id,
-        new_password: newPassword
+      // الحصول على رمز المصادقة للمستخدم الحالي
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('جلسة المستخدم غير صالحة');
+      }
+
+      // استدعاء Edge Function بدلاً من RPC
+      const { data, error } = await supabase.functions.invoke('reset-password', {
+        body: {
+          userId: user.id,
+          newPassword: newPassword
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
       
       // تسجيل نتيجة عملية إعادة تعيين كلمة المرور للتصحيح
       console.log('نتيجة إعادة تعيين كلمة المرور:', { 
-        success: data === true, 
-        error: error ? error.message : null,
+        success: data?.success === true, 
+        error: error ? error.message : (data?.error || null),
         userId: user.id
       });
       
-      if (error) {
-        throw error;
-      }
-      
-      if (data !== true) {
-        throw new Error('فشلت عملية إعادة تعيين كلمة المرور');
+      if (error || !data || data.success !== true) {
+        const errorMessage = error?.message || data?.error || 'فشلت عملية إعادة تعيين كلمة المرور';
+        throw new Error(errorMessage);
       }
       
       setIsSuccess(true);
