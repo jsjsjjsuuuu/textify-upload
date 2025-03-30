@@ -31,6 +31,15 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
       return;
     }
 
+    if (!user || !user.id) {
+      toast({
+        title: "خطأ",
+        description: "معرف المستخدم غير صالح أو غير موجود",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       console.log('محاولة إعادة تعيين كلمة المرور للمستخدم بواسطة معرف:', user.id);

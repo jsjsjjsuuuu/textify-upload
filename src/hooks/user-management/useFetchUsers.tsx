@@ -106,68 +106,109 @@ export const useFetchUsers = () => {
       
       // محاولة استخدام طريقة بديلة محسّنة لجلب البيانات
       try {
-        console.log('جاري محاولة استخدام طريقة بديلة لجلب البيانات...');
+        console.log('جاري محاولة استخدام طريقة بديلة لجلب البيانات - استدعاء admin_get_basic_users...');
         
-        // 1. جلب بيانات المستخدمين من جدول profiles
-        const { data: profilesData, error: profilesError } = await supabase
+        // استدعاء وظيفة admin_get_basic_users الجديدة
+        const { data: basicUsersData, error: basicUsersError } = await supabase
+          .rpc('admin_get_basic_users');
+        
+        if (basicUsersError) {
+          console.error('خطأ في استدعاء وظيفة admin_get_basic_users:', basicUsersError);
+          throw basicUsersError;
+        }
+        
+        if (!basicUsersData || basicUsersData.length === 0) {
+          console.log('لم يتم العثور على بيانات للمستخدمين من الوظيفة البديلة');
+          throw new Error('لم يتم العثور على بيانات للمستخدمين');
+        }
+        
+        console.log('تم جلب بيانات أساسية من وظيفة admin_get_basic_users، العدد:', basicUsersData.length);
+        
+        // جلب بيانات الملفات الشخصية للتكامل
+        const { data: profilesData } = await supabase
           .from('profiles')
           .select('*');
         
-        if (profilesError) {
-          console.error('خطأ في جلب الملفات الشخصية:', profilesError);
-          toast.error('فشل في جلب بيانات المستخدمين');
-          setFetchError('فشل في جلب بيانات المستخدمين: ' + (profilesError.message || 'خطأ غير معروف'));
-          setIsLoading(false);
-          return;
+        // إنشاء خريطة للملفات الشخصية
+        const profilesMap = new Map();
+        if (profilesData && profilesData.length > 0) {
+          profilesData.forEach(profile => {
+            profilesMap.set(profile.id, profile);
+          });
         }
         
-        if (!profilesData || profilesData.length === 0) {
-          console.log('لم يتم العثور على بيانات للمستخدمين');
-          setUsers([]);
-          setIsLoading(false);
-          return;
-        }
-        
-        // 2. محاولة جلب بيانات إضافية من auth.users إذا أمكن
-        console.log('محاولة استرجاع بيانات المستخدمين الإضافية...');
-        let authUsers = [];
-        try {
-          // هذا قد لا ينجح لأن RLS قد يمنع الوصول، لكن نحاول على أي حال
-          const { data: authUsersData } = await supabase.auth.admin.listUsers();
-          authUsers = authUsersData?.users || [];
-          console.log('تم استرجاع بيانات المستخدمين من auth.admin.listUsers:', authUsers.length);
-        } catch (authError) {
-          console.warn('لم نتمكن من استرداد قائمة المستخدمين من auth.admin:', authError);
-          // استمر مع البيانات المحدودة المتاحة
-        }
-        
-        console.log('تم جلب بيانات محدودة من جدول profiles، العدد:', profilesData.length);
-        
-        // استخدام البيانات المتاحة لتكوين قائمة المستخدمين
-        const usersWithDefaultValues = profilesData.map(profile => {
-          // محاولة العثور على معلومات المستخدم المطابقة من auth.users
-          const authUser = authUsers.find(u => u.id === profile.id);
+        // دمج بيانات المستخدمين مع الملفات الشخصية
+        const mergedUsers = basicUsersData.map(user => {
+          const profile = profilesMap.get(user.id) || {};
           
           return {
-            ...profile,
-            id: profile.id,
-            email: authUser?.email || (profile.username ? `${profile.username}@example.com` : `user-${profile.id.substring(0, 8)}@example.com`),
-            created_at: authUser?.created_at || profile.created_at || new Date().toISOString(),
-            full_name: profile.full_name || 'مستخدم بدون اسم',
+            id: user.id,
+            email: user.email,
+            created_at: user.created_at,
+            updated_at: user.updated_at || profile.updated_at,
+            full_name: profile.full_name || user.raw_user_meta_data?.full_name || 'مستخدم بدون اسم',
+            avatar_url: profile.avatar_url || '',
+            is_approved: typeof profile.is_approved === 'boolean' ? profile.is_approved : false,
+            is_admin: typeof profile.is_admin === 'boolean' ? profile.is_admin : false,
             subscription_plan: profile.subscription_plan || 'standard',
             account_status: profile.account_status || 'active',
-            is_approved: typeof profile.is_approved === 'boolean' ? profile.is_approved : false,
-            is_admin: typeof profile.is_admin === 'boolean' ? profile.is_admin : false // تأكد من أن is_admin قيمة منطقية
+            subscription_end_date: profile.subscription_end_date,
+            username: profile.username || '',
+            last_login_at: user.last_sign_in_at,
+            phone_number: user.raw_user_meta_data?.phone || '',
+            address: user.raw_user_meta_data?.address || '',
+            notes: user.raw_user_meta_data?.notes || '',
           };
         });
         
-        setUsers(usersWithDefaultValues);
-        console.log('تم تحديث قائمة المستخدمين باستخدام البيانات المتاحة، العدد:', usersWithDefaultValues.length);
+        setUsers(mergedUsers);
+        console.log('تم تحديث قائمة المستخدمين باستخدام الطريقة البديلة المحسنة، العدد:', mergedUsers.length);
         
-        setFetchError('تم عرض بيانات محدودة للمستخدمين. قد تكون بعض البيانات غير كاملة.');
-        toast.warning('تم عرض بيانات محدودة للمستخدمين');
+        setFetchError('تم عرض بيانات المستخدمين بنجاح ولكن قد تكون بعض البيانات غير مكتملة.');
+        toast.success('تم جلب بيانات المستخدمين بنجاح');
+        
       } catch (fallbackError: any) {
         console.error('خطأ في الطريقة البديلة لجلب البيانات:', fallbackError);
+        
+        // محاولة آخر طريقة إذا فشلت الطرق الأخرى
+        try {
+          console.log('محاولة استرجاع بيانات المستخدمين المحدودة...');
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('*');
+          
+          if (profilesData && profilesData.length > 0) {
+            const limitedUsers = profilesData.map(profile => ({
+              id: profile.id,
+              email: `user-${profile.id.substring(0, 8)}@example.com`,
+              created_at: profile.created_at,
+              updated_at: profile.updated_at,
+              full_name: profile.full_name || 'مستخدم بدون اسم',
+              avatar_url: profile.avatar_url || '',
+              is_approved: typeof profile.is_approved === 'boolean' ? profile.is_approved : false,
+              is_admin: typeof profile.is_admin === 'boolean' ? profile.is_admin : false,
+              subscription_plan: profile.subscription_plan || 'standard',
+              account_status: profile.account_status || 'active',
+              subscription_end_date: profile.subscription_end_date,
+              username: profile.username || '',
+              last_login_at: null,
+              phone_number: '',
+              address: '',
+              notes: ''
+            }));
+            
+            setUsers(limitedUsers);
+            console.log('تم تحديث قائمة المستخدمين باستخدام بيانات محدودة، العدد:', limitedUsers.length);
+            
+            setFetchError('تم عرض بيانات محدودة للمستخدمين. معظم البيانات غير مكتملة.');
+            toast.warning('تم عرض بيانات محدودة للمستخدمين');
+            setIsLoading(false);
+            return;
+          }
+        } catch (lastError) {
+          console.error('فشلت جميع محاولات استرجاع البيانات:', lastError);
+        }
+        
         setFetchError(`خطأ غير متوقع: ${error.message || 'خطأ غير معروف'}`);
         toast.error('حدث خطأ أثناء جلب بيانات المستخدمين');
         setUsers([]);

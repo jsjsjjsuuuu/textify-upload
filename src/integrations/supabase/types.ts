@@ -140,6 +140,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_basic_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          created_at: string
+          updated_at: string
+          last_sign_in_at: string
+          raw_user_meta_data: Json
+          raw_app_meta_data: Json
+        }[]
+      }
       admin_get_complete_users: {
         Args: Record<PropertyKey, never>
         Returns: {

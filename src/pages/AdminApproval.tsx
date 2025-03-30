@@ -77,10 +77,10 @@ const AdminApproval = () => {
     });
     
     // جلب البيانات فقط إذا لم تتم محاولة الجلب من قبل أو إذا كانت قائمة المستخدمين فارغة
-    if ((!fetchAttempted || users.length === 0) && user && userProfile) {
+    if (!fetchAttempted || users.length === 0) {
       fetchUsers();
     }
-  }, [user, userProfile, fetchAttempted, users.length]);
+  }, [user, userProfile, fetchAttempted, users.length, fetchUsers]);
 
   // التعامل مع تأكيد إعادة تعيين كلمة المرور - تحسين التصحيح والتعامل مع الأخطاء
   const handleConfirmReset = () => {
