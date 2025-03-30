@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -70,6 +71,10 @@ export const useUserManagement = () => {
         });
       }
       
+      // طباعة البيانات للتصحيح
+      console.log('بيانات المستخدمين الأساسية:', authUsersData);
+      console.log('بيانات الملفات الشخصية:', profilesData);
+      
       // تحويل بيانات الملفات الشخصية إلى قائمة المستخدمين
       const usersWithCompleteData = (profilesData || []).map((profile: any) => {
         const userData = authUsersMap[profile.id] || { email: '', created_at: profile.created_at || new Date().toISOString() };
@@ -88,6 +93,7 @@ export const useUserManagement = () => {
       
       console.log('معلومات المستخدمين بعد المعالجة:', usersWithCompleteData.map(user => ({
         id: user.id,
+        email: user.email,
         is_admin: user.is_admin,
         is_admin_type: typeof user.is_admin
       })));
@@ -98,6 +104,76 @@ export const useUserManagement = () => {
       toast.error('حدث خطأ أثناء جلب بيانات المستخدمين');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // إضافة مستخدم جديد
+  const addNewUser = async (
+    email: string, 
+    password: string, 
+    fullName: string, 
+    isAdmin: boolean = false, 
+    isApproved: boolean = false,
+    subscriptionPlan: string = 'standard',
+    accountStatus: string = 'active'
+  ) => {
+    setIsProcessing(true);
+    try {
+      console.log('جاري إضافة مستخدم جديد:', { email, fullName, isAdmin, isApproved });
+      
+      // إنشاء المستخدم من خلال API لـ Supabase
+      const { data: signUpData, error: signUpError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: fullName }
+      });
+      
+      if (signUpError) {
+        console.error('خطأ في إنشاء المستخدم:', signUpError);
+        toast.error(`فشل في إنشاء المستخدم: ${signUpError.message}`);
+        return false;
+      }
+      
+      // التأكد من إنشاء المستخدم بنجاح والحصول على معرف المستخدم
+      if (!signUpData.user || !signUpData.user.id) {
+        console.error('لم يتم إنشاء المستخدم بشكل صحيح');
+        toast.error('فشل في إنشاء المستخدم: لم يتم إنشاء المستخدم بشكل صحيح');
+        return false;
+      }
+      
+      const userId = signUpData.user.id;
+      
+      // تحديث الملف الشخصي للمستخدم
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: fullName,
+          is_admin: isAdmin,
+          is_approved: isApproved,
+          subscription_plan: subscriptionPlan,
+          account_status: accountStatus
+        })
+        .eq('id', userId);
+      
+      if (profileError) {
+        console.error('خطأ في تحديث الملف الشخصي للمستخدم:', profileError);
+        toast.error(`فشل في تحديث الملف الشخصي: ${profileError.message}`);
+        // نستمر على الرغم من وجود خطأ في تحديث الملف الشخصي، لأن المستخدم تم إنشاؤه بالفعل
+      }
+      
+      toast.success('تم إنشاء المستخدم بنجاح');
+      
+      // إعادة تحميل المستخدمين بعد الإضافة
+      await fetchUsers();
+      
+      return true;
+    } catch (error: any) {
+      console.error('خطأ غير متوقع في إضافة المستخدم:', error);
+      toast.error(`حدث خطأ أثناء إضافة المستخدم: ${error.message || 'خطأ غير معروف'}`);
+      return false;
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -188,17 +264,7 @@ export const useUserManagement = () => {
         return;
       }
 
-      // التحقق من صحة تنسيق UUID
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const isValidUuid = uuidPattern.test(userId);
-      
-      console.log('التحقق من تنسيق UUID:', {
-        userId,
-        isValidUuid,
-        passwordLength: newPassword.length
-      });
-
-      // استخدام الدالة الموجودة بالفعل: admin_reset_password_by_string_id
+      // استخدام الدالة الخاصة بإعادة تعيين كلمة المرور
       const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
         user_id_str: userId,
         new_password: newPassword
@@ -213,34 +279,28 @@ export const useUserManagement = () => {
         console.error('خطأ في إعادة تعيين كلمة المرور:', error);
         toast.error(`فشل في إعادة تعيين كلمة المرور: ${error.message}`);
         
-        // محاولة استخدام طريقة بديلة إذا كان معرف المستخدم صالحًا
-        if (isValidUuid) {
-          console.log('المحاولة باستخدام الطريقة البديلة admin_update_user_password');
-          
-          const { data: traditionalData, error: traditionalError } = await supabase.rpc('admin_update_user_password', {
-            user_id: userId,
-            new_password: newPassword
-          });
-          
-          console.log('نتيجة استدعاء admin_update_user_password:', { 
-            data: traditionalData, 
-            error: traditionalError ? { message: traditionalError.message, code: traditionalError.code } : null 
-          });
-          
-          if (traditionalError) {
-            throw traditionalError;
-          }
-          
-          if (traditionalData === true) {
-            console.log('تم تغيير كلمة المرور بنجاح (طريقة تقليدية)');
-            toast.success('تم إعادة تعيين كلمة المرور بنجاح');
-            resetPasswordStates();
-            return;
-          } else {
-            throw new Error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
-          }
+        // محاولة باستخدام الطريقة الثانية
+        const { data: alternativeData, error: alternativeError } = await supabase.rpc('admin_update_user_password', {
+          user_id: userId,
+          new_password: newPassword
+        });
+        
+        console.log('نتيجة استدعاء admin_update_user_password:', { 
+          data: alternativeData, 
+          error: alternativeError ? { message: alternativeError.message, code: alternativeError.code } : null 
+        });
+        
+        if (alternativeError) {
+          throw alternativeError;
+        }
+        
+        if (alternativeData === true) {
+          console.log('تم تغيير كلمة المرور بنجاح (طريقة بديلة)');
+          toast.success('تم إعادة تعيين كلمة المرور بنجاح');
+          resetPasswordStates();
+          return;
         } else {
-          throw new Error('معرف المستخدم ليس بتنسيق UUID صالح');
+          throw new Error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
         }
       } else {
         // نجحت الطريقة المباشرة
@@ -496,6 +556,7 @@ export const useUserManagement = () => {
     setShowConfirmReset,
     setUserToReset,
     fetchUsers,
+    addNewUser,
     approveUser,
     rejectUser,
     resetUserPassword,
