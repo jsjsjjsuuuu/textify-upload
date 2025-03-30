@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { KeyRound, Lock, Eye, EyeOff, CheckCircle, RefreshCw } from 'lucide-react';
 import { UserProfile } from '@/types/UserProfile';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +14,6 @@ interface PasswordResetPopoverProps {
 }
 
 const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => {
-  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,26 +22,18 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
 
   const handleResetPassword = async () => {
     if (!newPassword || newPassword.length < 6) {
-      toast({
-        title: "خطأ",
-        description: "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
-        variant: "destructive",
-      });
+      toast.error("يجب أن تكون كلمة المرور 6 أحرف على الأقل");
       return;
     }
 
     if (!user || !user.id) {
-      toast({
-        title: "خطأ",
-        description: "معرف المستخدم غير صالح أو غير موجود",
-        variant: "destructive",
-      });
+      toast.error("معرف المستخدم غير صالح أو غير موجود");
       return;
     }
 
     setIsLoading(true);
     try {
-      console.log('محاولة إعادة تعيين كلمة المرور للمستخدم بواسطة معرف:', user.id);
+      console.log('بدء عملية إعادة تعيين كلمة المرور للمستخدم:', user.id);
       console.log('طول كلمة المرور المستخدمة:', newPassword.length);
       
       // الحصول على رمز المصادقة للمستخدم الحالي
@@ -49,8 +41,10 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
       if (!session) {
         throw new Error('جلسة المستخدم غير صالحة');
       }
+      
+      console.log('تم الحصول على جلسة صالحة، جاري إرسال طلب إعادة تعيين كلمة المرور');
 
-      // استدعاء Edge Function بدلاً من RPC
+      // استدعاء Edge Function مع رمز المصادقة
       const { data, error } = await supabase.functions.invoke('reset-password', {
         body: {
           userId: user.id,
@@ -61,24 +55,19 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
         }
       });
       
-      // تسجيل نتيجة عملية إعادة تعيين كلمة المرور للتصحيح
-      console.log('نتيجة إعادة تعيين كلمة المرور:', { 
+      console.log('استجابة إعادة تعيين كلمة المرور:', { 
         success: data?.success === true, 
-        error: error ? error.message : (data?.error || null),
-        userId: user.id
+        error: error ? error.message : (data?.error || null) 
       });
       
       if (error || !data || data.success !== true) {
         const errorMessage = error?.message || data?.error || 'فشلت عملية إعادة تعيين كلمة المرور';
+        console.error('خطأ في إعادة تعيين كلمة المرور:', errorMessage);
         throw new Error(errorMessage);
       }
       
       setIsSuccess(true);
-      toast({
-        title: "تم بنجاح",
-        description: "تم إعادة تعيين كلمة المرور بنجاح",
-        duration: 3000,
-      });
+      toast.success("تم إعادة تعيين كلمة المرور بنجاح");
       
       setTimeout(() => {
         setIsOpen(false);
@@ -87,14 +76,9 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
       }, 1500);
       
     } catch (error: any) {
-      console.error('خطأ في إعادة تعيين كلمة المرور:', error);
+      console.error('خطأ أثناء عملية إعادة تعيين كلمة المرور:', error);
       
-      toast({
-        title: "خطأ",
-        description: error.message || "حدث خطأ أثناء إعادة تعيين كلمة المرور",
-        variant: "destructive",
-        duration: 5000,
-      });
+      toast.error(error.message || "حدث خطأ أثناء إعادة تعيين كلمة المرور");
     } finally {
       setIsLoading(false);
     }

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -80,9 +81,6 @@ export const usePasswordManagement = () => {
       console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
       console.log('[usePasswordManagement] طول كلمة المرور المستخدمة:', password.length);
       
-      // استخدام Edge Function بدلاً من RPC
-      const startTime = Date.now();
-      
       // الحصول على رمز المصادقة للمستخدم الحالي
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -100,12 +98,9 @@ export const usePasswordManagement = () => {
         }
       });
       
-      const timeTaken = Date.now() - startTime;
-      
       console.log('[usePasswordManagement] نتيجة إعادة تعيين كلمة المرور:', { 
         success: data?.success === true, 
-        error: error ? error.message : (data?.error || null),
-        timeTaken: `${timeTaken}ms`
+        error: error ? error.message : (data?.error || null)
       });
       
       if (error || !data || data.success !== true) {
@@ -128,7 +123,6 @@ export const usePasswordManagement = () => {
     } finally {
       setIsProcessing(false);
       setShowConfirmReset(false);
-      // لا نقوم بإعادة تعيين userToReset هنا حتى نتمكن من محاولة إعادة تعيين كلمة المرور مرة أخرى إذا فشلت العملية
     }
   };
 
