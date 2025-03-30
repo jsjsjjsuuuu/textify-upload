@@ -20,18 +20,38 @@ export const useFetchUsers = () => {
     setIsLoading(true);
     setFetchError(null);
     try {
-      console.log('بدء جلب بيانات المستخدمين باستخدام الوظيفة الجديدة...');
+      console.log('بدء جلب بيانات المستخدمين...');
       setFetchAttempted(true); // تعيين أنه تمت محاولة الجلب على الأقل مرة واحدة
       
-      // استدعاء الوظيفة الجديدة التي تجمع بيانات المستخدمين بالكامل
+      // استدعاء وظيفة admin_get_complete_users
       const { data: completeUsersData, error: completeUsersError } = await supabase
         .rpc('admin_get_complete_users');
       
       if (completeUsersError) {
         console.error('خطأ في جلب بيانات المستخدمين الكاملة:', completeUsersError);
-        
-        // إذا فشل طلب المسؤول، نحاول جلب بيانات الملفات الشخصية العادية كخطة بديلة
+        throw completeUsersError;
+      }
+      
+      if (!completeUsersData || completeUsersData.length === 0) {
+        console.log('لم يتم العثور على مستخدمين');
+        setUsers([]);
+        toast.info('لم يتم العثور على مستخدمين');
+        setIsLoading(false);
+        return;
+      }
+      
+      // تمت العملية بنجاح، تحديث قائمة المستخدمين
+      console.log('تم جلب بيانات المستخدمين الكاملة بنجاح، العدد:', completeUsersData.length);
+      setUsers(completeUsersData);
+      
+    } catch (error: any) {
+      console.error('خطأ في جلب بيانات المستخدمين:', error);
+      
+      // محاولة استخدام طريقة بديلة لجلب البيانات
+      try {
         console.log('جاري محاولة استخدام طريقة بديلة لجلب البيانات...');
+        
+        // جلب بيانات المستخدمين من جدول profiles
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('*');
@@ -39,7 +59,7 @@ export const useFetchUsers = () => {
         if (profilesError) {
           console.error('خطأ في جلب الملفات الشخصية:', profilesError);
           toast.error('فشل في جلب بيانات المستخدمين');
-          setFetchError('فشل في جلب بيانات المستخدمين: ' + (completeUsersError.message || 'خطأ غير معروف'));
+          setFetchError('فشل في جلب بيانات المستخدمين: ' + (profilesError.message || 'خطأ غير معروف'));
           setIsLoading(false);
           return;
         }
@@ -51,7 +71,7 @@ export const useFetchUsers = () => {
           return;
         }
         
-        // استخدام بيانات الملفات الشخصية المحدودة المتاحة
+        // استخدام البيانات المتاحة فقط
         setUsers(profilesData.map(profile => ({
           ...profile,
           id: profile.id,
@@ -61,20 +81,12 @@ export const useFetchUsers = () => {
         
         setFetchError('تعذر جلب البيانات الكاملة للمستخدمين. يتم عرض بيانات محدودة فقط.');
         toast.warning('تم عرض بيانات محدودة للمستخدمين');
-      } else {
-        // تم جلب البيانات الكاملة بنجاح
-        console.log('تم جلب بيانات المستخدمين الكاملة بنجاح، العدد:', completeUsersData.length);
-        setUsers(completeUsersData);
-        
-        if (completeUsersData.length === 0) {
-          console.log('لم يتم العثور على مستخدمين');
-          toast.info('لم يتم العثور على مستخدمين');
-        }
+      } catch (fallbackError: any) {
+        console.error('خطأ في الطريقة البديلة لجلب البيانات:', fallbackError);
+        setFetchError(`خطأ غير متوقع: ${error.message || 'خطأ غير معروف'}`);
+        toast.error('حدث خطأ أثناء جلب بيانات المستخدمين');
+        setUsers([]);
       }
-    } catch (error: any) {
-      console.error('خطأ غير متوقع في جلب بيانات المستخدمين:', error);
-      toast.error('حدث خطأ أثناء جلب بيانات المستخدمين');
-      setFetchError(`خطأ غير متوقع: ${error.message || 'خطأ غير معروف'}`);
     } finally {
       setIsLoading(false);
     }
