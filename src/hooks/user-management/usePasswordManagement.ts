@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import ResetPasswordDialog from '@/components/admin/ResetPasswordDialog';
 
 export const usePasswordManagement = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -59,7 +60,7 @@ export const usePasswordManagement = () => {
     setLastResetResult(null);
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - باستخدام Edge Function
+  // وظيفة إعادة تعيين كلمة المرور المحسنة - باستخدام Edge Function
   const resetUserPassword = async (userId: string, password: string): Promise<boolean> => {
     if (!userId) {
       console.error('[usePasswordManagement] معرف المستخدم غير صالح:', userId);
@@ -79,15 +80,17 @@ export const usePasswordManagement = () => {
     setIsProcessing(true);
     try {
       console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
-      console.log('[usePasswordManagement] طول كلمة المرور المستخدمة:', password.length);
       
-      // الحصول على رمز المصادقة للمستخدم الحالي
+      // الحصول على جلسة المستخدم الحالي للمصادقة
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.error('[usePasswordManagement] لا توجد جلسة مستخدم صالحة');
         throw new Error('جلسة المستخدم غير صالحة');
       }
+      
+      console.log('[usePasswordManagement] تم الحصول على جلسة صالحة، جاري إرسال طلب إعادة تعيين كلمة المرور');
 
-      // استدعاء Edge Function
+      // استدعاء Edge Function مع التوكن المناسب
       const { data, error } = await supabase.functions.invoke('reset-password', {
         body: {
           userId: userId,
@@ -98,7 +101,7 @@ export const usePasswordManagement = () => {
         }
       });
       
-      console.log('[usePasswordManagement] نتيجة إعادة تعيين كلمة المرور:', { 
+      console.log('[usePasswordManagement] استجابة إعادة تعيين كلمة المرور:', { 
         success: data?.success === true, 
         error: error ? error.message : (data?.error || null)
       });

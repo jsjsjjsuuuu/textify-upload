@@ -13,6 +13,8 @@ interface ResetPasswordRequest {
 }
 
 serve(async (req) => {
+  console.log('تم استلام طلب إلى وظيفة إعادة تعيين كلمة المرور');
+  
   // التعامل مع طلبات CORS المبدئية
   if (req.method === 'OPTIONS') {
     console.log('تم استلام طلب OPTIONS - إرجاع استجابة CORS');
@@ -27,6 +29,20 @@ serve(async (req) => {
 
     console.log('تم استلام طلب إعادة تعيين كلمة المرور');
 
+    // الحصول على المتغيرات البيئية المطلوبة
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+      console.error('متغيرات البيئة المطلوبة غير متوفرة:', {
+        hasUrl: !!supabaseUrl,
+        hasAnonKey: !!supabaseAnonKey,
+        hasServiceRoleKey: !!supabaseServiceRoleKey
+      });
+      throw new Error('إعدادات Supabase غير صحيحة أو مفقودة');
+    }
+
     // استخراج رمز المصادقة
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -37,15 +53,7 @@ serve(async (req) => {
     const token = authHeader.split(' ')[1];
     console.log('تم استخراج رمز المصادقة بنجاح');
 
-    // تهيئة عميل Supabase
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('متغيرات البيئة الضرورية غير متوفرة');
-      throw new Error('إعدادات Supabase غير صحيحة');
-    }
-
+    // تهيئة عميل Supabase العادي للتحقق من المستخدم الحالي
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
@@ -102,7 +110,7 @@ serve(async (req) => {
 
     if (!userId || !newPassword) {
       console.error('بيانات إعادة تعيين كلمة المرور غير كاملة');
-      throw new Error('بيانات غير كاملة');
+      throw new Error('بيانات غير كاملة - معرف المستخدم أو كلمة المرور مفقودة');
     }
 
     if (newPassword.length < 6) {
@@ -112,15 +120,8 @@ serve(async (req) => {
 
     console.log(`محاولة إعادة تعيين كلمة المرور للمستخدم: ${userId} بواسطة المسؤول: ${currentUserId}`);
 
-    // الحصول على مفتاح الخدمة لاستخدام واجهة برمجة التطبيقات الإدارية
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!serviceRoleKey) {
-      console.error('مفتاح الخدمة (SERVICE_ROLE_KEY) غير متوفر');
-      throw new Error('مفتاح الخدمة غير متوفر. يرجى التحقق من إعدادات البيئة.');
-    }
-
     // إنشاء عميل Supabase بمفتاح الخدمة للوصول إلى وظائف المسؤول
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: {
         persistSession: false,
       },
@@ -129,14 +130,14 @@ serve(async (req) => {
     console.log('تم إنشاء عميل المسؤول بنجاح، جاري تنفيذ إعادة تعيين كلمة المرور...');
 
     // استخدام واجهة برمجة التطبيقات Admin لإعادة تعيين كلمة المرور
-    const { error: resetError } = await adminClient.auth.admin.updateUserById(
+    const { data: updateData, error: updateError } = await adminClient.auth.admin.updateUserById(
       userId,
       { password: newPassword }
     );
 
-    if (resetError) {
-      console.error('خطأ في إعادة تعيين كلمة المرور:', resetError);
-      throw new Error(`فشل في إعادة تعيين كلمة المرور: ${resetError.message}`);
+    if (updateError) {
+      console.error('خطأ في إعادة تعيين كلمة المرور:', updateError.message);
+      throw new Error(`فشل في إعادة تعيين كلمة المرور: ${updateError.message}`);
     }
 
     console.log('تم إعادة تعيين كلمة المرور بنجاح للمستخدم:', userId);

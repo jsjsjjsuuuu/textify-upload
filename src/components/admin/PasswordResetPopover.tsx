@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { KeyRound, Lock, Eye, EyeOff, CheckCircle, RefreshCw } from 'lucide-react';
 import { UserProfile } from '@/types/UserProfile';
 import { supabase } from '@/integrations/supabase/client';
+import { usePasswordManagement } from '@/hooks/user-management/usePasswordManagement';
 
 interface PasswordResetPopoverProps {
   user: UserProfile;
@@ -19,6 +20,8 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  
+  const { resetUserPassword } = usePasswordManagement();
 
   const handleResetPassword = async () => {
     if (!newPassword || newPassword.length < 6) {
@@ -34,36 +37,12 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
     setIsLoading(true);
     try {
       console.log('بدء عملية إعادة تعيين كلمة المرور للمستخدم:', user.id);
-      console.log('طول كلمة المرور المستخدمة:', newPassword.length);
       
-      // الحصول على رمز المصادقة للمستخدم الحالي
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('جلسة المستخدم غير صالحة');
-      }
+      // استخدام وظيفة إعادة تعيين كلمة المرور المحسنة من خطاف usePasswordManagement
+      const success = await resetUserPassword(user.id, newPassword);
       
-      console.log('تم الحصول على جلسة صالحة، جاري إرسال طلب إعادة تعيين كلمة المرور');
-
-      // استدعاء Edge Function مع رمز المصادقة
-      const { data, error } = await supabase.functions.invoke('reset-password', {
-        body: {
-          userId: user.id,
-          newPassword: newPassword
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      });
-      
-      console.log('استجابة إعادة تعيين كلمة المرور:', { 
-        success: data?.success === true, 
-        error: error ? error.message : (data?.error || null) 
-      });
-      
-      if (error || !data || data.success !== true) {
-        const errorMessage = error?.message || data?.error || 'فشلت عملية إعادة تعيين كلمة المرور';
-        console.error('خطأ في إعادة تعيين كلمة المرور:', errorMessage);
-        throw new Error(errorMessage);
+      if (!success) {
+        throw new Error('فشلت عملية إعادة تعيين كلمة المرور');
       }
       
       setIsSuccess(true);
@@ -77,7 +56,6 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
       
     } catch (error: any) {
       console.error('خطأ أثناء عملية إعادة تعيين كلمة المرور:', error);
-      
       toast.error(error.message || "حدث خطأ أثناء إعادة تعيين كلمة المرور");
     } finally {
       setIsLoading(false);
