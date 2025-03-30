@@ -89,7 +89,7 @@ export const useFetchUsers = () => {
         return {
           ...user,
           id: user.id || crypto.randomUUID(), // نادر جدًا، لكن للأمان
-          email: user.email || `user-${user.id?.substring(0, 8) || 'unknown'}@example.com`,
+          email: user.email || `غير معروف (${user.id?.substring(0, 8) || 'مجهول'})`,
           full_name: user.full_name || 'مستخدم بدون اسم',
           subscription_plan: user.subscription_plan || 'standard',
           account_status: user.account_status || 'active',
@@ -161,7 +161,8 @@ export const useFetchUsers = () => {
           
           return {
             id: user.id,
-            email: user.email,
+            // الاحتفاظ بالبريد الإلكتروني الحقيقي للمستخدم
+            email: user.email || `غير معروف (${user.id.substring(0, 8)})`,
             created_at: user.created_at,
             updated_at: user.updated_at || profile.updated_at,
             full_name: profile.full_name || fullNameFromMeta || 'مستخدم بدون اسم',
@@ -190,30 +191,52 @@ export const useFetchUsers = () => {
         
         // محاولة آخر طريقة إذا فشلت الطرق الأخرى
         try {
-          console.log('محاولة استرجاع بيانات المستخدمين المحدودة...');
-          const { data: profilesData } = await supabase
+          console.log('محاولة استرجاع بيانات المستخدمين المحدودة من جدول profiles...');
+          const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
             .select('*');
           
+          if (profilesError) {
+            console.error('خطأ في جلب بيانات الملفات الشخصية:', profilesError);
+            throw profilesError;
+          }
+          
           if (profilesData && profilesData.length > 0) {
-            const limitedUsers = profilesData.map(profile => ({
-              id: profile.id,
-              email: `user-${profile.id.substring(0, 8)}@example.com`,
-              created_at: profile.created_at,
-              updated_at: profile.updated_at,
-              full_name: profile.full_name || 'مستخدم بدون اسم',
-              avatar_url: profile.avatar_url || '',
-              is_approved: typeof profile.is_approved === 'boolean' ? profile.is_approved : false,
-              is_admin: typeof profile.is_admin === 'boolean' ? profile.is_admin : false,
-              subscription_plan: profile.subscription_plan || 'standard',
-              account_status: profile.account_status || 'active',
-              subscription_end_date: profile.subscription_end_date,
-              username: profile.username || '',
-              last_login_at: null,
-              phone_number: '',
-              address: '',
-              notes: ''
-            }));
+            // محاولة إضافية لاسترجاع عناوين البريد الإلكتروني للمستخدمين
+            let emailsMap = new Map();
+            try {
+              const { data: emailsData } = await supabase.rpc('get_users_emails');
+              if (emailsData && emailsData.length > 0) {
+                emailsData.forEach(item => emailsMap.set(item.id, item.email));
+                console.log('تم جلب عناوين البريد الإلكتروني للمستخدمين:', emailsMap.size);
+              }
+            } catch (emailsError) {
+              console.error('خطأ في جلب عناوين البريد الإلكتروني:', emailsError);
+            }
+            
+            const limitedUsers = profilesData.map(profile => {
+              // استخدام خريطة البريد الإلكتروني إذا كانت متوفرة، وإلا استخدام قيمة افتراضية
+              const userEmail = emailsMap.get(profile.id) || `غير معروف (${profile.id.substring(0, 8)})`;
+              
+              return {
+                id: profile.id,
+                email: userEmail,
+                created_at: profile.created_at,
+                updated_at: profile.updated_at,
+                full_name: profile.full_name || 'مستخدم بدون اسم',
+                avatar_url: profile.avatar_url || '',
+                is_approved: typeof profile.is_approved === 'boolean' ? profile.is_approved : false,
+                is_admin: typeof profile.is_admin === 'boolean' ? profile.is_admin : false,
+                subscription_plan: profile.subscription_plan || 'standard',
+                account_status: profile.account_status || 'active',
+                subscription_end_date: profile.subscription_end_date,
+                username: profile.username || '',
+                last_login_at: null,
+                phone_number: '',
+                address: '',
+                notes: ''
+              };
+            });
             
             setUsers(limitedUsers);
             console.log('تم تحديث قائمة المستخدمين باستخدام بيانات محدودة، العدد:', limitedUsers.length);
