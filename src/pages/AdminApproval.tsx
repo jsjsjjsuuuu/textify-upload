@@ -1,28 +1,22 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { RefreshCw, UserPlus, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-// استيراد المكونات
-import UserTable from '@/components/admin/UserTable';
-import UserEditForm from '@/components/admin/UserEditForm';
-import UserFilters from '@/components/admin/UserFilters';
-import UserTabsFilter from '@/components/admin/UserTabsFilter';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { AdminUserManagementTab } from '@/components/Profile';
 import ResetPasswordDialog from '@/components/admin/ResetPasswordDialog';
 import UserStats from '@/components/admin/UserStats';
-import { AdminUserManagementTab } from '@/components/Profile';
-
-// استيراد custom hook
 import { useUserManagement } from '@/hooks/useUserManagement';
+import { toast } from 'sonner';
+
+// استيراد المكونات الجديدة
+import AdminHeader from '@/components/admin/AdminHeader';
+import AdminTabs from '@/components/admin/AdminTabs';
+import UserManagementPanel from '@/components/admin/UserManagementPanel';
 
 const AdminApproval = () => {
   const { user, userProfile } = useAuth();
-  const [activeAdminTab, setActiveAdminTab] = useState('users');
+  const [activeAdminTab, setActiveAdminTab] = React.useState('users');
   
   const {
     users,
@@ -134,26 +128,7 @@ const AdminApproval = () => {
       <div className="container py-6">
         <Card className="mb-6">
           <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <CardTitle className="text-2xl">لوحة تحكم المسؤول</CardTitle>
-                <CardDescription>
-                  إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={fetchUsers} 
-                  disabled={isLoading}
-                  className="flex items-center gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  تحديث
-                </Button>
-              </div>
-            </div>
+            <AdminHeader onRefresh={fetchUsers} isLoading={isLoading} />
           </CardHeader>
           <CardContent>
             {/* عرض رسالة الخطأ إذا كان هناك خطأ في جلب البيانات */}
@@ -166,69 +141,43 @@ const AdminApproval = () => {
       
         <Card>
           <CardHeader>
-            <Tabs value={activeAdminTab} onValueChange={setActiveAdminTab} className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="users">قائمة المستخدمين</TabsTrigger>
-                <TabsTrigger value="management" className="flex items-center gap-1">
-                  <UserPlus className="h-4 w-4" />
-                  إضافة و إدارة المستخدمين
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <AdminTabs 
+              activeTab={activeAdminTab} 
+              onTabChange={setActiveAdminTab}
+              managementTabContent={<AdminUserManagementTab />}
+            >
+              <UserManagementPanel 
+                searchQuery={searchQuery}
+                filterPlan={filterPlan}
+                filterStatus={filterStatus}
+                activeTab={activeTab}
+                isEditingUser={isEditingUser}
+                editedUserData={editedUserData}
+                newPassword={newPassword}
+                showPassword={showPassword}
+                isProcessing={isProcessing}
+                selectedDate={selectedDate}
+                userCounts={userCounts}
+                filteredUsers={filteredUsers}
+                isLoading={isLoading}
+                onSearchChange={setSearchQuery}
+                onPlanFilterChange={setFilterPlan}
+                onStatusFilterChange={setFilterStatus}
+                onTabChange={setActiveTab}
+                onEdit={startEditing}
+                onApprove={approveUser}
+                onReject={rejectUser}
+                onCancel={cancelEditing}
+                onSave={saveUserData}
+                onShowPasswordToggle={() => setShowPassword(!showPassword)}
+                onNewPasswordChange={setNewPassword}
+                onUserDataChange={handleEditChange}
+                onDateSelect={handleDateSelect}
+                onPasswordReset={() => prepareUserPasswordReset(editedUserData!.id)}
+                onEmailChange={updateUserEmail}
+              />
+            </AdminTabs>
           </CardHeader>
-          <CardContent>
-            <Tabs value={activeAdminTab}>
-              <TabsContent value="users" className="mt-0">
-                {/* أدوات البحث والتصفية */}
-                <UserFilters 
-                  searchQuery={searchQuery}
-                  filterPlan={filterPlan}
-                  filterStatus={filterStatus}
-                  onSearchChange={setSearchQuery}
-                  onPlanFilterChange={setFilterPlan}
-                  onStatusFilterChange={setFilterStatus}
-                />
-                
-                <UserTabsFilter
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                  totalUsers={userCounts.total}
-                  pendingUsers={userCounts.pending}
-                  approvedUsers={userCounts.approved}
-                >
-                  {isEditingUser ? (
-                    <UserEditForm 
-                      userData={editedUserData!}
-                      newPassword={newPassword}
-                      showPassword={showPassword}
-                      isProcessing={isProcessing}
-                      selectedDate={selectedDate}
-                      onCancel={cancelEditing}
-                      onSave={saveUserData}
-                      onShowPasswordToggle={() => setShowPassword(!showPassword)}
-                      onNewPasswordChange={setNewPassword}
-                      onUserDataChange={handleEditChange}
-                      onDateSelect={handleDateSelect}
-                      onPasswordReset={() => prepareUserPasswordReset(editedUserData!.id)}
-                      onEmailChange={updateUserEmail}
-                    />
-                  ) : (
-                    <UserTable 
-                      users={filteredUsers}
-                      isLoading={isLoading}
-                      onEdit={startEditing}
-                      onApprove={approveUser}
-                      onReject={rejectUser}
-                    />
-                  )}
-                </UserTabsFilter>
-              </TabsContent>
-              
-              <TabsContent value="management">
-                <AdminUserManagementTab />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
         </Card>
       </div>
       
