@@ -120,7 +120,6 @@ const UserTable: React.FC<UserTableProps> = ({
             <TableHead>تاريخ الانتهاء</TableHead>
             <TableHead>معتمد</TableHead>
             <TableHead>تاريخ التسجيل</TableHead>
-            <TableHead>آخر تسجيل دخول</TableHead>
             <TableHead>ملاحظات</TableHead>
             <TableHead>الإجراءات</TableHead>
           </TableRow>
@@ -195,12 +194,6 @@ const UserTable: React.FC<UserTableProps> = ({
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <CalendarIcon className="h-3 w-3" />
                   {formatDate(user.created_at)}
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  {formatDate(user.last_login_at)}
                 </div>
               </TableCell>
               <TableCell>
