@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -125,129 +124,142 @@ const UserTable: React.FC<UserTableProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage 
-                    src={user.avatar_url || `https://avatar.iran.liara.run/public/${user.email}`} 
-                    alt={user.full_name || user.email}
-                  />
-                  <AvatarFallback>{user.full_name?.charAt(0) || user.email.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <span>{user.full_name || 'بدون اسم'}</span>
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-1 text-sm">
-                  <div className="flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
-                    <span>{user.email}</span>
-                  </div>
-                  {user.phone_number && (
+          {users.map((user) => {
+            // التأكد من اكتمال بيانات المستخدم
+            const completeUser = {
+              ...user,
+              id: user.id || '',
+              email: user.email || '',
+              full_name: user.full_name || ''
+            };
+            
+            return (
+              <TableRow key={user.id}>
+                <TableCell className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage 
+                      src={user.avatar_url || `https://avatar.iran.liara.run/public/${user.email}`} 
+                      alt={user.full_name || user.email}
+                    />
+                    <AvatarFallback>{user.full_name?.charAt(0) || user.email.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <span>{user.full_name || 'بدون اسم'}</span>
+                </TableCell>
+                
+                <TableCell>
+                  <div className="flex flex-col gap-1 text-sm">
                     <div className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      <span>{user.phone_number}</span>
+                      <Mail className="h-3 w-3" />
+                      <span>{user.email}</span>
                     </div>
-                  )}
-                  {user.address && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      <span>{user.address}</span>
+                    {user.phone_number && (
+                      <div className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        <span>{user.phone_number}</span>
+                      </div>
+                    )}
+                    {user.address && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        <span>{user.address}</span>
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                
+                <TableCell>
+                  <Badge variant="outline" className={getSubscriptionColor(user.subscription_plan || 'standard')}>
+                    {getSubscriptionLabel(user.subscription_plan || 'standard')}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={getAccountStatusColor(user.account_status || 'active')}>
+                    {getAccountStatusLabel(user.account_status || 'active')}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {user.subscription_end_date ? (
+                    <div className="flex items-center gap-1 text-sm">
+                      <CalendarIcon className="h-3 w-3" />
+                      {formatDate(user.subscription_end_date)}
                     </div>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className={getSubscriptionColor(user.subscription_plan || 'standard')}>
-                  {getSubscriptionLabel(user.subscription_plan || 'standard')}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className={getAccountStatusColor(user.account_status || 'active')}>
-                  {getAccountStatusLabel(user.account_status || 'active')}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {user.subscription_end_date ? (
-                  <div className="flex items-center gap-1 text-sm">
-                    <CalendarIcon className="h-3 w-3" />
-                    {formatDate(user.subscription_end_date)}
-                  </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground">غير محدد</span>
-                )}
-              </TableCell>
-              <TableCell>
-                {user.is_approved ? (
-                  <Badge variant="outline" className="bg-green-100 text-green-700">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    معتمد
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-red-100 text-red-700">
-                    <XCircle className="h-3 w-3 mr-1" />
-                    غير معتمد
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <CalendarIcon className="h-3 w-3" />
-                  {formatDate(user.created_at)}
-                </div>
-              </TableCell>
-              <TableCell>
-                {user.notes ? (
-                  <div className="flex items-center gap-1 text-sm">
-                    <FileText className="h-3 w-3" />
-                    <span className="max-w-[150px] truncate" title={user.notes}>
-                      {user.notes}
-                    </span>
-                  </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground">لا توجد ملاحظات</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    onClick={() => onEdit(user)}
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    تعديل
-                  </Button>
-                  
-                  {user.is_approved ? (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => onReject(user.id)}
-                    >
-                      <UserX className="h-4 w-4 mr-1" />
-                      إلغاء الاعتماد
-                    </Button>
                   ) : (
+                    <span className="text-sm text-muted-foreground">غير محدد</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {user.is_approved ? (
+                    <Badge variant="outline" className="bg-green-100 text-green-700">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      معتمد
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-red-100 text-red-700">
+                      <XCircle className="h-3 w-3 mr-1" />
+                      غير معتمد
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <CalendarIcon className="h-3 w-3" />
+                    {formatDate(user.created_at)}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {user.notes ? (
+                    <div className="flex items-center gap-1 text-sm">
+                      <FileText className="h-3 w-3" />
+                      <span className="max-w-[150px] truncate" title={user.notes}>
+                        {user.notes}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">لا توجد ملاحظات</span>
+                  )}
+                </TableCell>
+                
+                <TableCell>
+                  <div className="flex items-center gap-2">
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                      onClick={() => onApprove(user.id)}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => onEdit(user)}
                     >
-                      <UserCheck className="h-4 w-4 mr-1" />
-                      اعتماد
+                      <Edit className="h-4 w-4 mr-1" />
+                      تعديل
                     </Button>
-                  )}
-                  
-                  {/* زر تغيير كلمة المرور باستخدام المكون الجديد */}
-                  <PasswordResetPopover user={user} />
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+                    
+                    {user.is_approved ? (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => onReject(user.id)}
+                      >
+                        <UserX className="h-4 w-4 mr-1" />
+                        إلغاء الاعتماد
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => onApprove(user.id)}
+                      >
+                        <UserCheck className="h-4 w-4 mr-1" />
+                        اعتماد
+                      </Button>
+                    )}
+                    
+                    {/* تمرير بيانات المستخدم الكاملة */}
+                    <PasswordResetPopover user={completeUser} />
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

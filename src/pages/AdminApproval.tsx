@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
@@ -32,6 +31,9 @@ const AdminApproval = () => {
     selectedDate,
     showConfirmReset,
     userToReset,
+    newPassword,
+    confirmPassword,
+    passwordError,
     fetchAttempted,
     fetchError,
     setActiveTab,
@@ -41,6 +43,9 @@ const AdminApproval = () => {
     setShowPassword,
     setShowConfirmReset,
     setUserToReset,
+    setNewPassword,
+    setConfirmPassword,
+    setPasswordError,
     fetchUsers,
     approveUser,
     rejectUser,
@@ -54,6 +59,7 @@ const AdminApproval = () => {
     getUserCounts,
     prepareUserPasswordReset,
     handleDateSelect,
+    validatePassword,
     ErrorAlert,
   } = useUserManagement();
 
@@ -75,26 +81,27 @@ const AdminApproval = () => {
     }
   }, [user, userProfile, fetchAttempted, users.length]);
 
-  // التعامل مع تأكيد إعادة تعيين كلمة المرور - تم التبسيط
+  // التعامل مع تأكيد إعادة تعيين كلمة المرور - تحسين التصحيح والتعامل مع الأخطاء
   const handleConfirmReset = () => {
-    if (userToReset) {
-      // طباعة سجل تصحيح لمساعدة في تشخيص المشكلة
-      console.log('تنفيذ إعادة تعيين كلمة المرور مع البيانات:', {
+    if (!userToReset) {
+      console.error('لا يمكن إعادة تعيين كلمة المرور: معرف المستخدم غير محدد');
+      toast.error('لم يتم تحديد مستخدم لإعادة تعيين كلمة المرور');
+      return;
+    }
+    
+    // التحقق من كلمة المرور قبل إعادة التعيين
+    if (validatePassword()) {
+      console.log('تنفيذ إعادة تعيين كلمة المرور للمستخدم:', {
         userToReset,
-        userToResetType: typeof userToReset,
-        userToResetLength: userToReset.length
+        passwordLength: newPassword.length
       });
       
-      // تنفيذ عملية إعادة تعيين كلمة المرور
-      resetUserPassword(userToReset, "");
+      resetUserPassword(userToReset, newPassword);
     } else {
-      console.error('لا يمكن إعادة تعيين كلمة المرور:', {
-        userToReset
+      console.error('كلمة المرور غير صالحة:', {
+        passwordError
       });
-      
-      if (!userToReset) {
-        toast.error('لم يتم تحديد مستخدم لإعادة تعيين كلمة المرور');
-      }
+      toast.error(passwordError || 'كلمة المرور غير صالحة');
     }
   };
 

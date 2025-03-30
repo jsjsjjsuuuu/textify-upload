@@ -88,7 +88,7 @@ const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
             onSave={onSave}
             onUserDataChange={onUserDataChange}
             onDateSelect={onDateSelect}
-            onEmailChange={onEmailChange}
+            onEmailChange={(newEmail) => onEmailChange(isEditingUser, newEmail)}
           />
         ) : (
           <UserTable 
