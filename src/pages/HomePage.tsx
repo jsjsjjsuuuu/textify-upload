@@ -76,6 +76,40 @@ const HomePage = () => {
     icon: <Zap />
   }];
   
+  // بيانات الجدول الزمني
+  const timelineItems = [
+    {
+      year: '2024',
+      title: 'إطلاق خدمات جديدة',
+      description: 'تطوير خوارزميات الذكاء الاصطناعي ودعم المزيد من تنسيقات الصور وإطلاق تطبيق للهواتف الذكية',
+      items: [
+        'تطوير خوارزميات الذكاء الاصطناعي',
+        'دعم المزيد من تنسيقات الصور والملفات',
+        'إطلاق تطبيق للهواتف الذكية'
+      ]
+    },
+    {
+      year: '2023',
+      title: 'توسيع قاعدة العملاء',
+      description: 'تحسين الخدمات وزيادة قاعدة العملاء مع إضافة ميزات تحليلية متقدمة',
+      items: [
+        'إضافة ميزات تحليلية متقدمة',
+        'تحسين دقة استخراج البيانات',
+        'دعم تكامل مع المزيد من الأنظمة'
+      ]
+    },
+    {
+      year: 'أوائل 2023',
+      title: 'بداية الرحلة',
+      description: 'تأسيس الشركة وإطلاق الخدمة الأساسية وبناء قاعدة العملاء الأولى',
+      items: [
+        'تأسيس الشركة وإطلاق الخدمة الأساسية',
+        'بناء قاعدة العملاء الأولى',
+        'تطوير الواجهة الأساسية للمستخدمين'
+      ]
+    }
+  ];
+  
   return (
     <div className="min-h-screen bg-background flex flex-col" dir="rtl">
       <AppHeader />
@@ -128,7 +162,7 @@ const HomePage = () => {
       {/* إضافة قسم خريطة العالم - World Map Section */}
       <WorldMapDemo />
       
-      {/* قسم الجدول الزمني - Timeline Section */}
+      {/* قسم الجدول الزمني - Timeline Section - تصميم جديد */}
       <section className="py-20 px-6 bg-white dark:bg-background">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
@@ -141,36 +175,53 @@ const HomePage = () => {
           </div>
           
           <div className="relative mx-auto max-w-4xl">
-            {/* خط العمود */}
-            <div className="absolute h-full w-0.5 bg-gradient-to-b from-brand-coral via-purple-500 to-gray-200 right-[7px]"></div>
+            {/* خط العمود الجديد - منتصف */}
+            <div className="absolute h-full w-1 bg-gradient-to-b from-brand-coral via-purple-500 to-gray-200 right-1/2 transform translate-x-1/2 left-1/2"></div>
             
-            {/* 2024 مرحلة */}
-            <div className="mb-20 relative pr-10">
-              <div className="absolute w-3.5 h-3.5 bg-brand-coral rounded-full right-0 translate-x-1.5"></div>
-              <h3 className="text-5xl font-medium text-gray-600 mb-4">2024</h3>
-              <div className="space-y-4">
-                <p className="text-muted-foreground">إطلاق خدمات جديدة وتحسينات على منصتنا</p>
-                <ul className="space-y-2 list-disc list-inside text-muted-foreground">
-                  <li>تطوير خوارزميات الذكاء الاصطناعي</li>
-                  <li>دعم المزيد من تنسيقات الصور والملفات</li>
-                  <li>إطلاق تطبيق للهواتف الذكية</li>
-                </ul>
+            {/* عناصر الجدول الزمني بتصميم جديد */}
+            {timelineItems.map((item, index) => (
+              <div 
+                key={index} 
+                className={`mb-16 relative flex ${index % 2 === 0 ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`w-[45%] relative ${index % 2 === 0 ? 'ml-12' : 'mr-12'}`}>
+                  {/* النقطة المضيئة على الخط */}
+                  <div className="absolute w-5 h-5 bg-brand-coral rounded-full top-6 transform -translate-y-1/2 shadow-md shadow-brand-coral/30 z-10"
+                       style={{ [index % 2 === 0 ? 'right' : 'left']: '-42px' }}>
+                    <div className="absolute w-3 h-3 bg-white rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+                  </div>
+                  
+                  {/* بطاقة المحتوى */}
+                  <motion.div 
+                    initial={{ opacity: 0, x: index % 2 === 0 ? 20 : -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                    viewport={{ once: true }}
+                    className="bg-white dark:bg-card p-6 rounded-xl shadow-md border border-muted hover:shadow-lg transition-shadow"
+                  >
+                    <div className="flex items-center mb-4">
+                      <div className="bg-brand-coral/10 dark:bg-brand-coral/20 text-brand-coral font-bold rounded-lg py-1 px-4 ml-3">
+                        {item.year}
+                      </div>
+                      <h3 className="text-xl font-bold text-foreground">{item.title}</h3>
+                    </div>
+                    
+                    <p className="text-muted-foreground mb-4">{item.description}</p>
+                    
+                    <ul className="space-y-2">
+                      {item.items.map((subItem, subIndex) => (
+                        <li key={subIndex} className="flex items-start">
+                          <div className="mr-2 mt-1 text-brand-coral">
+                            <CheckCircle2 size={16} />
+                          </div>
+                          <span className="text-foreground">{subItem}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                </div>
               </div>
-            </div>
-            
-            {/* Early 2023 مرحلة */}
-            <div className="relative pr-10">
-              <div className="absolute w-3.5 h-3.5 bg-brand-coral rounded-full right-0 translate-x-1.5"></div>
-              <h3 className="text-5xl font-medium text-gray-600 mb-4">أوائل 2023</h3>
-              <div className="space-y-4">
-                <p className="text-muted-foreground">بداية رحلتنا في مجال استخراج البيانات من الصور</p>
-                <ul className="space-y-2 list-disc list-inside text-muted-foreground">
-                  <li>تأسيس الشركة وإطلاق الخدمة الأساسية</li>
-                  <li>بناء قاعدة العملاء الأولى</li>
-                  <li>تطوير الواجهة الأساسية للمستخدمين</li>
-                </ul>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -303,4 +354,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-
