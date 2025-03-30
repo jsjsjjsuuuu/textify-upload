@@ -34,6 +34,17 @@ const formatCurrency = (value: number): string => {
     maximumFractionDigits: 0
   }).replace(/SAR/g, '');
 };
+
+// دالة مساعدة لتنسيق الدينار العراقي
+const formatIraqiDinar = (value: number): string => {
+  return new Intl.NumberFormat('ar-IQ', {
+    style: 'currency',
+    currency: 'IQD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).replace('IQD', 'دينار');
+};
+
 export function Pricing({
   plans,
   title = "أسعار بسيطة وشفافة",
@@ -95,8 +106,11 @@ export function Pricing({
             }} transition={{
               duration: 0.5
             }}>
-                  {formatCurrency(isMonthly ? parseFloat(plan.price) : parseFloat(plan.yearlyPrice))}
+                  {formatIraqiDinar(isMonthly ? Number(plan.price) : Number(plan.yearlyPrice))}
                 </motion.span>
+                <span className="text-xl text-muted-foreground mr-2">
+                  ألف
+                </span>
                 {plan.period !== "Next 3 months" && <span className="text-sm font-semibold leading-6 tracking-wide text-muted-foreground">
                     / {plan.period}
                   </span>}
