@@ -96,6 +96,7 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
         {isImageError ? (
           <ImageErrorDisplay 
             onRetry={retryLoadImage} 
+            retryCount={retryCount}
             errorMessage="تعذر تحميل الصورة. انقر لإعادة المحاولة."
           />
         ) : (
