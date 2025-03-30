@@ -220,6 +220,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      get_user_email_by_id: {
+        Args: {
+          user_id: string
+        }
+        Returns: string
+      }
       get_users_emails: {
         Args: Record<PropertyKey, never>
         Returns: {

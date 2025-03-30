@@ -91,6 +91,26 @@ const UserTable: React.FC<UserTableProps> = ({
         return 'bg-gray-200 text-gray-700';
     }
   };
+  
+  // تنسيق البريد الإلكتروني
+  const formatEmail = (email: string | undefined) => {
+    if (!email || email.length === 0) return 'البريد غير متوفر';
+    return email;
+  };
+
+  // الحصول على حروف العرض للصورة الرمزية
+  const getAvatarInitials = (user: UserProfile) => {
+    if (user.full_name && user.full_name.length > 0) {
+      return user.full_name.charAt(0).toUpperCase();
+    }
+    if (user.email && user.email.length > 0) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    if (user.username && user.username.length > 0) {
+      return user.username.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
 
   if (isLoading) {
     return (
@@ -126,13 +146,7 @@ const UserTable: React.FC<UserTableProps> = ({
         </TableHeader>
         <TableBody>
           {users.map((user) => {
-            // التأكد من اكتمال بيانات المستخدم
-            const completeUser = {
-              ...user,
-              id: user.id || '',
-              email: user.email || '', // تغيير مهم: لا نضيف نص بديل
-              full_name: user.full_name || ''
-            };
+            const userEmail = formatEmail(user.email);
             
             return (
               <TableRow key={user.id}>
@@ -142,7 +156,7 @@ const UserTable: React.FC<UserTableProps> = ({
                       src={user.avatar_url || `https://avatar.iran.liara.run/public/${user.email}`} 
                       alt={user.full_name || user.email || 'المستخدم'}
                     />
-                    <AvatarFallback>{(user.full_name?.charAt(0) || user.email?.charAt(0) || 'U')}</AvatarFallback>
+                    <AvatarFallback>{getAvatarInitials(user)}</AvatarFallback>
                   </Avatar>
                   <span>{user.full_name || 'بدون اسم'}</span>
                 </TableCell>
@@ -151,7 +165,9 @@ const UserTable: React.FC<UserTableProps> = ({
                   <div className="flex flex-col gap-1 text-sm">
                     <div className="flex items-center gap-1">
                       <Mail className="h-3 w-3" />
-                      <span>{user.email || 'غير متوفر'}</span>
+                      <span className="max-w-[200px] truncate" title={userEmail}>
+                        {userEmail}
+                      </span>
                     </div>
                     {user.phone_number && (
                       <div className="flex items-center gap-1">
@@ -254,8 +270,7 @@ const UserTable: React.FC<UserTableProps> = ({
                       </Button>
                     )}
                     
-                    {/* تمرير بيانات المستخدم الكاملة مع التأكد من وجود البيانات الأساسية */}
-                    <PasswordResetPopover user={completeUser} />
+                    <PasswordResetPopover user={user} />
                   </div>
                 </TableCell>
               </TableRow>

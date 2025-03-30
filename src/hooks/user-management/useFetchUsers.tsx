@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -12,7 +13,7 @@ export const useFetchUsers = () => {
   const [fetchAttempted, setFetchAttempted] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // جلب قائمة المستخدمين - مع تحسينات كبيرة في معالجة الأخطاء والتعامل مع البيانات
+  // جلب قائمة المستخدمين - مع تحسينات إضافية للتعامل مع البريد الإلكتروني
   const fetchUsers = async () => {
     if (isLoading) return; // منع التنفيذ المتعدد إذا كان هناك طلب جاري بالفعل
     
@@ -65,6 +66,7 @@ export const useFetchUsers = () => {
         console.log('نموذج بيانات المستخدم (أول مستخدم):', {
           id: completeUsersData[0].id,
           email: completeUsersData[0].email,
+          email_length: completeUsersData[0].email ? completeUsersData[0].email.length : 0,
           is_admin: completeUsersData[0].is_admin,
           is_admin_type: typeof completeUsersData[0].is_admin
         });
@@ -77,15 +79,22 @@ export const useFetchUsers = () => {
           console.error('مستخدم بدون معرف!', user);
         }
         
+        // إذا كان البريد الإلكتروني فارغًا، نحاول استردادة من مكان آخر
+        let userEmail = user.email || '';
+        
+        // تحقق إضافي من طول البريد الإلكتروني
+        if (userEmail.length < 3 || !userEmail.includes('@')) {
+          console.warn(`تم العثور على بريد إلكتروني غير صالح للمستخدم ${user.id}: "${userEmail}"`);
+          userEmail = ''; // إعادة تعيين البريد إذا كان غير صالح
+        }
+        
         return {
           ...user,
           id: user.id || crypto.randomUUID(), // نادر جدًا، لكن للأمان
-          // تحسين: لا نستخدم البريد الإلكتروني البديل إلا إذا كان البريد الإلكتروني غير موجود تمامًا
-          email: user.email || `غير متوفر (${user.id?.substring(0, 8) || 'مجهول'})`,
+          email: userEmail,
           full_name: user.full_name || 'مستخدم بدون اسم',
           subscription_plan: user.subscription_plan || 'standard',
           account_status: user.account_status || 'active',
-          // التأكد من أن القيم المنطقية تظهر بشكل صحيح
           is_approved: typeof user.is_approved === 'boolean' ? user.is_approved : false,
           is_admin: typeof user.is_admin === 'boolean' ? user.is_admin : false
         };
@@ -117,6 +126,15 @@ export const useFetchUsers = () => {
         
         console.log('تم جلب بيانات أساسية من وظيفة admin_get_basic_users، العدد:', basicUsersData.length);
         
+        // تسجيل عينة من البيانات المستلمة
+        if (basicUsersData.length > 0) {
+          console.log('عينة من البيانات الأساسية (أول مستخدم):', {
+            id: basicUsersData[0].id,
+            email: basicUsersData[0].email,
+            email_length: basicUsersData[0].email ? basicUsersData[0].email.length : 0
+          });
+        }
+        
         // جلب بيانات الملفات الشخصية للتكامل
         const { data: profilesData } = await supabase
           .from('profiles')
@@ -130,13 +148,18 @@ export const useFetchUsers = () => {
           });
         }
         
-        // دمج بيانات المستخدمين مع الملفات الشخصية مع التعامل المحسن مع البيانات الوصفية
+        // دمج بيانات المستخدمين مع الملفات الشخصية مع التعامل المحسن مع البريد الإلكتروني
         const mergedUsers = basicUsersData.map(user => {
           const profile = profilesMap.get(user.id) || {};
           
-          // التأكد من استخدام البريد الإلكتروني الفعلي دون تغييره
-          // التأكد من استخدام البريد الإلكتروني الفعلي دائمًا
-          const userEmail = user.email || '';
+          // التأكد من صحة البريد الإلكتروني واستخدامه فقط إذا كان صالحًا
+          let userEmail = user.email || '';
+          
+          // تحقق إضافي من طول البريد الإلكتروني
+          if (userEmail.length < 3 || !userEmail.includes('@')) {
+            console.warn(`تم العثور على بريد إلكتروني غير صالح للمستخدم ${user.id}: "${userEmail}"`);
+            userEmail = ''; // إعادة تعيين البريد إذا كان غير صالح
+          }
             
           // استخراج البيانات بشكل آمن من raw_user_meta_data
           const raw_meta = user.raw_user_meta_data || {};
@@ -158,7 +181,7 @@ export const useFetchUsers = () => {
           
           return {
             id: user.id,
-            email: userEmail, // استخدام البريد الإلكتروني الأصلي
+            email: userEmail,
             created_at: user.created_at,
             updated_at: user.updated_at || profile.updated_at,
             full_name: profile.full_name || fullNameFromMeta || 'مستخدم بدون اسم',
@@ -185,8 +208,27 @@ export const useFetchUsers = () => {
       } catch (fallbackError: any) {
         console.error('خطأ في الطريقة البديلة لجلب البيانات:', fallbackError);
         
-        // محاولة آخر طريقة إذا فشلت الطرق الأخرى - مع تحسين طريقة العرض
+        // محاولة آخر طريقة إذا فشلت الطرق الأخرى
         try {
+          console.log('محاولة استرجاع البريد الإلكتروني باستخدام وظيفة get_users_emails...');
+          
+          // محاولة إضافية لاسترجاع عناوين البريد الإلكتروني للمستخدمين
+          const { data: emailsData } = await supabase.rpc('get_users_emails');
+          
+          // إنشاء خريطة للبريد الإلكتروني إذا كانت البيانات متوفرة
+          let emailsMap = new Map();
+          if (emailsData && emailsData.length > 0) {
+            emailsData.forEach(item => {
+              if (item.id && item.email) { // تأكد من وجود معرف وبريد إلكتروني صالح
+                emailsMap.set(item.id, item.email);
+              }
+            });
+            console.log('تم جلب عناوين البريد الإلكتروني للمستخدمين:', emailsMap.size);
+          } else {
+            console.warn('لم يتم العثور على بيانات البريد الإلكتروني من وظيفة get_users_emails');
+          }
+          
+          // استرجاع الملفات الشخصية للمستخدمين
           console.log('محاولة استرجاع بيانات المستخدمين المحدودة من جدول profiles...');
           const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
@@ -198,29 +240,14 @@ export const useFetchUsers = () => {
           }
           
           if (profilesData && profilesData.length > 0) {
-            // محاولة إضافية لاسترجاع عناوين البريد الإلكتروني للمستخدمين
-            let emailsMap = new Map();
-            try {
-              const { data: emailsData } = await supabase.rpc('get_users_emails');
-              if (emailsData && emailsData.length > 0) {
-                emailsData.forEach(item => {
-                  if (item.id && item.email) { // تأكد من وجود معرف وبريد إلكتروني صالح
-                    emailsMap.set(item.id, item.email);
-                  }
-                });
-                console.log('تم جلب عناوين البريد الإلكتروني للمستخدمين:', emailsMap.size);
-              }
-            } catch (emailsError) {
-              console.error('خطأ في جلب عناوين البريد الإلكتروني:', emailsError);
-            }
-            
+            // إنشاء قائمة المستخدمين من الملفات الشخصية مع محاولة إضافة البريد الإلكتروني
             const limitedUsers = profilesData.map(profile => {
               // استخدام البريد الإلكتروني من الخريطة إن وجد
               const userEmail = emailsMap.get(profile.id) || '';
               
               return {
                 id: profile.id,
-                email: userEmail, // استخدام البريد الإلكتروني الأصلي
+                email: userEmail,
                 created_at: profile.created_at,
                 updated_at: profile.updated_at,
                 full_name: profile.full_name || 'مستخدم بدون اسم',
