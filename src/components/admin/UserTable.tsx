@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, UserX, UserCheck, CalendarIcon, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Edit, UserX, UserCheck, CalendarIcon, Clock, CheckCircle, XCircle, Mail, Phone, MapPin, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 
@@ -26,7 +26,9 @@ const UserTable: React.FC<UserTableProps> = ({
   onReject
 }) => {
   // تنسيق التاريخ بالعربية
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'غير متوفر';
+    
     try {
       return format(new Date(dateString), 'PPP', { locale: arSA });
     } catch (error) {
@@ -112,12 +114,14 @@ const UserTable: React.FC<UserTableProps> = ({
         <TableHeader>
           <TableRow>
             <TableHead>المستخدم</TableHead>
-            <TableHead>البريد الإلكتروني</TableHead>
+            <TableHead>معلومات الاتصال</TableHead>
             <TableHead>الباقة</TableHead>
             <TableHead>حالة الحساب</TableHead>
             <TableHead>تاريخ الانتهاء</TableHead>
             <TableHead>معتمد</TableHead>
             <TableHead>تاريخ التسجيل</TableHead>
+            <TableHead>آخر تسجيل دخول</TableHead>
+            <TableHead>ملاحظات</TableHead>
             <TableHead>الإجراءات</TableHead>
           </TableRow>
         </TableHeader>
@@ -134,7 +138,26 @@ const UserTable: React.FC<UserTableProps> = ({
                 </Avatar>
                 <span>{user.full_name || 'بدون اسم'}</span>
               </TableCell>
-              <TableCell>{user.email}</TableCell>
+              <TableCell>
+                <div className="flex flex-col gap-1 text-sm">
+                  <div className="flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    <span>{user.email}</span>
+                  </div>
+                  {user.phone_number && (
+                    <div className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      <span>{user.phone_number}</span>
+                    </div>
+                  )}
+                  {user.address && (
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      <span>{user.address}</span>
+                    </div>
+                  )}
+                </div>
+              </TableCell>
               <TableCell>
                 <Badge variant="outline" className={getSubscriptionColor(user.subscription_plan || 'standard')}>
                   {getSubscriptionLabel(user.subscription_plan || 'standard')}
@@ -171,8 +194,26 @@ const UserTable: React.FC<UserTableProps> = ({
               <TableCell>
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <CalendarIcon className="h-3 w-3" />
-                  {user.created_at ? formatDate(user.created_at) : 'غير متوفر'}
+                  {formatDate(user.created_at)}
                 </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  {formatDate(user.last_login_at)}
+                </div>
+              </TableCell>
+              <TableCell>
+                {user.notes ? (
+                  <div className="flex items-center gap-1 text-sm">
+                    <FileText className="h-3 w-3" />
+                    <span className="max-w-[150px] truncate" title={user.notes}>
+                      {user.notes}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">لا توجد ملاحظات</span>
+                )}
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
