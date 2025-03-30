@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserProfile } from '@/types/UserProfile';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export const useUserManagement = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -12,6 +12,7 @@ export const useUserManagement = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [fetchAttempted, setFetchAttempted] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   
   // حالة تعديل المستخدم
   const [isEditingUser, setIsEditingUser] = useState<string | null>(null);
@@ -28,11 +29,12 @@ export const useUserManagement = () => {
     if (isLoading) return; // منع التنفيذ المتعدد إذا كان هناك طلب جاري بالفعل
     
     setIsLoading(true);
+    setFetchError(null);
     try {
       console.log('بدء جلب بيانات المستخدمين...');
       setFetchAttempted(true); // تعيين أنه تمت محاولة الجلب على الأقل مرة واحدة
       
-      // جلب بيانات الملفات الشخصية
+      // جلب بيانات الملفات الشخصية أولاً - هذه البيانات متاحة للجميع
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
@@ -41,25 +43,43 @@ export const useUserManagement = () => {
         console.error('خطأ في جلب الملفات الشخصية:', profilesError);
         toast.error('خطأ في جلب بيانات الملفات الشخصية');
         setIsLoading(false);
+        setFetchError('فشل في جلب بيانات الملفات الشخصية: ' + profilesError.message);
         return;
       }
       
-      // جلب بيانات المستخدمين من خلال الدالة المخصصة get_users_emails
-      const { data: authUsersData, error: authUsersError } = await supabase.rpc('get_users_emails');
+      if (!profilesData || profilesData.length === 0) {
+        console.log('لم يتم العثور على ملفات شخصية');
+        setUsers([]);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('تم جلب الملفات الشخصية بنجاح، العدد:', profilesData.length);
       
-      if (authUsersError) {
-        console.error('خطأ في جلب بيانات المستخدمين الأساسية:', authUsersError);
-        toast.error('خطأ في جلب بيانات المستخدمين');
+      // محاولة جلب بيانات المستخدمين من خلال الـ RPC - مع معالجة محسنة للأخطاء
+      let authUsersData = null;
+      let authUsersError = null;
+      
+      try {
+        // محاولة استخدام الدالة المخصصة
+        console.log('محاولة استدعاء وظيفة get_users_emails...');
+        const result = await supabase.rpc('get_users_emails');
+        authUsersData = result.data;
+        authUsersError = result.error;
         
-        // في حالة فشل جلب البيانات من الدالة، نستمر باستخدام البيانات الموجودة في الملفات الشخصية فقط
-        if (!profilesData || profilesData.length === 0) {
-          setIsLoading(false);
-          return;
+        if (authUsersError) {
+          console.error('خطأ في استدعاء وظيفة get_users_emails:', authUsersError);
+        } else {
+          console.log('تم جلب بيانات المستخدمين من get_users_emails بنجاح، العدد:', authUsersData ? authUsersData.length : 0);
         }
+      } catch (rpcError) {
+        console.error('استثناء أثناء استدعاء get_users_emails:', rpcError);
+        authUsersError = { message: 'خطأ في استدعاء دالة جلب البيانات' };
       }
       
       // إنشاء كائن للبحث السريع عن البريد الإلكتروني وتاريخ الإنشاء حسب معرف المستخدم
       const authUsersMap: Record<string, { email: string, created_at: string }> = {};
+      
       if (authUsersData && Array.isArray(authUsersData)) {
         authUsersData.forEach((user: { id: string, email: string, created_at: string }) => {
           if (user && user.id) {
@@ -69,15 +89,19 @@ export const useUserManagement = () => {
             };
           }
         });
+        console.log('تم إنشاء خريطة بيانات المستخدمين، عدد العناصر:', Object.keys(authUsersMap).length);
+      } else if (authUsersError) {
+        console.warn('لم يتم جلب بيانات المستخدمين من الدالة، سيتم استخدام البيانات المتاحة فقط.');
+        toast.warning('تم جلب بيانات الملفات الشخصية فقط - بعض المعلومات قد تكون غير متاحة');
       }
-      
-      // طباعة البيانات للتصحيح
-      console.log('بيانات المستخدمين الأساسية:', authUsersData);
-      console.log('بيانات الملفات الشخصية:', profilesData);
       
       // تحويل بيانات الملفات الشخصية إلى قائمة المستخدمين
       const usersWithCompleteData = (profilesData || []).map((profile: any) => {
-        const userData = authUsersMap[profile.id] || { email: '', created_at: profile.created_at || new Date().toISOString() };
+        // استخدام بيانات المستخدم من الخريطة إذا كانت متاحة
+        const userData = authUsersMap[profile.id] || { 
+          email: profile.username ? `${profile.username}@example.com` : 'user@example.com', 
+          created_at: profile.created_at || new Date().toISOString() 
+        };
         
         // معالجة is_admin بشكل أكثر دقة - التأكد من أنها قيمة منطقية
         const isAdmin = profile.is_admin === true;
@@ -86,22 +110,17 @@ export const useUserManagement = () => {
           ...profile,
           id: profile.id,
           email: userData.email,
-          is_admin: isAdmin, // التأكد من أن القيمة منطقية
+          is_admin: isAdmin,
           created_at: userData.created_at || profile.created_at,
         };
       });
       
-      console.log('معلومات المستخدمين بعد المعالجة:', usersWithCompleteData.map(user => ({
-        id: user.id,
-        email: user.email,
-        is_admin: user.is_admin,
-        is_admin_type: typeof user.is_admin
-      })));
-      
+      console.log('معلومات المستخدمين بعد المعالجة:', usersWithCompleteData.length);
       setUsers(usersWithCompleteData);
-    } catch (error) {
-      console.error('خطأ في جلب بيانات المستخدمين:', error);
+    } catch (error: any) {
+      console.error('خطأ غير متوقع في جلب بيانات المستخدمين:', error);
       toast.error('حدث خطأ أثناء جلب بيانات المستخدمين');
+      setFetchError(`خطأ غير متوقع: ${error.message || 'خطأ غير معروف'}`);
     } finally {
       setIsLoading(false);
     }
@@ -264,58 +283,67 @@ export const useUserManagement = () => {
         return;
       }
 
-      // استخدام الدالة الخاصة بإعادة تعيين كلمة المرور
-      const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
-        user_id_str: userId,
-        new_password: newPassword
-      });
+      // محاولة استخدام admin_reset_password_by_string_id أولاً
+      let success = false;
       
-      console.log('نتيجة استدعاء admin_reset_password_by_string_id:', { 
-        data, 
-        error: error ? { message: error.message, code: error.code } : null 
-      });
-      
-      if (error) {
-        console.error('خطأ في إعادة تعيين كلمة المرور:', error);
-        toast.error(`فشل في إعادة تعيين كلمة المرور: ${error.message}`);
-        
-        // محاولة باستخدام الطريقة الثانية
-        const { data: alternativeData, error: alternativeError } = await supabase.rpc('admin_update_user_password', {
-          user_id: userId,
+      try {
+        console.log('محاولة استخدام admin_reset_password_by_string_id...');
+        const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
+          user_id_str: userId,
           new_password: newPassword
         });
         
-        console.log('نتيجة استدعاء admin_update_user_password:', { 
-          data: alternativeData, 
-          error: alternativeError ? { message: alternativeError.message, code: alternativeError.code } : null 
+        console.log('نتيجة استدعاء admin_reset_password_by_string_id:', { 
+          data, 
+          error: error ? { message: error.message, code: error.code } : null 
         });
         
-        if (alternativeError) {
-          throw alternativeError;
+        if (error) {
+          console.warn('لم ينجح admin_reset_password_by_string_id، جاري تجربة الطريقة البديلة...');
+        } else if (data === true) {
+          console.log('تم تغيير كلمة المرور بنجاح باستخدام admin_reset_password_by_string_id');
+          success = true;
         }
-        
-        if (alternativeData === true) {
-          console.log('تم تغيير كلمة المرور بنجاح (طريقة بديلة)');
-          toast.success('تم إعادة تعيين كلمة المرور بنجاح');
-          resetPasswordStates();
-          return;
-        } else {
-          throw new Error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
-        }
-      } else {
-        // نجحت الطريقة المباشرة
-        if (data === true) {
-          console.log('تم تغيير كلمة المرور بنجاح');
-          toast.success('تم إعادة تعيين كلمة المرور بنجاح');
-          resetPasswordStates();
-          return;
-        } else {
-          console.error('لم يتم إعادة تعيين كلمة المرور، البيانات غير متوقعة:', data);
-          toast.error('لم يتم العثور على المستخدم أو حدث خطأ آخر');
+      } catch (error1) {
+        console.error('خطأ في استدعاء admin_reset_password_by_string_id:', error1);
+      }
+      
+      // إذا لم تنجح الطريقة الأولى، جرب الطريقة الثانية
+      if (!success) {
+        try {
+          console.log('محاولة استخدام admin_update_user_password...');
+          const { data, error } = await supabase.rpc('admin_update_user_password', {
+            user_id: userId,
+            new_password: newPassword
+          });
+          
+          console.log('نتيجة استدعاء admin_update_user_password:', { 
+            data, 
+            error: error ? { message: error.message, code: error.code } : null 
+          });
+          
+          if (error) {
+            throw error;
+          } else if (data === true) {
+            console.log('تم تغيير كلمة المرور بنجاح باستخدام admin_update_user_password');
+            success = true;
+          }
+        } catch (error2) {
+          console.error('خطأ في استدعاء admin_update_user_password:', error2);
+          throw error2;
         }
       }
+      
+      // إذا نجحت أي من الطريقتين
+      if (success) {
+        toast.success('تم إعادة تعيين كلمة المرور بنجاح');
+        resetPasswordStates();
+        return;
+      } else {
+        throw new Error('فشلت جميع محاولات إعادة تعيين كلمة المرور');
+      }
     } catch (error: any) {
-      console.error('خطأ غير متوقع في إعادة تعيين كلمة المرور:', error);
+      console.error('خطأ في إعادة تعيين كلمة المرور:', error);
       toast.error(`حدث خطأ أثناء إعادة تعيين كلمة المرور: ${error.message || 'خطأ غير معروف'}`);
     } finally {
       setIsProcessing(false);
@@ -531,6 +559,18 @@ export const useUserManagement = () => {
     }
   };
 
+  // وظيفة إضافة مكون تنبيه لعرض رسالة الخطأ
+  const ErrorAlert = () => {
+    if (!fetchError) return null;
+    
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertTitle>خطأ في جلب البيانات</AlertTitle>
+        <AlertDescription>{fetchError}</AlertDescription>
+      </Alert>
+    );
+  };
+
   return {
     users,
     isLoading,
@@ -547,6 +587,7 @@ export const useUserManagement = () => {
     showConfirmReset,
     userToReset,
     fetchAttempted,
+    fetchError,
     setActiveTab,
     setFilterPlan,
     setFilterStatus,
@@ -570,5 +611,6 @@ export const useUserManagement = () => {
     prepareUserPasswordReset,
     handleDateSelect,
     resetPasswordStates,
+    ErrorAlert,
   };
 };

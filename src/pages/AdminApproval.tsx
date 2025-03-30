@@ -40,6 +40,7 @@ const AdminApproval = () => {
     showConfirmReset,
     userToReset,
     fetchAttempted,
+    fetchError,
     setActiveTab,
     setFilterPlan,
     setFilterStatus,
@@ -61,6 +62,7 @@ const AdminApproval = () => {
     getUserCounts,
     prepareUserPasswordReset,
     handleDateSelect,
+    ErrorAlert,
   } = useUserManagement();
 
   // جلب البيانات عند تحميل الصفحة - مع منع التكرار
@@ -76,10 +78,10 @@ const AdminApproval = () => {
     });
     
     // جلب البيانات فقط إذا لم تتم محاولة الجلب من قبل أو إذا كانت قائمة المستخدمين فارغة
-    if (!fetchAttempted && user && userProfile) {
+    if ((!fetchAttempted || users.length === 0) && user && userProfile) {
       fetchUsers();
     }
-  }, [user, userProfile, fetchAttempted]);
+  }, [user, userProfile, fetchAttempted, users.length]);
 
   // التعامل مع تأكيد إعادة تعيين كلمة المرور
   const handleConfirmReset = () => {
@@ -154,6 +156,9 @@ const AdminApproval = () => {
             </div>
           </CardHeader>
           <CardContent>
+            {/* عرض رسالة الخطأ إذا كان هناك خطأ في جلب البيانات */}
+            <ErrorAlert />
+            
             {/* عرض إحصائيات المستخدمين */}
             <UserStats stats={userStats} />
           </CardContent>
@@ -172,7 +177,7 @@ const AdminApproval = () => {
             </Tabs>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeAdminTab} onValueChange={setActiveAdminTab}>
+            <Tabs value={activeAdminTab}>
               <TabsContent value="users" className="mt-0">
                 {/* أدوات البحث والتصفية */}
                 <UserFilters 
@@ -219,7 +224,7 @@ const AdminApproval = () => {
                 </UserTabsFilter>
               </TabsContent>
               
-              <TabsContent value="management" className="mt-0">
+              <TabsContent value="management">
                 <AdminUserManagementTab />
               </TabsContent>
             </Tabs>
