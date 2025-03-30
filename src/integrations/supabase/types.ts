@@ -140,6 +140,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_users_with_email: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          created_at: string
+        }[]
+      }
       admin_reset_password_by_string_id: {
         Args: {
           user_id_str: string
@@ -173,6 +181,10 @@ export type Database = {
           user_email: string
           new_password: string
         }
+        Returns: boolean
+      }
+      ensure_user_is_admin: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       get_users_emails: {

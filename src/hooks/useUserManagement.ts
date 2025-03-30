@@ -87,7 +87,7 @@ export const useUserManagement = () => {
           const { data: adminData, error: adminError } = await supabase
             .from('profiles')
             .select('id, is_admin')
-            .eq('id', supabase.auth.getUser().then(res => res.data.user?.id));
+            .eq('id', (await supabase.auth.getUser()).data.user?.id);
           
           const isAdmin = adminData && adminData.length > 0 && adminData[0].is_admin;
           
