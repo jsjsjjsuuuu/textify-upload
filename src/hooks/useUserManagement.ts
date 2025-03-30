@@ -681,20 +681,21 @@ export const useUserManagement = () => {
     if (!fetchError) return null;
     
     return (
-      <Alert variant="destructive" className="mb-4">
-        <AlertTitle>خطأ في جلب البيانات</AlertTitle>
-        <AlertDescription>
-          {fetchError}
-          <div className="mt-2">
-            <button 
-              onClick={fetchUsers} 
-              className="text-sm underline text-primary"
-            >
-              إعادة المحاولة
-            </button>
-          </div>
-        </AlertDescription>
-      </Alert>
+      
+        <Alert variant="destructive" className="mb-4">
+          
+            خطأ في جلب البيانات
+          
+          
+            {fetchError}
+            
+              
+                إعادة المحاولة
+              
+            
+          
+        
+      
     );
   };
 
