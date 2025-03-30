@@ -19,7 +19,9 @@ export interface UserManagementState {
   isEditingUser: string | null;
   editedUserData: UserProfile | null;
   newPassword: string;
+  confirmPassword: string;
   showPassword: boolean;
+  passwordError: string | null;
   isProcessing: boolean;
   selectedDate: Date | undefined;
   
@@ -61,12 +63,15 @@ export interface UserManagementActions {
   
   // عمليات كلمة المرور
   setNewPassword: (password: string) => void;
+  setConfirmPassword: (password: string) => void;
   setShowPassword: (show: boolean) => void;
   setShowConfirmReset: (show: boolean) => void;
   setUserToReset: (userId: string | null) => void;
+  setPasswordError: (error: string | null) => void;
   resetUserPassword: (userId: string, newPassword: string) => Promise<void>;
   prepareUserPasswordReset: (userId: string) => void;
   resetPasswordStates: () => void;
+  validatePassword: () => boolean;
   
   // عمليات تحديث البيانات
   updateUserEmail: (userId: string, newEmail: string) => Promise<void>;

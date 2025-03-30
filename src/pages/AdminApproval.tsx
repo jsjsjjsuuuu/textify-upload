@@ -27,8 +27,6 @@ const AdminApproval = () => {
     searchQuery,
     isEditingUser,
     editedUserData,
-    newPassword,
-    confirmPassword,
     showPassword,
     isProcessing,
     selectedDate,
@@ -36,17 +34,13 @@ const AdminApproval = () => {
     userToReset,
     fetchAttempted,
     fetchError,
-    passwordError,
     setActiveTab,
     setFilterPlan,
     setFilterStatus,
     setSearchQuery,
-    setNewPassword,
-    setConfirmPassword,
     setShowPassword,
     setShowConfirmReset,
     setUserToReset,
-    setPasswordError,
     fetchUsers,
     approveUser,
     rejectUser,
@@ -60,7 +54,6 @@ const AdminApproval = () => {
     getUserCounts,
     prepareUserPasswordReset,
     handleDateSelect,
-    validatePassword,
     ErrorAlert,
   } = useUserManagement();
 
@@ -84,30 +77,23 @@ const AdminApproval = () => {
 
   // التعامل مع تأكيد إعادة تعيين كلمة المرور - تم التبسيط
   const handleConfirmReset = () => {
-    if (userToReset && newPassword) {
+    if (userToReset) {
       // طباعة سجل تصحيح لمساعدة في تشخيص المشكلة
       console.log('تنفيذ إعادة تعيين كلمة المرور مع البيانات:', {
         userToReset,
         userToResetType: typeof userToReset,
-        userToResetLength: userToReset.length,
-        passwordLength: newPassword.length
+        userToResetLength: userToReset.length
       });
       
       // تنفيذ عملية إعادة تعيين كلمة المرور
-      resetUserPassword(userToReset, newPassword);
+      resetUserPassword(userToReset, "");
     } else {
       console.error('لا يمكن إعادة تعيين كلمة المرور:', {
-        userToReset,
-        hasPassword: !!newPassword,
-        passwordLength: newPassword ? newPassword.length : 0
+        userToReset
       });
       
       if (!userToReset) {
         toast.error('لم يتم تحديد مستخدم لإعادة تعيين كلمة المرور');
-      }
-      
-      if (!newPassword) {
-        toast.error('يرجى إدخال كلمة المرور الجديدة');
       }
     }
   };
@@ -157,12 +143,8 @@ const AdminApproval = () => {
                 activeTab={activeTab}
                 isEditingUser={isEditingUser}
                 editedUserData={editedUserData}
-                newPassword={newPassword}
-                confirmPassword={confirmPassword}
-                showPassword={showPassword}
                 isProcessing={isProcessing}
                 selectedDate={selectedDate}
-                passwordError={passwordError}
                 userCounts={userCounts}
                 filteredUsers={filteredUsers}
                 isLoading={isLoading}
@@ -175,14 +157,9 @@ const AdminApproval = () => {
                 onReject={rejectUser}
                 onCancel={cancelEditing}
                 onSave={saveUserData}
-                onShowPasswordToggle={() => setShowPassword(!showPassword)}
-                onNewPasswordChange={setNewPassword}
-                onConfirmPasswordChange={setConfirmPassword}
                 onUserDataChange={handleEditChange}
                 onDateSelect={handleDateSelect}
-                onPasswordReset={() => prepareUserPasswordReset(editedUserData!.id)}
                 onEmailChange={updateUserEmail}
-                validatePassword={validatePassword}
               />
             </AdminTabs>
           </CardHeader>
@@ -195,8 +172,6 @@ const AdminApproval = () => {
         onOpenChange={setShowConfirmReset}
         onCancel={() => {
           setUserToReset(null);
-          setNewPassword('');
-          setConfirmPassword('');
         }}
         onConfirm={handleConfirmReset}
         isProcessing={isProcessing}

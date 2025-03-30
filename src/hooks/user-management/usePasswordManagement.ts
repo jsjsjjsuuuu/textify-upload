@@ -55,7 +55,7 @@ export const usePasswordManagement = () => {
   };
 
   // وظيفة إعادة تعيين كلمة المرور - محسنة ومعاد كتابتها
-  const resetUserPassword = async (userId: string, password: string) => {
+  const resetUserPassword = async (userId: string, password: string): Promise<void> => {
     setIsProcessing(true);
     try {
       console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', {
@@ -67,14 +67,14 @@ export const usePasswordManagement = () => {
         console.error('[usePasswordManagement] كلمة المرور فارغة');
         toast.error('كلمة المرور لا يمكن أن تكون فارغة');
         setIsProcessing(false);
-        return false;
+        return;
       }
       
       if (!userId) {
         console.error('[usePasswordManagement] معرف المستخدم غير موجود');
         toast.error('معرف المستخدم غير صالح');
         setIsProcessing(false);
-        return false;
+        return;
       }
 
       // تنفيذ إعادة تعيين كلمة المرور باستخدام عدة طرق وآليات احتياطية
@@ -155,19 +155,16 @@ export const usePasswordManagement = () => {
       if (success) {
         toast.success('تم إعادة تعيين كلمة المرور بنجاح');
         resetPasswordStates();
-        return true;
       } else {
         const errorMessage = lastError ? 
           (lastError.message || 'خطأ غير معروف') : 
           'فشلت جميع محاولات إعادة تعيين كلمة المرور';
         console.error('[usePasswordManagement] فشل إعادة تعيين كلمة المرور:', errorMessage);
         toast.error(`فشل إعادة تعيين كلمة المرور: ${errorMessage}`);
-        return false;
       }
     } catch (error: any) {
       console.error('[usePasswordManagement] خطأ في إعادة تعيين كلمة المرور:', error);
       toast.error(`حدث خطأ أثناء إعادة تعيين كلمة المرور: ${error.message || 'خطأ غير معروف'}`);
-      return false;
     } finally {
       setIsProcessing(false);
       setShowConfirmReset(false);

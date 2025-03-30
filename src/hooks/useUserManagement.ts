@@ -47,17 +47,22 @@ export const useUserManagement = (): UserManagement => {
 
   const { 
     newPassword, 
+    confirmPassword,
     showPassword, 
     showConfirmReset, 
     userToReset, 
     isProcessing: passwordProcessing, 
+    passwordError,
     setNewPassword, 
+    setConfirmPassword,
     setShowPassword, 
     setShowConfirmReset, 
     setUserToReset, 
+    setPasswordError,
     resetPasswordStates, 
     prepareUserPasswordReset, 
-    resetUserPassword 
+    resetUserPassword,
+    validatePassword
   } = usePasswordManagement();
 
   const { 
@@ -88,7 +93,9 @@ export const useUserManagement = (): UserManagement => {
     isEditingUser,
     editedUserData,
     newPassword,
+    confirmPassword,
     showPassword,
+    passwordError,
     isProcessing,
     selectedDate,
     
@@ -102,9 +109,11 @@ export const useUserManagement = (): UserManagement => {
     setFilterStatus,
     setSearchQuery,
     setNewPassword,
+    setConfirmPassword,
     setShowPassword,
     setShowConfirmReset,
     setUserToReset,
+    setPasswordError,
     
     // وظائف المستخدمين
     fetchUsers,
@@ -122,6 +131,7 @@ export const useUserManagement = (): UserManagement => {
     prepareUserPasswordReset,
     handleDateSelect,
     resetPasswordStates,
+    validatePassword,
     
     // مكونات
     ErrorAlert,

@@ -13,8 +13,6 @@ interface UserManagementPanelProps {
   activeTab: string;
   isEditingUser: string | null;
   editedUserData: UserProfile | null;
-  newPassword: string;
-  showPassword: boolean;
   isProcessing: boolean;
   selectedDate: Date | undefined;
   userCounts: {
@@ -33,11 +31,8 @@ interface UserManagementPanelProps {
   onReject: (userId: string) => void;
   onCancel: () => void;
   onSave: () => void;
-  onShowPasswordToggle: () => void;
-  onNewPasswordChange: (value: string) => void;
   onUserDataChange: (field: string, value: any) => void;
   onDateSelect: (date: Date | undefined) => void;
-  onPasswordReset: () => void;
   onEmailChange: (userId: string, newEmail: string) => void;
 }
 
@@ -48,8 +43,6 @@ const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
   activeTab,
   isEditingUser,
   editedUserData,
-  newPassword,
-  showPassword,
   isProcessing,
   selectedDate,
   userCounts,
@@ -64,11 +57,8 @@ const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
   onReject,
   onCancel,
   onSave,
-  onShowPasswordToggle,
-  onNewPasswordChange,
   onUserDataChange,
   onDateSelect,
-  onPasswordReset,
   onEmailChange
 }) => {
   return (
@@ -92,17 +82,12 @@ const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
         {isEditingUser ? (
           <UserEditForm 
             userData={editedUserData!}
-            newPassword={newPassword}
-            showPassword={showPassword}
             isProcessing={isProcessing}
             selectedDate={selectedDate}
             onCancel={onCancel}
             onSave={onSave}
-            onShowPasswordToggle={onShowPasswordToggle}
-            onNewPasswordChange={onNewPasswordChange}
             onUserDataChange={onUserDataChange}
             onDateSelect={onDateSelect}
-            onPasswordReset={onPasswordReset}
             onEmailChange={onEmailChange}
           />
         ) : (
