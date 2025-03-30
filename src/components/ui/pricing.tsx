@@ -128,7 +128,7 @@ export function Pricing({
               
 
               <p className="text-xs leading-5 text-muted-foreground">
-                {isMonthly ? "فوترة شهرية" : "فوترة سنوية"}
+                شهريًا
               </p>
 
               <ul className="mt-5 gap-2 flex flex-col">
