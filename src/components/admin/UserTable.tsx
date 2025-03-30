@@ -92,9 +92,18 @@ const UserTable: React.FC<UserTableProps> = ({
     }
   };
   
-  // تنسيق البريد الإلكتروني
+  // تنسيق البريد الإلكتروني - تم تحسينها للتعامل مع القيم الفارغة بشكل أفضل
   const formatEmail = (email: string | undefined) => {
-    if (!email || email.length === 0) return 'البريد غير متوفر';
+    // إظهار البريد الإلكتروني حتى لو كان فارغًا أو لا يتوافق مع صيغة البريد
+    // هذا سيساعد المشرفين على معرفة المستخدمين الذين يحتاجون إلى تصحيح بريدهم
+    if (!email) return 'البريد غير متوفر';
+    if (email.trim() === '') return 'البريد غير متوفر';
+    
+    // التحقق من الصيغة الأساسية للبريد (وجود @ على الأقل)
+    if (!email.includes('@')) {
+      return <span className="text-yellow-500 font-medium">{email} (صيغة غير صحيحة)</span>;
+    }
+    
     return email;
   };
 
@@ -146,7 +155,9 @@ const UserTable: React.FC<UserTableProps> = ({
         </TableHeader>
         <TableBody>
           {users.map((user) => {
-            const userEmail = formatEmail(user.email);
+            // تصحيح سلوك عرض البريد الإلكتروني
+            const userEmail = user.email;
+            console.log('بيانات المستخدم:', { id: user.id, email: userEmail, emailLength: userEmail ? userEmail.length : 0 });
             
             return (
               <TableRow key={user.id}>
@@ -165,8 +176,8 @@ const UserTable: React.FC<UserTableProps> = ({
                   <div className="flex flex-col gap-1 text-sm">
                     <div className="flex items-center gap-1">
                       <Mail className="h-3 w-3" />
-                      <span className="max-w-[200px] truncate" title={userEmail}>
-                        {userEmail}
+                      <span className="max-w-[200px] truncate" title={userEmail || 'البريد غير متوفر'}>
+                        {formatEmail(userEmail)}
                       </span>
                     </div>
                     {user.phone_number && (

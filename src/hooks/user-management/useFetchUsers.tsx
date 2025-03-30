@@ -20,7 +20,7 @@ export const useFetchUsers = () => {
     setIsLoading(true);
     setFetchError(null);
     try {
-      console.log('بدء جلب بيانات المستخدمين... - نسخة محسنة');
+      console.log('بدء جلب بيانات المستخدمين...');
       setFetchAttempted(true); // تعيين أنه تمت محاولة الجلب على الأقل مرة واحدة
       
       // استدعاء وظيفة admin_get_complete_users المحسنة
@@ -72,26 +72,12 @@ export const useFetchUsers = () => {
         });
       }
       
-      // التأكد من ظهور البريد الإلكتروني بشكل صحيح دائمًا
+      // إظهار البريد الإلكتروني كما هو بدون محاولة التحقق من صحته
       const validatedUsers = completeUsersData.map(user => {
-        // تسجيل المستخدمين الذين تنقصهم بيانات أساسية
-        if (!user.id) {
-          console.error('مستخدم بدون معرف!', user);
-        }
-        
-        // إذا كان البريد الإلكتروني فارغًا، نحاول استردادة من مكان آخر
-        let userEmail = user.email || '';
-        
-        // تحقق إضافي من طول البريد الإلكتروني
-        if (userEmail.length < 3 || !userEmail.includes('@')) {
-          console.warn(`تم العثور على بريد إلكتروني غير صالح للمستخدم ${user.id}: "${userEmail}"`);
-          userEmail = ''; // إعادة تعيين البريد إذا كان غير صالح
-        }
-        
         return {
           ...user,
           id: user.id || crypto.randomUUID(), // نادر جدًا، لكن للأمان
-          email: userEmail,
+          email: user.email || '', // عرض البريد الإلكتروني كما هو حتى لو كان فارغًا
           full_name: user.full_name || 'مستخدم بدون اسم',
           subscription_plan: user.subscription_plan || 'standard',
           account_status: user.account_status || 'active',
@@ -100,20 +86,31 @@ export const useFetchUsers = () => {
         };
       });
       
+      // تسجيل قيم البريد الإلكتروني بعد المعالجة
+      validatedUsers.forEach((user, index) => {
+        if (index < 5) { // سجل أول 5 مستخدمين فقط لتجنب سجل كبير جدًا
+          console.log(`المستخدم [${index}]:`, { 
+            id: user.id, 
+            email: user.email, 
+            email_length: user.email ? user.email.length : 0 
+          });
+        }
+      });
+      
       setUsers(validatedUsers);
       console.log('تم تحديث قائمة المستخدمين بنجاح، العدد الإجمالي:', validatedUsers.length);
       
     } catch (error: any) {
       console.error('خطأ في جلب بيانات المستخدمين:', error);
       
-      // محاولة استخدام طريقة بديلة محسّنة لجلب البيانات
+      // محاولة استخدام طريقة بديلة
       try {
-        console.log('جاري محاولة استخدام طريقة بديلة لجلب البيانات - استدعاء admin_get_basic_users...');
+        console.log('جاري محاولة استخدام طريقة بديلة لجلب البيانات...');
         
-        // استدعاء وظيفة admin_get_basic_users المحسنة
+        // محاولة استرداد بيانات المستخدمين الأساسية
         const { data: basicUsersData, error: basicUsersError } = await supabase
           .rpc('admin_get_basic_users');
-        
+          
         if (basicUsersError) {
           console.error('خطأ في استدعاء وظيفة admin_get_basic_users:', basicUsersError);
           throw basicUsersError;
@@ -124,16 +121,7 @@ export const useFetchUsers = () => {
           throw new Error('لم يتم العثور على بيانات للمستخدمين');
         }
         
-        console.log('تم جلب بيانات أساسية من وظيفة admin_get_basic_users، العدد:', basicUsersData.length);
-        
-        // تسجيل عينة من البيانات المستلمة
-        if (basicUsersData.length > 0) {
-          console.log('عينة من البيانات الأساسية (أول مستخدم):', {
-            id: basicUsersData[0].id,
-            email: basicUsersData[0].email,
-            email_length: basicUsersData[0].email ? basicUsersData[0].email.length : 0
-          });
-        }
+        console.log('تم جلب بيانات أساسية، العدد:', basicUsersData.length);
         
         // جلب بيانات الملفات الشخصية للتكامل
         const { data: profilesData } = await supabase
@@ -148,18 +136,12 @@ export const useFetchUsers = () => {
           });
         }
         
-        // دمج بيانات المستخدمين مع الملفات الشخصية مع التعامل المحسن مع البريد الإلكتروني
+        // دمج بيانات المستخدمين مع الملفات الشخصية
         const mergedUsers = basicUsersData.map(user => {
           const profile = profilesMap.get(user.id) || {};
           
-          // التأكد من صحة البريد الإلكتروني واستخدامه فقط إذا كان صالحًا
+          // إظهار البريد الإلكتروني كما هو
           let userEmail = user.email || '';
-          
-          // تحقق إضافي من طول البريد الإلكتروني
-          if (userEmail.length < 3 || !userEmail.includes('@')) {
-            console.warn(`تم العثور على بريد إلكتروني غير صالح للمستخدم ${user.id}: "${userEmail}"`);
-            userEmail = ''; // إعادة تعيين البريد إذا كان غير صالح
-          }
             
           // استخراج البيانات بشكل آمن من raw_user_meta_data
           const raw_meta = user.raw_user_meta_data || {};
@@ -199,8 +181,19 @@ export const useFetchUsers = () => {
           };
         });
         
+        // سجل عناوين البريد الإلكتروني من البيانات المدمجة
+        mergedUsers.forEach((user, index) => {
+          if (index < 5) { // سجل أول 5 مستخدمين فقط
+            console.log(`المستخدم المدمج [${index}]:`, { 
+              id: user.id, 
+              email: user.email, 
+              email_length: user.email ? user.email.length : 0 
+            });
+          }
+        });
+        
         setUsers(mergedUsers);
-        console.log('تم تحديث قائمة المستخدمين باستخدام الطريقة البديلة المحسنة، العدد:', mergedUsers.length);
+        console.log('تم تحديث قائمة المستخدمين باستخدام الطريقة البديلة، العدد:', mergedUsers.length);
         
         setFetchError('تم عرض بيانات المستخدمين بنجاح ولكن قد تكون بعض البيانات غير مكتملة.');
         toast.success('تم جلب بيانات المستخدمين بنجاح');
@@ -208,12 +201,13 @@ export const useFetchUsers = () => {
       } catch (fallbackError: any) {
         console.error('خطأ في الطريقة البديلة لجلب البيانات:', fallbackError);
         
-        // محاولة آخر طريقة إذا فشلت الطرق الأخرى
+        // محاولة طريقة ثالثة لجلب البيانات - استخدام get_users_emails
         try {
           console.log('محاولة استرجاع البريد الإلكتروني باستخدام وظيفة get_users_emails...');
           
-          // محاولة إضافية لاسترجاع عناوين البريد الإلكتروني للمستخدمين
           const { data: emailsData } = await supabase.rpc('get_users_emails');
+          
+          console.log('بيانات البريد الإلكتروني:', emailsData);
           
           // إنشاء خريطة للبريد الإلكتروني إذا كانت البيانات متوفرة
           let emailsMap = new Map();
@@ -263,6 +257,17 @@ export const useFetchUsers = () => {
                 address: '',
                 notes: ''
               };
+            });
+            
+            // سجل عناوين البريد الإلكتروني من البيانات المحدودة
+            limitedUsers.forEach((user, index) => {
+              if (index < 5) { // سجل أول 5 مستخدمين فقط
+                console.log(`المستخدم المحدود [${index}]:`, { 
+                  id: user.id, 
+                  email: user.email, 
+                  email_length: user.email ? user.email.length : 0 
+                });
+              }
             });
             
             setUsers(limitedUsers);
