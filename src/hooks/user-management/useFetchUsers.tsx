@@ -155,6 +155,7 @@ export const useFetchUsers = () => {
   return {
     users,
     detailedUsers,
+    setUsers,
     isLoading,
     isLoadingDetails,
     fetchAttempted,
