@@ -15,4 +15,5 @@ export interface UserProfile {
   phone_number?: string;
   address?: string;
   notes?: string;
+  updated_at?: string;
 }
