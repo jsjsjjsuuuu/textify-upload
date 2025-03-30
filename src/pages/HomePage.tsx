@@ -82,9 +82,7 @@ const HomePage = () => {
           }} transition={{
             duration: 0.6
           }} className="text-center lg:text-right">
-              <Badge className="mb-4 py-1.5 px-4 bg-brand-beige text-brand-brown">
-                خدمة استخراج البيانات من الصور
-              </Badge>
+              
               <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl">
                 استخراج البيانات من الصور <span className="text-brand-coral">بذكاء اصطناعي</span> متطور
               </h1>
