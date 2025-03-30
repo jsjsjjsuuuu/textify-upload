@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
@@ -96,7 +97,14 @@ const AdminApproval = () => {
         passwordLength: newPassword.length
       });
       
-      resetUserPassword(userToReset, newPassword);
+      // تعديل التعامل مع النتيجة المرجعة من resetUserPassword
+      resetUserPassword(userToReset, newPassword)
+        .then(success => {
+          if (!success) {
+            console.error('فشلت عملية إعادة تعيين كلمة المرور');
+            toast.error('فشلت عملية إعادة تعيين كلمة المرور');
+          }
+        });
     } else {
       console.error('كلمة المرور غير صالحة:', {
         passwordError

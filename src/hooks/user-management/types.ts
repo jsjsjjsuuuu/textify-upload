@@ -68,7 +68,7 @@ export interface UserManagementActions {
   setShowConfirmReset: (show: boolean) => void;
   setUserToReset: (userId: string | null) => void;
   setPasswordError: (error: string | null) => void;
-  resetUserPassword: (userId: string, newPassword: string) => Promise<void>;
+  resetUserPassword: (userId: string, newPassword: string) => Promise<boolean>; // تغيير نوع البيانات المُرجع من void إلى boolean
   prepareUserPasswordReset: (userId: string) => void;
   resetPasswordStates: () => void;
   validatePassword: () => boolean;
