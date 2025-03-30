@@ -120,7 +120,7 @@ export const useUserManagement = (): UserManagement => {
     addNewUser,
     approveUser,
     rejectUser,
-    resetUserPassword, // نوع الإرجاع متوافق الآن مع التعريف في types.ts
+    resetUserPassword, // نوع الإرجاع متوافق الآن مع التعريف في types.ts كـ Promise<boolean>
     updateUserEmail,
     saveUserData,
     startEditing,

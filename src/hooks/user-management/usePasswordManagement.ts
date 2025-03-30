@@ -53,12 +53,13 @@ export const usePasswordManagement = () => {
     }
     
     console.log('[usePasswordManagement] إعداد إعادة تعيين كلمة المرور للمستخدم:', userId);
+    resetPasswordStates(); // إعادة تعيين الحالات قبل فتح مربع الحوار
     setUserToReset(userId);
     setShowConfirmReset(true);
     setLastResetResult(null);
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - مُحسّنة
+  // وظيفة إعادة تعيين كلمة المرور - مُحسّنة مع إرجاع قيمة boolean للنجاح/الفشل
   const resetUserPassword = async (userId: string, password: string): Promise<boolean> => {
     if (!userId) {
       console.error('[usePasswordManagement] معرف المستخدم غير صالح:', userId);
