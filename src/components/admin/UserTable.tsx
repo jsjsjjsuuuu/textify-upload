@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -133,15 +134,20 @@ const UserTable: React.FC<UserTableProps> = ({
               full_name: user.full_name || ''
             };
             
+            // تسجيل المستخدمين الذين ليس لديهم بريد إلكتروني للتصحيح
+            if (!user.email) {
+              console.warn('تم العثور على مستخدم بدون بريد إلكتروني:', { userId: user.id, userName: user.full_name });
+            }
+            
             return (
               <TableRow key={user.id}>
                 <TableCell className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarImage 
                       src={user.avatar_url || `https://avatar.iran.liara.run/public/${user.email}`} 
-                      alt={user.full_name || user.email}
+                      alt={user.full_name || user.email || 'المستخدم'}
                     />
-                    <AvatarFallback>{user.full_name?.charAt(0) || user.email.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>{(user.full_name?.charAt(0) || user.email?.charAt(0) || 'U')}</AvatarFallback>
                   </Avatar>
                   <span>{user.full_name || 'بدون اسم'}</span>
                 </TableCell>
@@ -150,7 +156,7 @@ const UserTable: React.FC<UserTableProps> = ({
                   <div className="flex flex-col gap-1 text-sm">
                     <div className="flex items-center gap-1">
                       <Mail className="h-3 w-3" />
-                      <span>{user.email}</span>
+                      <span>{user.email || 'بريد إلكتروني غير متوفر'}</span>
                     </div>
                     {user.phone_number && (
                       <div className="flex items-center gap-1">
@@ -253,7 +259,7 @@ const UserTable: React.FC<UserTableProps> = ({
                       </Button>
                     )}
                     
-                    {/* تمرير بيانات المستخدم الكاملة */}
+                    {/* تمرير بيانات المستخدم الكاملة مع التأكد من وجود البيانات الأساسية */}
                     <PasswordResetPopover user={completeUser} />
                   </div>
                 </TableCell>

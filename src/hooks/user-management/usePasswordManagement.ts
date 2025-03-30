@@ -45,7 +45,9 @@ export const usePasswordManagement = () => {
 
   // إعداد المستخدم لإعادة تعيين كلمة المرور
   const prepareUserPasswordReset = (userId: string) => {
-    if (!validatePassword()) {
+    if (!userId) {
+      console.error('[usePasswordManagement] معرف المستخدم غير صالح:', userId);
+      toast.error('معرف المستخدم غير صالح');
       return;
     }
     
@@ -54,7 +56,7 @@ export const usePasswordManagement = () => {
     setShowConfirmReset(true);
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - مبسطة
+  // وظيفة إعادة تعيين كلمة المرور - مُحسّنة
   const resetUserPassword = async (userId: string, password: string): Promise<void> => {
     if (!userId) {
       console.error('[usePasswordManagement] معرف المستخدم غير صالح:', userId);
@@ -63,7 +65,10 @@ export const usePasswordManagement = () => {
     }
 
     if (!password || password.length < 6) {
-      console.error('[usePasswordManagement] كلمة المرور غير صالحة');
+      console.error('[usePasswordManagement] كلمة المرور غير صالحة:', { 
+        passwordEmpty: !password, 
+        passwordLength: password ? password.length : 0 
+      });
       toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
       return;
     }
@@ -72,10 +77,15 @@ export const usePasswordManagement = () => {
     try {
       console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
       
-      // استخدام وظيفة واحدة فقط لإعادة تعيين كلمة المرور
+      // استخدام وظيفة مُحسّنة لإعادة تعيين كلمة المرور
       const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
         user_id_str: userId,
         new_password: password
+      });
+      
+      console.log('[usePasswordManagement] نتيجة إعادة تعيين كلمة المرور:', { 
+        success: data === true, 
+        error: error ? error.message : null 
       });
       
       if (error) {
@@ -86,6 +96,7 @@ export const usePasswordManagement = () => {
         toast.success('تم إعادة تعيين كلمة المرور بنجاح');
         resetPasswordStates();
       } else {
+        console.error('[usePasswordManagement] فشلت عملية إعادة تعيين كلمة المرور، البيانات المستلمة:', data);
         toast.error('فشلت عملية إعادة تعيين كلمة المرور');
       }
     } catch (error: any) {

@@ -26,13 +26,23 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
   // جلب بيانات المستخدم عند فتح النافذة المنبثقة
   useEffect(() => {
     if (isOpen && user?.id) {
-      // تأكد من أن لدينا معلومات المستخدم الكاملة
       console.log('فتح نافذة تغيير كلمة المرور للمستخدم:', {
         userId: user.id,
-        userEmail: user.email,
-        userName: user.full_name
+        userEmail: user.email || 'بريد إلكتروني غير متوفر',
+        userName: user.full_name || 'اسم غير متوفر'
       });
-      setUserData(user);
+      
+      // التأكد من أن جميع البيانات المطلوبة موجودة
+      if (!user.email) {
+        console.error('بيانات المستخدم غير مكتملة - البريد الإلكتروني مفقود:', user);
+      }
+      
+      // نسخ بيانات المستخدم للاستخدام المحلي
+      setUserData({
+        ...user,
+        id: user.id,
+        email: user.email || `user-${user.id.substring(0, 8)}@example.com` // قيمة احتياطية
+      });
     }
   }, [isOpen, user]);
 
@@ -77,21 +87,25 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
         userEmail: userData.email
       });
       
-      // محاولة تغيير كلمة المرور باستخدام وظيفة واحدة فقط لتجنب التعقيد
+      // محاولة تغيير كلمة المرور
       const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
         user_id_str: userData.id,
         new_password: newPassword
       });
       
+      console.log('نتيجة تغيير كلمة المرور:', { data, error });
+      
       if (error) {
         throw error;
       }
       
+      // تأكيد نجاح العملية
       if (data === true) {
         toast.success("تم تغيير كلمة المرور بنجاح");
         closePopover();
       } else {
         toast.error("فشل في تغيير كلمة المرور لسبب غير معروف");
+        console.error('فشل تغيير كلمة المرور، البيانات المستلمة:', data);
       }
     } catch (error: any) {
       console.error(`خطأ في تغيير كلمة المرور:`, error);
@@ -132,8 +146,20 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
   return (
     <Popover open={isOpen} onOpenChange={(open) => {
       if (open) {
-        // عند الفتح، تأكد من جلب بيانات المستخدم واستخدامها
-        setUserData(user);
+        console.log('تم فتح نافذة تغيير كلمة المرور للمستخدم:', user?.id);
+        
+        if (!user || !user.id || !user.email) {
+          console.error('بيانات المستخدم غير صالحة أو غير مكتملة:', user);
+          toast.error('بيانات المستخدم غير مكتملة');
+          return; // منع فتح النافذة مع بيانات غير صالحة
+        }
+        
+        // نسخ بيانات المستخدم للاستخدام المحلي
+        setUserData({
+          ...user,
+          id: user.id,
+          email: user.email
+        });
       }
       setIsOpen(open);
     }}>
@@ -162,7 +188,7 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
             {passwordError && (
               <Alert variant="destructive" className="py-2">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription className="text-xs ml-2">
+                <AlertDescription className="text-xs mr-2">
                   {passwordError}
                 </AlertDescription>
               </Alert>

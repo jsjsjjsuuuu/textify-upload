@@ -42,7 +42,26 @@ export const useFetchUsers = () => {
       
       // تمت العملية بنجاح، تحديث قائمة المستخدمين
       console.log('تم جلب بيانات المستخدمين الكاملة بنجاح، العدد:', completeUsersData.length);
-      setUsers(completeUsersData);
+      
+      // التحقق من اكتمال البيانات الأساسية لكل مستخدم
+      const validatedUsers = completeUsersData.map(user => {
+        // تسجيل المستخدمين الذين تنقصهم بيانات أساسية
+        if (!user.email) {
+          console.warn('مستخدم بدون بريد إلكتروني:', { userId: user.id, userName: user.full_name });
+        }
+        
+        // إضافة قيم افتراضية للحقول المفقودة
+        return {
+          ...user,
+          email: user.email || `user-${user.id.substring(0, 8)}@example.com`,
+          full_name: user.full_name || 'مستخدم بدون اسم',
+          subscription_plan: user.subscription_plan || 'standard',
+          account_status: user.account_status || 'active',
+          is_approved: typeof user.is_approved === 'boolean' ? user.is_approved : false
+        };
+      });
+      
+      setUsers(validatedUsers);
       
     } catch (error: any) {
       console.error('خطأ في جلب بيانات المستخدمين:', error);
@@ -72,12 +91,18 @@ export const useFetchUsers = () => {
         }
         
         // استخدام البيانات المتاحة فقط
-        setUsers(profilesData.map(profile => ({
+        const usersWithDefaultValues = profilesData.map(profile => ({
           ...profile,
           id: profile.id,
           email: profile.username ? `${profile.username}@example.com` : `user-${profile.id.substring(0, 8)}@example.com`,
-          created_at: profile.created_at || new Date().toISOString()
-        })));
+          created_at: profile.created_at || new Date().toISOString(),
+          full_name: profile.full_name || 'مستخدم بدون اسم',
+          subscription_plan: profile.subscription_plan || 'standard',
+          account_status: profile.account_status || 'active',
+          is_approved: typeof profile.is_approved === 'boolean' ? profile.is_approved : false
+        }));
+        
+        setUsers(usersWithDefaultValues);
         
         setFetchError('تعذر جلب البيانات الكاملة للمستخدمين. يتم عرض بيانات محدودة فقط.');
         toast.warning('تم عرض بيانات محدودة للمستخدمين');
