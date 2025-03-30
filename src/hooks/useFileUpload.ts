@@ -6,8 +6,9 @@ import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
-import { useImageQueue } from "@/hooks/useImageQueue"; // استيراد نظام قائمة الانتظار
-import { getApiKeyStats, resetAllApiKeys } from "@/lib/gemini"; // استيراد وظيفة إحصائيات المفاتيح
+import { useImageQueue } from "@/hooks/useImageQueue"; 
+import { getApiKeyStats, resetAllApiKeys } from "@/lib/gemini";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FileUploadProps {
   images: ImageData[];
@@ -115,6 +116,44 @@ export const useFileUpload = ({
     return baseDelay + randomVariation;
   }, []);
 
+  // وظيفة لرفع الصورة إلى Supabase Storage
+  const uploadToStorage = useCallback(async (
+    file: File, 
+    userId: string, 
+    imageId: string
+  ): Promise<string | null> => {
+    try {
+      if (!file || !userId) {
+        console.error("ملف غير صالح أو معرف مستخدم غير موجود");
+        return null;
+      }
+
+      const timestamp = Date.now();
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${userId}/${imageId}_${timestamp}.${fileExt}`;
+      
+      console.log(`جاري رفع الصورة إلى التخزين: ${filePath}`);
+      
+      const { data, error } = await supabase.storage
+        .from('receipt_images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (error) {
+        console.error("خطأ في رفع الصورة إلى التخزين:", error);
+        return null;
+      }
+      
+      console.log("تم رفع الصورة بنجاح:", data.path);
+      return data.path;
+    } catch (error) {
+      console.error("خطأ غير متوقع أثناء رفع الصورة:", error);
+      return null;
+    }
+  }, []);
+
   // وظيفة معالجة صورة واحدة (OCR أو Gemini)
   const processImage = useCallback(async (image: ImageData) => {
     console.log(`بدء معالجة الصورة: ${image.id}`);
@@ -145,6 +184,26 @@ export const useFileUpload = ({
       // التحقق من وجود الملف
       if (!image.file) {
         throw new Error("ملف الصورة غير متاح");
+      }
+      
+      // رفع الصورة إلى Supabase Storage إذا كان المستخدم مسجل الدخول
+      const user = supabase.auth.getUser();
+      let storagePath = null;
+      
+      if ((await user).data.user) {
+        storagePath = await uploadToStorage(
+          image.file, 
+          (await user).data.user.id, 
+          image.id
+        );
+        
+        if (storagePath) {
+          console.log(`تم رفع الصورة إلى التخزين: ${storagePath}`);
+          // تحديث مسار التخزين في الصورة
+          updateImage(image.id, {
+            storage_path: storagePath
+          });
+        }
       }
       
       // معالجة الصورة بناءً على الطريقة المختارة
@@ -227,6 +286,11 @@ export const useFileUpload = ({
         processedImage = await processWithOcr(image.file, image);
       }
       
+      // إضافة مسار التخزين إلى البيانات المعالجة
+      if (storagePath) {
+        processedImage.storage_path = storagePath;
+      }
+      
       // التحقق من نجاح المعالجة من خلال وجود البيانات المستخرجة
       const hasExtractedData = processedImage.code || 
         processedImage.senderName || 
@@ -261,7 +325,8 @@ export const useFileUpload = ({
         price: processedImage.price,
         companyName: processedImage.companyName,
         extractedText: processedImage.extractedText,
-        confidence: processedImage.confidence
+        confidence: processedImage.confidence,
+        storage_path: storagePath // تحديث مسار التخزين
       });
       
       // إضافة تأخير قبل حفظ البيانات للسماح بعرض البيانات في الواجهة
@@ -304,7 +369,16 @@ export const useFileUpload = ({
       // إعادة رمي الخطأ للتعامل معه في وظيفة القائمة
       throw error;
     }
-  }, [geminiEnabled, processWithGemini, processWithOcr, saveProcessedImage, updateImage, calculateIdealDelay, resetApiKeys]);
+  }, [
+    geminiEnabled, 
+    processWithGemini, 
+    processWithOcr, 
+    saveProcessedImage, 
+    updateImage, 
+    calculateIdealDelay, 
+    resetApiKeys,
+    uploadToStorage
+  ]);
 
   // معالج تغيير الملفات - عند رفع الصور
   const handleFileChange = useCallback(async (files: File[]) => {

@@ -37,4 +37,3 @@ const ImageErrorDisplay: React.FC<ImageErrorDisplayProps> = ({
 };
 
 export default ImageErrorDisplay;
-

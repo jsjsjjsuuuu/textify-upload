@@ -23,6 +23,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ImageErrorDisplay from "@/components/ImagePreview/ImageViewer/ImageErrorDisplay";
 
+// صورة تعبئة افتراضية للصور التي لا يمكن تحميلها
+const PLACEHOLDER_IMAGE_URL = '/placeholder-image.jpg';
+
 // مكون الصفحة الرئيسي
 const Records = () => {
   const { user } = useAuth();
@@ -280,14 +283,23 @@ const Records = () => {
 
   // قم بإنشاء عنوان URL للصورة من Storage
   const getImageUrl = (image) => {
+    // التحقق من وجود مسار التخزين
     if (image.storage_path) {
       const { data } = supabase.storage
         .from('receipt_images')
         .getPublicUrl(image.storage_path);
+      
       // إضافة طابع زمني لمنع مشاكل التخزين المؤقت
-      return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : image.previewUrl;
+      return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : (image.previewUrl || PLACEHOLDER_IMAGE_URL);
     }
-    return image.previewUrl;
+    
+    // التحقق من وجود URL المعاينة وأنه ليس blob URL (يسبب أخطاء)
+    if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
+      return image.previewUrl;
+    }
+    
+    // استخدام الصورة الافتراضية إذا لم تكن هناك صورة صالحة
+    return PLACEHOLDER_IMAGE_URL;
   };
 
   return (

@@ -5,6 +5,10 @@ import { ImageData } from "@/types/ImageData";
 import { CalendarIcon, Clock, ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ImageErrorDisplay from "../ImagePreview/ImageViewer/ImageErrorDisplay";
+import { supabase } from "@/integrations/supabase/client";
+
+// صورة تعبئة افتراضية للصور التي لا يمكن تحميلها
+const PLACEHOLDER_IMAGE_URL = '/placeholder-image.jpg';
 
 interface DraggableImageProps {
   image: ImageData;
@@ -38,20 +42,45 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
     setIsImageError(false);
     setIsImageLoading(true);
     setRetryCount(prev => prev + 1);
-    // تحديث الصورة بإضافة معلمة عشوائية لتجنب التخزين المؤقت
-    image.previewUrl = image.previewUrl?.split('?')[0] + `?retry=${Date.now()}`;
+    
+    if (image.storage_path) {
+      // إذا كان هناك مسار تخزين، استخدم Supabase Storage
+      const { data } = supabase.storage
+        .from('receipt_images')
+        .getPublicUrl(image.storage_path);
+      
+      if (data?.publicUrl) {
+        // إضافة طابع زمني لمنع التخزين المؤقت
+        image.previewUrl = `${data.publicUrl}?retry=${Date.now()}`;
+      }
+    } else {
+      // تحديث الصورة بإضافة معلمة عشوائية لتجنب التخزين المؤقت
+      image.previewUrl = image.previewUrl?.split('?')[0] + `?retry=${Date.now()}`;
+    }
   }, [image, retryCount]);
 
   // لوضع صورة بديلة إذا كان عنوان URL للصورة غير صالح أو فارغًا
   const getImageSrc = useCallback(() => {
+    // التحقق من وجود مسار تخزين
+    if (image.storage_path) {
+      const { data } = supabase.storage
+        .from('receipt_images')
+        .getPublicUrl(image.storage_path);
+      
+      if (data?.publicUrl) {
+        return `${data.publicUrl}?t=${Date.now()}`;
+      }
+    }
+    
     // التحقق مما إذا كان عنوان URL للصورة يبدأ بـ "blob:" وهو ما يسبب الخطأ
     if (image.previewUrl && image.previewUrl.startsWith('blob:')) {
       console.warn(`تم اكتشاف عنوان blob غير صالح للصورة: ${image.id}`);
       // استخدام صورة بديلة بدلاً من blob
-      return '/placeholder-image.jpg';
+      return PLACEHOLDER_IMAGE_URL;
     }
-    return image.previewUrl || '/placeholder-image.jpg';
-  }, [image.id, image.previewUrl]);
+    
+    return image.previewUrl || PLACEHOLDER_IMAGE_URL;
+  }, [image.id, image.previewUrl, image.storage_path]);
 
   // تحديث العنوان عند التحميل الأولي
   useEffect(() => {
