@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { createBrowserRouter, Navigate, RouterProvider, Route, Routes } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFound from './pages/NotFound';
 import Login from './pages/Login';
@@ -91,7 +91,7 @@ export const router = createBrowserRouter([
   },
 ]);
 
-// إضافة مكون AppRoutes لاستخدامه في App.tsx
+// مكون AppRoutes لاستخدامه في App.tsx
 export const AppRoutes = () => {
   return <RouterProvider router={router} />;
 };
