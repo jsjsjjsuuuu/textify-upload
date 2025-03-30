@@ -13,7 +13,7 @@ export const useFetchUsers = () => {
   const [fetchAttempted, setFetchAttempted] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // جلب قائمة المستخدمين - مع تحسينات كبيرة في معالجة الأخطاء
+  // جلب قائمة المستخدمين - مع تحسينات كبيرة في معالجة الأخطاء والتعامل مع البيانات
   const fetchUsers = async () => {
     if (isLoading) return; // منع التنفيذ المتعدد إذا كان هناك طلب جاري بالفعل
     
@@ -23,7 +23,7 @@ export const useFetchUsers = () => {
       console.log('بدء جلب بيانات المستخدمين... - نسخة محسنة');
       setFetchAttempted(true); // تعيين أنه تمت محاولة الجلب على الأقل مرة واحدة
       
-      // استدعاء وظيفة admin_get_complete_users بشكل ذكي مع معالجة أكثر دقة للأخطاء
+      // استدعاء وظيفة admin_get_complete_users المحسنة
       console.log('استدعاء وظيفة admin_get_complete_users...');
       const startTime = performance.now();
       const { data: completeUsersData, error: completeUsersError } = await supabase
@@ -71,30 +71,34 @@ export const useFetchUsers = () => {
         });
       }
       
-      // التحقق من اكتمال البيانات الأساسية لكل مستخدم
+      // التحقق من اكتمال البيانات الأساسية لكل مستخدم والتأكد من عرض البريد الإلكتروني الصحيح
       const validatedUsers = completeUsersData.map(user => {
         // تسجيل المستخدمين الذين تنقصهم بيانات أساسية
         if (!user.id) {
           console.error('مستخدم بدون معرف!', user);
         }
         
-        if (!user.email) {
+        // التحقق من وجود البريد الإلكتروني وإظهار تحذير فقط إذا كان مفقودًا حقًا
+        if (!user.email || user.email.trim() === '') {
           console.warn('مستخدم بدون بريد إلكتروني:', { 
             userId: user.id, 
             userName: user.full_name 
           });
         }
         
-        // إضافة قيم افتراضية للحقول المفقودة
         return {
           ...user,
           id: user.id || crypto.randomUUID(), // نادر جدًا، لكن للأمان
-          email: user.email || `غير معروف (${user.id?.substring(0, 8) || 'مجهول'})`,
+          // الاحتفاظ بالبريد الإلكتروني الأصلي إذا كان موجودًا، وإلا استخدام قيمة بديلة واضحة
+          email: user.email && user.email.trim() !== '' 
+            ? user.email 
+            : `غير معروف (${user.id?.substring(0, 8) || 'مجهول'})`,
           full_name: user.full_name || 'مستخدم بدون اسم',
           subscription_plan: user.subscription_plan || 'standard',
           account_status: user.account_status || 'active',
+          // التأكد من أن القيم المنطقية تظهر بشكل صحيح
           is_approved: typeof user.is_approved === 'boolean' ? user.is_approved : false,
-          is_admin: typeof user.is_admin === 'boolean' ? user.is_admin : false // تأكد من أن is_admin قيمة منطقية
+          is_admin: typeof user.is_admin === 'boolean' ? user.is_admin : false
         };
       });
       
@@ -108,7 +112,7 @@ export const useFetchUsers = () => {
       try {
         console.log('جاري محاولة استخدام طريقة بديلة لجلب البيانات - استدعاء admin_get_basic_users...');
         
-        // استدعاء وظيفة admin_get_basic_users الجديدة
+        // استدعاء وظيفة admin_get_basic_users المحسنة
         const { data: basicUsersData, error: basicUsersError } = await supabase
           .rpc('admin_get_basic_users');
         
@@ -137,11 +141,16 @@ export const useFetchUsers = () => {
           });
         }
         
-        // دمج بيانات المستخدمين مع الملفات الشخصية
+        // دمج بيانات المستخدمين مع الملفات الشخصية مع التعامل المحسن مع البيانات الوصفية
         const mergedUsers = basicUsersData.map(user => {
           const profile = profilesMap.get(user.id) || {};
           
-          // استخراج البيانات بشكل آمن للنوع من raw_user_meta_data
+          // التأكد من أن البريد الإلكتروني يظهر بشكل صحيح
+          const userEmail = user.email && user.email.trim() !== '' 
+            ? user.email 
+            : `غير معروف (${user.id.substring(0, 8)})`;
+            
+          // استخراج البيانات بشكل آمن من raw_user_meta_data
           const raw_meta = user.raw_user_meta_data || {};
           const fullNameFromMeta = typeof raw_meta === 'object' && raw_meta !== null 
             ? (raw_meta as Record<string, any>).full_name 
@@ -161,8 +170,7 @@ export const useFetchUsers = () => {
           
           return {
             id: user.id,
-            // الاحتفاظ بالبريد الإلكتروني الحقيقي للمستخدم
-            email: user.email || `غير معروف (${user.id.substring(0, 8)})`,
+            email: userEmail, // استخدام البريد الإلكتروني المعالج
             created_at: user.created_at,
             updated_at: user.updated_at || profile.updated_at,
             full_name: profile.full_name || fullNameFromMeta || 'مستخدم بدون اسم',
@@ -189,7 +197,7 @@ export const useFetchUsers = () => {
       } catch (fallbackError: any) {
         console.error('خطأ في الطريقة البديلة لجلب البيانات:', fallbackError);
         
-        // محاولة آخر طريقة إذا فشلت الطرق الأخرى
+        // محاولة آخر طريقة إذا فشلت الطرق الأخرى - مع تحسين طريقة العرض
         try {
           console.log('محاولة استرجاع بيانات المستخدمين المحدودة من جدول profiles...');
           const { data: profilesData, error: profilesError } = await supabase
@@ -207,7 +215,11 @@ export const useFetchUsers = () => {
             try {
               const { data: emailsData } = await supabase.rpc('get_users_emails');
               if (emailsData && emailsData.length > 0) {
-                emailsData.forEach(item => emailsMap.set(item.id, item.email));
+                emailsData.forEach(item => {
+                  if (item.email && item.email.trim() !== '') {
+                    emailsMap.set(item.id, item.email);
+                  }
+                });
                 console.log('تم جلب عناوين البريد الإلكتروني للمستخدمين:', emailsMap.size);
               }
             } catch (emailsError) {
@@ -215,7 +227,7 @@ export const useFetchUsers = () => {
             }
             
             const limitedUsers = profilesData.map(profile => {
-              // استخدام خريطة البريد الإلكتروني إذا كانت متوفرة، وإلا استخدام قيمة افتراضية
+              // استخدام خريطة البريد الإلكتروني إذا كانت متوفرة، وإلا استخدام قيمة افتراضية واضحة
               const userEmail = emailsMap.get(profile.id) || `غير معروف (${profile.id.substring(0, 8)})`;
               
               return {
