@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import ResetPasswordDialog from '@/components/admin/ResetPasswordDialog';
 
 export const usePasswordManagement = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -60,6 +59,28 @@ export const usePasswordManagement = () => {
     setLastResetResult(null);
   };
 
+  // وظيفة استدعاء RPC مباشرة كخيار بديل
+  const resetPasswordViaRPC = async (userId: string, password: string): Promise<boolean> => {
+    console.log('[usePasswordManagement] محاولة استخدام RPC لإعادة تعيين كلمة المرور للمستخدم:', userId);
+    try {
+      const { data, error } = await supabase.rpc(
+        'admin_reset_user_password',
+        { user_id_str: userId, new_password: password }
+      );
+      
+      if (error) {
+        console.error('[usePasswordManagement] خطأ RPC:', error.message);
+        return false;
+      }
+      
+      console.log('[usePasswordManagement] نتيجة RPC:', data);
+      return data === true;
+    } catch (error) {
+      console.error('[usePasswordManagement] استثناء RPC:', error);
+      return false;
+    }
+  };
+
   // وظيفة إعادة تعيين كلمة المرور المحسنة - باستخدام Edge Function
   const resetUserPassword = async (userId: string, password: string): Promise<boolean> => {
     if (!userId) {
@@ -80,6 +101,18 @@ export const usePasswordManagement = () => {
     setIsProcessing(true);
     try {
       console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
+      
+      // محاولة استخدام وظيفة RPC أولاً
+      const rpcResult = await resetPasswordViaRPC(userId, password);
+      if (rpcResult) {
+        console.log('[usePasswordManagement] تم إعادة تعيين كلمة المرور بنجاح عبر RPC');
+        toast.success('تم إعادة تعيين كلمة المرور بنجاح');
+        resetPasswordStates();
+        setLastResetResult(true);
+        return true;
+      }
+      
+      console.log('[usePasswordManagement] فشلت محاولة RPC، سيتم المتابعة باستخدام Edge Function');
       
       // الحصول على جلسة المستخدم الحالي للمصادقة
       const { data: { session } } = await supabase.auth.getSession();

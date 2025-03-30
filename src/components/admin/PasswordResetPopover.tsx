@@ -7,7 +7,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { toast } from 'sonner';
 import { KeyRound, Lock, Eye, EyeOff, CheckCircle, RefreshCw } from 'lucide-react';
 import { UserProfile } from '@/types/UserProfile';
-import { supabase } from '@/integrations/supabase/client';
 import { usePasswordManagement } from '@/hooks/user-management/usePasswordManagement';
 
 interface PasswordResetPopoverProps {

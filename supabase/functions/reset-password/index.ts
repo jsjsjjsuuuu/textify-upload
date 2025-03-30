@@ -24,6 +24,7 @@ serve(async (req) => {
   try {
     // التحقق من الطلب
     if (req.method !== 'POST') {
+      console.error('طريقة غير مدعومة:', req.method);
       throw new Error('طريقة غير مدعومة: ' + req.method);
     }
 
@@ -62,6 +63,7 @@ serve(async (req) => {
       },
       auth: {
         persistSession: false,
+        autoRefreshToken: false,
       },
     });
 
@@ -124,20 +126,50 @@ serve(async (req) => {
     const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: {
         persistSession: false,
+        autoRefreshToken: false,
       },
     });
+
+    // محاولة استخدام وظيفة RPC (قاعدة البيانات) أولاً (خيار بديل)
+    try {
+      console.log('محاولة استخدام وظيفة RPC لإعادة تعيين كلمة المرور...');
+      const { data: rpcResult, error: rpcError } = await supabaseClient.rpc(
+        'admin_reset_user_password',
+        { user_id_str: userId, new_password: newPassword }
+      );
+      
+      if (!rpcError && rpcResult === true) {
+        console.log('تم إعادة تعيين كلمة المرور بنجاح باستخدام RPC للمستخدم:', userId);
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: 'تم إعادة تعيين كلمة المرور بنجاح (RPC)'
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        );
+      } else {
+        console.log('فشلت محاولة RPC، سيتم المتابعة باستخدام API المسؤول:', rpcError?.message);
+      }
+    } catch (rpcAttemptError) {
+      console.log('استثناء أثناء محاولة استخدام RPC:', rpcAttemptError.message);
+    }
 
     console.log('تم إنشاء عميل المسؤول بنجاح، جاري تنفيذ إعادة تعيين كلمة المرور...');
 
     // استخدام واجهة برمجة التطبيقات Admin لإعادة تعيين كلمة المرور
-    const { data: updateData, error: updateError } = await adminClient.auth.admin.updateUserById(
+    const updateUserResponse = await adminClient.auth.admin.updateUserById(
       userId,
       { password: newPassword }
     );
 
-    if (updateError) {
-      console.error('خطأ في إعادة تعيين كلمة المرور:', updateError.message);
-      throw new Error(`فشل في إعادة تعيين كلمة المرور: ${updateError.message}`);
+    if (updateUserResponse.error) {
+      console.error('خطأ في إعادة تعيين كلمة المرور:', updateUserResponse.error.message);
+      throw new Error(`فشل في إعادة تعيين كلمة المرور: ${updateUserResponse.error.message}`);
     }
 
     console.log('تم إعادة تعيين كلمة المرور بنجاح للمستخدم:', userId);
