@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { motion } from "framer-motion";
@@ -10,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays, Trash } from "lucide-react";
+import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays, Trash, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { ImageData } from "@/types/ImageData";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import ImageErrorDisplay from "@/components/ImagePreview/ImageViewer/ImageErrorDisplay";
 
 // مكون الصفحة الرئيسي
 const Records = () => {
@@ -37,7 +39,11 @@ const Records = () => {
     handleSubmitToApi,
     formatDate: formatImageDate,
     loadUserImages,
+    saveProcessedImage
   } = useImageProcessing();
+  
+  // إضافة حالة لتتبع حالة تحميل الصور
+  const [imageLoadErrors, setImageLoadErrors] = useState<{[key: string]: number}>({});
 
   // التعامل مع حذف صورة
   const onDeleteImage = async (id: string) => {
@@ -64,6 +70,99 @@ const Records = () => {
         title: "خطأ في الحذف",
         description: "حدث خطأ أثناء محاولة حذف السجل",
         variant: "destructive"
+      });
+    }
+  };
+  
+  // وظيفة لإعادة معالجة صورة
+  const handleReprocessImage = async (imageId: string) => {
+    try {
+      const imageToReprocess = images.find(img => img.id === imageId);
+      if (!imageToReprocess) {
+        toast({
+          title: "خطأ",
+          description: "لم يتم العثور على الصورة",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      toast({
+        title: "جاري المعالجة",
+        description: "جاري إعادة معالجة الصورة..."
+      });
+      
+      await saveProcessedImage(imageToReprocess);
+      
+      toast({
+        title: "تم بنجاح",
+        description: "تم إعادة معالجة الصورة بنجاح"
+      });
+      
+      // إعادة تحميل البيانات بعد المعالجة
+      loadUserImages();
+    } catch (error) {
+      console.error("خطأ في إعادة معالجة الصورة:", error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء إعادة معالجة الصورة",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // معالجة فشل تحميل الصورة
+  const handleImageError = (imageId: string) => {
+    setImageLoadErrors(prev => ({
+      ...prev,
+      [imageId]: (prev[imageId] || 0) + 1
+    }));
+  };
+  
+  // إعادة محاولة تحميل الصورة
+  const retryLoadImage = (imageId: string, storagePath: string | null, previewUrl: string | null) => {
+    // تحديث العداد
+    setImageLoadErrors(prev => ({
+      ...prev,
+      [imageId]: (prev[imageId] || 0) + 1
+    }));
+    
+    // إعادة تحميل الصورة
+    if (storagePath) {
+      const { data } = supabase.storage
+        .from('receipt_images')
+        .getPublicUrl(storagePath);
+        
+      if (data?.publicUrl) {
+        // إضافة طابع زمني لمنع التخزين المؤقت
+        const timestamp = Date.now();
+        const url = `${data.publicUrl}?t=${timestamp}`;
+        
+        // تحديث عنصر الصورة إذا كان موجوداً
+        const imgElement = document.querySelector(`img[data-image-id="${imageId}"]`) as HTMLImageElement;
+        if (imgElement) {
+          imgElement.src = url;
+        }
+        
+        toast({
+          title: "إعادة تحميل",
+          description: "جاري إعادة تحميل الصورة..."
+        });
+      }
+    } else if (previewUrl) {
+      // استخدام URL المعاينة مع إضافة طابع زمني
+      const timestamp = Date.now();
+      const url = `${previewUrl}?t=${timestamp}`;
+      
+      // تحديث عنصر الصورة
+      const imgElement = document.querySelector(`img[data-image-id="${imageId}"]`) as HTMLImageElement;
+      if (imgElement) {
+        imgElement.src = url;
+      }
+      
+      toast({
+        title: "إعادة تحميل",
+        description: "جاري إعادة تحميل الصورة من URL المعاينة..."
       });
     }
   };
@@ -185,7 +284,8 @@ const Records = () => {
       const { data } = supabase.storage
         .from('receipt_images')
         .getPublicUrl(image.storage_path);
-      return data?.publicUrl || image.previewUrl;
+      // إضافة طابع زمني لمنع مشاكل التخزين المؤقت
+      return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : image.previewUrl;
     }
     return image.previewUrl;
   };
@@ -343,15 +443,25 @@ const Records = () => {
                           <span className="text-muted-foreground">{formatImageDate(image.date)}</span>
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <div 
-                            className="w-16 h-16 rounded-lg overflow-hidden bg-transparent cursor-pointer border border-border/40 dark:border-gray-700/40"
-                          >
-                            <img 
-                              src={getImageUrl(image)} 
-                              alt="صورة مصغرة" 
-                              className="object-contain h-full w-full" 
-                              style={{ mixBlendMode: 'multiply' }} 
-                            />
+                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-transparent relative flex items-center justify-center border border-border/40 dark:border-gray-700/40">
+                            {imageLoadErrors[image.id] && imageLoadErrors[image.id] > 2 ? (
+                              <div className="absolute inset-0">
+                                <ImageErrorDisplay 
+                                  onRetry={() => retryLoadImage(image.id, image.storage_path, image.previewUrl)} 
+                                  retryCount={imageLoadErrors[image.id]} 
+                                />
+                              </div>
+                            ) : (
+                              <img 
+                                data-image-id={image.id}
+                                src={getImageUrl(image)} 
+                                alt="صورة مصغرة" 
+                                className="object-contain h-full w-full" 
+                                style={{ mixBlendMode: 'multiply' }} 
+                                onError={() => handleImageError(image.id)}
+                                loading="lazy"
+                              />
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="px-6 py-4 font-medium">
@@ -377,15 +487,28 @@ const Records = () => {
                           {getStatusBadge(image.status, image.submitted)}
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 rounded-full bg-muted/30 text-destructive hover:bg-destructive/10" 
-                            onClick={() => onDeleteImage(image.id)}
-                            title="حذف السجل"
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 rounded-full bg-muted/30 text-destructive hover:bg-destructive/10" 
+                              onClick={() => onDeleteImage(image.id)}
+                              title="حذف السجل"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                            
+                            {/* زر إعادة معالجة الصورة */}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 rounded-full bg-muted/30 text-blue-600 hover:bg-blue-50" 
+                              onClick={() => handleReprocessImage(image.id)}
+                              title="إعادة معالجة"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))

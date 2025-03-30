@@ -13,7 +13,7 @@ const ImageErrorDisplay = ({
   retryCount = 0 
 }: ImageErrorDisplayProps) => {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 bg-white/80 dark:bg-gray-800/80">
+    <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 bg-white/80 dark:bg-gray-800/80 rounded-md">
       <ImageOff size={48} />
       <p className="mt-2 text-center font-medium">فشل تحميل الصورة</p>
       <p className="text-sm text-muted-foreground mt-1 mb-2">
