@@ -81,7 +81,10 @@ export function Pricing({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 sm:2 gap-4">
-        {plans.map((plan, index) => <motion.div key={index} initial={{
+        {plans.map((plan, index) => (
+          <motion.div 
+            key={index} 
+            initial={{
         y: 50,
         opacity: 0
       }} animate={{
@@ -90,7 +93,8 @@ export function Pricing({
       }} transition={{
         duration: 0.6,
         delay: index * 0.1
-      }} className={cn(`rounded-2xl border-[1px] p-6 bg-background text-center lg:flex lg:flex-col lg:justify-center relative`, plan.isPopular ? "border-primary border-2" : "border-border", "flex flex-col")}>
+      }} className={cn(`rounded-2xl border-[1px] p-6 bg-background text-center lg:flex lg:flex-col lg:justify-center relative`, plan.isPopular ? "border-primary border-2" : "border-border", "flex flex-col")}
+          >
             {plan.isPopular && <div className="absolute top-0 left-0 bg-primary py-0.5 px-2 rounded-bl-xl rounded-tr-xl flex items-center">
                 <Star className="text-primary-foreground h-4 w-4 fill-current" />
                 <span className="text-primary-foreground mr-1 font-sans font-semibold">
@@ -145,7 +149,8 @@ export function Pricing({
                 {plan.description}
               </p>
             </div>
-          </motion.div>)}
+          </motion.div>
+        ))}
       </div>
     </div>;
 }
