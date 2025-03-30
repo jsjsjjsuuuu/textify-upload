@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, UserPlus } from 'lucide-react';
+import { RefreshCw, UserPlus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 

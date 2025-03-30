@@ -56,26 +56,64 @@ export const useUserManagement = () => {
 
       console.log('تم جلب الملفات الشخصية بنجاح، العدد:', profilesData.length);
       
-      // محاولة جلب بيانات المستخدمين من خلال الـ RPC - مع معالجة محسنة للأخطاء
+      // محاولة جلب بيانات المستخدمين - استخدام محاولات متعددة مع آلية احتياطية
       let authUsersData = null;
       let authUsersError = null;
       
       try {
-        // محاولة استخدام الدالة المخصصة
-        console.log('محاولة استدعاء وظيفة get_users_emails...');
-        const result = await supabase.rpc('get_users_emails');
-        authUsersData = result.data;
-        authUsersError = result.error;
+        // الطريقة 1: استخدام وظيفة RPC المخصصة
+        console.log('محاولة 1: استدعاء وظيفة get_users_emails...');
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_users_emails');
         
-        if (authUsersError) {
-          console.error('خطأ في استدعاء وظيفة get_users_emails:', authUsersError);
-        } else {
-          console.log('تم جلب بيانات المستخدمين من get_users_emails بنجاح، العدد:', authUsersData ? authUsersData.length : 0);
+        if (rpcError) {
+          console.warn('خطأ في استدعاء get_users_emails:', rpcError);
+          throw rpcError; // نقل إلى المحاولة التالية
         }
-      } catch (rpcError) {
-        console.error('استثناء أثناء استدعاء get_users_emails:', rpcError);
-        authUsersError = { message: 'خطأ في استدعاء دالة جلب البيانات' };
+        
+        if (rpcData && Array.isArray(rpcData)) {
+          console.log('تم جلب البيانات بنجاح من get_users_emails، العدد:', rpcData.length);
+          authUsersData = rpcData;
+        } else {
+          throw new Error('بيانات غير صالحة من get_users_emails');
+        }
+      } catch (firstMethodError) {
+        console.warn('فشلت المحاولة الأولى، جاري تجربة طريقة بديلة...');
+        
+        try {
+          // الطريقة 2: استخدام استعلام مباشر إلى جدول auth.users إذا كان لديك امتيازات الإدارة
+          console.log('محاولة 2: استخدام طريقة بديلة للحصول على بيانات المستخدمين...');
+          
+          // هذا الاستعلام سيعمل فقط للمستخدمين المشرفين
+          const { data: adminData, error: adminError } = await supabase
+            .from('profiles')
+            .select('id, is_admin')
+            .eq('id', supabase.auth.getUser().then(res => res.data.user?.id));
+          
+          const isAdmin = adminData && adminData.length > 0 && adminData[0].is_admin;
+          
+          if (isAdmin) {
+            // محاولة استدعاء دالة أخرى مخصصة للمشرفين
+            const { data: adminUsersData, error: adminUsersError } = await supabase
+              .rpc('admin_get_users_with_email');
+            
+            if (!adminUsersError && adminUsersData) {
+              authUsersData = adminUsersData;
+              console.log('تم جلب البيانات بنجاح باستخدام امتيازات المشرف');
+            } else {
+              authUsersError = adminUsersError;
+              console.warn('فشل استدعاء admin_get_users_with_email:', adminUsersError);
+            }
+          } else {
+            console.warn('المستخدم ليس مشرفًا، لا يمكن استخدام طريقة المشرف');
+          }
+        } catch (secondMethodError) {
+          console.warn('فشلت المحاولة الثانية، سيتم استخدام البيانات المتاحة فقط');
+          authUsersError = secondMethodError;
+        }
       }
+      
+      // استخدام البيانات المتاحة حتى لو فشلت بعض المحاولات
+      console.log('إنشاء قائمة المستخدمين باستخدام البيانات المتاحة...');
       
       // إنشاء كائن للبحث السريع عن البريد الإلكتروني وتاريخ الإنشاء حسب معرف المستخدم
       const authUsersMap: Record<string, { email: string, created_at: string }> = {};
@@ -90,20 +128,23 @@ export const useUserManagement = () => {
           }
         });
         console.log('تم إنشاء خريطة بيانات المستخدمين، عدد العناصر:', Object.keys(authUsersMap).length);
-      } else if (authUsersError) {
-        console.warn('لم يتم جلب بيانات المستخدمين من الدالة، سيتم استخدام البيانات المتاحة فقط.');
-        toast.warning('تم جلب بيانات الملفات الشخصية فقط - بعض المعلومات قد تكون غير متاحة');
+      } else {
+        console.warn('لم تتوفر بيانات المستخدمين الكاملة، سيتم استخدام البيانات المتاحة فقط.');
+        if (authUsersError) {
+          console.error('خطأ في جلب بيانات المستخدمين:', authUsersError);
+          // لا نقوم بإظهار رسالة خطأ للمستخدم هنا لأننا سنستخدم البيانات المتاحة
+        }
       }
       
       // تحويل بيانات الملفات الشخصية إلى قائمة المستخدمين
       const usersWithCompleteData = (profilesData || []).map((profile: any) => {
-        // استخدام بيانات المستخدم من الخريطة إذا كانت متاحة
+        // استخدام بيانات المستخدم من الخريطة إذا كانت متاحة، أو توليد بيانات افتراضية
         const userData = authUsersMap[profile.id] || { 
-          email: profile.username ? `${profile.username}@example.com` : 'user@example.com', 
+          email: profile.username ? `${profile.username}@example.com` : `user-${profile.id.substring(0, 8)}@example.com`, 
           created_at: profile.created_at || new Date().toISOString() 
         };
         
-        // معالجة is_admin بشكل أكثر دقة - التأكد من أنها قيمة منطقية
+        // معالجة is_admin بشكل أكثر دقة
         const isAdmin = profile.is_admin === true;
         
         return {
@@ -117,6 +158,12 @@ export const useUserManagement = () => {
       
       console.log('معلومات المستخدمين بعد المعالجة:', usersWithCompleteData.length);
       setUsers(usersWithCompleteData);
+      
+      // إذا كانت هناك مشكلة جزئية في جلب البيانات ولكن تمكنا من الحصول على بعض البيانات
+      if (authUsersError && usersWithCompleteData.length > 0) {
+        setFetchError('تمكنا من جلب البيانات الأساسية ولكن بعض المعلومات قد تكون غير مكتملة. قد ترى عناوين بريد إلكتروني افتراضية.');
+        toast.warning('بعض بيانات المستخدمين قد تكون غير مكتملة، ولكن الوظائف الأساسية تعمل');
+      }
     } catch (error: any) {
       console.error('خطأ غير متوقع في جلب بيانات المستخدمين:', error);
       toast.error('حدث خطأ أثناء جلب بيانات المستخدمين');
@@ -140,13 +187,36 @@ export const useUserManagement = () => {
     try {
       console.log('جاري إضافة مستخدم جديد:', { email, fullName, isAdmin, isApproved });
       
-      // إنشاء المستخدم من خلال API لـ Supabase
-      const { data: signUpData, error: signUpError } = await supabase.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: { full_name: fullName }
-      });
+      // التحقق من صحة البيانات
+      if (!email || !email.includes('@') || !password || password.length < 6) {
+        toast.error('بيانات المستخدم غير صالحة. تأكد من صحة البريد الإلكتروني وأن كلمة المرور 6 أحرف على الأقل');
+        return false;
+      }
+      
+      // إنشاء المستخدم
+      let signUpResult;
+      try {
+        // محاولة استخدام وظيفة admin.createUser أولاً
+        signUpResult = await supabase.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: fullName }
+        });
+      } catch (adminError) {
+        console.warn('فشل استخدام admin.createUser، جاري استخدام طريقة بديلة:', adminError);
+        
+        // محاولة استخدام signUp العادية كبديل
+        signUpResult = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullName }
+          }
+        });
+      }
+      
+      const { data: signUpData, error: signUpError } = signUpResult;
       
       if (signUpError) {
         console.error('خطأ في إنشاء المستخدم:', signUpError);
@@ -262,12 +332,11 @@ export const useUserManagement = () => {
     }
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - محسنة ومعاد كتابتها بالكامل
+  // وظيفة إعادة تعيين كلمة المرور - محسنة ومعاد كتابتها
   const resetUserPassword = async (userId: string, newPassword: string) => {
     setIsProcessing(true);
     try {
       console.log('بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
-      console.log('طول كلمة المرور الجديدة:', newPassword.length);
       
       if (!newPassword || newPassword.trim() === '') {
         console.error('كلمة المرور فارغة');
@@ -283,64 +352,111 @@ export const useUserManagement = () => {
         return;
       }
 
-      // محاولة استخدام admin_reset_password_by_string_id أولاً
+      // تنفيذ إعادة تعيين كلمة المرور باستخدام عدة طرق وآليات احتياطية
       let success = false;
+      let lastError = null;
       
+      // محاولة الطريقة الأولى: استخدام admin_reset_password_by_string_id
       try {
-        console.log('محاولة استخدام admin_reset_password_by_string_id...');
+        console.log('محاولة 1: استخدام admin_reset_password_by_string_id...');
         const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
           user_id_str: userId,
           new_password: newPassword
         });
         
-        console.log('نتيجة استدعاء admin_reset_password_by_string_id:', { 
-          data, 
-          error: error ? { message: error.message, code: error.code } : null 
-        });
-        
         if (error) {
-          console.warn('لم ينجح admin_reset_password_by_string_id، جاري تجربة الطريقة البديلة...');
+          lastError = error;
+          console.warn('فشلت المحاولة 1:', error);
         } else if (data === true) {
           console.log('تم تغيير كلمة المرور بنجاح باستخدام admin_reset_password_by_string_id');
           success = true;
         }
       } catch (error1) {
-        console.error('خطأ في استدعاء admin_reset_password_by_string_id:', error1);
+        lastError = error1;
+        console.warn('خطأ في تنفيذ المحاولة 1:', error1);
       }
       
-      // إذا لم تنجح الطريقة الأولى، جرب الطريقة الثانية
+      // محاولة الطريقة الثانية: استخدام admin_update_user_password
       if (!success) {
         try {
-          console.log('محاولة استخدام admin_update_user_password...');
+          console.log('محاولة 2: استخدام admin_update_user_password...');
           const { data, error } = await supabase.rpc('admin_update_user_password', {
             user_id: userId,
             new_password: newPassword
           });
           
-          console.log('نتيجة استدعاء admin_update_user_password:', { 
-            data, 
-            error: error ? { message: error.message, code: error.code } : null 
-          });
-          
           if (error) {
-            throw error;
+            lastError = error;
+            console.warn('فشلت المحاولة 2:', error);
           } else if (data === true) {
             console.log('تم تغيير كلمة المرور بنجاح باستخدام admin_update_user_password');
             success = true;
           }
         } catch (error2) {
-          console.error('خطأ في استدعاء admin_update_user_password:', error2);
-          throw error2;
+          lastError = error2;
+          console.warn('خطأ في تنفيذ المحاولة 2:', error2);
         }
       }
       
-      // إذا نجحت أي من الطريقتين
+      // محاولة الطريقة الثالثة: استخدام admin_reset_password_direct_api
+      if (!success) {
+        try {
+          console.log('محاولة 3: استخدام admin_reset_password_direct_api...');
+          const { data, error } = await supabase.rpc('admin_reset_password_direct_api', {
+            user_id_str: userId,
+            new_password: newPassword
+          });
+          
+          if (error) {
+            lastError = error;
+            console.warn('فشلت المحاولة 3:', error);
+          } else if (data === true) {
+            console.log('تم تغيير كلمة المرور بنجاح باستخدام admin_reset_password_direct_api');
+            success = true;
+          }
+        } catch (error3) {
+          lastError = error3;
+          console.warn('خطأ في تنفيذ المحاولة 3:', error3);
+        }
+      }
+      
+      // محاولة الطريقة الرابعة: استخدام admin_update_user_password_by_email
+      if (!success) {
+        try {
+          // الحصول على البريد الإلكتروني للمستخدم أولاً
+          const user = users.find(u => u.id === userId);
+          if (user && user.email) {
+            console.log('محاولة 4: استخدام admin_update_user_password_by_email مع البريد:', user.email);
+            const { data, error } = await supabase.rpc('admin_update_user_password_by_email', {
+              user_email: user.email,
+              new_password: newPassword
+            });
+            
+            if (error) {
+              lastError = error;
+              console.warn('فشلت المحاولة 4:', error);
+            } else if (data === true) {
+              console.log('تم تغيير كلمة المرور بنجاح باستخدام admin_update_user_password_by_email');
+              success = true;
+            }
+          } else {
+            console.warn('لم يتم العثور على بريد إلكتروني للمستخدم، تخطي المحاولة 4');
+          }
+        } catch (error4) {
+          lastError = error4;
+          console.warn('خطأ في تنفيذ المحاولة 4:', error4);
+        }
+      }
+      
+      // إذا نجحت أي من المحاولات
       if (success) {
         toast.success('تم إعادة تعيين كلمة المرور بنجاح');
         resetPasswordStates();
         return;
       } else {
-        throw new Error('فشلت جميع محاولات إعادة تعيين كلمة المرور');
+        const errorMessage = lastError ? (lastError.message || 'خطأ غير معروف') : 'فشلت جميع محاولات إعادة تعيين كلمة المرور';
+        console.error('فشل إعادة تعيين كلمة المرور:', errorMessage);
+        toast.error(`فشل إعادة تعيين كلمة المرور: ${errorMessage}`);
       }
     } catch (error: any) {
       console.error('خطأ في إعادة تعيين كلمة المرور:', error);
@@ -566,7 +682,17 @@ export const useUserManagement = () => {
     return (
       <Alert variant="destructive" className="mb-4">
         <AlertTitle>خطأ في جلب البيانات</AlertTitle>
-        <AlertDescription>{fetchError}</AlertDescription>
+        <AlertDescription>
+          {fetchError}
+          <div className="mt-2">
+            <button 
+              onClick={fetchUsers} 
+              className="text-sm underline text-primary"
+            >
+              إعادة المحاولة
+            </button>
+          </div>
+        </AlertDescription>
       </Alert>
     );
   };
