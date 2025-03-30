@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -74,48 +75,42 @@ const HomePage = () => {
     description: 'إرسال البيانات إلى المواقع المستهدفة بسرعة فائقة',
     icon: <Zap />
   }];
-  return <div className="min-h-screen bg-background flex flex-col">
+  
+  return (
+    <div className="min-h-screen bg-background flex flex-col" dir="rtl">
       <AppHeader />
       
       {/* قسم الترحيب - Hero Section */}
       <section className="relative py-20 px-6 md:py-32 overflow-hidden">
         <div className="container mx-auto max-w-6xl relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div initial={{
-            opacity: 0,
-            y: 20
-          }} animate={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.6
-          }} className="text-center lg:text-right">
-              
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ duration: 0.6 }}
+              className="text-right"
+            >
               <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl">
                 استخراج البيانات من الصور <span className="text-brand-coral">بذكاء اصطناعي</span> متطور
               </h1>
               <p className="text-lg text-muted-foreground mb-8 md:text-base">
                 خدمة متكاملة لاستخراج البيانات من الصور وأتمتتها بسرعة وكفاءة، مع خطط اشتراك مرنة تناسب الجميع
               </p>
-              <div className="flex flex-col sm:flex-row justify-center lg:justify-end gap-4">
+              <div className="flex justify-start gap-4">
                 <Button className="apple-button bg-brand-coral text-white hover:bg-brand-coral/90" size="lg" asChild>
-                  <Link to="/register" className="mx-[240px] my-0 py-[15px] px-[59px]">
+                  <Link to="/register" className="py-[15px] px-[59px]">
                     ابدأ الآن مجاناً
                   </Link>
                 </Button>
               </div>
             </motion.div>
             
-            <motion.div initial={{
-            opacity: 0,
-            scale: 0.9
-          }} animate={{
-            opacity: 1,
-            scale: 1
-          }} transition={{
-            duration: 0.6,
-            delay: 0.2
-          }} className="relative mx-auto max-w-md lg:max-w-none">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              transition={{ duration: 0.6, delay: 0.2 }} 
+              className="mx-auto max-w-md lg:max-w-none"
+            >
               <div className="elegant-upload relative overflow-hidden rounded-3xl shadow-2xl aspect-[4/3]">
                 <img src="/placeholder-image.jpg" alt="استخراج البيانات من الصور" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-8">
@@ -145,13 +140,13 @@ const HomePage = () => {
             </p>
           </div>
           
-          <div className="relative mx-auto max-w-4xl" dir="rtl">
+          <div className="relative mx-auto max-w-4xl">
             {/* خط العمود */}
-            <div className="absolute h-full w-0.5 bg-gradient-to-b from-blue-500 via-purple-500 to-gray-200 left-[7px] md:right-[7px] md:left-auto"></div>
+            <div className="absolute h-full w-0.5 bg-gradient-to-b from-brand-coral via-purple-500 to-gray-200 right-[7px]"></div>
             
             {/* 2024 مرحلة */}
-            <div className="mb-20 relative pl-10 md:pr-10 md:pl-0">
-              <div className="absolute w-3.5 h-3.5 bg-gray-300 rounded-full left-0 md:right-0 md:left-auto -translate-x-1.5 md:translate-x-1.5"></div>
+            <div className="mb-20 relative pr-10">
+              <div className="absolute w-3.5 h-3.5 bg-brand-coral rounded-full right-0 translate-x-1.5"></div>
               <h3 className="text-5xl font-medium text-gray-600 mb-4">2024</h3>
               <div className="space-y-4">
                 <p className="text-muted-foreground">إطلاق خدمات جديدة وتحسينات على منصتنا</p>
@@ -164,8 +159,8 @@ const HomePage = () => {
             </div>
             
             {/* Early 2023 مرحلة */}
-            <div className="relative pl-10 md:pr-10 md:pl-0">
-              <div className="absolute w-3.5 h-3.5 bg-gray-300 rounded-full left-0 md:right-0 md:left-auto -translate-x-1.5 md:translate-x-1.5"></div>
+            <div className="relative pr-10">
+              <div className="absolute w-3.5 h-3.5 bg-brand-coral rounded-full right-0 translate-x-1.5"></div>
               <h3 className="text-5xl font-medium text-gray-600 mb-4">أوائل 2023</h3>
               <div className="space-y-4">
                 <p className="text-muted-foreground">بداية رحلتنا في مجال استخراج البيانات من الصور</p>
@@ -200,26 +195,24 @@ const HomePage = () => {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {additionalFeatures.map((feature, index) => <motion.div key={index} initial={{
-            opacity: 0,
-            y: 20
-          }} whileInView={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.5,
-            delay: index * 0.1
-          }} viewport={{
-            once: true
-          }} className="bg-card rounded-xl p-6 hover:shadow-md transition-shadow border">
+            {additionalFeatures.map((feature, index) => (
+              <motion.div 
+                key={index} 
+                initial={{ opacity: 0, y: 20 }} 
+                whileInView={{ opacity: 1, y: 0 }} 
+                transition={{ duration: 0.5, delay: index * 0.1 }} 
+                viewport={{ once: true }} 
+                className="bg-card rounded-xl p-6 hover:shadow-md transition-shadow border"
+              >
                 <div className="w-12 h-12 rounded-full bg-brand-beige flex items-center justify-center mb-4">
                   <div className="text-brand-brown">
                     {feature.icon}
                   </div>
                 </div>
-                <h3 className="apple-subheader text-xl mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
-              </motion.div>)}
+                <h3 className="apple-subheader text-xl mb-2 text-right">{feature.title}</h3>
+                <p className="text-muted-foreground text-right">{feature.description}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -247,7 +240,7 @@ const HomePage = () => {
       <footer className="bg-card border-t py-12 px-6">
         <div className="container mx-auto max-w-6xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
+            <div className="text-right">
               <h3 className="font-bold text-lg mb-4">استخراج البيانات</h3>
               <p className="text-muted-foreground">
                 خدمة متكاملة لاستخراج البيانات من الصور وأتمتتها بسرعة وكفاءة عالية
@@ -257,7 +250,7 @@ const HomePage = () => {
               </div>
             </div>
             
-            <div>
+            <div className="text-right">
               <h3 className="font-bold text-lg mb-4">روابط سريعة</h3>
               <ul className="space-y-2">
                 <li>
@@ -283,7 +276,7 @@ const HomePage = () => {
               </ul>
             </div>
             
-            <div>
+            <div className="text-right">
               <h3 className="font-bold text-lg mb-4">تواصل معنا</h3>
               <p className="text-muted-foreground mb-2">
                 يسعدنا الإجابة عن استفساراتك وتقديم الدعم اللازم
@@ -305,7 +298,9 @@ const HomePage = () => {
           </div>
         </div>
       </footer>
-    </div>;
+    </div>
+  );
 };
 
 export default HomePage;
+
