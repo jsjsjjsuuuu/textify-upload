@@ -27,62 +27,29 @@ export const useUserOperations = (users: UserProfile[], setUsers: React.Dispatch
         return false;
       }
       
-      // إنشاء المستخدم
-      let signUpResult;
-      try {
-        // محاولة استخدام وظيفة admin.createUser أولاً
-        signUpResult = await supabase.auth.admin.createUser({
+      // استدعاء وظيفة Edge Function لإنشاء المستخدم
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
           email,
           password,
-          email_confirm: true,
-          user_metadata: { full_name: fullName }
-        });
-      } catch (adminError) {
-        console.warn('فشل استخدام admin.createUser، جاري استخدام طريقة بديلة:', adminError);
-        
-        // محاولة استخدام signUp العادية كبديل
-        signUpResult = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName }
-          }
-        });
-      }
+          fullName,
+          isAdmin,
+          isApproved,
+          subscriptionPlan,
+          accountStatus
+        }
+      });
       
-      const { data: signUpData, error: signUpError } = signUpResult;
-      
-      if (signUpError) {
-        console.error('خطأ في إنشاء المستخدم:', signUpError);
-        toast.error(`فشل في إنشاء المستخدم: ${signUpError.message}`);
+      if (error) {
+        console.error('خطأ في استدعاء وظيفة إنشاء المستخدم:', error);
+        toast.error(`فشل في إنشاء المستخدم: ${error.message}`);
         return false;
       }
       
-      // التأكد من إنشاء المستخدم بنجاح والحصول على معرف المستخدم
-      if (!signUpData.user || !signUpData.user.id) {
-        console.error('لم يتم إنشاء المستخدم بشكل صحيح');
-        toast.error('فشل في إنشاء المستخدم: لم يتم إنشاء المستخدم بشكل صحيح');
+      if (!data.success) {
+        console.error('فشل في إنشاء المستخدم:', data.error);
+        toast.error(`فشل في إنشاء المستخدم: ${data.error}`);
         return false;
-      }
-      
-      const userId = signUpData.user.id;
-      
-      // تحديث الملف الشخصي للمستخدم
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          full_name: fullName,
-          is_admin: isAdmin,
-          is_approved: isApproved,
-          subscription_plan: subscriptionPlan,
-          account_status: accountStatus
-        })
-        .eq('id', userId);
-      
-      if (profileError) {
-        console.error('خطأ في تحديث الملف الشخصي للمستخدم:', profileError);
-        toast.error(`فشل في تحديث الملف الشخصي: ${profileError.message}`);
-        // نستمر على الرغم من وجود خطأ في تحديث الملف الشخصي، لأن المستخدم تم إنشاؤه بالفعل
       }
       
       toast.success('تم إنشاء المستخدم بنجاح');
