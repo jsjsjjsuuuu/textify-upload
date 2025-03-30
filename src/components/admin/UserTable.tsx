@@ -37,7 +37,7 @@ const UserTable: React.FC<UserTableProps> = ({
   // حالة التحميل
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  // تنفيذ تغيير كلمة المرور
+  // تنفيذ تغيير كلمة المرور - تم تحسينها
   const handleChangePassword = async (userId: string) => {
     if (!newPassword || newPassword.length < 6) {
       toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
@@ -45,12 +45,21 @@ const UserTable: React.FC<UserTableProps> = ({
     }
 
     setIsChangingPassword(true);
+    
     try {
+      // طباعة سجل تصحيح للتحقق من البيانات التي نرسلها
+      console.log('بدء محاولة تغيير كلمة المرور مع:', {
+        userId,
+        passwordLength: newPassword.length
+      });
+      
       // استدعاء وظيفة Supabase لتغيير كلمة المرور
       const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
         user_id_str: userId,
         new_password: newPassword
       });
+
+      console.log('نتيجة محاولة تغيير كلمة المرور:', { data, error });
 
       if (error) {
         console.error('خطأ في تغيير كلمة المرور:', error);
@@ -64,7 +73,29 @@ const UserTable: React.FC<UserTableProps> = ({
         setPasswordUser(null);
         setNewPassword('');
       } else {
-        toast.error('فشل في تغيير كلمة المرور');
+        // محاولة اضافية إذا كانت النتيجة الأولى false
+        console.log('المحاولة الأولى فشلت، سنحاول استخدام admin_update_user_password...');
+        
+        const { data: secondAttemptData, error: secondAttemptError } = await supabase.rpc('admin_update_user_password', {
+          user_id: userId,
+          new_password: newPassword
+        });
+        
+        console.log('نتيجة المحاولة الثانية:', { secondAttemptData, secondAttemptError });
+        
+        if (secondAttemptError) {
+          console.error('فشلت المحاولة الثانية:', secondAttemptError);
+          toast.error('فشل في تغيير كلمة المرور: ' + secondAttemptError.message);
+          return;
+        }
+        
+        if (secondAttemptData === true) {
+          toast.success('تم تغيير كلمة المرور بنجاح (المحاولة الثانية)');
+          setPasswordUser(null);
+          setNewPassword('');
+        } else {
+          toast.error('فشل في تغيير كلمة المرور بعد المحاولتين');
+        }
       }
     } catch (error: any) {
       console.error('خطأ غير متوقع:', error);
@@ -291,7 +322,7 @@ const UserTable: React.FC<UserTableProps> = ({
                     </Button>
                   )}
                   
-                  {/* زر تغيير كلمة المرور الجديد */}
+                  {/* زر تغيير كلمة المرور */}
                   <Popover
                     open={passwordUser === user.id}
                     onOpenChange={(open) => {
