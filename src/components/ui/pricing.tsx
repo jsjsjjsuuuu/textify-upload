@@ -110,12 +110,6 @@ export function Pricing({
             }}>
                   {formatIraqiDinar(isMonthly ? Number(plan.price) : Number(plan.yearlyPrice))}
                 </motion.span>
-                <span className="text-xl text-muted-foreground mr-2">
-                  ألف
-                </span>
-                {plan.period !== "Next 3 months" && <span className="text-sm font-semibold leading-6 tracking-wide text-muted-foreground">
-                    / {plan.period}
-                  </span>}
               </div>
 
               <p className="text-xs leading-5 text-muted-foreground">
