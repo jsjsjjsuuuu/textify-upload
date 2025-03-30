@@ -13,6 +13,7 @@ import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUserManagement } from '@/hooks/useUserManagement';
+import { supabase } from '@/integrations/supabase/client';
 
 // إنشاء مخطط التحقق من صحة نموذج إضافة مستخدم
 const addUserSchema = z.object({
@@ -108,17 +109,19 @@ const AdminUserManagementTab: React.FC = () => {
     setIsLoading(true);
     try {
       // البحث عن معرف المستخدم باستخدام البريد الإلكتروني
-      const { data: users, error: searchError } = await fetch(`/api/get-user-id?email=${encodeURIComponent(data.email)}`).then(res => res.json());
+      const { data: response, error: searchError } = await supabase.functions.invoke('get-user-id', {
+        body: { email: data.email }
+      });
       
       if (searchError) {
-        throw new Error(searchError);
+        throw new Error(searchError.message);
       }
       
-      if (!users || users.length === 0) {
+      if (!response || !response.users || response.users.length === 0) {
         throw new Error('لم يتم العثور على المستخدم');
       }
       
-      const userId = users[0].id;
+      const userId = response.users[0].id;
       
       // استخدام وظيفة إعادة تعيين كلمة المرور
       const success = await resetUserPassword(userId, data.newPassword);
