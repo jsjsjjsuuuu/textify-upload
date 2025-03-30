@@ -23,16 +23,30 @@ export const useFetchUsers = () => {
       console.log('بدء جلب بيانات المستخدمين...');
       setFetchAttempted(true); // تعيين أنه تمت محاولة الجلب على الأقل مرة واحدة
       
-      // استدعاء وظيفة admin_get_complete_users
+      // استدعاء وظيفة admin_get_complete_users بشكل ذكي مع معالجة أكثر دقة للأخطاء
+      console.log('استدعاء وظيفة admin_get_complete_users...');
       const { data: completeUsersData, error: completeUsersError } = await supabase
         .rpc('admin_get_complete_users');
       
+      // تسجيل نتائج الاستدعاء
+      console.log('نتائج استدعاء admin_get_complete_users:', {
+        dataReceived: Boolean(completeUsersData),
+        dataLength: completeUsersData ? completeUsersData.length : 0,
+        hasError: Boolean(completeUsersError),
+        errorMessage: completeUsersError ? completeUsersError.message : null
+      });
+      
       if (completeUsersError) {
         console.error('خطأ في جلب بيانات المستخدمين الكاملة:', completeUsersError);
-        throw completeUsersError;
+        throw new Error(`فشل في جلب بيانات المستخدمين: ${completeUsersError.message}`);
       }
       
-      if (!completeUsersData || completeUsersData.length === 0) {
+      if (!completeUsersData) {
+        console.log('لم يتم استلام أي بيانات من وظيفة admin_get_complete_users');
+        throw new Error('لم يتم استلام أي بيانات من قاعدة البيانات');
+      }
+      
+      if (completeUsersData.length === 0) {
         console.log('لم يتم العثور على مستخدمين');
         setUsers([]);
         toast.info('لم يتم العثور على مستخدمين');
@@ -46,14 +60,22 @@ export const useFetchUsers = () => {
       // التحقق من اكتمال البيانات الأساسية لكل مستخدم
       const validatedUsers = completeUsersData.map(user => {
         // تسجيل المستخدمين الذين تنقصهم بيانات أساسية
+        if (!user.id) {
+          console.error('مستخدم بدون معرف!', user);
+        }
+        
         if (!user.email) {
-          console.warn('مستخدم بدون بريد إلكتروني:', { userId: user.id, userName: user.full_name });
+          console.warn('مستخدم بدون بريد إلكتروني:', { 
+            userId: user.id, 
+            userName: user.full_name 
+          });
         }
         
         // إضافة قيم افتراضية للحقول المفقودة
         return {
           ...user,
-          email: user.email || `user-${user.id.substring(0, 8)}@example.com`,
+          id: user.id || crypto.randomUUID(), // نادر جدًا، لكن للأمان
+          email: user.email || `user-${user.id?.substring(0, 8) || 'unknown'}@example.com`,
           full_name: user.full_name || 'مستخدم بدون اسم',
           subscription_plan: user.subscription_plan || 'standard',
           account_status: user.account_status || 'active',
@@ -62,6 +84,7 @@ export const useFetchUsers = () => {
       });
       
       setUsers(validatedUsers);
+      console.log('تم تحديث قائمة المستخدمين بنجاح، العدد الإجمالي:', validatedUsers.length);
       
     } catch (error: any) {
       console.error('خطأ في جلب بيانات المستخدمين:', error);
@@ -90,6 +113,8 @@ export const useFetchUsers = () => {
           return;
         }
         
+        console.log('تم جلب بيانات محدودة من جدول profiles، العدد:', profilesData.length);
+        
         // استخدام البيانات المتاحة فقط
         const usersWithDefaultValues = profilesData.map(profile => ({
           ...profile,
@@ -103,6 +128,7 @@ export const useFetchUsers = () => {
         }));
         
         setUsers(usersWithDefaultValues);
+        console.log('تم تحديث قائمة المستخدمين باستخدام بيانات محدودة، العدد:', usersWithDefaultValues.length);
         
         setFetchError('تعذر جلب البيانات الكاملة للمستخدمين. يتم عرض بيانات محدودة فقط.');
         toast.warning('تم عرض بيانات محدودة للمستخدمين');
@@ -114,6 +140,7 @@ export const useFetchUsers = () => {
       }
     } finally {
       setIsLoading(false);
+      console.log('انتهت عملية جلب البيانات');
     }
   };
 

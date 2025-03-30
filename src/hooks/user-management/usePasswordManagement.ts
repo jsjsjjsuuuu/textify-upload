@@ -11,6 +11,7 @@ export const usePasswordManagement = () => {
   const [userToReset, setUserToReset] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [lastResetResult, setLastResetResult] = useState<boolean | null>(null);
 
   // وظيفة إعادة تعيين حالات كلمة المرور
   const resetPasswordStates = () => {
@@ -54,14 +55,15 @@ export const usePasswordManagement = () => {
     console.log('[usePasswordManagement] إعداد إعادة تعيين كلمة المرور للمستخدم:', userId);
     setUserToReset(userId);
     setShowConfirmReset(true);
+    setLastResetResult(null);
   };
 
   // وظيفة إعادة تعيين كلمة المرور - مُحسّنة
-  const resetUserPassword = async (userId: string, password: string): Promise<void> => {
+  const resetUserPassword = async (userId: string, password: string): Promise<boolean> => {
     if (!userId) {
       console.error('[usePasswordManagement] معرف المستخدم غير صالح:', userId);
       toast.error('معرف المستخدم غير صالح');
-      return;
+      return false;
     }
 
     if (!password || password.length < 6) {
@@ -70,42 +72,71 @@ export const usePasswordManagement = () => {
         passwordLength: password ? password.length : 0 
       });
       toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
-      return;
+      return false;
     }
 
     setIsProcessing(true);
     try {
       console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
       
-      // استخدام وظيفة مُحسّنة لإعادة تعيين كلمة المرور
+      // استخدام وظيفة قاعدة البيانات لإعادة تعيين كلمة المرور
+      const startTime = Date.now();
       const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
         user_id_str: userId,
         new_password: password
       });
+      const timeTaken = Date.now() - startTime;
       
       console.log('[usePasswordManagement] نتيجة إعادة تعيين كلمة المرور:', { 
         success: data === true, 
-        error: error ? error.message : null 
+        error: error ? error.message : null,
+        timeTaken: `${timeTaken}ms`
       });
       
       if (error) {
-        throw error;
+        // محاولة استخدام وظيفة بديلة في حالة الفشل
+        console.warn('[usePasswordManagement] محاولة استخدام وظيفة بديلة لإعادة تعيين كلمة المرور');
+        
+        const { data: altData, error: altError } = await supabase.rpc('admin_reset_password_direct_api', {
+          user_id_str: userId,
+          new_password: password
+        });
+        
+        if (altError) {
+          throw altError;
+        }
+        
+        if (altData === true) {
+          console.log('[usePasswordManagement] نجحت عملية إعادة تعيين كلمة المرور باستخدام الوظيفة البديلة');
+          toast.success('تم إعادة تعيين كلمة المرور بنجاح');
+          resetPasswordStates();
+          setLastResetResult(true);
+          return true;
+        } else {
+          throw new Error('فشلت عملية إعادة تعيين كلمة المرور باستخدام الوظيفة البديلة');
+        }
       }
       
       if (data === true) {
         toast.success('تم إعادة تعيين كلمة المرور بنجاح');
         resetPasswordStates();
+        setLastResetResult(true);
+        return true;
       } else {
         console.error('[usePasswordManagement] فشلت عملية إعادة تعيين كلمة المرور، البيانات المستلمة:', data);
         toast.error('فشلت عملية إعادة تعيين كلمة المرور');
+        setLastResetResult(false);
+        return false;
       }
     } catch (error: any) {
       console.error('[usePasswordManagement] خطأ في إعادة تعيين كلمة المرور:', error);
       toast.error(`حدث خطأ أثناء إعادة تعيين كلمة المرور: ${error.message || 'خطأ غير معروف'}`);
+      setLastResetResult(false);
+      return false;
     } finally {
       setIsProcessing(false);
       setShowConfirmReset(false);
-      setUserToReset(null);
+      // لا نقوم بإعادة تعيين userToReset هنا حتى نتمكن من محاولة إعادة تعيين كلمة المرور مرة أخرى إذا فشلت العملية
     }
   };
 
@@ -117,6 +148,7 @@ export const usePasswordManagement = () => {
     userToReset,
     isProcessing,
     passwordError,
+    lastResetResult,
     setNewPassword,
     setConfirmPassword,
     setShowPassword,

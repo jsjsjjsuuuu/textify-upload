@@ -34,15 +34,27 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
       
       // التأكد من أن جميع البيانات المطلوبة موجودة
       if (!user.email) {
-        console.error('بيانات المستخدم غير مكتملة - البريد الإلكتروني مفقود:', user);
+        console.warn('بيانات المستخدم غير مكتملة - البريد الإلكتروني مفقود:', user);
       }
       
-      // نسخ بيانات المستخدم للاستخدام المحلي
+      if (!user.id) {
+        console.error('بيانات المستخدم غير مكتملة - معرف المستخدم مفقود!', user);
+        toast.error('بيانات المستخدم غير مكتملة');
+        setIsOpen(false);
+        return;
+      }
+      
+      // نسخ بيانات المستخدم للاستخدام المحلي مع التأكد من وجود القيم الأساسية
       setUserData({
         ...user,
         id: user.id,
         email: user.email || `user-${user.id.substring(0, 8)}@example.com` // قيمة احتياطية
       });
+    } else {
+      // إعادة تعيين البيانات عند إغلاق النافذة
+      if (!isOpen) {
+        setUserData(null);
+      }
     }
   }, [isOpen, user]);
 
@@ -82,21 +94,48 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
     setIsChangingPassword(true);
     
     try {
+      const userId = userData.id;
       console.log(`بدء عملية تغيير كلمة المرور للمستخدم:`, {
-        userId: userData.id,
-        userEmail: userData.email
+        userId,
+        userEmail: userData.email,
+        passwordLength: newPassword.length
       });
       
       // محاولة تغيير كلمة المرور
+      const startTime = Date.now();
       const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
-        user_id_str: userData.id,
+        user_id_str: userId,
         new_password: newPassword
       });
+      const timeTaken = Date.now() - startTime;
       
-      console.log('نتيجة تغيير كلمة المرور:', { data, error });
+      console.log('نتيجة تغيير كلمة المرور:', { 
+        success: data === true, 
+        error: error ? error.message : null,
+        timeTaken: `${timeTaken}ms`
+      });
       
       if (error) {
-        throw error;
+        // محاولة استخدام وظيفة بديلة في حالة الفشل
+        console.warn('محاولة استخدام وظيفة بديلة لتغيير كلمة المرور');
+        
+        const { data: altData, error: altError } = await supabase.rpc('admin_reset_password_direct_api', {
+          user_id_str: userId,
+          new_password: newPassword
+        });
+        
+        if (altError) {
+          throw altError;
+        }
+        
+        if (altData === true) {
+          console.log('نجحت عملية تغيير كلمة المرور باستخدام الوظيفة البديلة');
+          toast.success("تم تغيير كلمة المرور بنجاح");
+          closePopover();
+          return;
+        } else {
+          throw new Error('فشلت عملية تغيير كلمة المرور باستخدام الوظيفة البديلة');
+        }
       }
       
       // تأكيد نجاح العملية
@@ -143,25 +182,25 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
     }
   };
 
+  // التحقق من صحة بيانات المستخدم قبل السماح بفتح النافذة
+  const handleBeforeOpen = (open: boolean): boolean => {
+    if (open) {
+      console.log('طلب فتح نافذة تغيير كلمة المرور للمستخدم:', user?.id);
+      
+      if (!user || !user.id) {
+        console.error('بيانات المستخدم غير صالحة أو غير مكتملة:', user);
+        toast.error('بيانات المستخدم غير مكتملة');
+        return false; // منع فتح النافذة مع بيانات غير صالحة
+      }
+    }
+    return true; // السماح بالعملية
+  };
+
   return (
     <Popover open={isOpen} onOpenChange={(open) => {
-      if (open) {
-        console.log('تم فتح نافذة تغيير كلمة المرور للمستخدم:', user?.id);
-        
-        if (!user || !user.id || !user.email) {
-          console.error('بيانات المستخدم غير صالحة أو غير مكتملة:', user);
-          toast.error('بيانات المستخدم غير مكتملة');
-          return; // منع فتح النافذة مع بيانات غير صالحة
-        }
-        
-        // نسخ بيانات المستخدم للاستخدام المحلي
-        setUserData({
-          ...user,
-          id: user.id,
-          email: user.email
-        });
+      if (handleBeforeOpen(open)) {
+        setIsOpen(open);
       }
-      setIsOpen(open);
     }}>
       <PopoverTrigger asChild>
         <Button
