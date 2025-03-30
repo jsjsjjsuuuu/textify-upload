@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef } from "react";
@@ -98,19 +97,31 @@ export function Pricing({
                   الأكثر شعبية
                 </span>
               </div>}
+            
             <div className="flex-1 flex flex-col">
+              
               <p className="text-base font-semibold text-muted-foreground">
                 {plan.name}
               </p>
+              
               <div className="mt-6 flex items-center justify-center gap-x-2">
-                <motion.span className="text-5xl font-bold tracking-tight text-foreground" animate={{
-              scale: animateNumbers ? [1, 1.1, 1] : 1
-            }} transition={{
-              duration: 0.5
-            }}>
+                <motion.span 
+                  className="text-5xl font-bold tracking-tight text-foreground" 
+                  animate={{
+                    scale: animateNumbers ? [1, 1.1, 1] : 1
+                  }} 
+                  transition={{
+                    duration: 0.5
+                  }}
+                >
                   {formatIraqiDinar(isMonthly ? Number(plan.price) : Number(plan.yearlyPrice))}
                 </motion.span>
+                <span className="text-xs text-muted-foreground mr-1">
+                  د.ع. ألف
+                </span>
               </div>
+
+              
 
               <p className="text-xs leading-5 text-muted-foreground">
                 {isMonthly ? "فوترة شهرية" : "فوترة سنوية"}
