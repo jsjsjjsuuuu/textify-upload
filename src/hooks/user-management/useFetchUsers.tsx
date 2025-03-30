@@ -141,12 +141,30 @@ export const useFetchUsers = () => {
         const mergedUsers = basicUsersData.map(user => {
           const profile = profilesMap.get(user.id) || {};
           
+          // استخراج البيانات بشكل آمن للنوع من raw_user_meta_data
+          const raw_meta = user.raw_user_meta_data || {};
+          const fullNameFromMeta = typeof raw_meta === 'object' && raw_meta !== null 
+            ? (raw_meta as Record<string, any>).full_name 
+            : undefined;
+            
+          const phoneFromMeta = typeof raw_meta === 'object' && raw_meta !== null 
+            ? (raw_meta as Record<string, any>).phone 
+            : '';
+            
+          const addressFromMeta = typeof raw_meta === 'object' && raw_meta !== null 
+            ? (raw_meta as Record<string, any>).address 
+            : '';
+            
+          const notesFromMeta = typeof raw_meta === 'object' && raw_meta !== null 
+            ? (raw_meta as Record<string, any>).notes 
+            : '';
+          
           return {
             id: user.id,
             email: user.email,
             created_at: user.created_at,
             updated_at: user.updated_at || profile.updated_at,
-            full_name: profile.full_name || user.raw_user_meta_data?.full_name || 'مستخدم بدون اسم',
+            full_name: profile.full_name || fullNameFromMeta || 'مستخدم بدون اسم',
             avatar_url: profile.avatar_url || '',
             is_approved: typeof profile.is_approved === 'boolean' ? profile.is_approved : false,
             is_admin: typeof profile.is_admin === 'boolean' ? profile.is_admin : false,
@@ -155,9 +173,9 @@ export const useFetchUsers = () => {
             subscription_end_date: profile.subscription_end_date,
             username: profile.username || '',
             last_login_at: user.last_sign_in_at,
-            phone_number: user.raw_user_meta_data?.phone || '',
-            address: user.raw_user_meta_data?.address || '',
-            notes: user.raw_user_meta_data?.notes || '',
+            phone_number: phoneFromMeta,
+            address: addressFromMeta,
+            notes: notesFromMeta,
           };
         });
         
