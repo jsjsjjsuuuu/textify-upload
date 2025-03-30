@@ -118,7 +118,7 @@ export function Pricing({
                     duration: 0.5
                   }}
                 >
-                  {formatIraqiDinar(isMonthly ? Number(plan.price) : Number(plan.yearlyPrice))}
+                  {isMonthly ? Number(plan.price) : Number(plan.yearlyPrice)}
                 </motion.span>
                 <span className="text-xs text-muted-foreground mr-1">
                   ألف
