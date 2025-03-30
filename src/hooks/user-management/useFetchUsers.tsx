@@ -25,7 +25,7 @@ export const useFetchUsers = () => {
       console.log('بدء جلب قائمة المستخدمين الأساسية...');
       setFetchAttempted(true);
       
-      // استدعاء وظيفة admin_get_basic_users_list الجديدة
+      // استدعاء وظيفة admin_get_basic_users_list المُحدّثة
       const startTime = performance.now();
       const { data: basicUsersList, error: basicUsersError } = await supabase
         .rpc('admin_get_basic_users_list');
@@ -96,7 +96,7 @@ export const useFetchUsers = () => {
     try {
       console.log(`جلب البيانات التفصيلية للمستخدم: ${userId}`);
       
-      // استدعاء وظيفة admin_get_user_by_id
+      // استدعاء وظيفة admin_get_user_by_id المُحدّثة
       const { data, error } = await supabase
         .rpc('admin_get_user_by_id', { user_id: userId });
       

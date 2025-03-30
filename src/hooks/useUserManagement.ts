@@ -123,6 +123,7 @@ export const useUserManagement = (): UserManagement => {
     // وظائف المستخدمين
     fetchUsers,
     fetchUserDetails,
+    setUsers,
     addNewUser,
     approveUser,
     rejectUser,

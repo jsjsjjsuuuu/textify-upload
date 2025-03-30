@@ -36,6 +36,7 @@ export interface UserManagementActions {
   // عمليات جلب البيانات
   fetchUsers: () => Promise<void>;
   fetchUserDetails: (userId: string) => Promise<UserProfile | null>;
+  setUsers: React.Dispatch<React.SetStateAction<UserProfile[]>>;
   
   // عمليات التصفية
   setActiveTab: (tab: string) => void;
