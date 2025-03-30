@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -8,36 +9,43 @@ import { Separator } from '@/components/ui/separator';
 import { CheckCircle2, ChevronUp, Clock, Database, FileText, Upload, Users, Zap } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import AppHeader from '@/components/AppHeader';
+import { Pricing } from '@/components/ui/pricing';
+
 const HomePage = () => {
-  // معلومات الباقات
-  const plans = [{
+  // معلومات الباقات المحدثة للاستخدام مع مكون التسعير الجديد
+  const pricingPlans = [{
     id: 'standard',
     name: 'الباقة العادية',
-    price: '500 ألف',
+    price: '500',
+    yearlyPrice: '400',
+    period: 'شهريًا',
     description: 'مناسبة للاستخدام الفردي والشركات الصغيرة',
     features: ['رفع 750 صورة يومياً', 'معالجة بيانات دقيقة', 'دعم فني أساسي'],
-    icon: <Upload className="h-5 w-5" />,
-    accentColor: 'bg-blue-100 text-blue-700',
-    buttonVariant: 'outline' as const
+    buttonText: 'اختر هذه الباقة',
+    href: '/register?plan=standard',
+    isPopular: false
   }, {
     id: 'vip',
     name: 'الباقة VIP',
-    price: '1,000,000',
+    price: '1000',
+    yearlyPrice: '800',
+    period: 'شهريًا',
     description: 'للشركات المتوسطة التي تتطلب سرعة ودقة',
     features: ['رفع 1600 صورة يومياً', 'معالجة بيانات بسرعة مضاعفة', 'دعم فني متقدم', 'أولوية في معالجة الطلبات'],
-    icon: <Zap className="h-5 w-5" />,
-    accentColor: 'bg-amber-100 text-amber-700',
-    buttonVariant: 'default' as const,
-    popular: true
+    buttonText: 'اختر هذه الباقة',
+    href: '/register?plan=vip',
+    isPopular: true
   }, {
     id: 'pro',
     name: 'الباقة PRO',
-    price: 'مخصصة',
+    price: '2400',
+    yearlyPrice: '1900',
+    period: 'شهريًا',
     description: 'للشركات الكبيرة والمؤسسات',
     features: ['رفع 3500 صورة يومياً', 'خوارزميات متطورة لاستخراج البيانات', 'دعم فني على مدار الساعة', 'تكامل مع الأنظمة الأخرى', 'تقارير تفصيلية وأرشفة تلقائية'],
-    icon: <Database className="h-5 w-5" />,
-    accentColor: 'bg-purple-100 text-purple-700',
-    buttonVariant: 'outline' as const
+    buttonText: 'اختر هذه الباقة',
+    href: '/register?plan=pro',
+    isPopular: false
   }];
 
   // مزايا إضافية
@@ -95,9 +103,6 @@ const HomePage = () => {
                     ابدأ الآن مجاناً
                   </Link>
                 </Button>
-                <Button variant="outline" className="apple-button" size="lg" asChild>
-                  
-                </Button>
               </div>
             </motion.div>
             
@@ -128,47 +133,11 @@ const HomePage = () => {
       {/* قسم الباقات المتوفرة */}
       <section className="py-20 px-6 bg-muted/30">
         <div className="container mx-auto max-w-6xl">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4">
-              باقات مرنة تناسب احتياجاتك
-            </h2>
-            <p className="text-muted-foreground text-lg">
-              اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {plans.map(plan => <Card key={plan.id} className={`overflow-hidden transition-all ${plan.popular ? 'border-brand-coral shadow-lg shadow-brand-coral/10 relative' : ''}`}>
-                {plan.popular && <div className="absolute top-0 right-0 bg-brand-coral text-white py-1 px-3 text-xs font-medium">
-                    الأكثر شعبية
-                  </div>}
-                <CardHeader>
-                  <div className={`w-12 h-12 rounded-full ${plan.accentColor} flex items-center justify-center mb-4`}>
-                    {plan.icon}
-                  </div>
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <div className="mt-2 mb-2">
-                    <span className="text-3xl font-bold">{plan.price}</span>
-                  </div>
-                  <CardDescription>{plan.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, index) => <li key={index} className="flex items-start">
-                        <CheckCircle2 className="h-5 w-5 text-brand-coral shrink-0 mt-0.5 ml-2" />
-                        <span>{feature}</span>
-                      </li>)}
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Button variant={plan.buttonVariant} className="w-full" asChild>
-                    <Link to={`/register?plan=${plan.id}`}>
-                      اختر هذه الباقة
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>)}
-          </div>
+          <Pricing 
+            plans={pricingPlans}
+            title="باقات مرنة تناسب احتياجاتك"
+            description="اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة"
+          />
         </div>
       </section>
       
