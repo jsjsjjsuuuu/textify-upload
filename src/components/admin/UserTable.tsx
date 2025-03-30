@@ -130,14 +130,9 @@ const UserTable: React.FC<UserTableProps> = ({
             const completeUser = {
               ...user,
               id: user.id || '',
-              email: user.email || '',
+              email: user.email || '', // تغيير مهم: لا نضيف نص بديل
               full_name: user.full_name || ''
             };
-            
-            // تسجيل المستخدمين الذين ليس لديهم بريد إلكتروني للتصحيح
-            if (!user.email) {
-              console.warn('تم العثور على مستخدم بدون بريد إلكتروني:', { userId: user.id, userName: user.full_name });
-            }
             
             return (
               <TableRow key={user.id}>
@@ -156,7 +151,7 @@ const UserTable: React.FC<UserTableProps> = ({
                   <div className="flex flex-col gap-1 text-sm">
                     <div className="flex items-center gap-1">
                       <Mail className="h-3 w-3" />
-                      <span>{user.email || 'بريد إلكتروني غير متوفر'}</span>
+                      <span>{user.email || 'غير متوفر'}</span>
                     </div>
                     {user.phone_number && (
                       <div className="flex items-center gap-1">

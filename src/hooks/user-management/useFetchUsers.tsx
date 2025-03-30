@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -71,28 +70,18 @@ export const useFetchUsers = () => {
         });
       }
       
-      // التحقق من اكتمال البيانات الأساسية لكل مستخدم والتأكد من عرض البريد الإلكتروني الصحيح
+      // التأكد من ظهور البريد الإلكتروني بشكل صحيح دائمًا
       const validatedUsers = completeUsersData.map(user => {
         // تسجيل المستخدمين الذين تنقصهم بيانات أساسية
         if (!user.id) {
           console.error('مستخدم بدون معرف!', user);
         }
         
-        // التحقق من وجود البريد الإلكتروني وإظهار تحذير فقط إذا كان مفقودًا حقًا
-        if (!user.email || user.email.trim() === '') {
-          console.warn('مستخدم بدون بريد إلكتروني:', { 
-            userId: user.id, 
-            userName: user.full_name 
-          });
-        }
-        
         return {
           ...user,
           id: user.id || crypto.randomUUID(), // نادر جدًا، لكن للأمان
-          // الاحتفاظ بالبريد الإلكتروني الأصلي إذا كان موجودًا، وإلا استخدام قيمة بديلة واضحة
-          email: user.email && user.email.trim() !== '' 
-            ? user.email 
-            : `غير معروف (${user.id?.substring(0, 8) || 'مجهول'})`,
+          // تحسين: لا نستخدم البريد الإلكتروني البديل إلا إذا كان البريد الإلكتروني غير موجود تمامًا
+          email: user.email || `غير متوفر (${user.id?.substring(0, 8) || 'مجهول'})`,
           full_name: user.full_name || 'مستخدم بدون اسم',
           subscription_plan: user.subscription_plan || 'standard',
           account_status: user.account_status || 'active',
@@ -145,10 +134,9 @@ export const useFetchUsers = () => {
         const mergedUsers = basicUsersData.map(user => {
           const profile = profilesMap.get(user.id) || {};
           
-          // التأكد من أن البريد الإلكتروني يظهر بشكل صحيح
-          const userEmail = user.email && user.email.trim() !== '' 
-            ? user.email 
-            : `غير معروف (${user.id.substring(0, 8)})`;
+          // التأكد من استخدام البريد الإلكتروني الفعلي دون تغييره
+          // التأكد من استخدام البريد الإلكتروني الفعلي دائمًا
+          const userEmail = user.email || '';
             
           // استخراج البيانات بشكل آمن من raw_user_meta_data
           const raw_meta = user.raw_user_meta_data || {};
@@ -170,7 +158,7 @@ export const useFetchUsers = () => {
           
           return {
             id: user.id,
-            email: userEmail, // استخدام البريد الإلكتروني المعالج
+            email: userEmail, // استخدام البريد الإلكتروني الأصلي
             created_at: user.created_at,
             updated_at: user.updated_at || profile.updated_at,
             full_name: profile.full_name || fullNameFromMeta || 'مستخدم بدون اسم',
@@ -216,7 +204,7 @@ export const useFetchUsers = () => {
               const { data: emailsData } = await supabase.rpc('get_users_emails');
               if (emailsData && emailsData.length > 0) {
                 emailsData.forEach(item => {
-                  if (item.email && item.email.trim() !== '') {
+                  if (item.id && item.email) { // تأكد من وجود معرف وبريد إلكتروني صالح
                     emailsMap.set(item.id, item.email);
                   }
                 });
@@ -227,12 +215,12 @@ export const useFetchUsers = () => {
             }
             
             const limitedUsers = profilesData.map(profile => {
-              // استخدام خريطة البريد الإلكتروني إذا كانت متوفرة، وإلا استخدام قيمة افتراضية واضحة
-              const userEmail = emailsMap.get(profile.id) || `غير معروف (${profile.id.substring(0, 8)})`;
+              // استخدام البريد الإلكتروني من الخريطة إن وجد
+              const userEmail = emailsMap.get(profile.id) || '';
               
               return {
                 id: profile.id,
-                email: userEmail,
+                email: userEmail, // استخدام البريد الإلكتروني الأصلي
                 created_at: profile.created_at,
                 updated_at: profile.updated_at,
                 full_name: profile.full_name || 'مستخدم بدون اسم',
