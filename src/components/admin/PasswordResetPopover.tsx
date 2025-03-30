@@ -37,7 +37,7 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
     try {
       console.log('بدء عملية إعادة تعيين كلمة المرور للمستخدم:', user.id);
       
-      // استخدام وظيفة إعادة تعيين كلمة المرور المحسنة من خطاف usePasswordManagement
+      // استخدام وظيفة إعادة تعيين كلمة المرور المحسنة
       const success = await resetUserPassword(user.id, newPassword);
       
       if (!success) {

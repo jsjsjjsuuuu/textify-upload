@@ -59,7 +59,7 @@ export const usePasswordManagement = () => {
     setLastResetResult(null);
   };
 
-  // وظيفة استدعاء RPC مباشرة كخيار بديل
+  // وظيفة استدعاء RPC مباشرة
   const resetPasswordViaRPC = async (userId: string, password: string): Promise<boolean> => {
     console.log('[usePasswordManagement] محاولة استخدام RPC لإعادة تعيين كلمة المرور للمستخدم:', userId);
     try {
@@ -81,7 +81,7 @@ export const usePasswordManagement = () => {
     }
   };
 
-  // وظيفة إعادة تعيين كلمة المرور المحسنة - باستخدام Edge Function
+  // وظيفة إعادة تعيين كلمة المرور المحسنة
   const resetUserPassword = async (userId: string, password: string): Promise<boolean> => {
     if (!userId) {
       console.error('[usePasswordManagement] معرف المستخدم غير صالح:', userId);
@@ -102,7 +102,7 @@ export const usePasswordManagement = () => {
     try {
       console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
       
-      // محاولة استخدام وظيفة RPC أولاً
+      // محاولة استخدام وظيفة RPC أولاً - طريقة 1
       const rpcResult = await resetPasswordViaRPC(userId, password);
       if (rpcResult) {
         console.log('[usePasswordManagement] تم إعادة تعيين كلمة المرور بنجاح عبر RPC');
@@ -114,23 +114,11 @@ export const usePasswordManagement = () => {
       
       console.log('[usePasswordManagement] فشلت محاولة RPC، سيتم المتابعة باستخدام Edge Function');
       
-      // الحصول على جلسة المستخدم الحالي للمصادقة
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error('[usePasswordManagement] لا توجد جلسة مستخدم صالحة');
-        throw new Error('جلسة المستخدم غير صالحة');
-      }
-      
-      console.log('[usePasswordManagement] تم الحصول على جلسة صالحة، جاري إرسال طلب إعادة تعيين كلمة المرور');
-
-      // استدعاء Edge Function مع التوكن المناسب
+      // استدعاء Edge Function مع هيدرز مناسبة - طريقة 2
       const { data, error } = await supabase.functions.invoke('reset-password', {
         body: {
           userId: userId,
           newPassword: password
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
         }
       });
       

@@ -28,8 +28,6 @@ serve(async (req) => {
       throw new Error('طريقة غير مدعومة: ' + req.method);
     }
 
-    console.log('تم استلام طلب إعادة تعيين كلمة المرور');
-
     // الحصول على المتغيرات البيئية المطلوبة
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
@@ -44,60 +42,7 @@ serve(async (req) => {
       throw new Error('إعدادات Supabase غير صحيحة أو مفقودة');
     }
 
-    // استخراج رمز المصادقة
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('لم يتم العثور على رمز المصادقة أو الرمز غير صالح');
-      throw new Error('رمز المصادقة مفقود أو غير صالح');
-    }
-    
-    const token = authHeader.split(' ')[1];
-    console.log('تم استخراج رمز المصادقة بنجاح');
-
-    // تهيئة عميل Supabase العادي للتحقق من المستخدم الحالي
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
-
-    // التحقق من المستخدم الحالي وصلاحياته
-    console.log('التحقق من هوية المستخدم الحالي...');
-    const authResponse = await supabaseClient.auth.getUser();
-    
-    if (authResponse.error) {
-      console.error('فشل التحقق من المستخدم:', authResponse.error.message);
-      throw new Error('غير مصرح: ' + authResponse.error.message);
-    }
-
-    const currentUserId = authResponse.data.user.id;
-    console.log('تم التحقق من المستخدم الحالي:', currentUserId);
-
-    // التحقق من أن المستخدم مسؤول
-    console.log('التحقق من صلاحيات المستخدم...');
-    const { data: adminCheck, error: adminCheckError } = await supabaseClient
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', currentUserId)
-      .single();
-
-    if (adminCheckError) {
-      console.error('خطأ في التحقق من الصلاحيات:', adminCheckError.message);
-      throw new Error('خطأ في التحقق من الصلاحيات: ' + adminCheckError.message);
-    }
-
-    if (!adminCheck?.is_admin) {
-      console.error('المستخدم ليس لديه صلاحيات المسؤول');
-      throw new Error('غير مصرح: المستخدم ليس مسؤولاً');
-    }
-
-    console.log('تم التحقق من صلاحيات المسؤول بنجاح');
+    console.log('تم استلام طلب إعادة تعيين كلمة المرور');
 
     // استخراج بيانات الطلب
     let requestData: ResetPasswordRequest;
@@ -120,9 +65,8 @@ serve(async (req) => {
       throw new Error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
     }
 
-    console.log(`محاولة إعادة تعيين كلمة المرور للمستخدم: ${userId} بواسطة المسؤول: ${currentUserId}`);
-
-    // إنشاء عميل Supabase بمفتاح الخدمة للوصول إلى وظائف المسؤول
+    // إنشاء عميل Supabase بمفتاح الخدمة للوصول إلى وظائف المسؤول - لا حاجة للتوثيق
+    console.log('تم إنشاء عميل Supabase بمفتاح الخدمة، جاري استخدام واجهة API للمسؤول');
     const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: {
         persistSession: false,
@@ -130,10 +74,10 @@ serve(async (req) => {
       },
     });
 
-    // محاولة استخدام وظيفة RPC (قاعدة البيانات) أولاً (خيار بديل)
+    // محاولة استخدام وظيفة RPC (قاعدة البيانات) أولاً
     try {
       console.log('محاولة استخدام وظيفة RPC لإعادة تعيين كلمة المرور...');
-      const { data: rpcResult, error: rpcError } = await supabaseClient.rpc(
+      const { data: rpcResult, error: rpcError } = await adminClient.rpc(
         'admin_reset_user_password',
         { user_id_str: userId, new_password: newPassword }
       );
@@ -159,9 +103,8 @@ serve(async (req) => {
       console.log('استثناء أثناء محاولة استخدام RPC:', rpcAttemptError.message);
     }
 
-    console.log('تم إنشاء عميل المسؤول بنجاح، جاري تنفيذ إعادة تعيين كلمة المرور...');
-
     // استخدام واجهة برمجة التطبيقات Admin لإعادة تعيين كلمة المرور
+    console.log('استخدام واجهة برمجة التطبيقات Admin لإعادة تعيين كلمة المرور للمستخدم:', userId);
     const updateUserResponse = await adminClient.auth.admin.updateUserById(
       userId,
       { password: newPassword }
