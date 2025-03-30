@@ -10,7 +10,6 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import AppHeader from '@/components/AppHeader';
 import { Pricing } from '@/components/ui/pricing';
 import { WorldMapDemo } from '@/components/ui/world-map-demo';
-
 const HomePage = () => {
   // معلومات الباقات المحدثة للاستخدام مع مكون التسعير الجديد
   const pricingPlans = [{
@@ -74,7 +73,6 @@ const HomePage = () => {
     description: 'إرسال البيانات إلى المواقع المستهدفة بسرعة فائقة',
     icon: <Zap />
   }];
-  
   return <div className="min-h-screen bg-background flex flex-col">
       <AppHeader />
       
@@ -95,7 +93,7 @@ const HomePage = () => {
               <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl">
                 استخراج البيانات من الصور <span className="text-brand-coral">بذكاء اصطناعي</span> متطور
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground mb-8">
+              <p className="text-lg text-muted-foreground mb-8 md:text-base">
                 خدمة متكاملة لاستخراج البيانات من الصور وأتمتتها بسرعة وكفاءة، مع خطط اشتراك مرنة تناسب الجميع
               </p>
               <div className="flex flex-col sm:flex-row justify-center lg:justify-end gap-4">
@@ -137,11 +135,7 @@ const HomePage = () => {
       {/* قسم الباقات المتوفرة */}
       <section className="py-20 px-6 bg-muted/30">
         <div className="container mx-auto max-w-6xl">
-          <Pricing 
-            plans={pricingPlans}
-            title="باقات مرنة تناسب احتياجاتك"
-            description="اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة"
-          />
+          <Pricing plans={pricingPlans} title="باقات مرنة تناسب احتياجاتك" description="اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة" />
         </div>
       </section>
       
