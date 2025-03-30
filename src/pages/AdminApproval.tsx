@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
@@ -12,6 +13,7 @@ import UserEditForm from '@/components/admin/UserEditForm';
 import UserFilters from '@/components/admin/UserFilters';
 import UserTabsFilter from '@/components/admin/UserTabsFilter';
 import ResetPasswordDialog from '@/components/admin/ResetPasswordDialog';
+import UserStats from '@/components/admin/UserStats';
 
 // استيراد custom hook
 import { useUserManagement } from '@/hooks/useUserManagement';
@@ -109,15 +111,26 @@ const AdminApproval = () => {
   const userCounts = getUserCounts();
   const filteredUsers = getFilteredUsers();
 
+  // إحصائيات إضافية للمستخدمين
+  const userStats = {
+    ...userCounts,
+    active: users.filter(u => u.account_status === 'active').length,
+    suspended: users.filter(u => u.account_status === 'suspended').length,
+    expired: users.filter(u => u.account_status === 'expired').length,
+    standard: users.filter(u => u.subscription_plan === 'standard').length,
+    vip: users.filter(u => u.subscription_plan === 'vip').length,
+    pro: users.filter(u => u.subscription_plan === 'pro').length,
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
       <div className="container py-6">
-        <Card>
+        <Card className="mb-6">
           <CardHeader>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <CardTitle className="text-2xl">إدارة المستخدمين</CardTitle>
+                <CardTitle className="text-2xl">لوحة تحكم المسؤول</CardTitle>
                 <CardDescription>
                   إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات
                 </CardDescription>
@@ -135,6 +148,19 @@ const AdminApproval = () => {
                 </Button>
               </div>
             </div>
+          </CardHeader>
+          <CardContent>
+            {/* عرض إحصائيات المستخدمين */}
+            <UserStats stats={userStats} />
+          </CardContent>
+        </Card>
+      
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">إدارة المستخدمين</CardTitle>
+            <CardDescription>
+              عرض وتعديل بيانات المستخدمين والتحكم في حالة الحسابات
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {/* أدوات البحث والتصفية */}
