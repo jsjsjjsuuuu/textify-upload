@@ -1,12 +1,17 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, UserX, UserCheck, CalendarIcon, Clock, CheckCircle, XCircle, Mail, Phone, MapPin, FileText } from 'lucide-react';
+import { Edit, UserX, UserCheck, CalendarIcon, CheckCircle, XCircle, Mail, Phone, MapPin, FileText, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 import { UserProfile } from '@/types/UserProfile';
 
@@ -25,6 +30,50 @@ const UserTable: React.FC<UserTableProps> = ({
   onApprove,
   onReject
 }) => {
+  // حالة لتخزين معرف المستخدم الذي سيتم تغيير كلمة المرور له
+  const [passwordUser, setPasswordUser] = useState<string | null>(null);
+  // حالة لتخزين كلمة المرور الجديدة
+  const [newPassword, setNewPassword] = useState<string>('');
+  // حالة التحميل
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // تنفيذ تغيير كلمة المرور
+  const handleChangePassword = async (userId: string) => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      // استدعاء وظيفة Supabase لتغيير كلمة المرور
+      const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
+        user_id_str: userId,
+        new_password: newPassword
+      });
+
+      if (error) {
+        console.error('خطأ في تغيير كلمة المرور:', error);
+        toast.error('فشل في تغيير كلمة المرور: ' + error.message);
+        return;
+      }
+
+      if (data === true) {
+        toast.success('تم تغيير كلمة المرور بنجاح');
+        // إعادة تعيين الحالة
+        setPasswordUser(null);
+        setNewPassword('');
+      } else {
+        toast.error('فشل في تغيير كلمة المرور');
+      }
+    } catch (error: any) {
+      console.error('خطأ غير متوقع:', error);
+      toast.error('حدث خطأ أثناء تغيير كلمة المرور');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   // تنسيق التاريخ بالعربية
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return 'غير متوفر';
@@ -170,7 +219,7 @@ const UserTable: React.FC<UserTableProps> = ({
               <TableCell>
                 {user.subscription_end_date ? (
                   <div className="flex items-center gap-1 text-sm">
-                    <Clock className="h-3 w-3" />
+                    <CalendarIcon className="h-3 w-3" />
                     {formatDate(user.subscription_end_date)}
                   </div>
                 ) : (
@@ -241,6 +290,57 @@ const UserTable: React.FC<UserTableProps> = ({
                       اعتماد
                     </Button>
                   )}
+                  
+                  {/* زر تغيير كلمة المرور الجديد */}
+                  <Popover
+                    open={passwordUser === user.id}
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        setPasswordUser(null);
+                        setNewPassword('');
+                      } else {
+                        setPasswordUser(user.id);
+                      }
+                    }}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                      >
+                        <Lock className="h-4 w-4 mr-1" />
+                        تغيير كلمة المرور
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="space-y-4">
+                        <h4 className="font-medium">تغيير كلمة المرور لـ {user.full_name || user.email}</h4>
+                        <div className="space-y-2">
+                          <FormLabel htmlFor="new-password">كلمة المرور الجديدة</FormLabel>
+                          <div className="grid gap-2">
+                            <Input
+                              id="new-password"
+                              type="password"
+                              placeholder="كلمة المرور الجديدة"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              className="col-span-3"
+                            />
+                            <Button 
+                              onClick={() => handleChangePassword(user.id)}
+                              disabled={newPassword.length < 6 || isChangingPassword}
+                            >
+                              {isChangingPassword ? 'جاري التغيير...' : 'تغيير'}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            كلمة المرور يجب أن تكون 6 أحرف على الأقل.
+                          </p>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </TableCell>
             </TableRow>
