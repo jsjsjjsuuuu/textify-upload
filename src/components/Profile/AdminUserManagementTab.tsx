@@ -87,10 +87,7 @@ const AdminUserManagementTab: React.FC = () => {
       );
       
       if (success) {
-        toast({
-          title: "تم بنجاح",
-          description: `تم إضافة المستخدم ${data.email} بنجاح`,
-        });
+        toast.success(`تم إضافة المستخدم ${data.email} بنجاح`);
         
         addUserForm.reset();
         setIsAdmin(false);
@@ -100,11 +97,7 @@ const AdminUserManagementTab: React.FC = () => {
     } catch (error: any) {
       console.error("خطأ أثناء إضافة المستخدم:", error.message);
       
-      toast({
-        title: "خطأ",
-        description: error.message || "حدث خطأ أثناء إضافة المستخدم",
-        variant: "destructive",
-      });
+      toast.error(error.message || "حدث خطأ أثناء إضافة المستخدم");
     } finally {
       setIsLoading(false);
     }
@@ -131,10 +124,7 @@ const AdminUserManagementTab: React.FC = () => {
       const success = await resetUserPassword(userId, data.newPassword);
       
       if (success) {
-        toast({
-          title: "تم بنجاح",
-          description: `تم تغيير كلمة المرور للمستخدم ${data.email} بنجاح`,
-        });
+        toast.success(`تم تغيير كلمة المرور للمستخدم ${data.email} بنجاح`);
         
         resetPasswordForm.reset();
       } else {
@@ -143,11 +133,7 @@ const AdminUserManagementTab: React.FC = () => {
     } catch (error: any) {
       console.error("خطأ أثناء تغيير كلمة المرور:", error.message);
       
-      toast({
-        title: "خطأ",
-        description: error.message || "حدث خطأ أثناء تغيير كلمة المرور",
-        variant: "destructive",
-      });
+      toast.error(error.message || "حدث خطأ أثناء تغيير كلمة المرور");
     } finally {
       setIsLoading(false);
     }
