@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef } from "react";
@@ -37,12 +38,13 @@ const formatCurrency = (value: number): string => {
 
 // دالة مساعدة لتنسيق الدينار العراقي
 const formatIraqiDinar = (value: number): string => {
-  return new Intl.NumberFormat('ar-IQ', {
+  const formatter = new Intl.NumberFormat('ar-IQ', {
     style: 'currency',
     currency: 'IQD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
-  }).replace('IQD', 'دينار');
+  });
+  return formatter.format(value).replace(/IQD/g, '');
 };
 
 export function Pricing({
