@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import AppHeader from '@/components/AppHeader';
 import { Pricing } from '@/components/ui/pricing';
 import { WorldMapDemo } from '@/components/ui/world-map-demo';
+
 const HomePage = () => {
   // معلومات الباقات المحدثة للاستخدام مع مكون التسعير الجديد
   const pricingPlans = [{
@@ -131,6 +132,53 @@ const HomePage = () => {
       
       {/* إضافة قسم خريطة العالم - World Map Section */}
       <WorldMapDemo />
+      
+      {/* قسم الجدول الزمني - Timeline Section */}
+      <section className="py-20 px-6 bg-white dark:bg-background">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4">
+              جدولنا الزمني
+            </h2>
+            <p className="text-muted-foreground text-lg">
+              تطور خدماتنا وخططنا المستقبلية
+            </p>
+          </div>
+          
+          <div className="relative mx-auto max-w-4xl" dir="rtl">
+            {/* خط العمود */}
+            <div className="absolute h-full w-0.5 bg-gradient-to-b from-blue-500 via-purple-500 to-gray-200 left-[7px] md:right-[7px] md:left-auto"></div>
+            
+            {/* 2024 مرحلة */}
+            <div className="mb-20 relative pl-10 md:pr-10 md:pl-0">
+              <div className="absolute w-3.5 h-3.5 bg-gray-300 rounded-full left-0 md:right-0 md:left-auto -translate-x-1.5 md:translate-x-1.5"></div>
+              <h3 className="text-5xl font-medium text-gray-600 mb-4">2024</h3>
+              <div className="space-y-4">
+                <p className="text-muted-foreground">إطلاق خدمات جديدة وتحسينات على منصتنا</p>
+                <ul className="space-y-2 list-disc list-inside text-muted-foreground">
+                  <li>تطوير خوارزميات الذكاء الاصطناعي</li>
+                  <li>دعم المزيد من تنسيقات الصور والملفات</li>
+                  <li>إطلاق تطبيق للهواتف الذكية</li>
+                </ul>
+              </div>
+            </div>
+            
+            {/* Early 2023 مرحلة */}
+            <div className="relative pl-10 md:pr-10 md:pl-0">
+              <div className="absolute w-3.5 h-3.5 bg-gray-300 rounded-full left-0 md:right-0 md:left-auto -translate-x-1.5 md:translate-x-1.5"></div>
+              <h3 className="text-5xl font-medium text-gray-600 mb-4">أوائل 2023</h3>
+              <div className="space-y-4">
+                <p className="text-muted-foreground">بداية رحلتنا في مجال استخراج البيانات من الصور</p>
+                <ul className="space-y-2 list-disc list-inside text-muted-foreground">
+                  <li>تأسيس الشركة وإطلاق الخدمة الأساسية</li>
+                  <li>بناء قاعدة العملاء الأولى</li>
+                  <li>تطوير الواجهة الأساسية للمستخدمين</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
       
       {/* قسم الباقات المتوفرة */}
       <section className="py-20 px-6 bg-muted/30">
@@ -259,4 +307,5 @@ const HomePage = () => {
       </footer>
     </div>;
 };
+
 export default HomePage;
