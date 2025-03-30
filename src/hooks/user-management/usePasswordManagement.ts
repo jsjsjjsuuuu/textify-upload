@@ -59,7 +59,7 @@ export const usePasswordManagement = () => {
     setLastResetResult(null);
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - تستخدم الوظيفة الجديدة admin_reset_user_password
+  // وظيفة إعادة تعيين كلمة المرور - تستخدم الوظيفة المحدثة admin_reset_user_password
   const resetUserPassword = async (userId: string, password: string): Promise<boolean> => {
     if (!userId) {
       console.error('[usePasswordManagement] معرف المستخدم غير صالح:', userId);
@@ -79,8 +79,9 @@ export const usePasswordManagement = () => {
     setIsProcessing(true);
     try {
       console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
+      console.log('[usePasswordManagement] طول كلمة المرور المستخدمة:', password.length);
       
-      // استخدام وظيفة admin_reset_user_password الجديدة
+      // استخدام وظيفة admin_reset_user_password المحسنة
       const startTime = Date.now();
       const { data, error } = await supabase.rpc('admin_reset_user_password', {
         user_id_str: userId,

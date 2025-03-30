@@ -43,8 +43,9 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
     setIsLoading(true);
     try {
       console.log('محاولة إعادة تعيين كلمة المرور للمستخدم بواسطة معرف:', user.id);
+      console.log('طول كلمة المرور المستخدمة:', newPassword.length);
       
-      // استخدام الوظيفة الجديدة admin_reset_user_password
+      // استخدام الوظيفة المحدثة admin_reset_user_password
       const { data, error } = await supabase.rpc('admin_reset_user_password', {
         user_id_str: user.id,
         new_password: newPassword
