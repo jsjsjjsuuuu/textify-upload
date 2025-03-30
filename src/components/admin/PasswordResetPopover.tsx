@@ -44,7 +44,8 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
     try {
       console.log('محاولة إعادة تعيين كلمة المرور للمستخدم بواسطة معرف:', user.id);
       
-      const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
+      // استخدام الوظيفة الجديدة admin_reset_user_password
+      const { data, error } = await supabase.rpc('admin_reset_user_password', {
         user_id_str: user.id,
         new_password: newPassword
       });
@@ -57,21 +58,11 @@ const PasswordResetPopover: React.FC<PasswordResetPopoverProps> = ({ user }) => 
       });
       
       if (error) {
-        // محاولة استخدام الطريقة البديلة إذا فشلت الطريقة الأولى
-        console.warn('فشلت الطريقة الأولى، محاولة استخدام الطريقة البديلة...');
-        
-        const { data: altData, error: altError } = await supabase.rpc('admin_reset_password_direct_api', {
-          user_id_str: user.id,
-          new_password: newPassword
-        });
-        
-        if (altError) {
-          throw altError;
-        }
-        
-        if (altData !== true) {
-          throw new Error('فشلت عملية إعادة تعيين كلمة المرور باستخدام الطريقة البديلة');
-        }
+        throw error;
+      }
+      
+      if (data !== true) {
+        throw new Error('فشلت عملية إعادة تعيين كلمة المرور');
       }
       
       setIsSuccess(true);

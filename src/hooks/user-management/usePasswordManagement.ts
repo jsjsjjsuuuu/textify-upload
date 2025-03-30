@@ -59,7 +59,7 @@ export const usePasswordManagement = () => {
     setLastResetResult(null);
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - مُحسّنة مع إرجاع قيمة boolean للنجاح/الفشل
+  // وظيفة إعادة تعيين كلمة المرور - تستخدم الوظيفة الجديدة admin_reset_user_password
   const resetUserPassword = async (userId: string, password: string): Promise<boolean> => {
     if (!userId) {
       console.error('[usePasswordManagement] معرف المستخدم غير صالح:', userId);
@@ -80,9 +80,9 @@ export const usePasswordManagement = () => {
     try {
       console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
       
-      // استخدام وظيفة قاعدة البيانات لإعادة تعيين كلمة المرور
+      // استخدام وظيفة admin_reset_user_password الجديدة
       const startTime = Date.now();
-      const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
+      const { data, error } = await supabase.rpc('admin_reset_user_password', {
         user_id_str: userId,
         new_password: password
       });
@@ -95,27 +95,10 @@ export const usePasswordManagement = () => {
       });
       
       if (error) {
-        // محاولة استخدام وظيفة بديلة في حالة الفشل
-        console.warn('[usePasswordManagement] محاولة استخدام وظيفة بديلة لإعادة تعيين كلمة المرور');
-        
-        const { data: altData, error: altError } = await supabase.rpc('admin_reset_password_direct_api', {
-          user_id_str: userId,
-          new_password: password
-        });
-        
-        if (altError) {
-          throw altError;
-        }
-        
-        if (altData === true) {
-          console.log('[usePasswordManagement] نجحت عملية إعادة تعيين كلمة المرور باستخدام الوظيفة البديلة');
-          toast.success('تم إعادة تعيين كلمة المرور بنجاح');
-          resetPasswordStates();
-          setLastResetResult(true);
-          return true;
-        } else {
-          throw new Error('فشلت عملية إعادة تعيين كلمة المرور باستخدام الوظيفة البديلة');
-        }
+        console.error('[usePasswordManagement] خطأ في إعادة تعيين كلمة المرور:', error);
+        toast.error(`فشلت عملية إعادة تعيين كلمة المرور: ${error.message}`);
+        setLastResetResult(false);
+        return false;
       }
       
       if (data === true) {

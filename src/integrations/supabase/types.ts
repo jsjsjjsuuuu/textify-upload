@@ -216,14 +216,14 @@ export type Database = {
           created_at: string
         }[]
       }
-      admin_reset_password_by_string_id: {
+      admin_reset_password_direct_api: {
         Args: {
           user_id_str: string
           new_password: string
         }
         Returns: boolean
       }
-      admin_reset_password_direct_api: {
+      admin_reset_user_password: {
         Args: {
           user_id_str: string
           new_password: string
@@ -234,13 +234,6 @@ export type Database = {
         Args: {
           user_id: string
           new_email: string
-        }
-        Returns: boolean
-      }
-      admin_update_user_password: {
-        Args: {
-          user_id: string
-          new_password: string
         }
         Returns: boolean
       }
