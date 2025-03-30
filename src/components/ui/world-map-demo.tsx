@@ -8,9 +8,9 @@ export function WorldMapDemo() {
     <div className="py-40 dark:bg-black bg-white w-full">
       <div className="max-w-7xl mx-auto text-center">
         <p className="font-bold text-xl md:text-4xl dark:text-white text-black">
-          ربط{" "}
+          من أي مكان{" "}
           <span className="text-neutral-400">
-            {"العالم الافتراضي".split("").map((word, idx) => (
+            {"لا حدود للإبداع".split("").map((word, idx) => (
               <motion.span
                 key={idx}
                 className="inline-block"
@@ -24,7 +24,7 @@ export function WorldMapDemo() {
           </span>
         </p>
         <p className="text-sm md:text-lg text-neutral-500 max-w-2xl mx-auto py-4">
-          تحرر من الحدود التقليدية. اعمل من أي مكان، براحة شقتك الخاصة. مثالي للمسافرين والعاملين عن بعد.
+          تحرر من القيود التقليدية. اعمل من أي مكان بحرية كاملة. مثالي للمبدعين والمسافرين.
         </p>
       </div>
       <WorldMap
