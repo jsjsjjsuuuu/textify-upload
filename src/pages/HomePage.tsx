@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -10,6 +9,7 @@ import { CheckCircle2, ChevronUp, Clock, Database, FileText, Upload, Users, Zap 
 import { ThemeToggle } from '@/components/ThemeToggle';
 import AppHeader from '@/components/AppHeader';
 import { Pricing } from '@/components/ui/pricing';
+import { WorldMapDemo } from '@/components/ui/world-map-demo';
 
 const HomePage = () => {
   // معلومات الباقات المحدثة للاستخدام مع مكون التسعير الجديد
@@ -74,6 +74,7 @@ const HomePage = () => {
     description: 'إرسال البيانات إلى المواقع المستهدفة بسرعة فائقة',
     icon: <Zap />
   }];
+  
   return <div className="min-h-screen bg-background flex flex-col">
       <AppHeader />
       
@@ -129,6 +130,9 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+      
+      {/* إضافة قسم خريطة العالم - World Map Section */}
+      <WorldMapDemo />
       
       {/* قسم الباقات المتوفرة */}
       <section className="py-20 px-6 bg-muted/30">
