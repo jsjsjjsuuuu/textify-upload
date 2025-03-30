@@ -172,55 +172,57 @@ const AdminApproval = () => {
             </Tabs>
           </CardHeader>
           <CardContent>
-            <TabsContent value="users" className="mt-0">
-              {/* أدوات البحث والتصفية */}
-              <UserFilters 
-                searchQuery={searchQuery}
-                filterPlan={filterPlan}
-                filterStatus={filterStatus}
-                onSearchChange={setSearchQuery}
-                onPlanFilterChange={setFilterPlan}
-                onStatusFilterChange={setFilterStatus}
-              />
+            <Tabs value={activeAdminTab} onValueChange={setActiveAdminTab}>
+              <TabsContent value="users" className="mt-0">
+                {/* أدوات البحث والتصفية */}
+                <UserFilters 
+                  searchQuery={searchQuery}
+                  filterPlan={filterPlan}
+                  filterStatus={filterStatus}
+                  onSearchChange={setSearchQuery}
+                  onPlanFilterChange={setFilterPlan}
+                  onStatusFilterChange={setFilterStatus}
+                />
+                
+                <UserTabsFilter
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  totalUsers={userCounts.total}
+                  pendingUsers={userCounts.pending}
+                  approvedUsers={userCounts.approved}
+                >
+                  {isEditingUser ? (
+                    <UserEditForm 
+                      userData={editedUserData!}
+                      newPassword={newPassword}
+                      showPassword={showPassword}
+                      isProcessing={isProcessing}
+                      selectedDate={selectedDate}
+                      onCancel={cancelEditing}
+                      onSave={saveUserData}
+                      onShowPasswordToggle={() => setShowPassword(!showPassword)}
+                      onNewPasswordChange={setNewPassword}
+                      onUserDataChange={handleEditChange}
+                      onDateSelect={handleDateSelect}
+                      onPasswordReset={() => prepareUserPasswordReset(editedUserData!.id)}
+                      onEmailChange={updateUserEmail}
+                    />
+                  ) : (
+                    <UserTable 
+                      users={filteredUsers}
+                      isLoading={isLoading}
+                      onEdit={startEditing}
+                      onApprove={approveUser}
+                      onReject={rejectUser}
+                    />
+                  )}
+                </UserTabsFilter>
+              </TabsContent>
               
-              <UserTabsFilter
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                totalUsers={userCounts.total}
-                pendingUsers={userCounts.pending}
-                approvedUsers={userCounts.approved}
-              >
-                {isEditingUser ? (
-                  <UserEditForm 
-                    userData={editedUserData!}
-                    newPassword={newPassword}
-                    showPassword={showPassword}
-                    isProcessing={isProcessing}
-                    selectedDate={selectedDate}
-                    onCancel={cancelEditing}
-                    onSave={saveUserData}
-                    onShowPasswordToggle={() => setShowPassword(!showPassword)}
-                    onNewPasswordChange={setNewPassword}
-                    onUserDataChange={handleEditChange}
-                    onDateSelect={handleDateSelect}
-                    onPasswordReset={() => prepareUserPasswordReset(editedUserData!.id)}
-                    onEmailChange={updateUserEmail}
-                  />
-                ) : (
-                  <UserTable 
-                    users={filteredUsers}
-                    isLoading={isLoading}
-                    onEdit={startEditing}
-                    onApprove={approveUser}
-                    onReject={rejectUser}
-                  />
-                )}
-              </UserTabsFilter>
-            </TabsContent>
-            
-            <TabsContent value="management" className="mt-0">
-              <AdminUserManagementTab />
-            </TabsContent>
+              <TabsContent value="management" className="mt-0">
+                <AdminUserManagementTab />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
