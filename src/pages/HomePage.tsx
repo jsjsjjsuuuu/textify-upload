@@ -110,75 +110,66 @@ const HomePage = () => {
       {/* قسم الترحيب - Hero Section */}
       <section className="relative py-20 px-6 overflow-hidden bg-transparent md:py-[33px]">
         <div className="container mx-auto max-w-6xl relative z-10 px-0 my-[45px]">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div initial={{
-            opacity: 0,
-            y: 20
-          }} animate={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.6
-          }} className="text-right text-[#0A2342] dark:text-white my-[76px] mx-0 px-0 py-0">
-              <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl text-[#0A2342] dark:text-white">
-                استخراج البيانات من الصور <span className="text-blue-700 dark:text-blue-400">بذكاء اصطناعي</span> متطور
-              </h1>
-              <p className="text-lg text-[#34495E] dark:text-white/80 mb-8 md:text-base">
-                خدمة متكاملة لاستخراج البيانات من الصور وأتمتتها بسرعة وكفاءة، مع خطط اشتراك مرنة تناسب الجميع
-              </p>
-              <div className="flex justify-start gap-4">
-                <Button className="apple-button bg-blue-700 text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700" size="lg" asChild>
-                  <Link to="/register" className="py-[15px] px-[59px]">
-                    ابدأ الآن مجاناً
-                  </Link>
-                </Button>
+          {/* تم تغيير تصميم هذا القسم بشكل كامل */}
+          <div className="flex flex-col md:flex-row gap-8 items-center bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-3xl overflow-hidden shadow-xl p-8">
+            <div className="md:w-1/2 space-y-6">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="text-right"
+              >
+                <Badge className="bg-blue-600 text-white mb-4 px-3 py-1 text-sm">الحل الأمثل لاستخراج البيانات</Badge>
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-blue-800 dark:text-blue-200 leading-tight">
+                  استخرج البيانات من صورك <span className="text-indigo-600 dark:text-indigo-400">بكفاءة عالية</span>
+                </h1>
+                <p className="text-gray-700 dark:text-gray-300 mt-4 text-lg">
+                  نقدم لك منصة متكاملة تعمل بالذكاء الاصطناعي لاستخراج البيانات من الصور وتحويلها إلى نصوص قابلة للاستخدام
+                </p>
                 
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>عرض توضيحي للخدمة</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        سجل الآن للحصول على عرض توضيحي مجاني للخدمة مع أحد المختصين لدينا.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => navigate('/register')}>
-                        سجل الآن
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </motion.div>
+                <div className="flex gap-4 mt-8">
+                  <Button size="lg" className="bg-blue-700 hover:bg-blue-800 text-white dark:bg-blue-600 dark:hover:bg-blue-700 px-6 rounded-xl">
+                    <Link to="/register">ابدأ الآن</Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:hover:bg-blue-950/50 px-6 rounded-xl">
+                    <Link to="/service">تعرف على خدماتنا</Link>
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
             
-            <motion.div initial={{
-            opacity: 0,
-            scale: 0.9
-          }} animate={{
-            opacity: 1,
-            scale: 1
-          }} transition={{
-            duration: 0.6,
-            delay: 0.2
-          }} className="mx-auto max-w-md lg:max-w-none">
-              <div className="elegant-upload relative overflow-hidden rounded-3xl shadow-2xl aspect-[4/3]">
-                
-                
+            <motion.div 
+              className="md:w-1/2 relative"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl border-8 border-white dark:border-gray-800">
+                <img 
+                  src="/placeholder-image.jpg" 
+                  alt="استخراج البيانات من الصور" 
+                  className="w-full h-auto object-cover aspect-video"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-blue-900/40 to-transparent"></div>
+              </div>
+              
+              {/* إضافة أيقونات على الصورة */}
+              <div className="absolute -top-4 -right-4 bg-indigo-500 text-white p-3 rounded-full shadow-lg">
+                <FileText size={24} />
+              </div>
+              <div className="absolute -bottom-4 -left-4 bg-blue-500 text-white p-3 rounded-full shadow-lg">
+                <Database size={24} />
               </div>
             </motion.div>
           </div>
         </div>
       </section>
       
-      {/* إضافة قسم خريطة العالم - World Map Section */}
+      
       <WorldMapDemo />
       
-      {/* قسم الجدول الزمني - Timeline Section */}
-      <section className="py-20 px-6 bg-white dark:bg-[#0A2342]">
+      
+          <section className="py-20 px-6 bg-white dark:bg-[#0A2342]">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#0A2342] dark:text-white">
@@ -244,13 +235,9 @@ const HomePage = () => {
         </div>
       </section>
       
-      {/* قسم المزايا الإضافية */}
       
       
-      {/* قسم الدعوة للعمل - CTA */}
       
-      
-      {/* تذييل الصفحة - Footer */}
       <footer className="bg-card border-t py-12 px-6">
         <div className="container mx-auto max-w-6xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
