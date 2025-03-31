@@ -108,7 +108,7 @@ const HomePage = () => {
       <AppHeader />
       
       {/* قسم الترحيب بأسلوب أبل - Apple-style Hero Section */}
-      <section className="relative py-28 px-6 overflow-hidden bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 bg-transparent">
+      <section className="relative px-6 overflow-hidden bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 py-[121px] bg-transparent">
         <div className="container mx-auto max-w-5xl relative z-10">
           <div className="flex flex-col items-center text-center">
             <motion.div initial={{
