@@ -119,7 +119,7 @@ const HomePage = () => {
             y: 0
           }} transition={{
             duration: 0.6
-          }} className="text-right text-[#0A2342] dark:text-white my-[86px]">
+          }} className="text-right text-[#0A2342] dark:text-white my-[76px] mx-0 px-0 py-0">
               <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl text-[#0A2342] dark:text-white">
                 استخراج البيانات من الصور <span className="text-blue-700 dark:text-blue-400">بذكاء اصطناعي</span> متطور
               </h1>
