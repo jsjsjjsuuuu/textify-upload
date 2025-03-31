@@ -135,9 +135,7 @@ const HomePage = () => {
                 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="lg" className="py-[15px] px-[30px]">
-                      عرض توضيحي
-                    </Button>
+                    
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -240,7 +238,7 @@ const HomePage = () => {
       </section>
       
       {/* قسم الباقات المتوفرة */}
-      <section className="py-20 px-6 bg-muted/30">
+      <section className="py-20 px-6 bg-white">
         <div className="container mx-auto max-w-6xl">
           <Pricing plans={pricingPlans} title="باقات مرنة تناسب احتياجاتك" description="اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة" onSelectPlan={handleSelectPlan} />
         </div>
