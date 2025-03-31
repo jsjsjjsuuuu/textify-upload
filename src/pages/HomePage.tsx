@@ -108,7 +108,7 @@ const HomePage = () => {
       <AppHeader />
       
       {/* قسم الترحيب - Hero Section */}
-      <section className="relative py-20 px-6 md:py-32 overflow-hidden bg-white dark:bg-[#0A2342]">
+      <section className="relative py-20 px-6 overflow-hidden bg-transparent md:py-[33px]">
         <div className="container mx-auto max-w-6xl relative z-10 px-0 my-[45px]">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <motion.div initial={{
@@ -119,7 +119,7 @@ const HomePage = () => {
             y: 0
           }} transition={{
             duration: 0.6
-          }} className="text-right text-[#0A2342] dark:text-white">
+          }} className="text-right text-[#0A2342] dark:text-white my-[86px]">
               <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl text-[#0A2342] dark:text-white">
                 استخراج البيانات من الصور <span className="text-blue-700 dark:text-blue-400">بذكاء اصطناعي</span> متطور
               </h1>
