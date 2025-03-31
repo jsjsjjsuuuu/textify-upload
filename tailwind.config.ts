@@ -19,6 +19,9 @@ export default {
       }
     },
     extend: {
+      fontFamily: {
+        'arabic': ['Noto Sans Arabic', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+      },
       colors: {
         // Using the colors from the theme.css
         border: 'hsl(var(--border))',
