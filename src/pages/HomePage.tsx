@@ -12,6 +12,7 @@ import { Pricing } from '@/components/ui/pricing';
 import { WorldMapDemo } from '@/components/ui/world-map-demo';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 const HomePage = () => {
   const navigate = useNavigate();
   const [openFeatureDialog, setOpenFeatureDialog] = useState<string | null>(null);
@@ -78,6 +79,7 @@ const HomePage = () => {
     description: 'إرسال البيانات إلى المواقع المستهدفة بسرعة فائقة',
     icon: <Zap />
   }];
+  
   const timelineItems = [{
     year: '2024',
     title: 'معالجة الصور بالذكاء الاصطناعي',
@@ -104,63 +106,48 @@ const HomePage = () => {
   const handleSelectPlan = (planId: string) => {
     navigate(`/register?plan=${planId}`);
   };
-  return <div className="min-h-screen bg-background flex flex-col" dir="rtl">
+  
+  return (
+    <div className="min-h-screen bg-background flex flex-col" dir="rtl">
       <AppHeader />
       
       {/* قسم الترحيب بأسلوب أبل - Apple-style Hero Section */}
       <section className="relative px-6 overflow-hidden bg-transparent py-[121px]">
         <div className="container mx-auto max-w-5xl relative z-10">
           <div className="flex flex-col items-center text-center my-[30px]">
-            <motion.div initial={{
-            opacity: 0,
-            y: 20
-          }} animate={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.6
-          }} className="mb-8">
-              
-            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="mb-8"
+            />
             
-            <motion.h1 initial={{
-            opacity: 0,
-            y: 20
-          }} animate={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.6,
-            delay: 0.1
-          }} className="text-4xl md:text-6xl font-medium tracking-tight text-slate-900 dark:text-white mb-6">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-4xl md:text-6xl font-medium tracking-tight text-slate-900 dark:text-white mb-6"
+            >
               استخراج <span className="text-blue-600 dark:text-blue-400">البيانات</span> من الصور
               <br />بدقة فائقة
             </motion.h1>
             
-            <motion.p initial={{
-            opacity: 0,
-            y: 20
-          }} animate={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.6,
-            delay: 0.2
-          }} className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mb-10">
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mb-10"
+            >
               منصة متكاملة تعمل بالذكاء الاصطناعي لاستخراج البيانات من الصور وتحويلها 
               إلى نصوص قابلة للاستخدام بكفاءة عالية
             </motion.p>
             
-            <motion.div initial={{
-            opacity: 0,
-            y: 20
-          }} animate={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.6,
-            delay: 0.3
-          }} className="flex flex-col sm:flex-row gap-4 mb-16">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="flex flex-col sm:flex-row gap-4 mb-16"
+            >
               <Button size="lg" asChild className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 rounded-full text-lg">
                 <Link to="/register">ابدأ الآن</Link>
               </Button>
@@ -169,16 +156,12 @@ const HomePage = () => {
               </Button>
             </motion.div>
             
-            <motion.div initial={{
-            opacity: 0,
-            scale: 0.9
-          }} animate={{
-            opacity: 1,
-            scale: 1
-          }} transition={{
-            duration: 0.8,
-            delay: 0.4
-          }} className="relative w-full max-w-4xl mx-auto">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="relative w-full max-w-4xl mx-auto"
+            >
               
               
               {/* الشارات التقنية - Tech badges */}
@@ -186,7 +169,6 @@ const HomePage = () => {
               
               {/* تأثيرات النقاط الزخرفية - Decorative dots */}
               <div className="absolute -top-16 -right-16 w-32 h-32 bg-blue-200/30 dark:bg-blue-900/20 rounded-full blur-3xl"></div>
-              
             </motion.div>
           </div>
         </div>
@@ -194,7 +176,8 @@ const HomePage = () => {
       
       <WorldMapDemo />
       
-          <section className="py-20 px-6 bg-white dark:bg-[#0A2342]">
+      
+      <section className="py-20 px-6 bg-white dark:bg-[#0A2342]">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#0A2342] dark:text-white">خدماتنا</h2>
@@ -322,6 +305,8 @@ const HomePage = () => {
           </div>
         </div>
       </footer>
-    </div>;
+    </div>
+  );
 };
+
 export default HomePage;
