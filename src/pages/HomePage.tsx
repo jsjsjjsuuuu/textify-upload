@@ -96,12 +96,15 @@ const HomePage = () => {
       <section className="relative py-20 px-6 md:py-32 overflow-hidden bg-white dark:bg-[#0A2342]">
         <div className="container mx-auto max-w-6xl relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ duration: 0.6 }} 
-              className="text-right text-[#0A2342] dark:text-white"
-            >
+            <motion.div initial={{
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            duration: 0.6
+          }} className="text-right text-[#0A2342] dark:text-white">
               <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl text-[#0A2342] dark:text-white">
                 استخراج البيانات من الصور <span className="text-blue-700 dark:text-blue-400">بذكاء اصطناعي</span> متطور
               </h1>
@@ -109,11 +112,7 @@ const HomePage = () => {
                 خدمة متكاملة لاستخراج البيانات من الصور وأتمتتها بسرعة وكفاءة، مع خطط اشتراك مرنة تناسب الجميع
               </p>
               <div className="flex justify-start gap-4">
-                <Button 
-                  className="apple-button bg-blue-700 text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700" 
-                  size="lg" 
-                  asChild
-                >
+                <Button className="apple-button bg-blue-700 text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700" size="lg" asChild>
                   <Link to="/register" className="py-[15px] px-[59px]">
                     ابدأ الآن مجاناً
                   </Link>
@@ -218,59 +217,11 @@ const HomePage = () => {
       
       {/* قسم المزايا الإضافية */}
       <section className="py-20 px-6">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4">
-              مزايا إضافية لتحسين سير عملك
-            </h2>
-            <p className="text-muted-foreground text-lg">
-              استمتع بمجموعة من المزايا المتقدمة التي تساعدك في تسريع وتحسين عمليات معالجة البيانات
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {additionalFeatures.map((feature, index) => <motion.div key={index} initial={{
-            opacity: 0,
-            y: 20
-          }} whileInView={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.5,
-            delay: index * 0.1
-          }} viewport={{
-            once: true
-          }} className="bg-card rounded-xl p-6 hover:shadow-md transition-shadow border">
-                <div className="w-12 h-12 rounded-full bg-brand-beige flex items-center justify-center mb-4">
-                  <div className="text-brand-brown">
-                    {feature.icon}
-                  </div>
-                </div>
-                <h3 className="apple-subheader text-xl mb-2 text-right">{feature.title}</h3>
-                <p className="text-muted-foreground text-right">{feature.description}</p>
-              </motion.div>)}
-          </div>
-        </div>
+        
       </section>
       
       {/* قسم الدعوة للعمل - CTA */}
-      <section className="py-16 px-6 bg-brand-brown text-white">
-        <div className="container mx-auto max-w-5xl">
-          <div className="text-center">
-            <h2 className="text-3xl md:text-4xl font-medium tracking-tight mb-8">
-              ابدأ الآن واترك لنا مهمة استخراج بياناتك!
-            </h2>
-            <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">
-              انضم إلى الآلاف من العملاء الذين يثقون بنا في استخراج وأتمتة بياناتهم من الصور بدقة وكفاءة عالية
-            </p>
-            <Button size="lg" className="bg-white text-brand-brown hover:bg-white/90" asChild>
-              <Link to="/register">
-                سجل حساب جديد الآن
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      
       
       {/* تذييل الصفحة - Footer */}
       <footer className="bg-card border-t py-12 px-6">
