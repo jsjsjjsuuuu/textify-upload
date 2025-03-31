@@ -63,9 +63,9 @@ const HomePage = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col lg:flex-row items-center gap-10">
             <div className="w-full lg:w-1/2 order-2 lg:order-1">
-              <div className="rounded-xl overflow-hidden">
+              <div className="rounded-xl overflow-hidden shadow-lg">
                 <img 
-                  src="/lovable-uploads/7752182e-27ee-45e4-9247-ec7f6ec53f23.png" 
+                  src="/lovable-uploads/27b037cc-ef5c-4c05-aa9f-349bfaf52f61.png" 
                   alt="استخراج البيانات من الصور" 
                   className="w-full h-auto object-cover"
                 />
