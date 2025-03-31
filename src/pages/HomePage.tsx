@@ -110,7 +110,7 @@ const HomePage = () => {
       {/* قسم الترحيب بأسلوب أبل - Apple-style Hero Section */}
       <section className="relative px-6 overflow-hidden bg-transparent py-[121px]">
         <div className="container mx-auto max-w-5xl relative z-10">
-          <div className="flex flex-col items-center text-center">
+          <div className="flex flex-col items-center text-center my-[30px]">
             <motion.div initial={{
             opacity: 0,
             y: 20
@@ -120,9 +120,7 @@ const HomePage = () => {
           }} transition={{
             duration: 0.6
           }} className="mb-8">
-              <Badge className="bg-black text-white dark:bg-white dark:text-black mb-6 px-4 py-1.5 text-sm font-medium rounded-full">
-                الحل الأمثل لاستخراج البيانات
-              </Badge>
+              
             </motion.div>
             
             <motion.h1 initial={{
@@ -184,16 +182,7 @@ const HomePage = () => {
               
               
               {/* الشارات التقنية - Tech badges */}
-              <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 bg-white dark:bg-slate-900 rounded-full py-2 px-6 shadow-lg border border-slate-200 dark:border-slate-700 flex items-center gap-4">
-                <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1 text-sm font-medium">
-                  <FileText size={16} />
-                  استخراج النصوص
-                </span>
-                <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1 text-sm font-medium">
-                  <Database size={16} />
-                  معالجة البيانات
-                </span>
-              </div>
+              
               
               {/* تأثيرات النقاط الزخرفية - Decorative dots */}
               <div className="absolute -top-16 -right-16 w-32 h-32 bg-blue-200/30 dark:bg-blue-900/20 rounded-full blur-3xl"></div>
@@ -221,30 +210,28 @@ const HomePage = () => {
             <div className="absolute h-full w-1 bg-gradient-to-b from-[#0A2342] via-[#1F4068] to-[#34495E] right-1/2 transform translate-x-1/2 left-1/2"></div>
             
             {/* عناصر الجدول الزمني بتصميم جديد */}
-            {timelineItems.map((item, index) => (
-              <div
-                key={index}
-                className={`mb-16 relative flex ${
-                  index % 2 === 0 ? 'justify-end' : 'justify-start'
-                }`}
-              >
+            {timelineItems.map((item, index) => <div key={index} className={`mb-16 relative flex ${index % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
                 <div className={`w-[45%] relative ${index % 2 === 0 ? 'ml-12' : 'mr-12'}`}>
                   {/* النقطة المضيئة على الخط */}
-                  <div
-                    className="absolute w-5 h-5 bg-[#0A2342] rounded-full top-6 transform -translate-y-1/2 shadow-md shadow-[#1F4068]/30 z-10"
-                    style={{ [index % 2 === 0 ? 'right' : 'left']: '-42px' }}
-                  >
+                  <div className="absolute w-5 h-5 bg-[#0A2342] rounded-full top-6 transform -translate-y-1/2 shadow-md shadow-[#1F4068]/30 z-10" style={{
+                [index % 2 === 0 ? 'right' : 'left']: '-42px'
+              }}>
                     <div className="absolute w-3 h-3 bg-white rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
                   </div>
                   
                   {/* بطاقة المحتوى */}
-                  <motion.div
-                    initial={{ opacity: 0, x: index % 2 === 0 ? 20 : -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                    viewport={{ once: true }}
-                    className="bg-white dark:bg-[#1F4068] p-6 rounded-xl shadow-md border border-[#0A2342]/10 hover:shadow-lg transition-shadow"
-                  >
+                  <motion.div initial={{
+                opacity: 0,
+                x: index % 2 === 0 ? 20 : -20
+              }} whileInView={{
+                opacity: 1,
+                x: 0
+              }} transition={{
+                duration: 0.5,
+                delay: 0.1
+              }} viewport={{
+                once: true
+              }} className="bg-white dark:bg-[#1F4068] p-6 rounded-xl shadow-md border border-[#0A2342]/10 hover:shadow-lg transition-shadow">
                     <div className="flex items-center mb-4">
                       <h3 className="text-xl font-bold text-[#0A2342] dark:text-white">{item.title}</h3>
                     </div>
@@ -252,19 +239,16 @@ const HomePage = () => {
                     <p className="text-[#34495E] dark:text-gray-300 mb-4">{item.description}</p>
                     
                     <ul className="space-y-2">
-                      {item.items.map((subItem, subIndex) => (
-                        <li key={subIndex} className="flex items-start">
+                      {item.items.map((subItem, subIndex) => <li key={subIndex} className="flex items-start">
                           <div className="mr-2 mt-1 text-[#0A2342] dark:text-blue-400">
                             <CheckCircle2 size={16} />
                           </div>
                           <span className="text-[#34495E] dark:text-gray-300">{subItem}</span>
-                        </li>
-                      ))}
+                        </li>)}
                     </ul>
                   </motion.div>
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
       </section>
@@ -272,12 +256,7 @@ const HomePage = () => {
       {/* قسم الباقات المتوفرة */}
       <section className="py-20 px-6 bg-white">
         <div className="container mx-auto max-w-6xl">
-          <Pricing
-            plans={pricingPlans}
-            title="باقات مرنة تناسب احتياجاتك"
-            description="اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة"
-            onSelectPlan={handleSelectPlan}
-          />
+          <Pricing plans={pricingPlans} title="باقات مرنة تناسب احتياجاتك" description="اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة" onSelectPlan={handleSelectPlan} />
         </div>
       </section>
       
