@@ -12,14 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Moon, Sun, UserCog } from 'lucide-react';
+import { LogIn, Moon, Sun, UserCog, UserPlus } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 const AppHeader = () => {
   const { user, userProfile, signOut } = useAuth();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { setTheme } = useTheme();
+  const { setTheme, theme } = useTheme();
   
   // للتصحيح المباشر
   useEffect(() => {
@@ -44,45 +44,60 @@ const AppHeader = () => {
   console.log("هل المستخدم مسؤول في AppHeader:", isAdmin, "قيمة is_admin الأصلية:", userProfile?.is_admin);
   
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        <div className="mr-4 hidden md:flex">
-          <nav className="flex items-center space-x-6 text-sm font-medium">
+    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+      <div className="container flex h-16 items-center justify-between">
+        {/* الشعار والروابط الرئيسية */}
+        <div className="flex items-center gap-6">
+          <Link to="/" className="text-xl font-bold text-primary">استخراج البيانات</Link>
+          
+          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+            {user && (
+              <>
+                <Link
+                  to="/upload"
+                  className={`transition-colors hover:text-foreground/80 ${pathname === "/upload" ? "text-foreground font-bold" : "text-foreground/60"}`}
+                >
+                  تحميل الصور
+                </Link>
+                <Link
+                  to="/"
+                  className={`transition-colors hover:text-foreground/80 ${
+                    pathname === "/" || pathname === "/records" ? "text-foreground font-bold" : "text-foreground/60"
+                  }`}
+                >
+                  السجلات
+                </Link>
+                
+                {/* إظهار رابط صفحة إدارة المستخدمين للمسؤولين فقط بشكل صريح */}
+                {isAdmin && (
+                  <Link
+                    to="/admin/approvals"
+                    className={`transition-colors hover:text-foreground/80 flex items-center ${
+                      pathname === "/admin/approvals" ? "text-foreground font-bold" : "text-foreground/60"
+                    }`}
+                  >
+                    <UserCog className="h-4 w-4 ml-1" />
+                    إدارة المستخدمين
+                  </Link>
+                )}
+              </>
+            )}
             <Link
-              to="/upload"
-              className={`transition-colors hover:text-foreground/80 ${pathname === "/upload" ? "text-foreground font-bold" : "text-foreground/60"}`}
-            >
-              تحميل الصور
-            </Link>
-            <Link
-              to="/"
+              to="/service"
               className={`transition-colors hover:text-foreground/80 ${
-                pathname === "/" || pathname === "/records" ? "text-foreground font-bold" : "text-foreground/60"
+                pathname === "/service" ? "text-foreground font-bold" : "text-foreground/60"
               }`}
             >
-              السجلات
+              خدماتنا
             </Link>
-            
-            {/* إظهار رابط صفحة إدارة المستخدمين للمسؤولين فقط بشكل صريح */}
-            {isAdmin && (
-              <Link
-                to="/admin/approvals"
-                className={`transition-colors hover:text-foreground/80 flex items-center ${
-                  pathname === "/admin/approvals" ? "text-foreground font-bold" : "text-foreground/60"
-                }`}
-              >
-                <UserCog className="h-4 w-4 ml-1" />
-                إدارة المستخدمين
-              </Link>
-            )}
           </nav>
         </div>
         
-        <div className="ml-auto flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={() => setTheme(theme => theme === "light" ? "dark" : "light")}>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
             <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
+            <span className="sr-only">تبديل المظهر</span>
           </Button>
           
           {user ? (
@@ -118,9 +133,20 @@ const AppHeader = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Link to="/login">
-              <Button>تسجيل الدخول</Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild className="flex items-center gap-1">
+                <Link to="/login">
+                  <LogIn className="h-4 w-4 ml-1" />
+                  تسجيل الدخول
+                </Link>
+              </Button>
+              <Button size="sm" asChild className="flex items-center gap-1">
+                <Link to="/register">
+                  <UserPlus className="h-4 w-4 ml-1" />
+                  إنشاء حساب
+                </Link>
+              </Button>
+            </div>
           )}
         </div>
       </div>

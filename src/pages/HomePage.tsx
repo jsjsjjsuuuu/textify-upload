@@ -12,6 +12,7 @@ import { Pricing } from '@/components/ui/pricing';
 import { WorldMapDemo } from '@/components/ui/world-map-demo';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 const HomePage = () => {
   const navigate = useNavigate();
   const [openFeatureDialog, setOpenFeatureDialog] = useState<string | null>(null);
@@ -78,6 +79,7 @@ const HomePage = () => {
     description: 'إرسال البيانات إلى المواقع المستهدفة بسرعة فائقة',
     icon: <Zap />
   }];
+  
   const timelineItems = [{
     year: '2024',
     title: 'معالجة الصور بالذكاء الاصطناعي',
@@ -104,7 +106,9 @@ const HomePage = () => {
   const handleSelectPlan = (planId: string) => {
     navigate(`/register?plan=${planId}`);
   };
-  return <div className="min-h-screen bg-background flex flex-col" dir="rtl">
+  
+  return (
+    <div className="min-h-screen bg-background flex flex-col" dir="rtl">
       <AppHeader />
       
       {/* قسم الترحيب بأسلوب أبل - Apple-style Hero Section */}
@@ -194,7 +198,7 @@ const HomePage = () => {
       
       <WorldMapDemo />
       
-          <section className="py-20 px-6 bg-white dark:bg-[#0A2342]">
+      <section className="py-20 px-6 bg-white dark:bg-[#0A2342]">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#0A2342] dark:text-white">خدماتنا</h2>
@@ -252,7 +256,7 @@ const HomePage = () => {
       </section>
       
       {/* قسم الباقات المتوفرة */}
-      <section className="py-20 px-6 bg-white">
+      <section className="py-20 px-6 bg-white dark:bg-background">
         <div className="container mx-auto max-w-6xl">
           <Pricing plans={pricingPlans} title="باقات مرنة تناسب احتياجاتك" description="اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة" onSelectPlan={handleSelectPlan} />
         </div>
@@ -322,6 +326,7 @@ const HomePage = () => {
           </div>
         </div>
       </footer>
-    </div>;
+    </div>
+  );
 };
 export default HomePage;
