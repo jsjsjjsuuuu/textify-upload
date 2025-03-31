@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -8,7 +7,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ThemeToggle } from '@/components/ThemeToggle';
 import AppHeader from '@/components/AppHeader';
 import { Pricing } from '@/components/ui/pricing';
-
 const HomePage = () => {
   const navigate = useNavigate();
   const [openFeatureDialog, setOpenFeatureDialog] = useState<string | null>(null);
@@ -53,9 +51,7 @@ const HomePage = () => {
   const handleSelectPlan = (planId: string) => {
     navigate(`/register?plan=${planId}`);
   };
-
-  return (
-    <div className="min-h-screen bg-white dark:bg-[#0A2342]" dir="rtl">
+  return <div className="min-h-screen bg-white dark:bg-[#0A2342]" dir="rtl">
       <AppHeader />
       
       {/* قسم الترحيب الجديد - Simple Hero Section */}
@@ -64,20 +60,20 @@ const HomePage = () => {
           <div className="flex flex-col lg:flex-row items-center gap-10">
             <div className="w-full lg:w-1/2 order-2 lg:order-1">
               <div className="rounded-xl overflow-hidden shadow-lg">
-                <img 
-                  src="/lovable-uploads/27b037cc-ef5c-4c05-aa9f-349bfaf52f61.png" 
-                  alt="استخراج البيانات من الصور" 
-                  className="w-full h-auto object-cover"
-                />
+                
               </div>
             </div>
             
             <div className="w-full lg:w-1/2 text-right order-1 lg:order-2">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-              >
+              <motion.div initial={{
+              opacity: 0,
+              y: 20
+            }} animate={{
+              opacity: 1,
+              y: 0
+            }} transition={{
+              duration: 0.6
+            }} className="py-[24px] px-0 rounded-sm mx-0 my-[2px]">
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-[#0A2342] dark:text-white">
                   استخراج البيانات من الصور{' '}
                   <span className="text-blue-600 dark:text-blue-400">بذكاء اصطناعي متطور</span>
@@ -88,10 +84,7 @@ const HomePage = () => {
                 </p>
                 
                 <div className="mt-8">
-                  <Button 
-                    className="bg-blue-600 text-white hover:bg-blue-700 text-lg px-8 py-6"
-                    asChild
-                  >
+                  <Button className="bg-blue-600 text-white hover:bg-blue-700 text-lg px-8 py-6" asChild>
                     <Link to="/register">
                       ابدأ الآن مجاناً
                     </Link>
@@ -106,12 +99,7 @@ const HomePage = () => {
       {/* قسم الباقات المتوفرة */}
       <section className="py-20 px-6 bg-gray-50 dark:bg-[#0D2B4B]">
         <div className="container mx-auto max-w-6xl">
-          <Pricing 
-            plans={pricingPlans} 
-            title="باقات مرنة تناسب احتياجاتك" 
-            description="اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة" 
-            onSelectPlan={handleSelectPlan} 
-          />
+          <Pricing plans={pricingPlans} title="باقات مرنة تناسب احتياجاتك" description="اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة" onSelectPlan={handleSelectPlan} />
         </div>
       </section>
       
@@ -124,11 +112,7 @@ const HomePage = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button 
-              className="bg-white text-blue-600 hover:bg-gray-100 text-lg"
-              size="lg"
-              asChild
-            >
+            <Button className="bg-white text-blue-600 hover:bg-gray-100 text-lg" size="lg" asChild>
               <Link to="/register">
                 إنشاء حساب جديد
               </Link>
@@ -136,11 +120,7 @@ const HomePage = () => {
             
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="border-white text-white hover:bg-blue-700 text-lg"
-                  size="lg"
-                >
+                <Button variant="outline" className="border-white text-white hover:bg-blue-700 text-lg" size="lg">
                   عرض توضيحي
                 </Button>
               </AlertDialogTrigger>
@@ -223,8 +203,6 @@ const HomePage = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default HomePage;
