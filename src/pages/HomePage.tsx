@@ -10,7 +10,6 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import AppHeader from '@/components/AppHeader';
 import { Pricing } from '@/components/ui/pricing';
 import { WorldMapDemo } from '@/components/ui/world-map-demo';
-
 const HomePage = () => {
   // معلومات الباقات المحدثة للاستخدام مع مكون التسعير الجديد
   const pricingPlans = [{
@@ -74,54 +73,38 @@ const HomePage = () => {
     description: 'إرسال البيانات إلى المواقع المستهدفة بسرعة فائقة',
     icon: <Zap />
   }];
-  
-  const timelineItems = [
-    {
-      year: '2024',
-      title: 'معالجة الصور بالذكاء الاصطناعي',
-      description: 'نقدم حلولًا متقدمة لاستخراج البيانات بدقة عالية',
-      items: [
-        'استخراج نصوص من مختلف أنواع الصور',
-        'التعرف على الأختام والتواقيع',
-        'تصنيف وفهرسة البيانات تلقائيًا'
-      ]
-    },
-    {
-      year: '2023',
-      title: 'أتمتة إدخال البيانات',
-      description: 'حلول ذكية لتسريع وأتمتة عمليات إدخال البيانات',
-      items: [
-        'دعم المؤسسات الحكومية والخاصة',
-        'معالجة أكثر من 10,000 صورة يوميًا',
-        'دقة في استخراج البيانات تصل إلى 99%'
-      ]
-    },
-    {
-      year: 'أوائل 2023',
-      title: 'بداية الابتكار',
-      description: 'إطلاق منصة متكاملة لاستخراج البيانات',
-      items: [
-        'حل مشاكل إدخال البيانات اليدوي',
-        'تطوير خوارزميات متقدمة',
-        'بناء حلول سريعة وموثوقة'
-      ]
-    }
-  ];
-  
-  return (
-    <div className="min-h-screen bg-background flex flex-col" dir="rtl">
+  const timelineItems = [{
+    year: '2024',
+    title: 'معالجة الصور بالذكاء الاصطناعي',
+    description: 'نقدم حلولًا متقدمة لاستخراج البيانات بدقة عالية',
+    items: ['استخراج نصوص من مختلف أنواع الصور', 'التعرف على الأختام والتواقيع', 'تصنيف وفهرسة البيانات تلقائيًا']
+  }, {
+    year: '2023',
+    title: 'أتمتة إدخال البيانات',
+    description: 'حلول ذكية لتسريع وأتمتة عمليات إدخال البيانات',
+    items: ['دعم المؤسسات الحكومية والخاصة', 'معالجة أكثر من 10,000 صورة يوميًا', 'دقة في استخراج البيانات تصل إلى 99%']
+  }, {
+    year: 'أوائل 2023',
+    title: 'بداية الابتكار',
+    description: 'إطلاق منصة متكاملة لاستخراج البيانات',
+    items: ['حل مشاكل إدخال البيانات اليدوي', 'تطوير خوارزميات متقدمة', 'بناء حلول سريعة وموثوقة']
+  }];
+  return <div className="min-h-screen bg-background flex flex-col" dir="rtl">
       <AppHeader />
       
       {/* قسم الترحيب - Hero Section */}
       <section className="relative py-20 px-6 md:py-32 overflow-hidden">
         <div className="container mx-auto max-w-6xl relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ duration: 0.6 }}
-              className="text-right"
-            >
+            <motion.div initial={{
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            duration: 0.6
+          }} className="text-right">
               <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl">
                 استخراج البيانات من الصور <span className="text-brand-coral">بذكاء اصطناعي</span> متطور
               </h1>
@@ -137,12 +120,16 @@ const HomePage = () => {
               </div>
             </motion.div>
             
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }} 
-              animate={{ opacity: 1, scale: 1 }} 
-              transition={{ duration: 0.6, delay: 0.2 }} 
-              className="mx-auto max-w-md lg:max-w-none"
-            >
+            <motion.div initial={{
+            opacity: 0,
+            scale: 0.9
+          }} animate={{
+            opacity: 1,
+            scale: 1
+          }} transition={{
+            duration: 0.6,
+            delay: 0.2
+          }} className="mx-auto max-w-md lg:max-w-none">
               <div className="elegant-upload relative overflow-hidden rounded-3xl shadow-2xl aspect-[4/3]">
                 <img src="/placeholder-image.jpg" alt="استخراج البيانات من الصور" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-8">
@@ -177,49 +164,46 @@ const HomePage = () => {
             <div className="absolute h-full w-1 bg-gradient-to-b from-[#0A2342] via-[#1F4068] to-[#34495E] right-1/2 transform translate-x-1/2 left-1/2"></div>
             
             {/* عناصر الجدول الزمني بتصميم جديد */}
-            {timelineItems.map((item, index) => (
-              <div 
-                key={index} 
-                className={`mb-16 relative flex ${index % 2 === 0 ? 'justify-end' : 'justify-start'}`}
-              >
+            {timelineItems.map((item, index) => <div key={index} className={`mb-16 relative flex ${index % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
                 <div className={`w-[45%] relative ${index % 2 === 0 ? 'ml-12' : 'mr-12'}`}>
                   {/* النقطة المضيئة على الخط */}
-                  <div className="absolute w-5 h-5 bg-[#0A2342] rounded-full top-6 transform -translate-y-1/2 shadow-md shadow-[#1F4068]/30 z-10"
-                       style={{ [index % 2 === 0 ? 'right' : 'left']: '-42px' }}>
+                  <div className="absolute w-5 h-5 bg-[#0A2342] rounded-full top-6 transform -translate-y-1/2 shadow-md shadow-[#1F4068]/30 z-10" style={{
+                [index % 2 === 0 ? 'right' : 'left']: '-42px'
+              }}>
                     <div className="absolute w-3 h-3 bg-white rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
                   </div>
                   
                   {/* بطاقة المحتوى */}
-                  <motion.div 
-                    initial={{ opacity: 0, x: index % 2 === 0 ? 20 : -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                    viewport={{ once: true }}
-                    className="bg-white dark:bg-[#1F4068] p-6 rounded-xl shadow-md border border-[#0A2342]/10 hover:shadow-lg transition-shadow"
-                  >
+                  <motion.div initial={{
+                opacity: 0,
+                x: index % 2 === 0 ? 20 : -20
+              }} whileInView={{
+                opacity: 1,
+                x: 0
+              }} transition={{
+                duration: 0.5,
+                delay: 0.1
+              }} viewport={{
+                once: true
+              }} className="bg-white dark:bg-[#1F4068] p-6 rounded-xl shadow-md border border-[#0A2342]/10 hover:shadow-lg transition-shadow">
                     <div className="flex items-center mb-4">
-                      <div className="bg-[#0A2342]/10 dark:bg-[#0A2342]/20 text-[#0A2342] font-bold rounded-lg py-1 px-4 ml-3">
-                        {item.year}
-                      </div>
+                      
                       <h3 className="text-xl font-bold text-[#0A2342]">{item.title}</h3>
                     </div>
                     
                     <p className="text-[#34495E] mb-4">{item.description}</p>
                     
                     <ul className="space-y-2">
-                      {item.items.map((subItem, subIndex) => (
-                        <li key={subIndex} className="flex items-start">
+                      {item.items.map((subItem, subIndex) => <li key={subIndex} className="flex items-start">
                           <div className="mr-2 mt-1 text-[#0A2342]">
                             <CheckCircle2 size={16} />
                           </div>
                           <span className="text-[#34495E]">{subItem}</span>
-                        </li>
-                      ))}
+                        </li>)}
                     </ul>
                   </motion.div>
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
       </section>
@@ -244,15 +228,18 @@ const HomePage = () => {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {additionalFeatures.map((feature, index) => (
-              <motion.div 
-                key={index} 
-                initial={{ opacity: 0, y: 20 }} 
-                whileInView={{ opacity: 1, y: 0 }} 
-                transition={{ duration: 0.5, delay: index * 0.1 }} 
-                viewport={{ once: true }} 
-                className="bg-card rounded-xl p-6 hover:shadow-md transition-shadow border"
-              >
+            {additionalFeatures.map((feature, index) => <motion.div key={index} initial={{
+            opacity: 0,
+            y: 20
+          }} whileInView={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            duration: 0.5,
+            delay: index * 0.1
+          }} viewport={{
+            once: true
+          }} className="bg-card rounded-xl p-6 hover:shadow-md transition-shadow border">
                 <div className="w-12 h-12 rounded-full bg-brand-beige flex items-center justify-center mb-4">
                   <div className="text-brand-brown">
                     {feature.icon}
@@ -260,8 +247,7 @@ const HomePage = () => {
                 </div>
                 <h3 className="apple-subheader text-xl mb-2 text-right">{feature.title}</h3>
                 <p className="text-muted-foreground text-right">{feature.description}</p>
-              </motion.div>
-            ))}
+              </motion.div>)}
           </div>
         </div>
       </section>
@@ -347,8 +333,6 @@ const HomePage = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default HomePage;
