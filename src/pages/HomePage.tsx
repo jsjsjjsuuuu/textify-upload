@@ -183,9 +183,7 @@ const HomePage = () => {
       <section className="py-20 px-6 bg-white dark:bg-[#0A2342]">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#0A2342] dark:text-white">
-              جدولنا الزمني
-            </h2>
+            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#0A2342] dark:text-white">خدماتنا</h2>
             <p className="text-[#34495E] dark:text-gray-300 text-lg">
               تطور خدماتنا وخططنا المستقبلية
             </p>
