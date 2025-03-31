@@ -57,7 +57,11 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))'
         },
-        // Removing custom brand colors
+        // إضافة الألوان المخصصة الضرورية
+        'brand-coral': '#0A2342', // تم تغييره للون الأزرق الغامق
+        'brand-brown': '#0A2342', // تم تغييره للون الأزرق الغامق
+        'brand-beige': '#FFFFFF', // تم تغييره للون الأبيض
+        'brand-green': '#0A2342', // تم تغييره للون الأزرق الغامق
       },
       borderRadius: {
         lg: 'var(--radius)',
