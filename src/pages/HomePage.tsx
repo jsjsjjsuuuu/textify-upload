@@ -12,11 +12,10 @@ import { Pricing } from '@/components/ui/pricing';
 import { WorldMapDemo } from '@/components/ui/world-map-demo';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-
 const HomePage = () => {
   const navigate = useNavigate();
   const [openFeatureDialog, setOpenFeatureDialog] = useState<string | null>(null);
-  
+
   // معلومات الباقات المحدثة للاستخدام مع مكون التسعير الجديد
   const pricingPlans = [{
     id: 'standard',
@@ -79,7 +78,6 @@ const HomePage = () => {
     description: 'إرسال البيانات إلى المواقع المستهدفة بسرعة فائقة',
     icon: <Zap />
   }];
-  
   const timelineItems = [{
     year: '2024',
     title: 'معالجة الصور بالذكاء الاصطناعي',
@@ -96,17 +94,16 @@ const HomePage = () => {
     description: 'إطلاق منصة متكاملة لاستخراج البيانات',
     items: ['حل مشاكل إدخال البيانات اليدوي', 'تطوير خوارزميات متقدمة', 'بناء حلول سريعة وموثوقة']
   }];
-  
+
   // دالة لعرض نافذة حوار عند النقر على ميزة إضافية
   const showFeatureDialog = (featureTitle: string) => {
     setOpenFeatureDialog(featureTitle);
   };
-  
+
   // دالة للتوجيه إلى صفحة التسجيل مع باقة محددة
   const handleSelectPlan = (planId: string) => {
     navigate(`/register?plan=${planId}`);
   };
-  
   return <div className="min-h-screen bg-background flex flex-col" dir="rtl">
       <AppHeader />
       
@@ -172,11 +169,7 @@ const HomePage = () => {
           }} className="mx-auto max-w-md lg:max-w-none">
               <div className="elegant-upload relative overflow-hidden rounded-3xl shadow-2xl aspect-[4/3]">
                 <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-black/30 z-10"></div>
-                <img 
-                  src="/placeholder-image.jpg" 
-                  alt="استخراج البيانات من الصور" 
-                  className="w-full h-full object-cover"
-                />
+                <img src="/placeholder-image.jpg" alt="استخراج البيانات من الصور" className="w-full h-full object-cover" />
               </div>
             </motion.div>
           </div>
@@ -249,99 +242,17 @@ const HomePage = () => {
       {/* قسم الباقات المتوفرة */}
       <section className="py-20 px-6 bg-muted/30">
         <div className="container mx-auto max-w-6xl">
-          <Pricing 
-            plans={pricingPlans} 
-            title="باقات مرنة تناسب احتياجاتك" 
-            description="اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة"
-            onSelectPlan={handleSelectPlan}
-          />
+          <Pricing plans={pricingPlans} title="باقات مرنة تناسب احتياجاتك" description="اختر الباقة المناسبة لاحتياجاتك واستمتع بميزات استخراج البيانات المتقدمة" onSelectPlan={handleSelectPlan} />
         </div>
       </section>
       
       {/* قسم المزايا الإضافية */}
       <section className="py-20 px-6 bg-white dark:bg-[#0A2342]">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#0A2342] dark:text-white">
-              ميزات متقدمة
-            </h2>
-            <p className="text-[#34495E] dark:text-gray-300 text-lg">
-              نقدم لك مجموعة من الميزات المتقدمة لتسهيل عملية استخراج البيانات وأتمتتها
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {additionalFeatures.map((feature, index) => (
-              <Dialog key={index} open={openFeatureDialog === feature.title} onOpenChange={(open) => {
-                if (!open) setOpenFeatureDialog(null);
-              }}>
-                <DialogTrigger asChild>
-                  <Card 
-                    className="cursor-pointer hover:shadow-md transition-shadow border border-[#0A2342]/10 dark:border-white/10"
-                    onClick={() => showFeatureDialog(feature.title)}
-                  >
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-400">
-                          {feature.icon}
-                        </div>
-                        <CardTitle className="text-xl">{feature.title}</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-[#34495E] dark:text-gray-300">{feature.description}</p>
-                    </CardContent>
-                  </Card>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3 text-xl">
-                      <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-400">
-                        {feature.icon}
-                      </div>
-                      {feature.title}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {feature.description}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="mt-4">
-                    <p className="mb-4">تتيح هذه الميزة الفريدة للمستخدمين الاستفادة من تقنيات الذكاء الاصطناعي المتقدمة لتحسين دقة وسرعة العمل.</p>
-                    <Button onClick={() => {
-                      setOpenFeatureDialog(null);
-                      navigate('/register');
-                    }} className="w-full">
-                      جرّب هذه الميزة الآن
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            ))}
-          </div>
-        </div>
+        
       </section>
       
       {/* قسم الدعوة للعمل - CTA */}
-      <section className="py-20 px-6 bg-blue-700 dark:bg-blue-800 text-white">
-        <div className="container mx-auto max-w-6xl text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">ابدأ الآن واستفد من قوة الذكاء الاصطناعي</h2>
-          <p className="text-xl mb-8 max-w-3xl mx-auto text-blue-100">
-            انضم إلى آلاف العملاء الذين يستخدمون خدماتنا لأتمتة استخراج البيانات من الصور وتوفير الوقت والجهد
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-white text-blue-700 hover:bg-blue-50" asChild>
-              <Link to="/register">
-                ابدأ الاستخدام مجاناً
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="text-white border-white hover:bg-blue-600" asChild>
-              <Link to="/service">
-                تعرف على خدماتنا
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      
       
       {/* تذييل الصفحة - Footer */}
       <footer className="bg-card border-t py-12 px-6">
