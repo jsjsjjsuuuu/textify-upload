@@ -10,7 +10,6 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import AppHeader from '@/components/AppHeader';
 import { Pricing } from '@/components/ui/pricing';
 import { WorldMapDemo } from '@/components/ui/world-map-demo';
-
 const HomePage = () => {
   // معلومات الباقات المحدثة للاستخدام مع مكون التسعير الجديد
   const pricingPlans = [{
@@ -132,13 +131,8 @@ const HomePage = () => {
             delay: 0.2
           }} className="mx-auto max-w-md lg:max-w-none">
               <div className="elegant-upload relative overflow-hidden rounded-3xl shadow-2xl aspect-[4/3]">
-                <img src="/placeholder-image.jpg" alt="استخراج البيانات من الصور" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-8">
-                  <div className="text-white">
-                    <h3 className="text-xl font-medium mb-2">استخراج دقيق للبيانات</h3>
-                    <p className="text-white/80 text-sm">استخراج النصوص والبيانات من الصور بدقة عالية</p>
-                  </div>
-                </div>
+                
+                
               </div>
             </motion.div>
           </div>
@@ -288,5 +282,4 @@ const HomePage = () => {
       </footer>
     </div>;
 };
-
 export default HomePage;
