@@ -23,7 +23,7 @@ export default {
         'arabic': ['Noto Sans Arabic', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
       },
       colors: {
-        // Using the colors from the theme.css
+        // استخدام الألوان من theme.css
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -58,10 +58,18 @@ export default {
           foreground: 'hsl(var(--card-foreground))'
         },
         // إضافة الألوان المخصصة الضرورية
-        'brand-coral': '#0A2342', // تم تغييره للون الأزرق الغامق
-        'brand-brown': '#0A2342', // تم تغييره للون الأزرق الغامق
-        'brand-beige': '#FFFFFF', // تم تغييره للون الأبيض
-        'brand-green': '#0A2342', // تم تغييره للون الأزرق الغامق
+        'brand-coral': {
+          DEFAULT: '#0A2342', // تم تغييره للون الأزرق الغامق
+        },
+        'brand-brown': {
+          DEFAULT: '#0A2342', // تم تغييره للون الأزرق الغامق
+        },
+        'brand-beige': {
+          DEFAULT: '#FFFFFF', // تم تغييره للون الأبيض
+        },
+        'brand-green': {
+          DEFAULT: '#0A2342', // تم تغييره للون الأزرق الغامق
+        }
       },
       borderRadius: {
         lg: 'var(--radius)',
