@@ -93,27 +93,26 @@ const HomePage = () => {
       <AppHeader />
       
       {/* قسم الترحيب - Hero Section */}
-      <section className="relative py-20 px-6 md:py-32 overflow-hidden bg-white dark:bg-[#0A2342]">
+      <section className="relative py-20 px-6 md:py-32 overflow-hidden">
         <div className="container mx-auto max-w-6xl relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ duration: 0.6 }} 
-              className="text-right text-[#0A2342] dark:text-white"
-            >
-              <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl text-[#0A2342] dark:text-white">
-                استخراج البيانات من الصور <span className="text-blue-700 dark:text-blue-400">بذكاء اصطناعي</span> متطور
+            <motion.div initial={{
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            duration: 0.6
+          }} className="text-right">
+              <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl">
+                استخراج البيانات من الصور <span className="text-brand-coral">بذكاء اصطناعي</span> متطور
               </h1>
-              <p className="text-lg text-[#34495E] dark:text-white/80 mb-8 md:text-base">
+              <p className="text-lg text-muted-foreground mb-8 md:text-base">
                 خدمة متكاملة لاستخراج البيانات من الصور وأتمتتها بسرعة وكفاءة، مع خطط اشتراك مرنة تناسب الجميع
               </p>
               <div className="flex justify-start gap-4">
-                <Button 
-                  className="apple-button bg-blue-700 text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700" 
-                  size="lg" 
-                  asChild
-                >
+                <Button className="apple-button bg-brand-coral text-white hover:bg-brand-coral/90" size="lg" asChild>
                   <Link to="/register" className="py-[15px] px-[59px]">
                     ابدأ الآن مجاناً
                   </Link>
