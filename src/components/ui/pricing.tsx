@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Link } from "react-router-dom";
+
 interface PricingPlan {
   name: string;
   price: string;
@@ -21,6 +22,7 @@ interface PricingPlan {
   isPopular: boolean;
   id: string;
 }
+
 interface PricingProps {
   plans: PricingPlan[];
   title?: string;
@@ -58,6 +60,7 @@ export function Pricing({
   const [isMonthly, setIsMonthly] = useState(true);
   const [animateNumbers, setAnimateNumbers] = useState(false);
   const switchRef = useRef<HTMLButtonElement>(null);
+
   const handleToggle = (checked: boolean) => {
     setIsMonthly(!checked);
     setAnimateNumbers(true);
@@ -73,7 +76,8 @@ export function Pricing({
     }
   };
   
-  return <div className="container py-20">
+  return (
+    <div className="container py-20">
       <div className="text-center space-y-4 mb-12">
         <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
           {title}
@@ -83,39 +87,29 @@ export function Pricing({
         </p>
       </div>
 
-      <div className="flex justify-center mb-10">
-        <label className="relative inline-flex items-center cursor-pointer">
-          <Label>
-            
-          </Label>
-        </label>
-        
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 sm:2 gap-4">
         {plans.map((plan, index) => (
           <motion.div 
             key={index} 
-            initial={{
-        y: 50,
-        opacity: 0
-      }} animate={{
-        y: 0,
-        opacity: 1
-      }} transition={{
-        duration: 0.6,
-        delay: index * 0.1
-      }} className={cn(`rounded-2xl border-[1px] p-6 bg-background text-center lg:flex lg:flex-col lg:justify-center relative`, plan.isPopular ? "border-primary border-2" : "border-border", "flex flex-col")}
+            initial={{ y: 50, opacity: 0 }} 
+            animate={{ y: 0, opacity: 1 }} 
+            transition={{ duration: 0.6, delay: index * 0.1 }} 
+            className={cn(
+              `rounded-2xl border-[1px] p-6 bg-background text-center lg:flex lg:flex-col lg:justify-center relative`, 
+              plan.isPopular ? "border-primary border-2 shadow-lg" : "border-border", 
+              "flex flex-col"
+            )}
           >
-            {plan.isPopular && <div className="absolute top-0 left-0 bg-primary py-0.5 px-2 rounded-bl-xl rounded-tr-xl flex items-center">
+            {plan.isPopular && (
+              <div className="absolute top-0 left-0 bg-primary py-0.5 px-2 rounded-bl-xl rounded-tr-xl flex items-center">
                 <Star className="text-primary-foreground h-4 w-4 fill-current" />
                 <span className="text-primary-foreground mr-1 font-sans font-semibold">
                   الأكثر شعبية
                 </span>
-              </div>}
+              </div>
+            )}
             
             <div className="flex-1 flex flex-col">
-              
               <p className="text-base font-semibold text-muted-foreground">
                 {plan.name}
               </p>
@@ -123,12 +117,8 @@ export function Pricing({
               <div className="mt-6 flex items-center justify-center gap-x-2">
                 <motion.span 
                   className="text-5xl font-bold tracking-tight text-foreground" 
-                  animate={{
-                    scale: animateNumbers ? [1, 1.1, 1] : 1
-                  }} 
-                  transition={{
-                    duration: 0.5
-                  }}
+                  animate={{ scale: animateNumbers ? [1, 1.1, 1] : 1 }} 
+                  transition={{ duration: 0.5 }}
                 >
                   {isMonthly ? Number(plan.price) : Number(plan.yearlyPrice)}
                 </motion.span>
@@ -137,17 +127,17 @@ export function Pricing({
                 </span>
               </div>
 
-              
-
               <p className="text-xs leading-5 text-muted-foreground">
                 شهريًا
               </p>
 
               <ul className="mt-5 gap-2 flex flex-col">
-                {plan.features.map((feature, idx) => <li key={idx} className="flex items-start gap-2">
+                {plan.features.map((feature, idx) => (
+                  <li key={idx} className="flex items-start gap-2">
                     <Check className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
                     <span className="text-right">{feature}</span>
-                  </li>)}
+                  </li>
+                ))}
               </ul>
 
               <hr className="w-full my-4" />
@@ -173,5 +163,6 @@ export function Pricing({
           </motion.div>
         ))}
       </div>
-    </div>;
+    </div>
+  );
 }
