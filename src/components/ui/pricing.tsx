@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef } from "react";
@@ -18,11 +19,13 @@ interface PricingPlan {
   buttonText: string;
   href: string;
   isPopular: boolean;
+  id: string;
 }
 interface PricingProps {
   plans: PricingPlan[];
   title?: string;
   description?: string;
+  onSelectPlan?: (planId: string) => void;
 }
 
 // وظيفة مساعدة لتنسيق الأرقام كعملة
@@ -49,7 +52,8 @@ const formatIraqiDinar = (value: number): string => {
 export function Pricing({
   plans,
   title = "أسعار بسيطة وشفافة",
-  description = "اختر الخطة المناسبة لك، جميع الخطط تشمل الوصول إلى منصتنا وأدوات معالجة الصور ودعم مخصص."
+  description = "اختر الخطة المناسبة لك، جميع الخطط تشمل الوصول إلى منصتنا وأدوات معالجة الصور ودعم مخصص.",
+  onSelectPlan
 }: PricingProps) {
   const [isMonthly, setIsMonthly] = useState(true);
   const [animateNumbers, setAnimateNumbers] = useState(false);
@@ -61,6 +65,14 @@ export function Pricing({
     // إعادة تعيين حالة الرسوم المتحركة بعد الانتهاء من الرسوم المتحركة
     setTimeout(() => setAnimateNumbers(false), 500);
   };
+  
+  // دالة للتعامل مع النقر على زر الباقة
+  const handlePlanClick = (planId: string) => {
+    if (onSelectPlan) {
+      onSelectPlan(planId);
+    }
+  };
+  
   return <div className="container py-20">
       <div className="text-center space-y-4 mb-12">
         <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
@@ -140,10 +152,19 @@ export function Pricing({
 
               <hr className="w-full my-4" />
 
-              <Button variant={plan.isPopular ? "default" : "outline"} className="group relative w-full gap-2 overflow-hidden text-lg font-semibold tracking-tighter" asChild>
-                <Link to={plan.href}>
-                  {plan.buttonText}
-                </Link>
+              <Button 
+                variant={plan.isPopular ? "default" : "outline"} 
+                className="group relative w-full gap-2 overflow-hidden text-lg font-semibold tracking-tighter"
+                onClick={() => handlePlanClick(plan.id)}
+                asChild={!onSelectPlan}
+              >
+                {onSelectPlan ? (
+                  <span>{plan.buttonText}</span>
+                ) : (
+                  <Link to={plan.href}>
+                    {plan.buttonText}
+                  </Link>
+                )}
               </Button>
               <p className="mt-6 text-xs leading-5 text-muted-foreground">
                 {plan.description}
