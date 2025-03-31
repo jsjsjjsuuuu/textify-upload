@@ -10,7 +10,6 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import AppHeader from '@/components/AppHeader';
 import { Pricing } from '@/components/ui/pricing';
 import { WorldMapDemo } from '@/components/ui/world-map-demo';
-
 const HomePage = () => {
   // معلومات الباقات المحدثة للاستخدام مع مكون التسعير الجديد
   const pricingPlans = [{
@@ -152,19 +151,19 @@ const HomePage = () => {
       <section className="py-20 px-6 bg-white dark:bg-[#0A2342]">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#0A2342] dark:text-white">خدماتنا</h2>
-            <p className="text-[#34495E] dark:text-gray-300 text-lg">خدماتنا التي نوفرها الآن وخططنا المستقبلية</p>
+            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#0A2342]">خدماتنا</h2>
+            <p className="text-[#34495E] text-lg">خدماتنا  التي نوفرها الان وخططنا المستقبلية</p>
           </div>
           
           <div className="relative mx-auto max-w-4xl">
             {/* خط العمود الجديد - منتصف */}
-            <div className="absolute h-full w-1 bg-gradient-to-b from-[#0A2342] via-[#1F4068] to-[#34495E] right-1/2 transform translate-x-1/2 left-1/2 dark:opacity-70"></div>
+            <div className="absolute h-full w-1 bg-gradient-to-b from-[#0A2342] via-[#1F4068] to-[#34495E] right-1/2 transform translate-x-1/2 left-1/2"></div>
             
             {/* عناصر الجدول الزمني بتصميم جديد */}
             {timelineItems.map((item, index) => <div key={index} className={`mb-16 relative flex ${index % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
                 <div className={`w-[45%] relative ${index % 2 === 0 ? 'ml-12' : 'mr-12'}`}>
                   {/* النقطة المضيئة على الخط */}
-                  <div className="absolute w-5 h-5 bg-[#0A2342] dark:bg-brand-coral rounded-full top-6 transform -translate-y-1/2 shadow-md shadow-[#1F4068]/30 z-10" style={{
+                  <div className="absolute w-5 h-5 bg-[#0A2342] rounded-full top-6 transform -translate-y-1/2 shadow-md shadow-[#1F4068]/30 z-10" style={{
                 [index % 2 === 0 ? 'right' : 'left']: '-42px'
               }}>
                     <div className="absolute w-3 h-3 bg-white rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
@@ -182,22 +181,20 @@ const HomePage = () => {
                 delay: 0.1
               }} viewport={{
                 once: true
-              }} className="bg-white dark:bg-[#1F4068] p-6 rounded-xl shadow-md border border-[#0A2342]/10 dark:border-white/10 hover:shadow-lg transition-shadow">
+              }} className="bg-white dark:bg-[#1F4068] p-6 rounded-xl shadow-md border border-[#0A2342]/10 hover:shadow-lg transition-shadow">
                     <div className="flex items-center mb-4">
-                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-brand-coral/10 text-brand-coral text-xs font-medium mr-3">
-                        {item.year}
-                      </span>
-                      <h3 className="text-xl font-bold text-[#0A2342] dark:text-white">{item.title}</h3>
+                      
+                      <h3 className="text-xl font-bold text-[#0A2342]">{item.title}</h3>
                     </div>
                     
-                    <p className="text-[#34495E] dark:text-gray-300 mb-4 text-right">{item.description}</p>
+                    <p className="text-[#34495E] mb-4 text-right">{item.description}</p>
                     
                     <ul className="space-y-2">
                       {item.items.map((subItem, subIndex) => <li key={subIndex} className="flex items-start">
-                          <div className="mr-2 mt-1 text-brand-coral">
+                          <div className="mr-2 mt-1 text-[#0A2342]">
                             <CheckCircle2 size={16} />
                           </div>
-                          <span className="text-[#34495E] dark:text-gray-300">{subItem}</span>
+                          <span className="text-[#34495E]">{subItem}</span>
                         </li>)}
                     </ul>
                   </motion.div>
@@ -238,25 +235,28 @@ const HomePage = () => {
             delay: index * 0.1
           }} viewport={{
             once: true
-          }} className="bg-card rounded-xl p-6 hover:shadow-md transition-shadow border border-border/50">
-                <div className="w-12 h-12 rounded-full bg-brand-coral/10 flex items-center justify-center mb-4">
-                  <div className="text-brand-coral">
+          }} className="bg-card rounded-xl p-6 hover:shadow-md transition-shadow border">
+                <div className="w-12 h-12 rounded-full bg-brand-beige flex items-center justify-center mb-4">
+                  <div className="text-brand-brown">
                     {feature.icon}
                   </div>
                 </div>
-                <h3 className="apple-subheader text-xl mb-2 font-semibold text-right">{feature.title}</h3>
+                <h3 className="apple-subheader text-xl mb-2 text-right">{feature.title}</h3>
                 <p className="text-muted-foreground text-right">{feature.description}</p>
               </motion.div>)}
           </div>
         </div>
       </section>
       
+      {/* قسم الدعوة للعمل - CTA */}
+      
+      
       {/* تذييل الصفحة - Footer */}
       <footer className="bg-card border-t py-12 px-6">
         <div className="container mx-auto max-w-6xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-right">
-              <h3 className="font-bold text-lg mb-4">اصيل </h3>
+              <h3 className="font-bold text-lg mb-4">اصيل </h3>
               <p className="text-muted-foreground">
                 خدمة متكاملة لاستخراج البيانات من الصور وأتمتتها بسرعة وكفاءة عالية
               </p>
