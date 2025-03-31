@@ -14,7 +14,7 @@ const HomePage = () => {
         className="text-right text-[#0A2342] dark:text-white"
       >
         <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl text-[#0A2342] dark:text-white">
-          استخراج البيانات من الصور <span className="text-blue-700 dark:text-blue-400">بذكاء اصطناعي</span> متطور
+          استخراج البيانات من الصور <span className="text-[#0A2342] dark:text-blue-400">بذكاء اصطناعي</span> متطور
         </h1>
         <p className="text-lg text-[#34495E] dark:text-white/80 mb-8 md:text-base">
           خدمة متكاملة لاستخراج البيانات من الصور وأتمتتها بسرعة وكفاءة، مع خطط اشتراك مرنة تناسب الجميع
