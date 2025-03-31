@@ -197,7 +197,7 @@ const HomePage = () => {
               
               {/* تأثيرات النقاط الزخرفية - Decorative dots */}
               <div className="absolute -top-16 -right-16 w-32 h-32 bg-blue-200/30 dark:bg-blue-900/20 rounded-full blur-3xl"></div>
-              <div className="absolute -bottom-20 -left-16 w-40 h-40 bg-indigo-200/30 dark:bg-indigo-900/20 rounded-full blur-3xl"></div>
+              
             </motion.div>
           </div>
         </div>
