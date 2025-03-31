@@ -119,7 +119,7 @@ const HomePage = () => {
             y: 0
           }} transition={{
             duration: 0.6
-          }} className="text-right text-[#0A2342] dark:text-white">
+          }} className="text-right text-[#0A2342] dark:text-white py-[14px] mx-0 my-0 px-px">
               <h1 className="apple-header md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 text-4xl text-[#0A2342] dark:text-white">
                 استخراج البيانات من الصور <span className="text-blue-700 dark:text-blue-400">بذكاء اصطناعي</span> متطور
               </h1>
@@ -135,9 +135,7 @@ const HomePage = () => {
                 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="lg" className="py-[15px] px-[30px]">
-                      عرض توضيحي
-                    </Button>
+                    
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
