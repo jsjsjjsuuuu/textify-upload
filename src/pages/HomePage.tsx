@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import AppHeader from '@/components/AppHeader';
 import { Pricing } from '@/components/ui/pricing';
 import { WorldMapDemo } from '@/components/ui/world-map-demo';
+
 const HomePage = () => {
   // معلومات الباقات المحدثة للاستخدام مع مكون التسعير الجديد
   const pricingPlans = [{
@@ -287,4 +288,5 @@ const HomePage = () => {
       </footer>
     </div>;
 };
+
 export default HomePage;
