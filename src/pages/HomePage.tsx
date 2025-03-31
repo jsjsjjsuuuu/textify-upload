@@ -151,12 +151,8 @@ const HomePage = () => {
       <section className="py-20 px-6 bg-white dark:bg-[#0A2342]">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#0A2342]">
-              جدولنا الزمني
-            </h2>
-            <p className="text-[#34495E] text-lg">
-              تطور خدماتنا وخططنا المستقبلية
-            </p>
+            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#0A2342]">خدماتنا</h2>
+            <p className="text-[#34495E] text-lg">خدماتنا  التي نوفرها الان وخططنا المستقبلية</p>
           </div>
           
           <div className="relative mx-auto max-w-4xl">
@@ -191,7 +187,7 @@ const HomePage = () => {
                       <h3 className="text-xl font-bold text-[#0A2342]">{item.title}</h3>
                     </div>
                     
-                    <p className="text-[#34495E] mb-4">{item.description}</p>
+                    <p className="text-[#34495E] mb-4 text-right">{item.description}</p>
                     
                     <ul className="space-y-2">
                       {item.items.map((subItem, subIndex) => <li key={subIndex} className="flex items-start">
@@ -253,30 +249,14 @@ const HomePage = () => {
       </section>
       
       {/* قسم الدعوة للعمل - CTA */}
-      <section className="py-16 px-6 bg-brand-brown text-white">
-        <div className="container mx-auto max-w-5xl">
-          <div className="text-center">
-            <h2 className="text-3xl md:text-4xl font-medium tracking-tight mb-8">
-              ابدأ الآن واترك لنا مهمة استخراج بياناتك!
-            </h2>
-            <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">
-              انضم إلى الآلاف من العملاء الذين يثقون بنا في استخراج وأتمتة بياناتهم من الصور بدقة وكفاءة عالية
-            </p>
-            <Button size="lg" className="bg-white text-brand-brown hover:bg-white/90" asChild>
-              <Link to="/register">
-                سجل حساب جديد الآن
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      
       
       {/* تذييل الصفحة - Footer */}
       <footer className="bg-card border-t py-12 px-6">
         <div className="container mx-auto max-w-6xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-right">
-              <h3 className="font-bold text-lg mb-4">استخراج البيانات</h3>
+              <h3 className="font-bold text-lg mb-4">اصيل </h3>
               <p className="text-muted-foreground">
                 خدمة متكاملة لاستخراج البيانات من الصور وأتمتتها بسرعة وكفاءة عالية
               </p>
@@ -313,9 +293,7 @@ const HomePage = () => {
             
             <div className="text-right">
               <h3 className="font-bold text-lg mb-4">تواصل معنا</h3>
-              <p className="text-muted-foreground mb-2">
-                يسعدنا الإجابة عن استفساراتك وتقديم الدعم اللازم
-              </p>
+              <p className="text-muted-foreground mb-2">يسعدنا الإجابة عن استفساراتك وتقديم الدعم اللازم</p>
               <div className="mt-4">
                 <Button variant="outline" asChild>
                   <Link to="/contact">
@@ -328,9 +306,7 @@ const HomePage = () => {
           
           <Separator className="my-8" />
           
-          <div className="text-center text-muted-foreground text-sm">
-            &copy; {new Date().getFullYear()} خدمة استخراج البيانات - جميع الحقوق محفوظة
-          </div>
+          
         </div>
       </footer>
     </div>;
