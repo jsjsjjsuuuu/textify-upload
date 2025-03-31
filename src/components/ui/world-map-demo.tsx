@@ -1,3 +1,4 @@
+
 "use client";
 
 import { WorldMap } from "@/components/ui/world-map";
@@ -8,7 +9,9 @@ export function WorldMapDemo() {
         <p className="font-bold text-xl md:text-4xl dark:text-white text-black">
           اعمل من اي مكان لا حدود للابداع
         </p>
-        <p className="text-sm md:text-lg text-neutral-500 max-w-2xl mx-auto py-4">تحرر من القيود التقليدية. في الشركة ام في المنزل اعمل من اي مكان تريده انت </p>
+        <p className="text-sm md:text-lg text-neutral-500 max-w-2xl mx-auto py-4">
+          تحرر من القيود التقليدية. اعمل من أي مكان بحرية كاملة. مثالي للمبدعين والمسافرين.
+        </p>
       </div>
       <WorldMap dots={[{
       start: {
