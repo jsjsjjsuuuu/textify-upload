@@ -160,21 +160,21 @@ const HomePage = () => {
       {/* إضافة قسم خريطة العالم - World Map Section */}
       <WorldMapDemo />
       
-      {/* قسم الجدول الزمني - Timeline Section - تصميم جديد */}
-      <section className="py-20 px-6 bg-white dark:bg-background">
+      {/* قسم الجدول الزمني - Timeline Section */}
+      <section className="py-20 px-6 bg-white dark:bg-[#0A2342]">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4">
+            <h2 className="apple-header text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#0A2342]">
               جدولنا الزمني
             </h2>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-[#34495E] text-lg">
               تطور خدماتنا وخططنا المستقبلية
             </p>
           </div>
           
           <div className="relative mx-auto max-w-4xl">
             {/* خط العمود الجديد - منتصف */}
-            <div className="absolute h-full w-1 bg-gradient-to-b from-brand-coral via-purple-500 to-gray-200 right-1/2 transform translate-x-1/2 left-1/2"></div>
+            <div className="absolute h-full w-1 bg-gradient-to-b from-[#0A2342] via-[#1F4068] to-[#34495E] right-1/2 transform translate-x-1/2 left-1/2"></div>
             
             {/* عناصر الجدول الزمني بتصميم جديد */}
             {timelineItems.map((item, index) => (
@@ -184,7 +184,7 @@ const HomePage = () => {
               >
                 <div className={`w-[45%] relative ${index % 2 === 0 ? 'ml-12' : 'mr-12'}`}>
                   {/* النقطة المضيئة على الخط */}
-                  <div className="absolute w-5 h-5 bg-brand-coral rounded-full top-6 transform -translate-y-1/2 shadow-md shadow-brand-coral/30 z-10"
+                  <div className="absolute w-5 h-5 bg-[#0A2342] rounded-full top-6 transform -translate-y-1/2 shadow-md shadow-[#1F4068]/30 z-10"
                        style={{ [index % 2 === 0 ? 'right' : 'left']: '-42px' }}>
                     <div className="absolute w-3 h-3 bg-white rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
                   </div>
@@ -195,24 +195,24 @@ const HomePage = () => {
                     whileInView={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
                     viewport={{ once: true }}
-                    className="bg-white dark:bg-card p-6 rounded-xl shadow-md border border-muted hover:shadow-lg transition-shadow"
+                    className="bg-white dark:bg-[#1F4068] p-6 rounded-xl shadow-md border border-[#0A2342]/10 hover:shadow-lg transition-shadow"
                   >
                     <div className="flex items-center mb-4">
-                      <div className="bg-brand-coral/10 dark:bg-brand-coral/20 text-brand-coral font-bold rounded-lg py-1 px-4 ml-3">
+                      <div className="bg-[#0A2342]/10 dark:bg-[#0A2342]/20 text-[#0A2342] font-bold rounded-lg py-1 px-4 ml-3">
                         {item.year}
                       </div>
-                      <h3 className="text-xl font-bold text-foreground">{item.title}</h3>
+                      <h3 className="text-xl font-bold text-[#0A2342]">{item.title}</h3>
                     </div>
                     
-                    <p className="text-muted-foreground mb-4">{item.description}</p>
+                    <p className="text-[#34495E] mb-4">{item.description}</p>
                     
                     <ul className="space-y-2">
                       {item.items.map((subItem, subIndex) => (
                         <li key={subIndex} className="flex items-start">
-                          <div className="mr-2 mt-1 text-brand-coral">
+                          <div className="mr-2 mt-1 text-[#0A2342]">
                             <CheckCircle2 size={16} />
                           </div>
-                          <span className="text-foreground">{subItem}</span>
+                          <span className="text-[#34495E]">{subItem}</span>
                         </li>
                       ))}
                     </ul>
