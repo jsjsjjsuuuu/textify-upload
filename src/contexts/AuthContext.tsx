@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { SupabaseClient, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -122,11 +123,15 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.log("تم جلب الملف الشخصي بنجاح:", data);
       
+      // الحصول على البريد الإلكتروني للمستخدم
+      const userEmail = user?.email || '';
+      
       // التأكد من أن is_admin هو Boolean
-      const profile = {
+      const profile: UserProfile = {
         ...data,
-        is_admin: data.is_admin === true
-      } as UserProfile;
+        is_admin: data.is_admin === true,
+        email: userEmail // إضافة حقل البريد الإلكتروني المطلوب
+      };
       
       console.log("بيانات الملف الشخصي بعد المعالجة:", {
         ...profile,
@@ -185,8 +190,15 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       console.log("تم إنشاء ملف شخصي جديد بنجاح:", newProfile);
-      setUserProfile(newProfile);
-      return newProfile;
+      
+      // إضافة البريد الإلكتروني إلى الملف الشخصي الجديد
+      const profileWithEmail: UserProfile = {
+        ...newProfile,
+        email: userEmail // إضافة البريد الإلكتروني المطلوب
+      };
+      
+      setUserProfile(profileWithEmail);
+      return profileWithEmail;
     } catch (error) {
       console.error("خطأ غير متوقع في إنشاء الملف الشخصي:", error);
       return null;
