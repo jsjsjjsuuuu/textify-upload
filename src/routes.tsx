@@ -22,8 +22,9 @@ import AdminApproval from './pages/AdminApproval';
 import AutomationPage from './pages/AutomationPage';
 import HomePage from './pages/HomePage';
 
-// مكون لمراقبة التوجيه بناءً على حالة تسجيل الدخول - نقلناه من App.tsx إلى هنا
-const AuthRedirect = () => {
+// مكون إعادة التوجيه بناءً على حالة تسجيل الدخول
+// سنقوم بوضعه داخل التطبيق كمكون مستقل
+const AuthRedirectWrapper = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,10 +39,20 @@ const AuthRedirect = () => {
   return null;
 };
 
+// إنشاء مكون للصفحة الرئيسية مع إعادة التوجيه
+const HomePageWithRedirect = () => {
+  return (
+    <>
+      <HomePage />
+      <AuthRedirectWrapper />
+    </>
+  );
+};
+
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <HomePage />,
+    element: <HomePageWithRedirect />,
   },
   {
     path: "/app",
@@ -109,14 +120,9 @@ export const router = createBrowserRouter([
   },
 ]);
 
-// مكون AppRoutes الذي سيحتوي على كل من RouterProvider و AuthRedirect
+// مكون AppRoutes
 export const AppRoutes = () => {
-  return (
-    <>
-      <RouterProvider router={router} />
-      <AuthRedirect />
-    </>
-  );
+  return <RouterProvider router={router} />;
 };
 
 export default router;
