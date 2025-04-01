@@ -1,6 +1,8 @@
 
 import React from 'react';
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from 'react';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFound from './pages/NotFound';
 import Login from './pages/Login';
@@ -19,6 +21,22 @@ import ServicePage from './pages/ServicePage';
 import AdminApproval from './pages/AdminApproval';
 import AutomationPage from './pages/AutomationPage';
 import HomePage from './pages/HomePage';
+
+// مكون لمراقبة التوجيه بناءً على حالة تسجيل الدخول - نقلناه من App.tsx إلى هنا
+const AuthRedirect = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  useEffect(() => {
+    // إذا كان المستخدم قد سجل الدخول وكان على الصفحة الرئيسية، يتم توجيهه إلى صفحة التطبيق
+    if (user && location.pathname === '/') {
+      navigate('/app');
+    }
+  }, [user, location.pathname, navigate]);
+  
+  return null;
+};
 
 export const router = createBrowserRouter([
   {
@@ -91,9 +109,14 @@ export const router = createBrowserRouter([
   },
 ]);
 
-// مكون AppRoutes لاستخدامه في App.tsx
+// مكون AppRoutes الذي سيحتوي على كل من RouterProvider و AuthRedirect
 export const AppRoutes = () => {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <AuthRedirect />
+    </>
+  );
 };
 
 export default router;
