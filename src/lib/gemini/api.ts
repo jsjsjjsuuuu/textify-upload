@@ -17,10 +17,10 @@ export async function extractDataWithGemini({
   imageBase64,
   extractionPrompt,
   temperature = 0.1,
-  modelVersion = 'gemini-1.5-flash', // استخدام النموذج الأسرع افتراضياً
+  modelVersion = 'gemini-1.5-flash',
   enhancedExtraction = true,
-  maxRetries = 2, // تقليل عدد المحاولات
-  retryDelayMs = 3000 // تقليل مدة الانتظار
+  maxRetries = 2,
+  retryDelayMs = 2000
 }: GeminiExtractParams): Promise<ApiResult> {
   if (!apiKey) {
     console.error("Gemini API Key مفقود");
@@ -64,10 +64,9 @@ export async function extractDataWithGemini({
     console.log("طول صورة Base64:", imageBase64.length);
     console.log("استخدام إصدار النموذج:", modelVersion);
     
-    // التحقق من حجم صورة Base64 وتقليلها إذا كانت كبيرة جدًا
-    if (imageBase64.length > 1000000) { // أكثر من ~1MB
-      console.log("حجم الصورة كبير جدًا، محاولة تقليل جودة Base64...");
-      // في هذه الحالة، سنستمر ونلاحظ إذا كان الطلب سينجح
+    // التحقق من حجم صورة Base64
+    if (imageBase64.length > 1000000) {
+      console.log("حجم الصورة كبير جدًا، لكن سنستمر في المحاولة");
     }
     
     // تنظيف معرف صورة Base64
@@ -90,7 +89,7 @@ export async function extractDataWithGemini({
       ],
       generationConfig: {
         temperature: temperature,
-        maxOutputTokens: 800, // تقليل حد الإخراج لتسريع الاستجابة
+        maxOutputTokens: 1024,
         topK: 40,
         topP: 0.95
       }
@@ -100,7 +99,7 @@ export async function extractDataWithGemini({
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent`;
     console.log("إرسال طلب إلى نقطة نهاية Gemini API:", endpoint);
     
-    // إنشاء خيارات الطلب مع مهلة زمنية أقصر
+    // إنشاء خيارات الطلب
     const fetchOptions = {
       method: "POST",
       headers: {
@@ -108,23 +107,24 @@ export async function extractDataWithGemini({
         "x-goog-api-key": apiKey
       },
       body: JSON.stringify(requestBody),
-      // إضافة مهلة للطلبات
-      signal: AbortSignal.timeout(30000) // 30 ثانية
+      signal: AbortSignal.timeout(60000) // 60 ثانية
     };
     
     // تنفيذ الطلب مع قياس الوقت
     console.log("بدء طلب API...");
     const timeBeforeRequest = Date.now();
     
-    // إضافة محاولة إعادة الطلب في حالة الفشل
+    // محاولة طلب API مع إعادة المحاولة
     let response;
     let attemptCount = 0;
-    const maxAttempts = 2;
+    const maxAttempts = 3;
     
     while (attemptCount < maxAttempts) {
       try {
         attemptCount++;
+        console.log(`محاولة طلب API رقم ${attemptCount}...`);
         response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
+        console.log(`استجابة محاولة ${attemptCount}:`, response.status);
         break; // الخروج من الحلقة إذا نجح الطلب
       } catch (fetchError) {
         console.error(`محاولة الطلب ${attemptCount} فشلت:`, fetchError);
@@ -193,6 +193,59 @@ export async function extractDataWithGemini({
 
     if (!data.candidates || data.candidates.length === 0) {
       console.error("لا توجد مرشحات في استجابة Gemini");
+      
+      // محاولة استخدام مطالبة أبسط
+      try {
+        console.log("محاولة استخدام مطالبة أبسط...");
+        
+        const simpleRequestBody = {
+          ...requestBody,
+          contents: [
+            {
+              parts: [
+                { text: getTextOnlyExtractionPrompt() },
+                {
+                  inline_data: {
+                    mime_type: "image/jpeg",
+                    data: cleanBase64
+                  }
+                }
+              ]
+            }
+          ]
+        };
+        
+        // تأخير قبل طلب آخر
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const simpleResponse = await fetch(`${endpoint}?key=${apiKey}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey
+          },
+          body: JSON.stringify(simpleRequestBody),
+          signal: AbortSignal.timeout(30000) // 30 ثانية
+        });
+        
+        if (simpleResponse.ok) {
+          const simpleData = await simpleResponse.json();
+          
+          if (simpleData.candidates?.[0]?.content?.parts?.[0]?.text) {
+            return {
+              success: true,
+              message: "تم استخراج النص باستخدام مطالبة أبسط",
+              data: {
+                extractedText: simpleData.candidates[0].content.parts[0].text,
+                parsedData: {},
+                confidence: 50
+              }
+            };
+          }
+        }
+      } catch (alternativeError) {
+        console.error("فشلت المحاولة البديلة:", alternativeError);
+      }
       
       // الإبلاغ عن الخطأ لمدير المفاتيح
       reportApiKeyError(apiKey, "لم يتم إنشاء أي استجابة من Gemini");
@@ -305,88 +358,6 @@ export async function extractDataWithGemini({
             }
           }
         }
-        
-        // محاولة استخدام مطالبة نص فقط بسيطة إذا فشلت مطالبة خط اليد
-        console.log("محاولة استخدام مطالبة نص فقط بسيطة...");
-        
-        const textOnlyRequestBody = {
-          ...requestBody,
-          contents: [
-            {
-              parts: [
-                { text: getTextOnlyExtractionPrompt() },
-                {
-                  inline_data: {
-                    mime_type: "image/jpeg",
-                    data: cleanBase64
-                  }
-                }
-              ]
-            }
-          ]
-        };
-        
-        // تأخير قبل طلب آخر
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // استخدام الطلب البسيط
-        const textOnlyResponse = await fetch(`${endpoint}?key=${apiKey}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey
-          },
-          body: JSON.stringify(textOnlyRequestBody),
-          signal: AbortSignal.timeout(15000) // 15 ثواني
-        });
-        
-        if (textOnlyResponse.ok) {
-          const textOnlyData: GeminiResponse = await textOnlyResponse.json();
-          
-          if (textOnlyData.candidates?.[0]?.content?.parts?.[0]?.text) {
-            const rawExtractedText = textOnlyData.candidates[0].content.parts[0].text;
-            console.log("تم استخراج النص الخام بنجاح، الطول:", rawExtractedText.length);
-            
-            // محاولة استخراج البيانات من النص المستخرج
-            try {
-              const { parsedData, confidenceScore } = parseGeminiResponse(rawExtractedText);
-              
-              // إذا تم استخراج بعض البيانات على الأقل
-              if (Object.keys(parsedData).length > 0) {
-                return {
-                  success: true,
-                  message: "تم استخراج البيانات من النص الخام",
-                  data: {
-                    extractedText: rawExtractedText,
-                    parsedData,
-                    confidence: confidenceScore
-                  }
-                };
-              } else {
-                return {
-                  success: true,
-                  message: "تم استخراج النص الخام فقط، لم يتم التعرف على البيانات المنظمة",
-                  data: {
-                    extractedText: rawExtractedText,
-                    rawText: rawExtractedText,
-                    parsedData: {}
-                  }
-                };
-              }
-            } catch (parseError) {
-              // حتى إذا فشل التحليل، نعيد النص المستخرج على الأقل
-              return {
-                success: true,
-                message: "تم استخراج النص الخام فقط، فشل تحليله",
-                data: {
-                  extractedText: rawExtractedText,
-                  rawText: rawExtractedText,
-                  parsedData: {}
-                }
-              };
-            }
-          }
-        }
       } catch (alternativeError) {
         console.error("فشلت جميع المحاولات البديلة:", alternativeError);
       }
@@ -399,8 +370,9 @@ export async function extractDataWithGemini({
     
     // تحليل الاستجابة واستخراج البيانات المنظمة
     try {
+      console.log("تحليل النص المستخرج:", extractedText.substring(0, 100) + "...");
       const { parsedData, confidenceScore } = parseGeminiResponse(extractedText);
-      console.log("تم تحليل البيانات من Gemini بنجاح");
+      console.log("تم تحليل البيانات من Gemini بنجاح:", parsedData);
       
       return {
         success: true,
@@ -440,7 +412,7 @@ export async function extractDataWithGemini({
     } else if (errorMessage.includes('CORS')) {
       userFriendlyMessage = 'تم منع الطلب بسبب قيود CORS. حاول استخدام الموقع الرئيسي بدلاً من بيئة المعاينة.';
     } else if (errorMessage.includes('quota') || errorMessage.includes('limit')) {
-      userFriendlyMessage = 'تم تجاوز حد الاستخدام. جاري تبديل المفتاح تلقائياً.';
+      userFriendlyMessage = 'تم تجاوز حد الاستخدام. جاري استخدام مفتاح API بديل.';
     }
     
     return {

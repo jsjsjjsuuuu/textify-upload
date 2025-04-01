@@ -15,7 +15,7 @@ import { updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { isPreviewEnvironment } from "@/utils/automationServerUrl";
 
 export const useGeminiProcessing = () => {
-  const [useGemini, setUseGemini] = useState(false);
+  const [useGemini, setUseGemini] = useState(true); // تعيين القيمة الافتراضية إلى true
   const [connectionTested, setConnectionTested] = useState(false);
   const { toast } = useToast();
 
@@ -24,6 +24,7 @@ export const useGeminiProcessing = () => {
     const testConnection = async () => {
       if (!connectionTested) {
         const apiKey = getNextApiKey();
+        console.log("اختبار اتصال Gemini API عند بدء التشغيل...");
         await testGeminiApiConnection(apiKey);
       }
     };
@@ -40,22 +41,39 @@ export const useGeminiProcessing = () => {
         console.log("اتصال Gemini API ناجح");
         setConnectionTested(true);
         setUseGemini(true);
+        toast({
+          title: "اتصال ناجح",
+          description: "تم الاتصال بـ Gemini AI بنجاح",
+        });
       } else {
         console.warn("فشل اختبار اتصال Gemini API:", result.message);
-        // محاولة مفتاح آخر
-        const newKey = getNextApiKey();
-        if (newKey !== apiKey) {
-          await testGeminiApiConnection(newKey);
-        } else {
-          toast({
-            title: "تحذير",
-            description: `فشل اختبار اتصال Gemini API: ${result.message}`,
-            variant: "default"
-          });
-        }
+        
+        // محاولة مرة أخرى
+        console.log("محاولة إعادة اتصال...");
+        setTimeout(async () => {
+          const newResult = await testGeminiConnection(apiKey);
+          if (newResult.success) {
+            console.log("نجح الاتصال في المحاولة الثانية!");
+            setConnectionTested(true);
+            setUseGemini(true);
+          } else {
+            toast({
+              title: "تحذير",
+              description: `فشل الاتصال بـ Gemini AI: ${result.message}`,
+              variant: "destructive"
+            });
+            setUseGemini(false);
+          }
+        }, 2000);
       }
     } catch (error) {
       console.error("خطأ في اختبار اتصال Gemini API:", error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء الاتصال بخدمة Gemini AI، جاري استخدام المعالجة الداخلية",
+        variant: "destructive"
+      });
+      setUseGemini(false);
     }
   };
 
@@ -67,66 +85,46 @@ export const useGeminiProcessing = () => {
 
   // زيادة التأخير بين الطلبات
   const getApiDelayTime = (apiStats: { active: number, rateLimited: number }) => {
-    // زيادة التأخير كلما قل عدد المفاتيح النشطة
-    if (apiStats.active <= 1) {
-      return 5000; // 5 ثوانٍ عندما يكون هناك مفتاح واحد فقط
-    } else if (apiStats.active <= 2) {
-      return 3000; // 3 ثوانٍ عندما يكون هناك مفتاحان
-    } else {
-      return 1500; // 1.5 ثانية للمفاتيح الثلاثة أو أكثر
-    }
+    // ثابت 2 ثواني للتأخير
+    return 2000;
   };
 
   const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
-    // الحصول على المفتاح التالي من نظام الدوران
+    // الحصول على المفتاح التالي
     const geminiApiKey = getNextApiKey();
-    console.log("استخدام مفتاح Gemini API بطول:", geminiApiKey.length);
+    console.log("استخدام مفتاح Gemini API:", geminiApiKey.substring(0, 5) + "...");
 
-    // في بيئة المعاينة، نحاول استخدام Gemini مع تحذير المستخدم
-    if (isPreviewEnvironment()) {
-      console.log("تشغيل في بيئة معاينة (Lovable). محاولة استخدام Gemini قد تواجه قيود CORS.");
-      toast({
-        title: "تنبيه",
-        description: "استخدام Gemini في بيئة المعاينة قد يواجه قيود CORS، يرجى التحلي بالصبر في حالة بطء المعالجة",
-        variant: "default"
-      });
-    }
+    // تحديث الصورة لتظهر أنها قيد المعالجة
+    const processingImage: ImageData = { 
+      ...image, 
+      status: "processing" as const,
+      extractedText: "جاري معالجة الصورة واستخراج البيانات..."
+    };
 
     try {
       // الكشف عن حجم الملف وتقديم تحذير إذا كان كبيرًا جدًا
       const fileSizeMB = file.size / (1024 * 1024);
       if (fileSizeMB > 5) {
-        toast({
-          title: "تنبيه",
-          description: `حجم الصورة كبير (${fileSizeMB.toFixed(1)}MB)، قد تستغرق المعالجة وقتًا أطول`,
-          variant: "default"
-        });
+        console.log(`حجم الصورة كبير (${fileSizeMB.toFixed(1)}MB)، قد تستغرق المعالجة وقتًا أطول`);
       }
       
       console.log("تحويل الملف إلى base64");
       const imageBase64 = await fileToBase64(file);
       console.log("تم تحويل الملف إلى base64، بطول:", imageBase64.length);
       
-      // تحديث الصورة لتظهر أنها قيد المعالجة
-      const updatedImage: ImageData = { 
-        ...image, 
-        status: "processing" as const,
-        extractedText: "جاري معالجة الصورة واستخراج البيانات..."
-      };
-      
       // الحصول على إحصائيات المفاتيح لتحديد وقت التأخير
       const apiStats = getApiKeyStats();
-      // تأخير قبل الاستخراج لمنع تجاوز حد الاستخدام
+      // تأخير قبل الاستخراج
       await sleepBetweenRequests(getApiDelayTime(apiStats));
       
-      // إضافة معلومات تشخيصية أكثر
+      // إضافة معلومات تشخيصية
       console.log("بدء استدعاء extractDataWithGemini");
       console.log("إعدادات الاستخراج:", {
         apiKeyLength: geminiApiKey.length,
         imageBase64Length: imageBase64.length,
         enhancedExtraction: true,
-        maxRetries: 2, // تقليل عدد المحاولات
-        retryDelayMs: 3000 // تقليل وقت الانتظار بين المحاولات
+        maxRetries: 2,
+        retryDelayMs: 2000
       });
       
       const extractionResult = await extractDataWithGemini({
@@ -134,8 +132,8 @@ export const useGeminiProcessing = () => {
         imageBase64,
         enhancedExtraction: true,
         maxRetries: 2,
-        retryDelayMs: 3000,
-        modelVersion: 'gemini-1.5-flash'  // استخدام نموذج أسرع
+        retryDelayMs: 2000,
+        modelVersion: 'gemini-1.5-flash'
       });
       
       console.log("نتيجة استخراج Gemini:", extractionResult);
@@ -254,15 +252,6 @@ export const useGeminiProcessing = () => {
       
       // تحسين رسالة الخطأ
       let errorMessage = geminiError.message || 'خطأ غير معروف';
-      
-      if (errorMessage.includes('Failed to fetch')) {
-        errorMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك والمحاولة مرة أخرى.';
-      } else if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
-        errorMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى تحميل صورة أصغر حجمًا أو المحاولة مرة أخرى لاحقًا.';
-      } else if (errorMessage.includes('quota') || errorMessage.includes('limit exceeded')) {
-        errorMessage = 'تم تجاوز حصة API. جاري تحويلك تلقائيًا إلى مفتاح آخر للمحاولة مرة أخرى.';
-        // محاولة مفتاح آخر تلقائيًا في الاستدعاء التالي
-      }
       
       toast({
         title: "خطأ",
