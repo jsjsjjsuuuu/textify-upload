@@ -4,6 +4,7 @@ import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
 import { useState, useEffect, useCallback } from "react";
 import { DEFAULT_GEMINI_API_KEY, resetAllApiKeys } from "@/lib/gemini/apiKeyManager";
 import { useToast } from "@/hooks/use-toast";
+import { useFileUpload } from "@/hooks/useFileUpload";
 
 export const useImageProcessing = () => {
   const coreProcessing = useImageProcessingCore();
@@ -129,6 +130,14 @@ export const useImageProcessing = () => {
     }
   }, [coreProcessing.saveProcessedImage, toast]);
   
+  // الحصول على معلومات حدود التحميل من useFileUpload في coreProcessing
+  const uploadLimitInfo = coreProcessing.uploadLimitInfo || {
+    subscription: 'standard',
+    dailyLimit: 3,
+    currentCount: 0,
+    remainingUploads: 3
+  };
+  
   return {
     ...coreProcessing,
     formatDate,
@@ -146,7 +155,7 @@ export const useImageProcessing = () => {
     activeUploads: coreProcessing.activeUploads || 0,
     queueLength: coreProcessing.queueLength || 0,
     useGemini: coreProcessing.useGemini || false,
-    saveProcessedImage
-    // أزلنا uploadLimitInfo من هنا
+    saveProcessedImage,
+    uploadLimitInfo // إضافة معلومات حدود التحميل للواجهة
   };
 };

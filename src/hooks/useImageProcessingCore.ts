@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -163,6 +162,7 @@ export const useImageProcessingCore = () => {
     useGemini,
     pauseProcessing: filePauseProcessing,
     clearQueue,
+    uploadLimitInfo  // استخراج معلومات حدود التحميل من useFileUpload
   } = fileUploadData;
 
   // إعادة هيكلة وظيفة handleSubmitToApi لتستخدم وظيفة saveProcessedImage
@@ -282,6 +282,7 @@ export const useImageProcessingCore = () => {
     pauseProcessing,
     clearQueue,
     activeUploads,
-    queueLength
+    queueLength,
+    uploadLimitInfo // إضافة معلومات حدود التحميل إلى المخرجات
   };
 };
