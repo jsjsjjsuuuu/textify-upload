@@ -45,7 +45,7 @@ const AppHeader = () => {
       <div className="container flex h-16 items-center justify-between">
         {/* الشعار والروابط الرئيسية */}
         <div className="flex items-center gap-6">
-          <Link to="/" className="text-xl font-bold text-primary">استخراج البيانات</Link>
+          <Link to="/" className="text-xl font-bold text-primary">اصيل</Link>
           
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
             {user && <>
@@ -55,7 +55,7 @@ const AppHeader = () => {
                 </Link>
                 
                 {/* إظهار رابط صفحة إدارة المستخدمين للمسؤولين فقط بشكل صريح */}
-                {isAdmin && <Link to="/admin/approvals" className={`transition-colors hover:text-foreground/80 flex items-center ${pathname === "/admin/approvals" ? "text-foreground font-bold" : "text-foreground/60"}`}>
+                {isAdmin && <Link to="/admin/approvals" className="">
                     <UserCog className="h-4 w-4 ml-1" />
                     إدارة المستخدمين
                   </Link>}
