@@ -14,7 +14,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { ImageData } from '@/types/ImageData';
-
 const Index = () => {
   const navigate = useNavigate();
   const {
@@ -156,7 +155,6 @@ const Index = () => {
       description: "تم مسح قائمة انتظار المعالجة"
     });
   };
-
   return <div className="min-h-screen bg-background">
       <AppHeader />
       
@@ -228,13 +226,8 @@ const Index = () => {
               <div className="bg-card rounded-3xl shadow-sm overflow-hidden backdrop-blur-sm border border-muted">
                 <div className="p-8">
                   <h2 className="text-2xl font-medium mb-2 text-center text-primary-foreground/90">تحميل الصور</h2>
-                  <p className="text-muted-foreground text-center text-sm mb-6">قم بتحميل صور الإيصالات أو الفواتير لاستخراج البيانات منها تلقائياً</p>
-                  <ImageUploader 
-                    isProcessing={isProcessing} 
-                    processingProgress={processingProgress} 
-                    onFileChange={handleFileChange} 
-                    onCancelUpload={handleCancelUpload}
-                  />
+                  <p className="text-muted-foreground text-center text-sm mb-6">ارفــع الصـــور هنــا </p>
+                  <ImageUploader isProcessing={isProcessing} processingProgress={processingProgress} onFileChange={handleFileChange} onCancelUpload={handleCancelUpload} />
                 </div>
               </div>
             </div>
@@ -259,17 +252,7 @@ const Index = () => {
                 <p className="text-muted-foreground mb-8">
                   هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.
                 </p>
-                <ImagePreviewContainer 
-                  images={sessionImages} 
-                  isSubmitting={isSubmitting} 
-                  onTextChange={handleTextChange} 
-                  onDelete={handleDelete} 
-                  onSubmit={id => handleSubmitToApi(id)} 
-                  formatDate={formatImageDate} 
-                  showOnlySession={true} 
-                  onReprocess={handleReprocessImage}
-                  onImageClick={handleImageClick}
-                />
+                <ImagePreviewContainer images={sessionImages} isSubmitting={isSubmitting} onTextChange={handleTextChange} onDelete={handleDelete} onSubmit={id => handleSubmitToApi(id)} formatDate={formatImageDate} showOnlySession={true} onReprocess={handleReprocessImage} onImageClick={handleImageClick} />
               </div>
             </div>
           </section>}
