@@ -4,7 +4,7 @@ import ImageUploader from '@/components/ImageUploader';
 import ImageList from '@/components/ImageList';
 import BackgroundPattern from '@/components/BackgroundPattern';
 import { motion } from 'framer-motion';
-import { useImageProcessingCore } from '@/hooks/useImageProcessingCore';
+import { useImageProcessing } from '@/hooks/useImageProcessing';
 
 const Index: React.FC = () => {
   const {
@@ -15,10 +15,10 @@ const Index: React.FC = () => {
     handleImageClick,
     handleTextChange,
     handleDelete,
-    handleSubmit,
+    handleSubmitToApi,
     formatDate,
     handleCancelUpload
-  } = useImageProcessingCore();
+  } = useImageProcessing();
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
@@ -55,7 +55,7 @@ const Index: React.FC = () => {
             onImageClick={handleImageClick}
             onTextChange={handleTextChange}
             onDelete={handleDelete}
-            onSubmit={handleSubmit}
+            onSubmit={handleSubmitToApi}
             formatDate={formatDate}
           />
         )}
