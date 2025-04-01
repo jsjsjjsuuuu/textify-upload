@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -13,6 +14,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { ImageData } from '@/types/ImageData';
+
 const Index = () => {
   const navigate = useNavigate();
   const {
@@ -51,6 +54,25 @@ const Index = () => {
     formatPrice,
     formatProvinceName
   } = useDataFormatting();
+
+  // إضافة وظيفة handleImageClick داخل المكون بدلاً من توقع وجودها في hook
+  const handleImageClick = (image: ImageData) => {
+    console.log("تم النقر على الصورة:", image.id);
+    // يمكن إضافة أي منطق إضافي هنا للتعامل مع النقر على الصورة
+  };
+
+  // إضافة وظيفة handleCancelUpload داخل المكون
+  const handleCancelUpload = () => {
+    console.log("تم طلب إلغاء التحميل");
+    // يمكن استدعاء وظيفة إلغاء التحميل أو إيقاف المعالجة هنا
+    if (pauseProcessing) {
+      pauseProcessing();
+      toast({
+        title: "تم الإلغاء",
+        description: "تم إلغاء عملية التحميل بنجاح"
+      });
+    }
+  };
 
   // وظيفة تنفيذ التنظيف يدوياً
   const handleManualCleanup = async () => {
@@ -135,6 +157,7 @@ const Index = () => {
       description: "تم مسح قائمة انتظار المعالجة"
     });
   };
+
   return <div className="min-h-screen bg-background">
       <AppHeader />
       
@@ -207,7 +230,12 @@ const Index = () => {
                 <div className="p-8">
                   <h2 className="apple-subheader mb-4 text-center">تحميل الصور</h2>
                   <p className="text-muted-foreground text-center mb-6">قم بتحميل صور الإيصالات أو الفواتير وسنقوم باستخراج البيانات منها تلقائياً</p>
-                  <ImageUploader isProcessing={isProcessing} processingProgress={processingProgress} onFileChange={handleFileChange} />
+                  <ImageUploader 
+                    isProcessing={isProcessing} 
+                    processingProgress={processingProgress} 
+                    onFileChange={handleFileChange} 
+                    onCancelUpload={handleCancelUpload}
+                  />
                 </div>
               </div>
             </div>
@@ -232,7 +260,17 @@ const Index = () => {
                 <p className="text-muted-foreground mb-8">
                   هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.
                 </p>
-                <ImagePreviewContainer images={sessionImages} isSubmitting={isSubmitting} onTextChange={handleTextChange} onDelete={handleDelete} onSubmit={id => handleSubmitToApi(id)} formatDate={formatImageDate} showOnlySession={true} onReprocess={handleReprocessImage} />
+                <ImagePreviewContainer 
+                  images={sessionImages} 
+                  isSubmitting={isSubmitting} 
+                  onTextChange={handleTextChange} 
+                  onDelete={handleDelete} 
+                  onSubmit={id => handleSubmitToApi(id)} 
+                  formatDate={formatImageDate} 
+                  showOnlySession={true} 
+                  onReprocess={handleReprocessImage}
+                  onImageClick={handleImageClick}
+                />
               </div>
             </div>
           </section>}
