@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -14,6 +15,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { ImageData } from '@/types/ImageData';
+import { Progress } from '@/components/ui/progress';
+
 const Index = () => {
   const navigate = useNavigate();
   const {
@@ -45,7 +48,8 @@ const Index = () => {
     retryProcessing,
     pauseProcessing,
     // استخدام وظيفة الإيقاف المؤقت
-    clearQueue // استخدام وظيفة مسح القائمة
+    clearQueue, // استخدام وظيفة مسح القائمة
+    uploadLimitInfo // إضافة معلومات حدود التحميل
   } = useImageProcessing();
   const {
     formatPhoneNumber,
@@ -155,6 +159,7 @@ const Index = () => {
       description: "تم مسح قائمة انتظار المعالجة"
     });
   };
+  
   return <div className="min-h-screen bg-background">
       <AppHeader />
       
@@ -185,6 +190,54 @@ const Index = () => {
                   </Link>
                 </Button>
               </div>
+              
+              {/* معلومات الباقة وحدود التحميل */}
+              {user && uploadLimitInfo && <div className="mt-6 p-4 bg-muted/30 border border-muted/50 rounded-lg">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-2">
+                  <div className="text-sm text-muted-foreground mb-2 md:mb-0">
+                    <span className="font-semibold">الباقة: </span>
+                    <Badge className={`mr-1 ${
+                      uploadLimitInfo.subscription === 'pro' ? 'bg-blue-500' :
+                      uploadLimitInfo.subscription === 'vip' ? 'bg-purple-500' : 
+                      'bg-gray-500'
+                    }`}>
+                      {uploadLimitInfo.subscription === 'pro' ? 'PRO' :
+                       uploadLimitInfo.subscription === 'vip' ? 'VIP' : 
+                       'العادية'}
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-semibold">المتبقي اليوم: </span>
+                    <Badge variant="outline" className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 border-green-300">
+                      {uploadLimitInfo.remainingUploads} / {uploadLimitInfo.dailyLimit}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="w-full mt-2">
+                  <Progress 
+                    value={(uploadLimitInfo.currentCount / uploadLimitInfo.dailyLimit) * 100} 
+                    className="h-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1 text-center">
+                    استهلاك {uploadLimitInfo.currentCount} من أصل {uploadLimitInfo.dailyLimit} صورة ({Math.round((uploadLimitInfo.currentCount / uploadLimitInfo.dailyLimit) * 100)}%)
+                  </p>
+                </div>
+                
+                {uploadLimitInfo.remainingUploads === 0 && <div className="mt-3">
+                  <Alert className="bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800">
+                    <AlertDescription className="text-yellow-800 dark:text-yellow-300 text-sm">
+                      لقد وصلت إلى الحد اليومي للصور. سيتم تجديد الرصيد غداً، أو يمكنك ترقية باقتك للحصول على المزيد من الصور.
+                    </AlertDescription>
+                  </Alert>
+                </div>}
+                
+                {uploadLimitInfo.subscription === 'standard' && <div className="mt-3 text-center">
+                  <Link to="/profile" className="text-sm text-primary hover:underline">
+                    ترقية الباقة للحصول على المزيد من المميزات
+                  </Link>
+                </div>}
+              </div>}
               
               {/* معلومات حول حالة المعالجة */}
               {(isProcessing || queueLength > 0) && <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
@@ -226,8 +279,28 @@ const Index = () => {
               <div className="bg-card rounded-3xl shadow-sm overflow-hidden backdrop-blur-sm border border-muted">
                 <div className="p-8">
                   <h2 className="text-2xl font-medium mb-2 text-center text-primary-foreground/90">تحميل الصور</h2>
-                  <p className="text-muted-foreground text-center text-sm mb-6">ارفــع الصـــور هنــا </p>
-                  <ImageUploader isProcessing={isProcessing} processingProgress={processingProgress} onFileChange={handleFileChange} onCancelUpload={handleCancelUpload} />
+                  <p className="text-muted-foreground text-center text-sm mb-6">ارفــع الصـــور هنــا </p>
+                  
+                  {user && uploadLimitInfo.remainingUploads === 0 ? (
+                    <div className="p-8 text-center">
+                      <Alert className="bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800">
+                        <AlertDescription className="text-yellow-800 dark:text-yellow-300">
+                          لقد وصلت إلى الحد اليومي للصور ({uploadLimitInfo.dailyLimit} صورة). سيتم تجديد الرصيد غداً، أو يمكنك
+                          <Link to="/profile" className="mx-1 text-primary hover:underline font-semibold">
+                            ترقية باقتك
+                          </Link>
+                          للحصول على المزيد من الصور.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  ) : (
+                    <ImageUploader 
+                      isProcessing={isProcessing} 
+                      processingProgress={processingProgress} 
+                      onFileChange={handleFileChange} 
+                      onCancelUpload={handleCancelUpload} 
+                    />
+                  )}
                 </div>
               </div>
             </div>

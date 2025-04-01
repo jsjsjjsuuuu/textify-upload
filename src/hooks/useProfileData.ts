@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +39,14 @@ export const useProfileData = () => {
     processedImages: 0,
     pendingImages: 0
   });
+  
+  // إضافة حالة لمعلومات الباقة
+  const [subscriptionInfo, setSubscriptionInfo] = useState({
+    plan: 'standard',
+    dailyLimit: 3,
+    currentUsage: 0,
+    remainingUploads: 3,
+  });
 
   useEffect(() => {
     if (user) {
@@ -69,6 +78,29 @@ export const useProfileData = () => {
           username: userProfile.username || '',
           fullName: userProfile.full_name || '',
           avatarUrl: userProfile.avatar_url || '',
+        }));
+        
+        // تحديث معلومات الباقة
+        setSubscriptionInfo(prev => ({
+          ...prev,
+          plan: userProfile.subscription_plan || 'standard',
+          dailyLimit: userProfile.daily_image_limit || 3,
+        }));
+      }
+      
+      // الحصول على عدد التحميلات اليومية الحالية
+      const { data: uploadCountData } = await supabase.rpc(
+        'get_user_daily_upload_count',
+        { user_id_param: user.id }
+      );
+      
+      // تحديث معلومات الاستخدام
+      if (typeof uploadCountData === 'number') {
+        const dailyLimit = userProfile?.daily_image_limit || 3;
+        setSubscriptionInfo(prev => ({
+          ...prev,
+          currentUsage: uploadCountData,
+          remainingUploads: Math.max(0, dailyLimit - uploadCountData),
         }));
       }
       
@@ -179,6 +211,69 @@ export const useProfileData = () => {
     }
   };
   
+  // وظيفة لتحديث باقة المستخدم
+  const updateSubscriptionPlan = async (newPlan: string) => {
+    if (!user) return false;
+    
+    try {
+      setIsUpdating(true);
+      
+      // تحديد الحد اليومي الجديد
+      let newDailyLimit = 3;
+      switch (newPlan) {
+        case 'pro': 
+          newDailyLimit = 3500;
+          break;
+        case 'vip':
+          newDailyLimit = 1600;
+          break;
+        default:
+          newDailyLimit = 3;
+      }
+      
+      // تحديث باقة المستخدم في قاعدة البيانات
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          subscription_plan: newPlan,
+          daily_image_limit: newDailyLimit,
+          subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 يوم من الآن
+        })
+        .eq('id', user.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // تحديث حالة واجهة المستخدم
+      setSubscriptionInfo(prev => ({
+        ...prev,
+        plan: newPlan,
+        dailyLimit: newDailyLimit
+      }));
+      
+      // تحديث AuthContext
+      await refreshUserProfile();
+      
+      toast({
+        title: 'تم بنجاح',
+        description: `تم تحديث باقتك إلى ${newPlan === 'pro' ? 'PRO' : newPlan === 'vip' ? 'VIP' : 'العادية'}`,
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('خطأ في تحديث الباقة:', error);
+      toast({
+        title: 'خطأ',
+        description: 'تعذر تحديث الباقة. يرجى المحاولة مرة أخرى.',
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  
   const handleUpdateProfile = async () => {
     if (!user) return;
     
@@ -222,6 +317,8 @@ export const useProfileData = () => {
     handleInputChange,
     handleAvatarUpload,
     handleUpdateProfile,
-    fetchUserProfile
+    fetchUserProfile,
+    subscriptionInfo,
+    updateSubscriptionPlan
   };
 };
