@@ -95,7 +95,7 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
       <div className="absolute top-3 left-3 z-10 flex gap-2">
         <Badge 
           variant="outline" 
-          className={`bg-white/90 hover:bg-white text-black px-2 py-1 text-xs rounded-full backdrop-blur-sm ${
+          className={`bg-white/90 hover:bg-white text-black px-2 py-1 text-xs backdrop-blur-sm ${
             image.status === "completed" ? "border-green-500" : 
             image.status === "processing" ? "border-blue-500" : 
             "border-gray-300"
@@ -107,17 +107,17 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
         </Badge>
         
         {image.submitted && (
-          <Badge variant="outline" className="bg-green-500/90 hover:bg-green-500 text-white px-2 py-1 text-xs rounded-full">
+          <Badge variant="outline" className="bg-green-500/90 hover:bg-green-500 text-white px-2 py-1 text-xs">
             تم الإرسال
           </Badge>
         )}
       </div>
       
-      <div className="overflow-hidden flex-grow bg-muted/10 dark:bg-muted/5 relative rounded-t-lg">
+      <div className="overflow-hidden flex-grow bg-muted/20 relative">
         {isImageLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted/5">
-            <div className="animate-pulse w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center">
-              <ImageIcon className="h-8 w-8 text-muted-foreground/60" />
+          <div className="absolute inset-0 flex items-center justify-center bg-muted/10">
+            <div className="animate-pulse w-12 h-12 rounded-full bg-muted/30 flex items-center justify-center">
+              <ImageIcon className="h-6 w-6 text-muted-foreground" />
             </div>
           </div>
         )}
@@ -143,12 +143,11 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
               onLoad={handleImageLoad}
               onError={handleImageError}
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </motion.div>
         )}
       </div>
       
-      <div className="p-3 bg-card dark:bg-card/80 text-xs text-muted-foreground flex justify-between items-center rounded-b-lg border-t border-muted/20">
+      <div className="p-3 bg-white dark:bg-gray-800 text-xs text-muted-foreground flex justify-between items-center">
         <div className="flex items-center gap-1.5">
           <CalendarIcon className="h-3.5 w-3.5" />
           <span>{formatDate(image.date)}</span>
