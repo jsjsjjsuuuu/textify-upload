@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -226,10 +225,10 @@ const Index = () => {
         <section className="py-16 px-6 bg-transparent">
           <div className="container mx-auto bg-transparent">
             <div className="max-w-3xl mx-auto">
-              <div className="bg-card rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-card rounded-3xl shadow-sm overflow-hidden backdrop-blur-sm border border-muted">
                 <div className="p-8">
-                  <h2 className="apple-subheader mb-4 text-center">تحميل الصور</h2>
-                  <p className="text-muted-foreground text-center mb-6">قم بتحميل صور الإيصالات أو الفواتير وسنقوم باستخراج البيانات منها تلقائياً</p>
+                  <h2 className="text-2xl font-medium mb-2 text-center text-primary-foreground/90">تحميل الصور</h2>
+                  <p className="text-muted-foreground text-center text-sm mb-6">قم بتحميل صور الإيصالات أو الفواتير لاستخراج البيانات منها تلقائياً</p>
                   <ImageUploader 
                     isProcessing={isProcessing} 
                     processingProgress={processingProgress} 
