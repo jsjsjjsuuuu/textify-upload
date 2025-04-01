@@ -242,7 +242,7 @@ export const useProfileData = () => {
         .update({ 
           subscription_plan: newPlan,
           daily_image_limit: newDailyLimit,
-          subscription_end_date: subscriptionEndDate // تحويل التاريخ إلى سلسلة نصية
+          subscription_end_date: subscriptionEndDate
         })
         .eq('id', user.id);
       

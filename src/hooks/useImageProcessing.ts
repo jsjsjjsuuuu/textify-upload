@@ -147,5 +147,6 @@ export const useImageProcessing = () => {
     queueLength: coreProcessing.queueLength || 0,
     useGemini: coreProcessing.useGemini || false,
     saveProcessedImage
+    // أزلنا uploadLimitInfo من هنا
   };
 };

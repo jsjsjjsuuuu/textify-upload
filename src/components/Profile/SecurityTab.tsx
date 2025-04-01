@@ -23,7 +23,7 @@ const passwordSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
-interface SecurityTabProps {
+export interface SecurityTabProps {
   onSignOut: () => Promise<void>;
 }
 

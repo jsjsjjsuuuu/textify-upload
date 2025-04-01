@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -17,6 +16,14 @@ import { Badge } from '@/components/ui/badge';
 import { ImageData } from '@/types/ImageData';
 import { Progress } from '@/components/ui/progress';
 
+// أضف هذا النوع هنا
+interface UploadLimitInfo {
+  subscription: string;
+  dailyLimit: number;
+  currentCount: number;
+  remainingUploads: number;
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const {
@@ -26,7 +33,15 @@ const Index = () => {
     toast
   } = useToast();
 
-  // استدعاء hook بشكل ثابت في كل تحميل للمكون
+  // أضف حالة لمعلومات حدود التحميل
+  const [uploadLimitInfo, setUploadLimitInfo] = useState<UploadLimitInfo>({
+    subscription: 'standard',
+    dailyLimit: 3,
+    currentCount: 0,
+    remainingUploads: 3
+  });
+
+  // استدعاء hook بشكل ثابت في كل مرة يتم فيها استدعاء الـ hook
   const {
     sessionImages,
     isProcessing,
@@ -47,15 +62,8 @@ const Index = () => {
     queueLength,
     retryProcessing,
     pauseProcessing,
-    // استخدام وظيفة الإيقاف المؤقت
-    clearQueue, // استخدام وظيفة مسح القائمة
-    uploadLimitInfo // إضافة معلومات حدود التحميل
+    clearQueue
   } = useImageProcessing();
-  const {
-    formatPhoneNumber,
-    formatPrice,
-    formatProvinceName
-  } = useDataFormatting();
 
   // إضافة وظيفة handleImageClick داخل المكون بدلاً من توقع وجودها في hook
   const handleImageClick = (image: ImageData) => {
@@ -195,7 +203,7 @@ const Index = () => {
               {user && uploadLimitInfo && <div className="mt-6 p-4 bg-muted/30 border border-muted/50 rounded-lg">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-2">
                   <div className="text-sm text-muted-foreground mb-2 md:mb-0">
-                    <span className="font-semibold">الباقة: </span>
+                    <span className="font-semibold">الباقة: </span> 
                     <Badge className={`mr-1 ${
                       uploadLimitInfo.subscription === 'pro' ? 'bg-blue-500' :
                       uploadLimitInfo.subscription === 'vip' ? 'bg-purple-500' : 
