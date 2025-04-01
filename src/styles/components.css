@@ -1,5 +1,92 @@
 
 @layer base {
+  .design-element {
+    @apply absolute pointer-events-none opacity-30;
+  }
+  
+  .upload-zone {
+    @apply border-2 border-dashed border-brand-coral/30 rounded-xl p-8 text-center transition-all;
+  }
+  
+  .upload-zone:hover, .upload-zone.active {
+    @apply border-brand-coral/60 bg-brand-coral/5;
+  }
+  
+  .image-preview-card {
+    @apply relative rounded-xl overflow-hidden bg-white dark:bg-card shadow-lg transition-all hover:shadow-xl;
+  }
+  
+  .floating-element {
+    @apply absolute animate-float;
+  }
+  
+  .rtl-table {
+    direction: rtl;
+    text-align: right;
+  }
+  
+  .rtl-table th {
+    @apply font-bold text-brand-brown dark:text-brand-beige py-3 px-4;
+  }
+  
+  .rtl-table td {
+    @apply py-3 px-4 border-t border-muted;
+  }
+  
+  .rtl-textarea {
+    direction: rtl;
+    text-align: right;
+  }
+
+  /* تنسيقات أسلوب أبل للجداول */
+  .apple-table {
+    @apply w-full border-collapse;
+  }
+  
+  .apple-table th {
+    @apply text-left py-4 px-6 border-b border-border font-medium text-foreground;
+  }
+  
+  .apple-table td {
+    @apply py-4 px-6 border-b border-border text-foreground;
+  }
+  
+  .apple-table tr:hover {
+    @apply bg-muted/20;
+  }
+
+  /* تنسيقات ألونر داكن */
+  .dark .image-preview-card {
+    @apply bg-card border border-border;
+  }
+  
+  .dark .upload-zone:hover, .dark .upload-zone.active {
+    @apply border-brand-coral/50 bg-brand-coral/10;
+  }
+
+  /* تنسيقات جداول ألوان داكنة */
+  .dark .apple-table th {
+    @apply text-white/80 border-border;
+  }
+  
+  .dark .apple-table td {
+    @apply text-white/70 border-border;
+  }
+  
+  .dark .apple-table tr:hover {
+    @apply bg-muted/30;
+  }
+
+  /* Modern card styles */
+  .modern-card {
+    @apply rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-white to-brand-beige/10 backdrop-blur-sm border border-brand-beige/20 transition-all duration-300 hover:shadow-xl;
+  }
+
+  .dark .modern-card {
+    @apply bg-gradient-to-br from-card to-brand-brown/10 border-brand-brown/20;
+  }
+  
+  /* Elegant upload container styles */
   .elegant-upload {
     @apply bg-gradient-to-r from-brand-coral/20 via-brand-beige/30 to-brand-green/20 
            backdrop-blur-sm rounded-3xl shadow-xl shadow-brand-coral/15 hover:shadow-2xl transition-all duration-300;
