@@ -55,7 +55,7 @@ const AppHeader = () => {
                 </Link>
                 
                 {/* إظهار رابط صفحة إدارة المستخدمين للمسؤولين فقط بشكل صريح */}
-                {isAdmin && <Link to="/admin/approvals" className="mx-[16px] my-[15px]">
+                {isAdmin && <Link to="/admin/approvals" className="mx-[16px] my-[34px]">
                     
                     إدارة المستخدمين
                   </Link>}
