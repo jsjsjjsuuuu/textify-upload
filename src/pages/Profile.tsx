@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import ProfileInfoTab from '@/components/Profile/ProfileInfoTab';
 import SecurityTab from '@/components/Profile/SecurityTab';
 import AppHeader from '@/components/AppHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserManagementTab } from '@/components/Profile/UserManagementTab';
+import { UserManagementTab } from '@/components/Profile';
 import { Pricing } from '@/components/ui/pricing';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
