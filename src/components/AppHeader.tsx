@@ -55,14 +55,12 @@ const AppHeader = () => {
                 </Link>
                 
                 {/* إظهار رابط صفحة إدارة المستخدمين للمسؤولين فقط بشكل صريح */}
-                {isAdmin && <Link to="/admin/approvals" className="">
-                    <UserCog className="h-4 w-4 ml-1" />
+                {isAdmin && <Link to="/admin/approvals" className="mx-[16px] my-[15px]">
+                    
                     إدارة المستخدمين
                   </Link>}
               </>}
-            <Link to="/service" className={`transition-colors hover:text-foreground/80 ${pathname === "/service" ? "text-foreground font-bold" : "text-foreground/60"}`}>
-              خدماتنا
-            </Link>
+            
           </nav>
         </div>
         
