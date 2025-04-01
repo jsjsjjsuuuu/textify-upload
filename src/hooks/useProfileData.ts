@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { UserProfile } from '@/types/UserProfile';
 
 export interface UserData {
   id: string;
@@ -231,13 +232,17 @@ export const useProfileData = () => {
           newDailyLimit = 3;
       }
       
+      // تحويل التاريخ إلى سلسلة نصية
+      const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const subscriptionEndDate = thirtyDaysFromNow.toISOString();
+      
       // تحديث باقة المستخدم في قاعدة البيانات
       const { error } = await supabase
         .from('profiles')
         .update({ 
           subscription_plan: newPlan,
           daily_image_limit: newDailyLimit,
-          subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 يوم من الآن
+          subscription_end_date: subscriptionEndDate // تحويل التاريخ إلى سلسلة نصية
         })
         .eq('id', user.id);
       

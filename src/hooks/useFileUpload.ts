@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { compressImage } from "@/utils/imageCompression";
 import { ImageData } from "@/types/ImageData";
@@ -527,7 +527,7 @@ export const useFileUpload = ({
       toast({
         title: "تجاوز الحد المتبقي",
         description: `يمكنك تحميل ${remainingUploads} صورة فقط من أصل ${files.length} صورة محددة. سيتم معالجة أول ${remainingUploads} صورة فقط.`,
-        variant: "warning"
+        variant: "default"
       });
     }
 

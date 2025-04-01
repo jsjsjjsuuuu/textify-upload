@@ -146,7 +146,6 @@ export const useImageProcessing = () => {
     activeUploads: coreProcessing.activeUploads || 0,
     queueLength: coreProcessing.queueLength || 0,
     useGemini: coreProcessing.useGemini || false,
-    saveProcessedImage: saveProcessedImage,
-    uploadLimitInfo: coreProcessing.uploadLimitInfo // إضافة معلومات حدود التحميل
+    saveProcessedImage
   };
 };
