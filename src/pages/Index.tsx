@@ -238,7 +238,7 @@ const Index = () => {
           </section>}
           
         {/* عرض رابط للسجلات */}
-        <section className="py-16 px-6 bg-gray-50 dark:bg-gray-800/20">
+        <section className="py-16 px-6 bg-transparent">
           <div className="container mx-auto">
             <div className="max-w-7xl mx-auto text-center">
               <h2 className="text-3xl font-medium tracking-tight mb-6">سجلات الوصولات</h2>
