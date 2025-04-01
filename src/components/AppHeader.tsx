@@ -36,7 +36,7 @@ const AppHeader = () => {
   
   const handleSignOut = async () => {
     await signOut();
-    navigate('/login');
+    navigate('/');
   };
   
   // تحديد ما إذا كان المستخدم مسؤولاً بطريقة أكثر صرامة للتأكد من أن القيمة دائمًا منطقية (Boolean)
@@ -60,9 +60,9 @@ const AppHeader = () => {
                   تحميل الصور
                 </Link>
                 <Link
-                  to="/"
+                  to="/records"
                   className={`transition-colors hover:text-foreground/80 ${
-                    pathname === "/" || pathname === "/records" ? "text-foreground font-bold" : "text-foreground/60"
+                    pathname === "/records" ? "text-foreground font-bold" : "text-foreground/60"
                   }`}
                 >
                   السجلات

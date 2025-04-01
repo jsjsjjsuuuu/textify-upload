@@ -78,7 +78,7 @@ export const router = createBrowserRouter([
     element: <ServicePage />,
   },
   {
-    path: "/admin-approval",
+    path: "/admin/approvals",
     element: <ProtectedRoute><AdminApproval /></ProtectedRoute>,
   },
   {
