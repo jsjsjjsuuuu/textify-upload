@@ -18,6 +18,9 @@ export const useGeminiProcessing = () => {
   const [useGemini, setUseGemini] = useState(true); // تعيين القيمة الافتراضية إلى true
   const [connectionTested, setConnectionTested] = useState(false);
   const { toast } = useToast();
+  
+  // الحفاظ على سجل محاولات المعالجة لتجنب التكرار
+  const [processingAttempts, setProcessingAttempts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     // فحص الاتصال مع مجموعة المفاتيح
@@ -45,6 +48,7 @@ export const useGeminiProcessing = () => {
           title: "اتصال ناجح",
           description: "تم الاتصال بـ Gemini AI بنجاح",
         });
+        return true;
       } else {
         console.warn("فشل اختبار اتصال Gemini API:", result.message);
         
@@ -56,6 +60,7 @@ export const useGeminiProcessing = () => {
             console.log("نجح الاتصال في المحاولة الثانية!");
             setConnectionTested(true);
             setUseGemini(true);
+            return true;
           } else {
             toast({
               title: "تحذير",
@@ -63,6 +68,7 @@ export const useGeminiProcessing = () => {
               variant: "destructive"
             });
             setUseGemini(false);
+            return false;
           }
         }, 2000);
       }
@@ -74,7 +80,9 @@ export const useGeminiProcessing = () => {
         variant: "destructive"
       });
       setUseGemini(false);
+      return false;
     }
+    return false;
   };
 
   // وظيفة للتأخير المضمون بين طلبات API
@@ -90,9 +98,35 @@ export const useGeminiProcessing = () => {
   };
 
   const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
+    // التحقق من عدد المحاولات
+    const attemptKey = image.id;
+    const attempts = processingAttempts[attemptKey] || 0;
+    
+    // إذا كان هناك أكثر من 3 محاولات للمعالجة، نصل بها إلى حالة خطأ ونعرض رسالة للمستخدم
+    if (attempts >= 3) {
+      console.log(`وصلت صورة ${image.id} إلى الحد الأقصى من المحاولات (${attempts})`);
+      toast({
+        title: "فشل في المعالجة",
+        description: "وصلت الصورة إلى الحد الأقصى من محاولات المعالجة، يرجى تحميل صورة أخرى",
+        variant: "destructive"
+      });
+      
+      return {
+        ...image,
+        status: "error" as const,
+        extractedText: "فشل في معالجة الصورة بعد عدة محاولات. يرجى تحميل صورة أوضح."
+      };
+    }
+    
+    // زيادة عدد المحاولات
+    setProcessingAttempts(prev => ({
+      ...prev,
+      [attemptKey]: attempts + 1
+    }));
+    
     // الحصول على المفتاح التالي
     const geminiApiKey = getNextApiKey();
-    console.log("استخدام مفتاح Gemini API:", geminiApiKey.substring(0, 5) + "...");
+    console.log("استخدام مفتاح Gemini API:", geminiApiKey.substring(0, 8) + "...");
 
     // تحديث الصورة لتظهر أنها قيد المعالجة
     const processingImage: ImageData = { 
@@ -194,6 +228,13 @@ export const useGeminiProcessing = () => {
             };
           }
           
+          // إعادة تعيين عدد المحاولات لهذه الصورة عند النجاح
+          setProcessingAttempts(prev => {
+            const newAttempts = { ...prev };
+            delete newAttempts[attemptKey];
+            return newAttempts;
+          });
+          
           return finalImage;
         } else {
           console.log("Gemini أرجع بيانات فارغة");
@@ -231,6 +272,14 @@ export const useGeminiProcessing = () => {
         // الإبلاغ عن الخطأ لمدير المفاتيح
         reportApiKeyError(geminiApiKey, extractionResult.message || "خطأ غير معروف");
         
+        // محاولة استخدام مطالبة أبسط إذا فشلت المطالبة المحسنة
+        if (attempts < 2) {
+          console.log("محاولة استخدام مطالبة أبسط للاستخراج...");
+          await sleepBetweenRequests(1000);
+          
+          return processWithGemini(file, image);
+        }
+        
         toast({
           title: "فشل الاستخراج",
           description: "فشل استخراج البيانات: " + extractionResult.message,
@@ -253,6 +302,14 @@ export const useGeminiProcessing = () => {
       // تحسين رسالة الخطأ
       let errorMessage = geminiError.message || 'خطأ غير معروف';
       
+      // إذا فشلت بعدد محاولات قليل، حاول مرة أخرى
+      if (attempts < 2) {
+        console.log("محاولة أخرى بعد فشل المعالجة...");
+        await sleepBetweenRequests(2000);
+        
+        return processWithGemini(file, image);
+      }
+      
       toast({
         title: "خطأ",
         description: `فشل في استخراج البيانات: ${errorMessage}`,
@@ -271,16 +328,40 @@ export const useGeminiProcessing = () => {
   // وظيفة إعادة تعيين جميع مفاتيح API
   const resetApiKeys = useCallback(() => {
     resetAllApiKeys();
+    setProcessingAttempts({}); // إعادة تعيين سجل المحاولات أيضًا
     toast({
       title: "تم إعادة تعيين المفاتيح",
       description: "تم إعادة تعيين جميع مفاتيح API",
     });
   }, [toast]);
 
+  // وظيفة إعادة محاولة معالجة صورة معينة
+  const retryProcessing = useCallback(async (file: File, image: ImageData): Promise<ImageData> => {
+    // إعادة تعيين عدد المحاولات لهذه الصورة
+    const attemptKey = image.id;
+    setProcessingAttempts(prev => ({
+      ...prev,
+      [attemptKey]: 0
+    }));
+    
+    // إعادة محاولة المعالجة
+    console.log("إعادة محاولة معالجة الصورة:", image.id);
+    
+    toast({
+      title: "جاري إعادة المعالجة",
+      description: "تم بدء إعادة معالجة الصورة"
+    });
+    
+    return processWithGemini(file, image);
+  }, [toast]);
+
   return { 
     useGemini, 
     processWithGemini,
     resetApiKeys,
-    getApiStats: getApiKeyStats
+    getApiStats: getApiKeyStats,
+    retryProcessing,
+    connectionTested,
+    testGeminiApiConnection
   };
 };

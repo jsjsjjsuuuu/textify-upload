@@ -177,341 +177,123 @@ export async function extractDataWithGemini({
       };
     }
     
-    console.log("استلام بيانات استجابة Gemini API");
+    // تحليل استجابة Gemini لاستخراج البيانات المنظمة
+    const parsedResult = parseGeminiResponse(data);
     
-    if (data.promptFeedback?.blockReason) {
-      console.error("Gemini حظر الطلب:", data.promptFeedback.blockReason);
-      
-      // الإبلاغ عن الخطأ لمدير المفاتيح
-      reportApiKeyError(apiKey, `حظر الاستعلام: ${data.promptFeedback.blockReason}`);
-      
+    if (parsedResult.success && parsedResult.data) {
+      console.log("تم استخراج البيانات بنجاح من استجابة Gemini:", parsedResult.data);
       return {
-        success: false,
-        message: `تم حظر الاستعلام: ${data.promptFeedback.blockReason}`
+        success: true,
+        data: parsedResult.data,
+        message: "تم استخراج البيانات بنجاح"
       };
-    }
-
-    if (!data.candidates || data.candidates.length === 0) {
-      console.error("لا توجد مرشحات في استجابة Gemini");
+    } else {
+      console.warn("فشل استخراج البيانات المنظمة من استجابة Gemini:", parsedResult.message);
       
-      // محاولة استخدام مطالبة أبسط
-      try {
-        console.log("محاولة استخدام مطالبة أبسط...");
+      // محاولة إعادة المحاولة مع مطالبة مختلفة
+      if (enhancedExtraction && !extractionPrompt) {
+        console.log("محاولة استخدام مطالبة استخراج النص فقط...");
         
-        const simpleRequestBody = {
-          ...requestBody,
-          contents: [
-            {
-              parts: [
-                { text: getTextOnlyExtractionPrompt() },
-                {
-                  inline_data: {
-                    mime_type: "image/jpeg",
-                    data: cleanBase64
-                  }
-                }
-              ]
-            }
-          ]
-        };
-        
-        // تأخير قبل طلب آخر
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const simpleResponse = await fetch(`${endpoint}?key=${apiKey}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey
-          },
-          body: JSON.stringify(simpleRequestBody),
-          signal: AbortSignal.timeout(30000) // 30 ثانية
+        return await extractDataWithGemini({
+          apiKey,
+          imageBase64,
+          extractionPrompt: getTextOnlyExtractionPrompt(),
+          temperature,
+          modelVersion,
+          enhancedExtraction: false,
+          maxRetries,
+          retryDelayMs
         });
-        
-        if (simpleResponse.ok) {
-          const simpleData = await simpleResponse.json();
-          
-          if (simpleData.candidates?.[0]?.content?.parts?.[0]?.text) {
-            return {
-              success: true,
-              message: "تم استخراج النص باستخدام مطالبة أبسط",
-              data: {
-                extractedText: simpleData.candidates[0].content.parts[0].text,
-                parsedData: {},
-                confidence: 50
-              }
-            };
-          }
-        }
-      } catch (alternativeError) {
-        console.error("فشلت المحاولة البديلة:", alternativeError);
-      }
-      
-      // الإبلاغ عن الخطأ لمدير المفاتيح
-      reportApiKeyError(apiKey, "لم يتم إنشاء أي استجابة من Gemini");
-      
-      return {
-        success: false,
-        message: "لم يتم إنشاء أي استجابة من Gemini"
-      };
-    }
-
-    if (!data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
-      console.error("أجزاء المحتوى مفقودة في استجابة Gemini");
-      
-      // الإبلاغ عن الخطأ لمدير المفاتيح
-      reportApiKeyError(apiKey, "استجابة Gemini غير مكتملة");
-      
-      return {
-        success: false,
-        message: "استجابة Gemini غير مكتملة"
-      };
-    }
-
-    const extractedText = data.candidates[0].content.parts[0].text || '';
-    console.log("تم استلام النص المستخرج من Gemini بطول:", extractedText.length);
-    
-    // التحقق من وجود نص مستخرج
-    if (!extractedText) {
-      console.error("Gemini أرجع نصًا فارغًا");
-      
-      // محاولة استخدام مطالبة حول النص المكتوب بخط اليد
-      console.log("محاولة استخدام مطالبة للنصوص المكتوبة بخط اليد...");
-      
-      try {
-        // استخدام prompt للتعرف على النصوص المكتوبة بخط اليد
-        const handwritingRequestBody = {
-          ...requestBody,
-          contents: [
-            {
-              parts: [
-                { text: getHandwritingExtractionPrompt() },
-                {
-                  inline_data: {
-                    mime_type: "image/jpeg",
-                    data: cleanBase64
-                  }
-                }
-              ]
-            }
-          ]
-        };
-        
-        // تأخير قبل طلب آخر
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // استخدام مطالبة خط اليد
-        const handwritingResponse = await fetch(`${endpoint}?key=${apiKey}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey
-          },
-          body: JSON.stringify(handwritingRequestBody),
-          signal: AbortSignal.timeout(20000) // 20 ثواني
-        });
-        
-        if (handwritingResponse.ok) {
-          const handwritingData: GeminiResponse = await handwritingResponse.json();
-          
-          if (handwritingData.candidates?.[0]?.content?.parts?.[0]?.text) {
-            const rawHandwritingText = handwritingData.candidates[0].content.parts[0].text;
-            console.log("تم استخراج النص من خط اليد بنجاح، الطول:", rawHandwritingText.length);
-            
-            // محاولة استخراج البيانات من النص المستخرج
-            try {
-              const { parsedData, confidenceScore } = parseGeminiResponse(rawHandwritingText);
-              
-              // إذا تم استخراج بعض البيانات على الأقل
-              if (Object.keys(parsedData).length > 0) {
-                return {
-                  success: true,
-                  message: "تم استخراج البيانات من النص المكتوب بخط اليد",
-                  data: {
-                    extractedText: rawHandwritingText,
-                    parsedData,
-                    confidence: confidenceScore
-                  }
-                };
-              } else {
-                return {
-                  success: true,
-                  message: "تم استخراج النص المكتوب بخط اليد لكن فشل استخراج البيانات المنظمة",
-                  data: {
-                    extractedText: rawHandwritingText,
-                    rawText: rawHandwritingText,
-                    parsedData: {}
-                  }
-                };
-              }
-            } catch (parseError) {
-              // حتى إذا فشل التحليل، نعيد النص المستخرج على الأقل
-              return {
-                success: true,
-                message: "تم استخراج النص المكتوب بخط اليد لكن فشل تحليله",
-                data: {
-                  extractedText: rawHandwritingText,
-                  rawText: rawHandwritingText,
-                  parsedData: {}
-                }
-              };
-            }
-          }
-        }
-      } catch (alternativeError) {
-        console.error("فشلت جميع المحاولات البديلة:", alternativeError);
       }
       
       return {
-        success: false,
-        message: "لم يتم استخراج أي نص من الصورة"
+        success: parsedResult.success,
+        message: parsedResult.message,
+        data: parsedResult.data
       };
     }
     
-    // تحليل الاستجابة واستخراج البيانات المنظمة
-    try {
-      console.log("تحليل النص المستخرج:", extractedText.substring(0, 100) + "...");
-      const { parsedData, confidenceScore } = parseGeminiResponse(extractedText);
-      console.log("تم تحليل البيانات من Gemini بنجاح:", parsedData);
-      
-      return {
-        success: true,
-        message: "تم استخراج البيانات بنجاح",
-        data: {
-          extractedText,
-          parsedData,
-          confidence: confidenceScore
-        }
-      };
-    } catch (parseError) {
-      console.error("خطأ في تحليل البيانات المستخرجة:", parseError);
-      return {
-        success: true,
-        message: "تم استخراج النص ولكن فشل تحليل البيانات المنظمة",
-        data: {
-          extractedText,
-          rawText: extractedText,
-          parsedData: {}
-        }
-      };
-    }
   } catch (error) {
-    console.error("خطأ عند استخدام Gemini API:", error);
-    const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+    console.error("خطأ أثناء استدعاء Gemini API:", error);
     
     // الإبلاغ عن الخطأ لمدير المفاتيح
-    reportApiKeyError(apiKey, errorMessage);
-    
-    // تحسين رسائل الخطأ
-    let userFriendlyMessage = `حدث خطأ أثناء معالجة الطلب: ${errorMessage}`;
-    
-    if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError') || errorMessage.includes('AbortError')) {
-      userFriendlyMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى إعادة المحاولة مرة أخرى لاحقًا أو تحميل صورة بحجم أصغر.';
-    } else if (errorMessage.includes('Failed to fetch')) {
-      userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN إذا كنت تواجه قيود جغرافية.';
-    } else if (errorMessage.includes('CORS')) {
-      userFriendlyMessage = 'تم منع الطلب بسبب قيود CORS. حاول استخدام الموقع الرئيسي بدلاً من بيئة المعاينة.';
-    } else if (errorMessage.includes('quota') || errorMessage.includes('limit')) {
-      userFriendlyMessage = 'تم تجاوز حد الاستخدام. جاري استخدام مفتاح API بديل.';
-    }
+    reportApiKeyError(apiKey, error instanceof Error ? error.message : String(error));
     
     return {
       success: false,
-      message: userFriendlyMessage
+      message: `خطأ أثناء استدعاء Gemini API: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 }
 
 /**
- * إضافة دالة لاختبار الاتصال بـ Gemini API
+ * اختبار اتصال Gemini API
  */
 export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
-  if (!apiKey) {
-    return {
-      success: false,
-      message: "يرجى توفير مفتاح API صالح"
-    };
-  }
-
   try {
-    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    console.log("اختبار اتصال Gemini API...");
     
-    const fetchOptions = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: "مرحبا" }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 128
-        }
-      }),
-      signal: AbortSignal.timeout(15000) // 15 ثواني
-    };
-    
-    console.log("إرسال طلب اختبار إلى Gemini API...");
-    
-    let response;
-    try {
-      response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
-    } catch (fetchError) {
-      console.error("خطأ في طلب اختبار Gemini:", fetchError);
-      throw fetchError;
-    }
+    // استخدام طلب بسيط جدًا للاختبار
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        signal: AbortSignal.timeout(10000) // 10 ثواني
+      }
+    );
     
     if (!response.ok) {
-      let errorText;
-      try {
-        errorText = await response.text();
-      } catch (err) {
-        errorText = `لا يمكن قراءة نص الخطأ: ${err.message}`;
-      }
-      
-      console.error("فشل اختبار Gemini API:", response.status, errorText);
+      const errorText = await response.text();
+      console.error("فشل اختبار اتصال Gemini API:", response.status, errorText);
       
       // الإبلاغ عن الخطأ لمدير المفاتيح
-      reportApiKeyError(apiKey, `فشل الاختبار: ${response.status} - ${errorText}`);
+      reportApiKeyError(apiKey, `${response.status}: ${errorText}`);
       
       return {
         success: false,
-        message: `خطأ من Gemini API: ${response.status} - ${errorText}`
+        message: `فشل الاتصال باختبار Gemini API: ${response.status} - ${errorText}`
       };
     }
     
-    // تحديث وقت آخر استدعاء
-    lastApiCallTime.set(apiKey, Date.now());
+    const data = await response.json();
     
-    return {
-      success: true,
-      message: "تم الاتصال بـ Gemini API بنجاح"
-    };
+    if (data && Array.isArray(data.models)) {
+      console.log("نجح اختبار اتصال Gemini API:", data.models.length, "نماذج متاحة");
+      
+      return {
+        success: true,
+        message: `نجح الاتصال: ${data.models.length} نماذج متاحة`
+      };
+    } else {
+      console.warn("استجابة اختبار Gemini API غير متوقعة:", data);
+      
+      return {
+        success: false,
+        message: "استجابة اختبار غير متوقعة من Gemini API"
+      };
+    }
   } catch (error) {
-    console.error("خطأ عند اختبار اتصال Gemini API:", error);
-    const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+    console.error("خطأ أثناء اختبار اتصال Gemini API:", error);
     
     // الإبلاغ عن الخطأ لمدير المفاتيح
-    reportApiKeyError(apiKey, `خطأ الاختبار: ${errorMessage}`);
-    
-    let userFriendlyMessage = `حدث خطأ أثناء اختبار اتصال Gemini API: ${errorMessage}`;
-    
-    if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
-      userFriendlyMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى المحاولة مرة أخرى لاحقًا.';
-    } else if (errorMessage.includes('Failed to fetch')) {
-      userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN.';
-    }
+    reportApiKeyError(apiKey, error instanceof Error ? error.message : String(error));
     
     return {
       success: false,
-      message: userFriendlyMessage
+      message: `خطأ أثناء اختبار اتصال Gemini API: ${error instanceof Error ? error.message : String(error)}`
     };
   }
+}
+
+// وظيفة تحويل ملف إلى Base64
+export async function fileToBase64(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
 }
