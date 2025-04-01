@@ -1,22 +1,7 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { SupabaseClient, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-
-// واجهة UserProfile موحدة مع استخدام أسماء الحقول الجديدة فقط
-interface UserProfile {
-  id: string;
-  username: string | null;
-  full_name: string | null;
-  avatar_url: string | null;
-  is_approved: boolean | null;
-  is_admin: boolean | null;
-  subscription_plan?: string | null;
-  subscription_end_date?: string | null;
-  account_status?: string | null;
-  created_at?: string;
-  updated_at?: string;
-}
+import { UserProfile } from '@/types/UserProfile'; // استيراد واجهة UserProfile من الملف المشترك
 
 interface AuthContextType {
   supabaseClient: SupabaseClient | null;
