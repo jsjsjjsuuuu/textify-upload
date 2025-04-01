@@ -57,23 +57,24 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       <div
         {...getRootProps()}
         className={cn(
-          "relative border-2 border-dashed rounded-md cursor-pointer transition-all duration-200",
-          "hover:bg-accent hover:border-primary",
+          "relative border-2 border-dashed rounded-2xl h-64 cursor-pointer transition-all duration-300",
+          "bg-white/10 backdrop-blur-sm",
+          "hover:bg-accent/5 hover:border-primary/40",
           "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-          "dark:bg-popover dark:border-muted dark:hover:bg-secondary",
-          isDragActive || dragOver ? "bg-accent border-primary scale-[1.02]" : "bg-background",
-          isProcessing ? "cursor-not-allowed opacity-60" : ""
+          "dark:bg-black/5 dark:border-muted dark:hover:bg-black/10",
+          isDragActive || dragOver ? "bg-accent/10 border-primary/60 scale-[1.01]" : "border-muted/40",
+          isProcessing ? "cursor-not-allowed opacity-80" : ""
         )}
       >
         <input {...getInputProps()} disabled={isProcessing} />
         <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
           {isProcessing ? (
             <>
-              <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-              <p className="text-sm text-muted-foreground font-medium">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+              <p className="text-lg text-foreground font-medium">
                 جاري المعالجة {processingProgress}%
               </p>
-              <div className="w-full max-w-xs bg-gray-200 rounded-full h-2.5 mt-3 overflow-hidden dark:bg-gray-700">
+              <div className="w-full max-w-xs bg-muted/30 rounded-full h-2.5 mt-4 overflow-hidden dark:bg-muted/20">
                 <div 
                   className="bg-primary h-2.5 rounded-full transition-all duration-300" 
                   style={{ width: `${processingProgress}%` }}
@@ -82,19 +83,23 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
             </>
           ) : (
             <>
-              <Image className="h-12 w-12 text-muted-foreground mb-3 opacity-70" />
-              <p className="text-base text-muted-foreground">
+              <div className="w-20 h-20 rounded-full bg-muted/20 flex items-center justify-center mb-4">
+                <Image className="h-10 w-10 text-primary/70" />
+              </div>
+              <h3 className="text-xl font-medium text-foreground mb-2">
+                تحميل الصور
+              </h3>
+              <p className="text-base text-muted-foreground mb-4">
                 {isDragActive || dragOver ? 
                   <span className="font-medium text-primary">أسقط الصور هنا ...</span> : 
                   <span>اسحب وأسقط الصور <span className="hidden sm:inline">أو انقر للاختيار</span></span>
                 }
               </p>
-              <p className="text-xs text-muted-foreground mt-2 max-w-xs">
+              <p className="text-xs text-muted-foreground max-w-xs mb-5">
                 يمكنك تحميل صور بصيغة JPEG، PNG، أو WebP. الحد الأقصى هو 20 صورة في المرة الواحدة.
               </p>
               <Button 
-                className="mt-4" 
-                size="sm" 
+                className="rounded-full px-6" 
                 variant="outline"
                 type="button"
                 onClick={(e) => {
@@ -118,7 +123,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         <Button 
           variant="destructive" 
           size="sm" 
-          className="absolute top-2 right-2 h-8 w-8 p-0 rounded-full"
+          className="absolute top-3 right-3 h-8 w-8 p-0 rounded-full"
           onClick={onCancelUpload}
           title="إلغاء التحميل"
         >
