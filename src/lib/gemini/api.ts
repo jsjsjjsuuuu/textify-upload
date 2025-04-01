@@ -2,15 +2,11 @@
 import { GeminiExtractParams, GeminiRequest, GeminiResponse } from "./types";
 import { ApiResult } from "../apiService";
 import { parseGeminiResponse } from "./parsers";
-import { getEnhancedExtractionPrompt, getBasicExtractionPrompt, getTextOnlyExtractionPrompt } from "./prompts";
-import { 
-  createFetchOptions, 
-  fetchWithRetry, 
-  getConnectionTimeout 
-} from "@/utils/automationServerUrl";
+import { getEnhancedExtractionPrompt, getBasicExtractionPrompt, getTextOnlyExtractionPrompt, getHandwritingExtractionPrompt } from "./prompts";
+import { createFetchOptions, fetchWithRetry, getConnectionTimeout } from "@/utils/automationServerUrl";
 import { reportApiKeyError } from "./apiKeyManager";
 
-// تتبع آخر استدعاء API لكل مفتاح
+// تتبع آخر استدعاء API
 const lastApiCallTime = new Map<string, number>();
 
 /**
@@ -45,17 +41,17 @@ export async function extractDataWithGemini({
     }
   }
 
-  // إنشاء تأخير بين الطلبات لنفس المفتاح
+  // إنشاء تأخير بين الطلبات 
   const lastCallTime = lastApiCallTime.get(apiKey) || 0;
   const currentTime = Date.now();
   const timeSinceLastCall = currentTime - lastCallTime;
   
-  // التأكد من أن هناك على الأقل 2 ثوانٍ بين الطلبات لنفس المفتاح
-  const minDelayBetweenCalls = 2000; // 2 ثانية (زيادة من 1.5 ثانية)
+  // التأكد من أن هناك على الأقل ثانية واحدة بين الطلبات
+  const minDelayBetweenCalls = 1000; // ثانية واحدة
   
   if (timeSinceLastCall < minDelayBetweenCalls) {
     const delayNeeded = minDelayBetweenCalls - timeSinceLastCall;
-    console.log(`تأخير ${delayNeeded}ms قبل استدعاء API للمفتاح: ${apiKey.substring(0, 5)}...`);
+    console.log(`تأخير ${delayNeeded}ms قبل استدعاء API...`);
     await new Promise(resolve => setTimeout(resolve, delayNeeded));
   }
   
@@ -64,7 +60,6 @@ export async function extractDataWithGemini({
 
   try {
     console.log("إرسال طلب إلى Gemini API...");
-    console.log("طول مفتاح API:", apiKey.length);
     console.log("أول 5 أحرف من مفتاح API:", apiKey.substring(0, 5));
     console.log("طول صورة Base64:", imageBase64.length);
     console.log("استخدام إصدار النموذج:", modelVersion);
@@ -72,8 +67,7 @@ export async function extractDataWithGemini({
     // التحقق من حجم صورة Base64 وتقليلها إذا كانت كبيرة جدًا
     if (imageBase64.length > 1000000) { // أكثر من ~1MB
       console.log("حجم الصورة كبير جدًا، محاولة تقليل جودة Base64...");
-      // هنا يمكننا إما تقليل جودة الصورة أو استخدام ضغط إضافي
-      // لكن في هذه الحالة، سنستمر ونلاحظ إذا كان الطلب سينجح
+      // في هذه الحالة، سنستمر ونلاحظ إذا كان الطلب سينجح
     }
     
     // تنظيف معرف صورة Base64
@@ -114,8 +108,8 @@ export async function extractDataWithGemini({
         "x-goog-api-key": apiKey
       },
       body: JSON.stringify(requestBody),
-      // إضافة مهلة أطول للطلبات
-      signal: AbortSignal.timeout(25000) // 25 ثانية (زيادة من 15 ثانية)
+      // إضافة مهلة للطلبات
+      signal: AbortSignal.timeout(30000) // 30 ثانية
     };
     
     // تنفيذ الطلب مع قياس الوقت
@@ -228,10 +222,93 @@ export async function extractDataWithGemini({
     if (!extractedText) {
       console.error("Gemini أرجع نصًا فارغًا");
       
-      // محاولة استخدام مطالبة أبسط للنص فقط
-      console.log("محاولة استخدام مطالبة نص فقط بسيطة...");
+      // محاولة استخدام مطالبة حول النص المكتوب بخط اليد
+      console.log("محاولة استخدام مطالبة للنصوص المكتوبة بخط اليد...");
       
       try {
+        // استخدام prompt للتعرف على النصوص المكتوبة بخط اليد
+        const handwritingRequestBody = {
+          ...requestBody,
+          contents: [
+            {
+              parts: [
+                { text: getHandwritingExtractionPrompt() },
+                {
+                  inline_data: {
+                    mime_type: "image/jpeg",
+                    data: cleanBase64
+                  }
+                }
+              ]
+            }
+          ]
+        };
+        
+        // تأخير قبل طلب آخر
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // استخدام مطالبة خط اليد
+        const handwritingResponse = await fetch(`${endpoint}?key=${apiKey}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey
+          },
+          body: JSON.stringify(handwritingRequestBody),
+          signal: AbortSignal.timeout(20000) // 20 ثواني
+        });
+        
+        if (handwritingResponse.ok) {
+          const handwritingData: GeminiResponse = await handwritingResponse.json();
+          
+          if (handwritingData.candidates?.[0]?.content?.parts?.[0]?.text) {
+            const rawHandwritingText = handwritingData.candidates[0].content.parts[0].text;
+            console.log("تم استخراج النص من خط اليد بنجاح، الطول:", rawHandwritingText.length);
+            
+            // محاولة استخراج البيانات من النص المستخرج
+            try {
+              const { parsedData, confidenceScore } = parseGeminiResponse(rawHandwritingText);
+              
+              // إذا تم استخراج بعض البيانات على الأقل
+              if (Object.keys(parsedData).length > 0) {
+                return {
+                  success: true,
+                  message: "تم استخراج البيانات من النص المكتوب بخط اليد",
+                  data: {
+                    extractedText: rawHandwritingText,
+                    parsedData,
+                    confidence: confidenceScore
+                  }
+                };
+              } else {
+                return {
+                  success: true,
+                  message: "تم استخراج النص المكتوب بخط اليد لكن فشل استخراج البيانات المنظمة",
+                  data: {
+                    extractedText: rawHandwritingText,
+                    rawText: rawHandwritingText,
+                    parsedData: {}
+                  }
+                };
+              }
+            } catch (parseError) {
+              // حتى إذا فشل التحليل، نعيد النص المستخرج على الأقل
+              return {
+                success: true,
+                message: "تم استخراج النص المكتوب بخط اليد لكن فشل تحليله",
+                data: {
+                  extractedText: rawHandwritingText,
+                  rawText: rawHandwritingText,
+                  parsedData: {}
+                }
+              };
+            }
+          }
+        }
+        
+        // محاولة استخدام مطالبة نص فقط بسيطة إذا فشلت مطالبة خط اليد
+        console.log("محاولة استخدام مطالبة نص فقط بسيطة...");
+        
         const textOnlyRequestBody = {
           ...requestBody,
           contents: [
@@ -260,7 +337,7 @@ export async function extractDataWithGemini({
             "x-goog-api-key": apiKey
           },
           body: JSON.stringify(textOnlyRequestBody),
-          signal: AbortSignal.timeout(15000) // 15 ثواني (زيادة من 10 ثواني)
+          signal: AbortSignal.timeout(15000) // 15 ثواني
         });
         
         if (textOnlyResponse.ok) {
@@ -270,22 +347,48 @@ export async function extractDataWithGemini({
             const rawExtractedText = textOnlyData.candidates[0].content.parts[0].text;
             console.log("تم استخراج النص الخام بنجاح، الطول:", rawExtractedText.length);
             
-            return {
-              success: true,
-              message: "تم استخراج النص الخام فقط، لم يتم التعرف على البيانات المنظمة",
-              data: {
-                extractedText: rawExtractedText,
-                rawText: rawExtractedText,
-                parsedData: {}
+            // محاولة استخراج البيانات من النص المستخرج
+            try {
+              const { parsedData, confidenceScore } = parseGeminiResponse(rawExtractedText);
+              
+              // إذا تم استخراج بعض البيانات على الأقل
+              if (Object.keys(parsedData).length > 0) {
+                return {
+                  success: true,
+                  message: "تم استخراج البيانات من النص الخام",
+                  data: {
+                    extractedText: rawExtractedText,
+                    parsedData,
+                    confidence: confidenceScore
+                  }
+                };
+              } else {
+                return {
+                  success: true,
+                  message: "تم استخراج النص الخام فقط، لم يتم التعرف على البيانات المنظمة",
+                  data: {
+                    extractedText: rawExtractedText,
+                    rawText: rawExtractedText,
+                    parsedData: {}
+                  }
+                };
               }
-            };
+            } catch (parseError) {
+              // حتى إذا فشل التحليل، نعيد النص المستخرج على الأقل
+              return {
+                success: true,
+                message: "تم استخراج النص الخام فقط، فشل تحليله",
+                data: {
+                  extractedText: rawExtractedText,
+                  rawText: rawExtractedText,
+                  parsedData: {}
+                }
+              };
+            }
           }
-        } else {
-          // الإبلاغ عن الخطأ لمدير المفاتيح
-          reportApiKeyError(apiKey, "فشل طلب النص فقط");
         }
-      } catch (textOnlyError) {
-        console.error("فشلت محاولة النص فقط:", textOnlyError);
+      } catch (alternativeError) {
+        console.error("فشلت جميع المحاولات البديلة:", alternativeError);
       }
       
       return {

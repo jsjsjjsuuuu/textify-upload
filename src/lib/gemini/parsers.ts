@@ -17,7 +17,7 @@ export function parseGeminiResponse(extractedText: string): {
   let parsedData: Record<string, string> = {};
   
   try {
-    console.log("Parsing Gemini response text:", extractedText.substring(0, 100) + "...");
+    console.log("تحليل استجابة Gemini:", extractedText.substring(0, 100) + "...");
     
     // نبحث عن أي نص JSON في الاستجابة
     const jsonMatch = extractedText.match(/```json\s*([\s\S]*?)\s*```/) || 
@@ -25,12 +25,12 @@ export function parseGeminiResponse(extractedText: string): {
     
     if (jsonMatch) {
       const jsonText = jsonMatch[0].replace(/```json|```/g, '').trim();
-      console.log("Found JSON in response:", jsonText);
+      console.log("تم العثور على JSON في الاستجابة:", jsonText);
       try {
         parsedData = JSON.parse(jsonText);
-        console.log("Successfully parsed JSON:", parsedData);
+        console.log("تم تحليل JSON بنجاح:", parsedData);
       } catch (jsonError) {
-        console.error("Error parsing JSON:", jsonError);
+        console.error("خطأ في تحليل JSON:", jsonError);
         
         // إذا فشل تحليل JSON، نحاول إصلاحه
         try {
@@ -40,11 +40,11 @@ export function parseGeminiResponse(extractedText: string): {
             .replace(/(:(?:\s*)(?!true|false|null|{|\[|"|')([^,}\s]+))/g, ':"$2"')
             .replace(/'/g, '"');
           
-          console.log("Cleaned JSON text:", cleanedText);
+          console.log("تم تنظيف نص JSON:", cleanedText);
           parsedData = JSON.parse(cleanedText);
-          console.log("Successfully parsed cleaned JSON:", parsedData);
+          console.log("تم تحليل JSON المنظف بنجاح:", parsedData);
         } catch (cleanJsonError) {
-          console.error("Error parsing cleaned JSON:", cleanJsonError);
+          console.error("خطأ في تحليل JSON المنظف:", cleanJsonError);
           
           // إذا فشل تنظيف JSON، نحاول استخراج أزواج المفاتيح والقيم
           try {
@@ -59,9 +59,9 @@ export function parseGeminiResponse(extractedText: string): {
               }
             });
             
-            console.log("Extracted key-value pairs:", parsedData);
+            console.log("تم استخراج أزواج المفاتيح والقيم:", parsedData);
           } catch (extractionError) {
-            console.error("Error extracting key-value pairs:", extractionError);
+            console.error("خطأ في استخراج أزواج المفاتيح والقيم:", extractionError);
           }
         }
       }
@@ -69,152 +69,345 @@ export function parseGeminiResponse(extractedText: string): {
     
     // إذا لم يتم العثور على JSON أو كان فارغًا، فنبحث في النص عن أنماط محددة
     if (Object.keys(parsedData).length === 0) {
-      console.log("No JSON format found in response or JSON was empty. Extracting data from text directly.");
+      console.log("لم يتم العثور على تنسيق JSON في الاستجابة أو كان JSON فارغًا. استخراج البيانات من النص مباشرة.");
       
-      // استخراج رقم الكود
-      const codeMatches = extractedText.match(/رقم الوصل[:\s]+([0-9]+)/i) ||
-                          extractedText.match(/كود[:\s]+([0-9]+)/i) ||
-                          extractedText.match(/الكود[:\s]+([0-9]+)/i) ||
-                          extractedText.match(/code[:\s]+([0-9]+)/i) ||
-                          extractedText.match(/رقم[:\s]+([0-9]+)/i);
+      // استخراج رقم الكود - أنماط مختلفة
+      const codePatterns = [
+        /رقم الوصل[:\s]+([0-9]+)/i,
+        /كود[:\s]+([0-9]+)/i,
+        /الكود[:\s]+([0-9]+)/i,
+        /code[:\s]+([0-9]+)/i,
+        /رقم[:\s]+([0-9]+)/i,
+        /رمز[:\s]+([0-9]+)/i,
+        /وصل[:\s]+([0-9]+)/i,
+        /تتبع[:\s]+([0-9]+)/i,
+        /رقم الاستلام[:\s]+([0-9]+)/i,
+        /رقم الشحنة[:\s]+([0-9]+)/i,
+        /\b(كود|رمز|code)[:نسخة #.\s]*([0-9]{5,})/i,
+        /\b(كود|رمز|code)[:#\s\\\/\-]*([0-9]{4,})/i,
+        /\b([0-9]{5,})\b/ // البحث عن أي رقم من 5 أرقام أو أكثر
+      ];
       
-      if (codeMatches && codeMatches[1]) {
-        parsedData.code = codeMatches[1].trim();
-        console.log("Extracted code:", parsedData.code);
-      }
-      
-      // استخراج اسم المرسل
-      const senderNameMatches = extractedText.match(/اسم المرسل[:\s]+([^\n]+)/i) ||
-                               extractedText.match(/المرسل[:\s]+([^\n]+)/i) ||
-                               extractedText.match(/اسم الزبون[:\s]+([^\n]+)/i) ||
-                               extractedText.match(/الزبون[:\s]+([^\n]+)/i);
-      
-      if (senderNameMatches && senderNameMatches[1]) {
-        parsedData.senderName = senderNameMatches[1].trim();
-        console.log("Extracted sender name:", parsedData.senderName);
-      }
-      
-      // استخراج رقم الهاتف
-      const phoneNumberMatches = extractedText.match(/هاتف[:\s]+([0-9\s\-]+)/i) ||
-                                extractedText.match(/رقم الهاتف[:\s]+([0-9\s\-]+)/i) ||
-                                // البحث عن رقم هاتف عراقي نموذجي (يبدأ بـ 07)
-                                extractedText.match(/\b(07\d{2}[0-9\s\-]{7,8})\b/);
-      
-      if (phoneNumberMatches && phoneNumberMatches[1]) {
-        // تنظيف رقم الهاتف (إزالة المسافات والشرطات)
-        parsedData.phoneNumber = phoneNumberMatches[1].replace(/\D/g, '');
-        console.log("Extracted phone number:", parsedData.phoneNumber);
-      }
-      
-      // استخراج المحافظة
-      const provinceMatches = extractedText.match(/المحافظة[:\s]+([^\n]+)/i) ||
-                             extractedText.match(/محافظة[:\s]+([^\n]+)/i) ||
-                             extractedText.match(/عنوان الزبون[^:\n]*[:\s]+([^\n]+)/i);
-      
-      if (provinceMatches && provinceMatches[1]) {
-        // استخراج اسم المحافظة من النص وتصحيحه
-        const provinceText = provinceMatches[1].trim();
-        
-        // البحث عن اسم محافظة في النص
-        for (const province of IRAQ_PROVINCES) {
-          if (provinceText.includes(province)) {
-            parsedData.province = province;
+      // تجربة كل نمط من أنماط الكود
+      for (const pattern of codePatterns) {
+        const match = extractedText.match(pattern);
+        if (match && match.length > 1) {
+          // استخدام المجموعة 1 إذا كانت الأنماط العادية
+          if (match[1] && /^\d+$/.test(match[1])) {
+            parsedData.code = match[1].trim();
+            console.log("تم استخراج الكود من النمط:", pattern, "القيمة:", parsedData.code);
+            break;
+          }
+          // استخدام المجموعة 2 في حال الأنماط المعقدة
+          else if (match[2] && /^\d+$/.test(match[2])) {
+            parsedData.code = match[2].trim();
+            console.log("تم استخراج الكود من النمط المعقد:", pattern, "القيمة:", parsedData.code);
             break;
           }
         }
-        
-        // إذا لم يتم العثور على اسم محافظة، استخدم النص كما هو
-        if (!parsedData.province) {
+      }
+      
+      // استخراج اسم المرسل - أنماط مختلفة
+      const senderNamePatterns = [
+        /اسم المرسل[:\s]+([^\n]+)/i,
+        /المرسل[:\s]+([^\n]+)/i,
+        /اسم الزبون[:\s]+([^\n]+)/i,
+        /الزبون[:\s]+([^\n]+)/i,
+        /اسم المستلم[:\s]+([^\n]+)/i,
+        /المستلم[:\s]+([^\n]+)/i,
+        /اسم العميل[:\s]+([^\n]+)/i,
+        /العميل[:\s]+([^\n]+)/i,
+        /اسم[:\s]+([^\n]+)/i,
+        /الاسم[:\s]+([^\n]+)/i,
+        /customer[:\s]+([^\n]+)/i,
+        /sender[:\s]+([^\n]+)/i,
+        /name[:\s]+([^\n]+)/i
+      ];
+      
+      // تجربة كل نمط من أنماط اسم المرسل
+      for (const pattern of senderNamePatterns) {
+        const match = extractedText.match(pattern);
+        if (match && match[1]) {
+          parsedData.senderName = match[1].trim();
+          console.log("تم استخراج اسم المرسل:", parsedData.senderName);
+          break;
+        }
+      }
+      
+      // استخراج رقم الهاتف - أنماط مختلفة وتركيز على الأرقام العراقية
+      const phonePatterns = [
+        /هاتف[:\s]+([0-9\s\-]+)/i,
+        /رقم الهاتف[:\s]+([0-9\s\-]+)/i,
+        /الهاتف[:\s]+([0-9\s\-]+)/i,
+        /رقم الموبايل[:\s]+([0-9\s\-]+)/i,
+        /الموبايل[:\s]+([0-9\s\-]+)/i,
+        /موبايل[:\s]+([0-9\s\-]+)/i,
+        /تلفون[:\s]+([0-9\s\-]+)/i,
+        /phone[:\s]+([0-9\s\-]+)/i,
+        /mobile[:\s]+([0-9\s\-]+)/i,
+        /tel[:\s]+([0-9\s\-]+)/i,
+        // البحث عن أرقام هواتف عراقية نموذجية (تبدأ بـ 07)
+        /\b(07\d{2}[\s\-]*\d{3}[\s\-]*\d{4})\b/,
+        /\b(07\d{2}[\s\-]*\d{7})\b/,
+        /\b(07\d{9})\b/
+      ];
+      
+      // تجربة كل نمط من أنماط رقم الهاتف
+      for (const pattern of phonePatterns) {
+        const match = extractedText.match(pattern);
+        if (match && match[1]) {
+          // تنظيف رقم الهاتف (إزالة المسافات والشرطات)
+          const phoneNumber = match[1].replace(/\D/g, '');
+          // التحقق من أن الرقم عراقي (يبدأ بـ 07) وطوله 11
+          if (phoneNumber.startsWith('07') && phoneNumber.length === 11) {
+            parsedData.phoneNumber = phoneNumber;
+            console.log("تم استخراج رقم الهاتف:", parsedData.phoneNumber);
+            break;
+          } else if (phoneNumber.length >= 9) {
+            // إذا كان الرقم طويل بما فيه الكفاية ولكن لا يبدأ بـ 07، نضيف 07 في البداية
+            if (!phoneNumber.startsWith('07')) {
+              const correctedPhone = phoneNumber.length <= 9 ? `07${phoneNumber}` : phoneNumber;
+              // نتأكد من أنه 11 رقم
+              parsedData.phoneNumber = correctedPhone.substring(0, 11);
+              console.log("تم تصحيح رقم الهاتف:", parsedData.phoneNumber);
+              break;
+            }
+          }
+        }
+      }
+      
+      // بحث عن أي رقم هاتف في النص
+      if (!parsedData.phoneNumber) {
+        const phoneRegex = /\b(07[0-9]{2}[0-9\s\-]{7,8})\b/;
+        const phoneMatch = extractedText.match(phoneRegex);
+        if (phoneMatch && phoneMatch[1]) {
+          parsedData.phoneNumber = phoneMatch[1].replace(/\D/g, '');
+          console.log("تم العثور على رقم هاتف عراقي مباشرة:", parsedData.phoneNumber);
+        } else {
+          // بحث عن سلسلة من الأرقام المتتالية
+          const numberSequences = extractedText.match(/\b\d{9,11}\b/g);
+          if (numberSequences) {
+            // فحص كل سلسلة من الأرقام
+            for (const seq of numberSequences) {
+              // تفضيل السلاسل التي تبدأ بـ 07
+              if (seq.startsWith('07') && seq.length === 11) {
+                parsedData.phoneNumber = seq;
+                console.log("تم العثور على رقم هاتف محتمل:", parsedData.phoneNumber);
+                break;
+              }
+            }
+            
+            // إذا لم نجد رقم يبدأ بـ 07، نأخذ أول سلسلة
+            if (!parsedData.phoneNumber && numberSequences.length > 0) {
+              const possiblePhone = numberSequences[0];
+              if (possiblePhone.length >= 10) {
+                parsedData.phoneNumber = possiblePhone.substring(0, 11);
+                console.log("استخدام أول سلسلة أرقام كرقم هاتف محتمل:", parsedData.phoneNumber);
+              }
+            }
+          }
+        }
+      }
+      
+      // استخراج المحافظة - أنماط مختلفة وقائمة محافظات العراق
+      const provincePatterns = [
+        /المحافظة[:\s]+([^\n]+)/i,
+        /محافظة[:\s]+([^\n]+)/i,
+        /عنوان الزبون[^:\n]*[:\s]+([^\n]+)/i,
+        /العنوان[:\s]+([^\n]+)/i,
+        /المنطقة[:\s]+([^\n]+)/i,
+        /المدينة[:\s]+([^\n]+)/i,
+        /province[:\s]+([^\n]+)/i,
+        /city[:\s]+([^\n]+)/i,
+        /address[:\s]+([^\n]+)/i
+      ];
+      
+      // تجربة كل نمط من أنماط المحافظة
+      for (const pattern of provincePatterns) {
+        const match = extractedText.match(pattern);
+        if (match && match[1]) {
+          // استخراج اسم المحافظة من النص وتصحيحه
+          const provinceText = match[1].trim();
           parsedData.province = correctProvinceName(provinceText);
+          console.log("تم استخراج المحافظة:", parsedData.province);
+          break;
         }
-        
-        console.log("Extracted province:", parsedData.province);
       }
       
-      // استخراج السعر
-      const priceMatches = extractedText.match(/السعر[:\s]+([0-9\s\-,\.]+)/i) ||
-                          extractedText.match(/المبلغ[:\s]+([0-9\s\-,\.]+)/i) ||
-                          extractedText.match(/سعر[:\s]+([0-9\s\-,\.]+)/i) ||
-                          extractedText.match(/قيمة[:\s]+([0-9\s\-,\.]+)/i);
-      
-      if (priceMatches && priceMatches[1]) {
-        parsedData.price = priceMatches[1].trim();
-        console.log("Extracted price:", parsedData.price);
+      // إذا لم نجد المحافظة، نبحث عن أسماء المحافظات العراقية في النص
+      if (!parsedData.province) {
+        for (const province of IRAQ_PROVINCES) {
+          if (extractedText.includes(province)) {
+            parsedData.province = province;
+            console.log("تم العثور على اسم محافظة في النص:", parsedData.province);
+            break;
+          }
+        }
       }
       
-      // استخراج اسم الشركة
-      const companyNameMatches = extractedText.match(/شركة\s+([^\n]+)/i) ||
-                                extractedText.match(/مؤسسة\s+([^\n]+)/i) ||
-                                extractedText.match(/اسم الشركة[:\s]+([^\n]+)/i);
+      // استخراج السعر - أنماط مختلفة
+      const pricePatterns = [
+        /السعر[:\s]+([0-9\s\-,.]+)/i,
+        /المبلغ[:\s]+([0-9\s\-,.]+)/i,
+        /سعر[:\s]+([0-9\s\-,.]+)/i,
+        /قيمة[:\s]+([0-9\s\-,.]+)/i,
+        /المجموع[:\s]+([0-9\s\-,.]+)/i,
+        /الإجمالي[:\s]+([0-9\s\-,.]+)/i,
+        /الكلفة[:\s]+([0-9\s\-,.]+)/i,
+        /price[:\s]+([0-9\s\-,.]+)/i,
+        /amount[:\s]+([0-9\s\-,.]+)/i,
+        /total[:\s]+([0-9\s\-,.]+)/i,
+        /cost[:\s]+([0-9\s\-,.]+)/i,
+        /\b(\d+[\d,.]*)\s*(?:دينار|الف|د\.ع|ع\.د|IQD)/i, // البحث عن أرقام متبوعة بكلمة دينار أو مختصراتها
+        /\b(?:دينار|الف|د\.ع|ع\.د|IQD)\s*(\d+[\d,.]*)\b/i // البحث عن أرقام مسبوقة بكلمة دينار أو مختصراتها
+      ];
       
-      if (companyNameMatches && companyNameMatches[1]) {
-        parsedData.companyName = companyNameMatches[1].trim();
-        console.log("Extracted company name:", parsedData.companyName);
-      } else {
-        // إذا لم يتم العثور على اسم الشركة، فحاول استخدام السطر الأول من النص
-        const firstLine = extractedText.split('\n')[0].trim();
-        if (firstLine && firstLine.length > 3 && firstLine.length < 50) {
-          parsedData.companyName = firstLine;
-          console.log("Using first line as company name:", parsedData.companyName);
+      // تجربة كل نمط من أنماط السعر
+      for (const pattern of pricePatterns) {
+        const match = extractedText.match(pattern);
+        if (match && match[1]) {
+          // تنظيف السعر (إزالة الحروف غير الرقمية باستثناء النقطة والفاصلة)
+          const price = match[1].replace(/[^\d.,]/g, '');
+          parsedData.price = price;
+          console.log("تم استخراج السعر:", parsedData.price);
+          break;
+        }
+      }
+      
+      // البحث عن أي رقم قد يكون سعراً إذا لم نجد
+      if (!parsedData.price) {
+        const potentialPrices = extractedText.match(/\b\d{3,6}\b/g); // أرقام من 3-6 خانات
+        if (potentialPrices && potentialPrices.length > 0) {
+          // اختيار أكبر رقم كسعر محتمل
+          const prices = potentialPrices.map(p => parseInt(p, 10)).filter(p => p > 100);
+          if (prices.length > 0) {
+            const highestPrice = Math.max(...prices);
+            parsedData.price = highestPrice.toString();
+            console.log("تم اختيار أكبر رقم كسعر محتمل:", parsedData.price);
+          }
+        }
+      }
+      
+      // استخراج اسم الشركة - أنماط مختلفة
+      const companyNamePatterns = [
+        /شركة\s+([^\n]+)/i,
+        /مؤسسة\s+([^\n]+)/i,
+        /مكتب\s+([^\n]+)/i,
+        /اسم الشركة[:\s]+([^\n]+)/i,
+        /الشركة[:\s]+([^\n]+)/i,
+        /company[:\s]+([^\n]+)/i,
+        /office[:\s]+([^\n]+)/i
+      ];
+      
+      // تجربة كل نمط من أنماط اسم الشركة
+      for (const pattern of companyNamePatterns) {
+        const match = extractedText.match(pattern);
+        if (match && match[1]) {
+          parsedData.companyName = match[1].trim();
+          console.log("تم استخراج اسم الشركة:", parsedData.companyName);
+          break;
+        }
+      }
+      
+      // إذا لم نجد اسم الشركة، نستخدم السطر الأول أو الثاني من النص
+      if (!parsedData.companyName) {
+        const lines = extractedText.split('\n').filter(line => line.trim().length > 0);
+        if (lines.length > 0) {
+          // استخدام السطر الأول إذا كان مناسباً (أقل من 50 حرف)
+          const firstLine = lines[0].trim();
+          if (firstLine.length > 3 && firstLine.length < 50 && !firstLine.match(/^\d+$/)) {
+            parsedData.companyName = firstLine;
+            console.log("استخدام السطر الأول كاسم الشركة:", parsedData.companyName);
+          } 
+          // أو استخدام السطر الثاني إذا كان السطر الأول غير مناسب
+          else if (lines.length > 1) {
+            const secondLine = lines[1].trim();
+            if (secondLine.length > 3 && secondLine.length < 50 && !secondLine.match(/^\d+$/)) {
+              parsedData.companyName = secondLine;
+              console.log("استخدام السطر الثاني كاسم الشركة:", parsedData.companyName);
+            }
+          }
         }
       }
     }
     
-    // البحث عن رقم هاتف عراقي في النص بشكل مباشر إذا لم يتم العثور عليه سابقًا
+    // تحسين النتائج: إذا لم نجد رقم الهاتف، نبحث مرة أخرى بطريقة أكثر شمولاً
     if (!parsedData.phoneNumber) {
-      const iraqiPhoneRegex = /\b(07[0-9]{2}[0-9\s\-]{7,8})\b/;
-      const phoneMatchDirect = extractedText.match(iraqiPhoneRegex);
-      if (phoneMatchDirect && phoneMatchDirect[1]) {
-        parsedData.phoneNumber = phoneMatchDirect[1].replace(/\D/g, '');
-        console.log("Found Iraqi phone number directly:", parsedData.phoneNumber);
+      // البحث عن أي سلسلة أرقام قد تكون رقم هاتف عراقي
+      const allNumbers = extractedText.match(/\b\d{9,12}\b/g);
+      if (allNumbers && allNumbers.length > 0) {
+        // البحث عن أرقام تبدأ بـ 07 أولاً
+        const iraqiNumbers = allNumbers.filter(num => num.startsWith('07') && num.length >= 10);
+        
+        if (iraqiNumbers.length > 0) {
+          // استخدام أول رقم يبدأ بـ 07
+          parsedData.phoneNumber = iraqiNumbers[0].substring(0, 11);
+          console.log("تم العثور على رقم هاتف عراقي محتمل:", parsedData.phoneNumber);
+        } else if (allNumbers.length > 0) {
+          // استخدام أول رقم طويل وإضافة 07 في البداية إذا لزم الأمر
+          let possiblePhone = allNumbers[0];
+          if (!possiblePhone.startsWith('07')) {
+            possiblePhone = possiblePhone.length <= 9 ? `07${possiblePhone}` : possiblePhone;
+          }
+          parsedData.phoneNumber = possiblePhone.substring(0, 11);
+          console.log("تم اختيار رقم محتمل كرقم هاتف:", parsedData.phoneNumber);
+        }
       }
     }
     
-    // البحث عن أرقام بصيغ مختلفة قد تكون كود الشحنة
+    // تحسين النتائج: إذا لم نجد الكود، نبحث عن أي رقم قد يكون كوداً
     if (!parsedData.code) {
-      const possibleCodes = extractedText.match(/\b\d{5,10}\b/g);
+      const possibleCodes = extractedText.match(/\b\d{4,10}\b/g);
       if (possibleCodes && possibleCodes.length > 0) {
-        // استخدام أول رقم طويل (5-10 أرقام) كرمز محتمل
-        parsedData.code = possibleCodes[0];
-        console.log("Using first numeric sequence as code:", parsedData.code);
+        // تجنب استخدام الأرقام التي تبدو كأرقام هواتف (تبدأ بـ 07)
+        const nonPhoneNumbers = possibleCodes.filter(num => !num.startsWith('07'));
+        
+        if (nonPhoneNumbers.length > 0) {
+          // استخدام أطول رقم غير رقم هاتف
+          const longestCode = nonPhoneNumbers.reduce((a, b) => a.length >= b.length ? a : b);
+          parsedData.code = longestCode;
+          console.log("تم اختيار أطول رقم غير هاتف كرمز محتمل:", parsedData.code);
+        } else if (parsedData.phoneNumber && possibleCodes.length > 1) {
+          // استخدام رقم آخر غير رقم الهاتف الذي تم تحديده
+          const otherNumbers = possibleCodes.filter(num => num !== parsedData.phoneNumber);
+          if (otherNumbers.length > 0) {
+            parsedData.code = otherNumbers[0];
+            console.log("تم اختيار رقم مختلف عن رقم الهاتف كرمز محتمل:", parsedData.code);
+          }
+        } else {
+          // استخدام أول رقم إذا لم نجد رقم هاتف سابقاً
+          parsedData.code = possibleCodes[0];
+          console.log("تم اختيار أول رقم طويل كرمز محتمل:", parsedData.code);
+        }
       }
     }
     
     // معالجة وتحسين البيانات المستخرجة
     const enhancedData = enhanceExtractedData(parsedData, extractedText);
-    console.log("Enhanced extracted data:", enhancedData);
+    console.log("البيانات المحسنة:", enhancedData);
     
     // تصحيح اسم المحافظة إذا وجد
     if (enhancedData.province) {
       enhancedData.province = correctProvinceName(enhancedData.province);
-      console.log("Corrected province name:", enhancedData.province);
-    } else {
-      // البحث في النص كاملاً عن أي اسم محافظة عراقية
-      for (const province of IRAQ_PROVINCES) {
-        if (extractedText.includes(province)) {
-          enhancedData.province = province;
-          console.log("Found province name in text:", enhancedData.province);
-          break;
-        }
-      }
+      console.log("تم تصحيح اسم المحافظة:", enhancedData.province);
     }
     
     // تنسيق السعر وفقًا لقواعد العمل
     if (enhancedData.price) {
       enhancedData.price = formatPrice(enhancedData.price);
-      console.log("Formatted price:", enhancedData.price);
+      console.log("تم تنسيق السعر:", enhancedData.price);
     }
     
     // تقييم جودة البيانات المستخرجة
     const confidenceScore = calculateConfidenceScore(enhancedData);
-    console.log("Calculated confidence score:", confidenceScore);
+    console.log("درجة الثقة المحسوبة:", confidenceScore);
     
     return {
       parsedData: enhancedData,
       confidenceScore
     };
   } catch (error) {
-    console.error("Error in parseGeminiResponse:", error);
+    console.error("خطأ في parseGeminiResponse:", error);
     return {
       parsedData: {},
       confidenceScore: 0

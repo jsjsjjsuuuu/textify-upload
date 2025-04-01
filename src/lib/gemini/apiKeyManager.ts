@@ -3,18 +3,25 @@
  * مدير مفاتيح API لجيمناي - يقوم بتدوير المفاتيح وإدارة استخدامها
  */
 
-// تخزين مفاتيح API المتعددة
+// تخزين مفتاح API الرئيسي
+const PRIMARY_API_KEY = "AIzaSyBKczW8k6fNBXnjD5y7P2vLC5nYgJM7I4o";
+
+// تخزين مفاتيح API المتعددة، نستخدم الآن فقط المفتاح المحدد
 const API_KEYS = [
+  PRIMARY_API_KEY,
+  // احتفظنا بالمفاتيح الأخرى كنسخة احتياطية ولكن معطلة
+  // يمكن تفعيلها لاحقاً إذا لزم الأمر
+  /*
   "AIzaSyAKa3HnGszEpnhx2SXJbuQTjFNfL2Un2d8",
   "AIzaSyCzHmpOdtuRu07jP0P4GNlCMeQB_InKT7E",
   "AIzaSyCw3ET1HuGtfJtuY1ABK4GdLuOHtkqceKo",
   "AIzaSyCp7rVtu_IAdBSICRSd5RmNCvdrkiXQ7SI",
-  "AIzaSyBUwu7p61Rk1BHYJb5sa-CUMuN_6ImuQOc", // المفتاح الافتراضي السابق
-  // إضافة مفاتيح إضافية للتناوب
+  "AIzaSyBUwu7p61Rk1BHYJb5sa-CUMuN_6ImuQOc",
   "AIzaSyDi_K0m6y-t62a_fqxFV8DToF9sVpmm7YI",
   "AIzaSyCn-oXnIxQWiYy-wYI5-UpHbr_P-3Ni68Y",
   "AIzaSyDGPa1F9XH4nh3rxtwCnBBHMEDVHrygUUk",
   "AIzaSyBL8PnaeEL4tKUCJzrVPFDk5-UJGD9M4vQ"
+  */
 ];
 
 // مؤشر للمفتاح الحالي
@@ -47,9 +54,13 @@ const keyUsageMap = new Map<string, KeyUsage>(
 );
 
 /**
- * الحصول على المفتاح التالي بناءً على خوارزمية توزيع الحمل
+ * الحصول على المفتاح التالي - نستخدم الآن دائماً المفتاح الرئيسي
  */
 export const getNextApiKey = (): string => {
+  // دائماً إرجاع المفتاح الرئيسي المحدد
+  return PRIMARY_API_KEY;
+  
+  /* تم تعطيل منطق التناوب بين المفاتيح
   const now = Date.now();
   
   // تحديث حالة فترة التهدئة للمفاتيح
@@ -108,12 +119,17 @@ export const getNextApiKey = (): string => {
   console.log(`استخدام مفتاح API: ${nextKey.substring(0, 5)}... (الاستخدام: ${usage.usageCount})`);
   
   return nextKey;
+  */
 };
 
 /**
  * تسجيل خطأ لمفتاح محدد
  */
 export const reportApiKeyError = (apiKey: string, errorMessage: string): void => {
+  // تسجيل الخطأ فقط دون تغيير حالة المفتاح
+  console.log(`حدث خطأ باستخدام المفتاح: ${apiKey.substring(0, 5)}... - ${errorMessage}`);
+  
+  /* تم تعطيل منطق التناوب
   const usage = keyUsageMap.get(apiKey);
   if (!usage) return;
   
@@ -143,12 +159,22 @@ export const reportApiKeyError = (apiKey: string, errorMessage: string): void =>
     // زيادة فترة التهدئة للأخطاء العامة - 5 دقائق
     usage.cooldownUntil = Date.now() + 5 * 60 * 1000;
   }
+  */
 };
 
 /**
  * الحصول على إحصائيات استخدام المفاتيح
  */
 export const getApiKeyStats = (): { active: number, rateLimited: number, total: number, cooldown: number } => {
+  // دائمًا إرجاع أن لدينا مفتاح نشط واحد فقط
+  return {
+    active: 1,
+    rateLimited: 0,
+    cooldown: 0,
+    total: 1
+  };
+  
+  /* تم تعطيل منطق التناوب
   const now = Date.now();
   const stats = {
     active: 0,
@@ -168,12 +194,16 @@ export const getApiKeyStats = (): { active: number, rateLimited: number, total: 
   }
   
   return stats;
+  */
 };
 
 /**
  * إعادة تعيين حالة مفتاح محدد
  */
 export const resetApiKeyStatus = (apiKey: string): void => {
+  console.log(`تم إعادة تعيين حالة مفتاح API: ${apiKey.substring(0, 5)}...`);
+  
+  /* تم تعطيل منطق التناوب
   const usage = keyUsageMap.get(apiKey);
   if (usage) {
     usage.rateLimit = false;
@@ -181,22 +211,27 @@ export const resetApiKeyStatus = (apiKey: string): void => {
     usage.cooldownUntil = 0;
     console.log(`تم إعادة تعيين حالة مفتاح API: ${apiKey.substring(0, 5)}...`);
   }
+  */
 };
 
 /**
  * إعادة تعيين جميع مفاتيح API
  */
 export const resetAllApiKeys = (): void => {
+  console.log("تم إعادة تعيين جميع مفاتيح API");
+  
+  /* تم تعطيل منطق التناوب
   for (const key of API_KEYS) {
     resetApiKeyStatus(key);
   }
   console.log("تم إعادة تعيين جميع مفاتيح API");
+  */
 };
 
 // تصدير المفاتيح للاستخدام في أجزاء أخرى من التطبيق
 export const getAllApiKeys = (): string[] => {
-  return [...API_KEYS];
+  return [PRIMARY_API_KEY];
 };
 
 // تصدير مفتاح API الافتراضي (أول مفتاح)
-export const DEFAULT_GEMINI_API_KEY = API_KEYS[0];
+export const DEFAULT_GEMINI_API_KEY = PRIMARY_API_KEY;
