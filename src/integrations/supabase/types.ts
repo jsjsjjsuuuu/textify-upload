@@ -98,6 +98,7 @@ export type Database = {
           account_status: string | null
           avatar_url: string | null
           created_at: string
+          daily_image_limit: number | null
           full_name: string | null
           id: string
           is_admin: boolean | null
@@ -111,6 +112,7 @@ export type Database = {
           account_status?: string | null
           avatar_url?: string | null
           created_at?: string
+          daily_image_limit?: number | null
           full_name?: string | null
           id: string
           is_admin?: boolean | null
@@ -124,6 +126,7 @@ export type Database = {
           account_status?: string | null
           avatar_url?: string | null
           created_at?: string
+          daily_image_limit?: number | null
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
@@ -135,13 +138,84 @@ export type Database = {
         }
         Relationships: []
       }
+      user_daily_uploads: {
+        Row: {
+          id: string
+          last_updated: string
+          upload_count: number
+          upload_date: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          last_updated?: string
+          upload_count?: number
+          upload_date?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          last_updated?: string
+          upload_count?: number
+          upload_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      admin_get_basic_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          created_at: string
+          updated_at: string
+          last_sign_in_at: string
+          raw_user_meta_data: Json
+          raw_app_meta_data: Json
+        }[]
+      }
+      admin_get_basic_users_list: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+          is_approved: boolean
+          account_status: string
+          subscription_plan: string
+          created_at: string
+        }[]
+      }
       admin_get_complete_users: {
         Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          created_at: string
+          full_name: string
+          avatar_url: string
+          is_approved: boolean
+          is_admin: boolean
+          subscription_plan: string
+          account_status: string
+          subscription_end_date: string
+          username: string
+          last_login_at: string
+          phone_number: string
+          address: string
+          notes: string
+          updated_at: string
+        }[]
+      }
+      admin_get_user_by_id: {
+        Args: {
+          user_id: string
+        }
         Returns: {
           id: string
           email: string
@@ -169,14 +243,14 @@ export type Database = {
           created_at: string
         }[]
       }
-      admin_reset_password_by_string_id: {
+      admin_reset_password_direct_api: {
         Args: {
           user_id_str: string
           new_password: string
         }
         Returns: boolean
       }
-      admin_reset_password_direct_api: {
+      admin_reset_user_password: {
         Args: {
           user_id_str: string
           new_password: string
@@ -190,13 +264,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      admin_update_user_password: {
-        Args: {
-          user_id: string
-          new_password: string
-        }
-        Returns: boolean
-      }
       admin_update_user_password_by_email: {
         Args: {
           user_email: string
@@ -204,9 +271,27 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_user_upload_limit: {
+        Args: {
+          user_id_param: string
+        }
+        Returns: boolean
+      }
       ensure_user_is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      get_user_daily_upload_count: {
+        Args: {
+          user_id_param: string
+        }
+        Returns: number
+      }
+      get_user_email_by_id: {
+        Args: {
+          user_id: string
+        }
+        Returns: string
       }
       get_users_emails: {
         Args: Record<PropertyKey, never>
@@ -215,6 +300,12 @@ export type Database = {
           email: string
           created_at: string
         }[]
+      }
+      increment_user_upload_count: {
+        Args: {
+          user_id_param: string
+        }
+        Returns: number
       }
       is_admin_user: {
         Args: {
@@ -225,6 +316,10 @@ export type Database = {
       is_current_user_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      reset_all_daily_upload_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {

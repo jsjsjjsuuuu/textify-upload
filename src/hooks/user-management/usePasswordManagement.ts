@@ -11,6 +11,7 @@ export const usePasswordManagement = () => {
   const [userToReset, setUserToReset] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [lastResetResult, setLastResetResult] = useState<boolean | null>(null);
 
   // وظيفة إعادة تعيين حالات كلمة المرور
   const resetPasswordStates = () => {
@@ -45,133 +46,107 @@ export const usePasswordManagement = () => {
 
   // إعداد المستخدم لإعادة تعيين كلمة المرور
   const prepareUserPasswordReset = (userId: string) => {
-    if (!validatePassword()) {
+    if (!userId) {
+      console.error('[usePasswordManagement] معرف المستخدم غير صالح:', userId);
+      toast.error('معرف المستخدم غير صالح');
       return;
     }
     
     console.log('[usePasswordManagement] إعداد إعادة تعيين كلمة المرور للمستخدم:', userId);
+    resetPasswordStates(); // إعادة تعيين الحالات قبل فتح مربع الحوار
     setUserToReset(userId);
     setShowConfirmReset(true);
+    setLastResetResult(null);
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - محسنة ومعاد كتابتها
-  const resetUserPassword = async (userId: string, password: string) => {
+  // وظيفة استدعاء RPC مباشرة
+  const resetPasswordViaRPC = async (userId: string, password: string): Promise<boolean> => {
+    console.log('[usePasswordManagement] محاولة استخدام RPC لإعادة تعيين كلمة المرور للمستخدم:', userId);
+    try {
+      const { data, error } = await supabase.rpc(
+        'admin_reset_user_password',
+        { user_id_str: userId, new_password: password }
+      );
+      
+      if (error) {
+        console.error('[usePasswordManagement] خطأ RPC:', error.message);
+        return false;
+      }
+      
+      console.log('[usePasswordManagement] نتيجة RPC:', data);
+      return data === true;
+    } catch (error) {
+      console.error('[usePasswordManagement] استثناء RPC:', error);
+      return false;
+    }
+  };
+
+  // وظيفة إعادة تعيين كلمة المرور المحسنة
+  const resetUserPassword = async (userId: string, password: string): Promise<boolean> => {
+    if (!userId) {
+      console.error('[usePasswordManagement] معرف المستخدم غير صالح:', userId);
+      toast.error('معرف المستخدم غير صالح');
+      return false;
+    }
+
+    if (!password || password.length < 6) {
+      console.error('[usePasswordManagement] كلمة المرور غير صالحة:', { 
+        passwordEmpty: !password, 
+        passwordLength: password ? password.length : 0 
+      });
+      toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+      return false;
+    }
+
     setIsProcessing(true);
     try {
-      console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', {
-        userId,
-        passwordLength: password.length
-      });
+      console.log('[usePasswordManagement] بدء عملية إعادة تعيين كلمة المرور للمستخدم:', userId);
       
-      if (!password || password.trim() === '') {
-        console.error('[usePasswordManagement] كلمة المرور فارغة');
-        toast.error('كلمة المرور لا يمكن أن تكون فارغة');
-        setIsProcessing(false);
-        return false;
-      }
-      
-      if (!userId) {
-        console.error('[usePasswordManagement] معرف المستخدم غير موجود');
-        toast.error('معرف المستخدم غير صالح');
-        setIsProcessing(false);
-        return false;
-      }
-
-      // تنفيذ إعادة تعيين كلمة المرور باستخدام عدة طرق وآليات احتياطية
-      let success = false;
-      let lastError = null;
-      
-      // محاولة الطريقة الأولى: استخدام admin_reset_password_by_string_id
-      try {
-        console.log('[usePasswordManagement] محاولة 1: استخدام admin_reset_password_by_string_id...');
-        const { data: firstAttemptData, error: firstAttemptError } = await supabase.rpc('admin_reset_password_by_string_id', {
-          user_id_str: userId,
-          new_password: password
-        });
-        
-        console.log('[usePasswordManagement] نتيجة المحاولة 1:', { data: firstAttemptData, errorMessage: firstAttemptError?.message });
-        
-        if (firstAttemptError) {
-          lastError = firstAttemptError;
-          console.warn('[usePasswordManagement] فشلت المحاولة 1:', firstAttemptError);
-        } else if (firstAttemptData === true) {
-          console.log('[usePasswordManagement] نجحت المحاولة 1');
-          success = true;
-        }
-      } catch (error1) {
-        lastError = error1;
-        console.warn('[usePasswordManagement] استثناء في المحاولة 1:', error1);
-      }
-      
-      // محاولة الطريقة الثانية: استخدام admin_update_user_password
-      if (!success) {
-        try {
-          console.log('[usePasswordManagement] محاولة 2: استخدام admin_update_user_password...');
-          const { data: secondAttemptData, error: secondAttemptError } = await supabase.rpc('admin_update_user_password', {
-            user_id: userId,
-            new_password: password
-          });
-          
-          console.log('[usePasswordManagement] نتيجة المحاولة 2:', { data: secondAttemptData, errorMessage: secondAttemptError?.message });
-          
-          if (secondAttemptError) {
-            lastError = secondAttemptError;
-            console.warn('[usePasswordManagement] فشلت المحاولة 2:', secondAttemptError);
-          } else if (secondAttemptData === true) {
-            console.log('[usePasswordManagement] نجحت المحاولة 2');
-            success = true;
-          }
-        } catch (error2) {
-          lastError = error2;
-          console.warn('[usePasswordManagement] استثناء في المحاولة 2:', error2);
-        }
-      }
-      
-      // محاولة الطريقة الثالثة: استخدام admin_reset_password_direct_api
-      if (!success) {
-        try {
-          console.log('[usePasswordManagement] محاولة 3: استخدام admin_reset_password_direct_api...');
-          const { data: thirdAttemptData, error: thirdAttemptError } = await supabase.rpc('admin_reset_password_direct_api', {
-            user_id_str: userId,
-            new_password: password
-          });
-          
-          console.log('[usePasswordManagement] نتيجة المحاولة 3:', { data: thirdAttemptData, errorMessage: thirdAttemptError?.message });
-          
-          if (thirdAttemptError) {
-            lastError = thirdAttemptError;
-            console.warn('[usePasswordManagement] فشلت المحاولة 3:', thirdAttemptError);
-          } else if (thirdAttemptData === true) {
-            console.log('[usePasswordManagement] نجحت المحاولة 3');
-            success = true;
-          }
-        } catch (error3) {
-          lastError = error3;
-          console.warn('[usePasswordManagement] استثناء في المحاولة 3:', error3);
-        }
-      }
-      
-      // التعامل مع نتيجة المحاولات
-      if (success) {
+      // محاولة استخدام وظيفة RPC أولاً - طريقة 1
+      const rpcResult = await resetPasswordViaRPC(userId, password);
+      if (rpcResult) {
+        console.log('[usePasswordManagement] تم إعادة تعيين كلمة المرور بنجاح عبر RPC');
         toast.success('تم إعادة تعيين كلمة المرور بنجاح');
         resetPasswordStates();
+        setLastResetResult(true);
         return true;
-      } else {
-        const errorMessage = lastError ? 
-          (lastError.message || 'خطأ غير معروف') : 
-          'فشلت جميع محاولات إعادة تعيين كلمة المرور';
-        console.error('[usePasswordManagement] فشل إعادة تعيين كلمة المرور:', errorMessage);
-        toast.error(`فشل إعادة تعيين كلمة المرور: ${errorMessage}`);
+      }
+      
+      console.log('[usePasswordManagement] فشلت محاولة RPC، سيتم المتابعة باستخدام Edge Function');
+      
+      // استدعاء Edge Function مع هيدرز مناسبة - طريقة 2
+      const { data, error } = await supabase.functions.invoke('reset-password', {
+        body: {
+          userId: userId,
+          newPassword: password
+        }
+      });
+      
+      console.log('[usePasswordManagement] استجابة إعادة تعيين كلمة المرور:', { 
+        success: data?.success === true, 
+        error: error ? error.message : (data?.error || null)
+      });
+      
+      if (error || !data || data.success !== true) {
+        const errorMessage = error?.message || data?.error || 'فشلت عملية إعادة تعيين كلمة المرور';
+        console.error('[usePasswordManagement] خطأ في إعادة تعيين كلمة المرور:', errorMessage);
+        toast.error(`فشلت عملية إعادة تعيين كلمة المرور: ${errorMessage}`);
+        setLastResetResult(false);
         return false;
       }
+      
+      toast.success('تم إعادة تعيين كلمة المرور بنجاح');
+      resetPasswordStates();
+      setLastResetResult(true);
+      return true;
     } catch (error: any) {
       console.error('[usePasswordManagement] خطأ في إعادة تعيين كلمة المرور:', error);
       toast.error(`حدث خطأ أثناء إعادة تعيين كلمة المرور: ${error.message || 'خطأ غير معروف'}`);
+      setLastResetResult(false);
       return false;
     } finally {
       setIsProcessing(false);
       setShowConfirmReset(false);
-      setUserToReset(null);
     }
   };
 
@@ -183,6 +158,7 @@ export const usePasswordManagement = () => {
     userToReset,
     isProcessing,
     passwordError,
+    lastResetResult,
     setNewPassword,
     setConfirmPassword,
     setShowPassword,

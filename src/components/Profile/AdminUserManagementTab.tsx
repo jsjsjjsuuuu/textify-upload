@@ -1,18 +1,19 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, EyeOff, Lock, Loader2, User, UserPlus, Shield } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUserManagement } from '@/hooks/useUserManagement';
+import { supabase } from '@/integrations/supabase/client';
 
 // إنشاء مخطط التحقق من صحة نموذج إضافة مستخدم
 const addUserSchema = z.object({
@@ -34,13 +35,15 @@ type AddUserFormValues = z.infer<typeof addUserSchema>;
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 const AdminUserManagementTab: React.FC = () => {
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState('standard');
+  
+  // استخدام hook إدارة المستخدمين للوصول للوظائف
+  const { addNewUser, resetUserPassword, fetchUsers } = useUserManagement();
 
   // نموذج إضافة مستخدم جديد
   const addUserForm = useForm<AddUserFormValues>({
@@ -64,69 +67,38 @@ const AdminUserManagementTab: React.FC = () => {
     },
   });
 
+  // تحميل المستخدمين عند تحميل المكون
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
   // إضافة مستخدم جديد
   const onAddUserSubmit = async (data: AddUserFormValues) => {
     setIsLoading(true);
     try {
       console.log("محاولة إضافة مستخدم جديد:", data);
       
-      // إنشاء المستخدم في Supabase
-      const { data: userData, error } = await supabase.auth.admin.createUser({
-        email: data.email,
-        password: data.password,
-        email_confirm: true, // تأكيد البريد الإلكتروني تلقائيًا
-        user_metadata: {
-          full_name: data.fullName,
-        },
-      });
+      const success = await addNewUser(
+        data.email,
+        data.password,
+        data.fullName,
+        isAdmin,
+        isApproved,
+        subscriptionPlan
+      );
       
-      if (error) {
-        console.error("فشل إضافة المستخدم:", error.message);
-        throw error;
+      if (success) {
+        toast.success(`تم إضافة المستخدم ${data.email} بنجاح`);
+        
+        addUserForm.reset();
+        setIsAdmin(false);
+        setIsApproved(false);
+        setSubscriptionPlan('standard');
       }
-      
-      // تحديث الملف الشخصي للمستخدم
-      if (userData && userData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            full_name: data.fullName,
-            is_admin: isAdmin,
-            is_approved: isApproved,
-            subscription_plan: subscriptionPlan
-          })
-          .eq('id', userData.user.id);
-          
-        if (profileError) {
-          console.error("فشل تحديث بيانات الملف الشخصي:", profileError.message);
-          toast({
-            title: "تحذير",
-            description: "تم إنشاء المستخدم ولكن حدث خطأ أثناء تحديث ملفه الشخصي",
-            variant: "destructive",
-          });
-        }
-      }
-      
-      console.log("تم إضافة المستخدم بنجاح:", data.email);
-      
-      toast({
-        title: "تم بنجاح",
-        description: `تم إضافة المستخدم ${data.email} بنجاح`,
-      });
-      
-      addUserForm.reset();
-      setIsAdmin(false);
-      setIsApproved(false);
-      setSubscriptionPlan('standard');
-      
     } catch (error: any) {
       console.error("خطأ أثناء إضافة المستخدم:", error.message);
       
-      toast({
-        title: "خطأ",
-        description: error.message || "حدث خطأ أثناء إضافة المستخدم",
-        variant: "destructive",
-      });
+      toast.error(error.message || "حدث خطأ أثناء إضافة المستخدم");
     } finally {
       setIsLoading(false);
     }
@@ -136,40 +108,35 @@ const AdminUserManagementTab: React.FC = () => {
   const onResetPasswordSubmit = async (data: ResetPasswordFormValues) => {
     setIsLoading(true);
     try {
-      console.log("محاولة إعادة تعيين كلمة المرور للمستخدم:", data.email);
-      
-      // استخدام الوظيفة المخصصة لتحديث كلمة المرور باستخدام البريد الإلكتروني
-      const { data: result, error } = await supabase.rpc('admin_update_user_password_by_email', {
-        user_email: data.email,
-        new_password: data.newPassword,
+      // البحث عن معرف المستخدم باستخدام البريد الإلكتروني
+      const { data: response, error: searchError } = await supabase.functions.invoke('get-user-id', {
+        body: { email: data.email }
       });
       
-      if (error) {
-        console.error("فشل تحديث كلمة المرور:", error.message);
-        throw error;
+      if (searchError) {
+        throw new Error(searchError.message);
       }
       
-      if (!result) {
-        console.error("فشل تحديث كلمة المرور: لم يتم العثور على المستخدم");
-        throw new Error('فشل تحديث كلمة المرور: لم يتم العثور على المستخدم');
+      if (!response || !response.users || response.users.length === 0) {
+        throw new Error('لم يتم العثور على المستخدم');
       }
       
-      console.log("تم تغيير كلمة المرور بنجاح للمستخدم:", data.email);
+      const userId = response.users[0].id;
       
-      toast({
-        title: "تم بنجاح",
-        description: `تم تغيير كلمة المرور للمستخدم ${data.email} بنجاح`,
-      });
+      // استخدام وظيفة إعادة تعيين كلمة المرور
+      const success = await resetUserPassword(userId, data.newPassword);
       
-      resetPasswordForm.reset();
+      if (success) {
+        toast.success(`تم تغيير كلمة المرور للمستخدم ${data.email} بنجاح`);
+        
+        resetPasswordForm.reset();
+      } else {
+        throw new Error('فشل في إعادة تعيين كلمة المرور');
+      }
     } catch (error: any) {
       console.error("خطأ أثناء تغيير كلمة المرور:", error.message);
       
-      toast({
-        title: "خطأ",
-        description: error.message || "حدث خطأ أثناء تغيير كلمة المرور",
-        variant: "destructive",
-      });
+      toast.error(error.message || "حدث خطأ أثناء تغيير كلمة المرور");
     } finally {
       setIsLoading(false);
     }

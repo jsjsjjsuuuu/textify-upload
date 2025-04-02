@@ -1,13 +1,14 @@
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { compressImage } from "@/utils/imageCompression";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
-import { useImageQueue } from "@/hooks/useImageQueue"; // استيراد نظام قائمة الانتظار
-import { getApiKeyStats, resetAllApiKeys } from "@/lib/gemini"; // استيراد وظيفة إحصائيات المفاتيح
+import { useImageQueue } from "@/hooks/useImageQueue"; 
+import { getApiKeyStats, resetAllApiKeys } from "@/lib/gemini";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FileUploadProps {
   images: ImageData[];
@@ -63,6 +64,19 @@ export const useFileUpload = ({
   // تتبع المحاولات المتكررة لكل صورة
   const retryAttemptsMap = useRef<Map<string, number>>(new Map());
   
+  // معلومات حدود التحميل اليومية
+  const [uploadLimitInfo, setUploadLimitInfo] = useState<{
+    currentCount: number;
+    dailyLimit: number;
+    remainingUploads: number;
+    subscription: string;
+  }>({
+    currentCount: 0,
+    dailyLimit: 3, // الافتراضي للباقة العادية
+    remainingUploads: 3,
+    subscription: 'standard'
+  });
+  
   // مسح كاش الهاشات
   const clearProcessedHashesCache = useCallback(() => {
     processedHashes.current.clear();
@@ -83,6 +97,116 @@ export const useFileUpload = ({
       description: "تم مسح ذاكرة التخزين المؤقت للصور المجهزة وإعادة تعيين مفاتيح API",
     });
   }, [toast, resetApiKeys]);
+  
+  // التحقق من حدود التحميل اليومية للمستخدم
+  const checkUserUploadLimits = useCallback(async (): Promise<{
+    canUpload: boolean;
+    currentCount: number;
+    dailyLimit: number;
+    remainingUploads: number;
+    subscription: string;
+  }> => {
+    try {
+      const user = await supabase.auth.getUser();
+      
+      if (!user.data.user) {
+        return {
+          canUpload: false,
+          currentCount: 0,
+          dailyLimit: 3,
+          remainingUploads: 0,
+          subscription: 'غير مسجل'
+        };
+      }
+      
+      const userId = user.data.user.id;
+      
+      // الحصول على معلومات الباقة الحالية للمستخدم
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('subscription_plan, daily_image_limit')
+        .eq('id', userId)
+        .single();
+      
+      const subscription = profileData?.subscription_plan || 'standard';
+      const dailyLimit = profileData?.daily_image_limit || 3;
+      
+      // الحصول على عدد التحميلات الحالية
+      const { data: countData, error } = await supabase.rpc(
+        'get_user_daily_upload_count',
+        { user_id_param: userId }
+      );
+      
+      if (error) {
+        console.error("خطأ في الحصول على عدد التحميلات اليومية:", error);
+        throw new Error(error.message);
+      }
+      
+      const currentCount = countData || 0;
+      const remainingUploads = Math.max(0, dailyLimit - currentCount);
+      
+      // تحديث معلومات الحدود
+      setUploadLimitInfo({
+        currentCount,
+        dailyLimit,
+        remainingUploads,
+        subscription
+      });
+      
+      return {
+        canUpload: currentCount < dailyLimit,
+        currentCount,
+        dailyLimit,
+        remainingUploads,
+        subscription
+      };
+    } catch (error) {
+      console.error("خطأ في التحقق من حدود التحميل:", error);
+      return {
+        canUpload: false,
+        currentCount: 0,
+        dailyLimit: 3,
+        remainingUploads: 0,
+        subscription: 'خطأ'
+      };
+    }
+  }, []);
+  
+  // تحديث عداد التحميل بعد كل عملية تحميل ناجحة
+  const incrementUploadCount = useCallback(async () => {
+    try {
+      const user = await supabase.auth.getUser();
+      
+      if (!user.data.user) {
+        return false;
+      }
+      
+      const userId = user.data.user.id;
+      
+      // استدعاء وظيفة زيادة العداد
+      const { data, error } = await supabase.rpc(
+        'increment_user_upload_count',
+        { user_id_param: userId }
+      );
+      
+      if (error) {
+        console.error("خطأ في زيادة عداد التحميل:", error);
+        return false;
+      }
+      
+      // تحديث حالة الحدود المحلية
+      setUploadLimitInfo(prev => ({
+        ...prev,
+        currentCount: data,
+        remainingUploads: Math.max(0, prev.dailyLimit - data)
+      }));
+      
+      return true;
+    } catch (error) {
+      console.error("خطأ في زيادة عداد التحميل:", error);
+      return false;
+    }
+  }, []);
 
   // وظيفة لحساب التأخير المثالي بين معالجات الصور
   const calculateIdealDelay = useCallback(() => {
@@ -115,6 +239,44 @@ export const useFileUpload = ({
     return baseDelay + randomVariation;
   }, []);
 
+  // وظيفة لرفع الصورة إلى Supabase Storage
+  const uploadToStorage = useCallback(async (
+    file: File, 
+    userId: string, 
+    imageId: string
+  ): Promise<string | null> => {
+    try {
+      if (!file || !userId) {
+        console.error("ملف غير صالح أو معرف مستخدم غير موجود");
+        return null;
+      }
+
+      const timestamp = Date.now();
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${userId}/${imageId}_${timestamp}.${fileExt}`;
+      
+      console.log(`جاري رفع الصورة إلى التخزين: ${filePath}`);
+      
+      const { data, error } = await supabase.storage
+        .from('receipt_images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (error) {
+        console.error("خطأ في رفع الصورة إلى التخزين:", error);
+        return null;
+      }
+      
+      console.log("تم رفع الصورة بنجاح:", data.path);
+      return data.path;
+    } catch (error) {
+      console.error("خطأ غير متوقع أثناء رفع الصورة:", error);
+      return null;
+    }
+  }, []);
+
   // وظيفة معالجة صورة واحدة (OCR أو Gemini)
   const processImage = useCallback(async (image: ImageData) => {
     console.log(`بدء معالجة الصورة: ${image.id}`);
@@ -145,6 +307,26 @@ export const useFileUpload = ({
       // التحقق من وجود الملف
       if (!image.file) {
         throw new Error("ملف الصورة غير متاح");
+      }
+      
+      // رفع الصورة إلى Supabase Storage إذا كان المستخدم مسجل الدخول
+      const user = supabase.auth.getUser();
+      let storagePath = null;
+      
+      if ((await user).data.user) {
+        storagePath = await uploadToStorage(
+          image.file, 
+          (await user).data.user.id, 
+          image.id
+        );
+        
+        if (storagePath) {
+          console.log(`تم رفع الصورة إلى التخزين: ${storagePath}`);
+          // تحديث مسار التخزين في الصورة
+          updateImage(image.id, {
+            storage_path: storagePath
+          });
+        }
       }
       
       // معالجة الصورة بناءً على الطريقة المختارة
@@ -227,6 +409,11 @@ export const useFileUpload = ({
         processedImage = await processWithOcr(image.file, image);
       }
       
+      // إضافة مسار التخزين إلى البيانات المعالجة
+      if (storagePath) {
+        processedImage.storage_path = storagePath;
+      }
+      
       // التحقق من نجاح المعالجة من خلال وجود البيانات المستخرجة
       const hasExtractedData = processedImage.code || 
         processedImage.senderName || 
@@ -261,7 +448,8 @@ export const useFileUpload = ({
         price: processedImage.price,
         companyName: processedImage.companyName,
         extractedText: processedImage.extractedText,
-        confidence: processedImage.confidence
+        confidence: processedImage.confidence,
+        storage_path: storagePath // تحديث مسار التخزين
       });
       
       // إضافة تأخير قبل حفظ البيانات للسماح بعرض البيانات في الواجهة
@@ -304,7 +492,16 @@ export const useFileUpload = ({
       // إعادة رمي الخطأ للتعامل معه في وظيفة القائمة
       throw error;
     }
-  }, [geminiEnabled, processWithGemini, processWithOcr, saveProcessedImage, updateImage, calculateIdealDelay, resetApiKeys]);
+  }, [
+    geminiEnabled, 
+    processWithGemini, 
+    processWithOcr, 
+    saveProcessedImage, 
+    updateImage, 
+    calculateIdealDelay, 
+    resetApiKeys,
+    uploadToStorage
+  ]);
 
   // معالج تغيير الملفات - عند رفع الصور
   const handleFileChange = useCallback(async (files: File[]) => {
@@ -312,6 +509,27 @@ export const useFileUpload = ({
     
     const batchId = uuidv4(); // إنشاء معرف مجموعة للملفات المرفوعة معاً
     console.log(`تم استلام ${files.length} ملفات، معرف المجموعة: ${batchId}`);
+    
+    // التحقق من حدود التحميل قبل المعالجة
+    const { canUpload, remainingUploads, dailyLimit, subscription } = await checkUserUploadLimits();
+    
+    if (!canUpload) {
+      toast({
+        title: "تم الوصول للحد اليومي",
+        description: `لقد وصلت إلى الحد اليومي لباقتك (${dailyLimit} صورة). يرجى الترقية أو الانتظار حتى الغد.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // التحقق إذا كان عدد الصور أكبر من الحد المتبقي
+    if (files.length > remainingUploads) {
+      toast({
+        title: "تجاوز الحد المتبقي",
+        description: `يمكنك تحميل ${remainingUploads} صورة فقط من أصل ${files.length} صورة محددة. سيتم معالجة أول ${remainingUploads} صورة فقط.`,
+        variant: "default"
+      });
+    }
 
     // التحقق من التكرار قبل المعالجة
     removeDuplicates();
@@ -342,8 +560,8 @@ export const useFileUpload = ({
     // إضافة تأخير بين إضافة كل صورة لضمان ترتيبها الصحيح
     const addDelay = 300; // زيادة التأخير بين الصور
     
-    // تحديد عدد الصور المراد معالجتها دفعة واحدة (في حالة رفع الكثير من الصور)
-    const maxBatchSize = 20; // لا نريد أكثر من 20 صورة في المرة الواحدة
+    // تحديد عدد الصور المراد معالجتها (لا يتجاوز الحد المتبقي أو الحد الأقصى)
+    const maxBatchSize = Math.min(20, remainingUploads); // لا نريد أكثر من 20 صورة أو تجاوز الحد المتبقي
     const filesToProcess = files.slice(0, maxBatchSize);
     
     if (files.length > maxBatchSize) {
@@ -400,6 +618,9 @@ export const useFileUpload = ({
         // إضافة الصورة إلى الحالة
         addImage(newImage);
         addedImageIds.push(newImage.id);
+        
+        // زيادة عداد التحميل
+        await incrementUploadCount();
         
         // تحديث التقدم
         setProcessingProgress((fileNumber / filesToProcess.length) * 50); // الوصول إلى 50% فقط للمرحلة 1
@@ -470,6 +691,9 @@ export const useFileUpload = ({
     setTimeout(() => {
       setProcessingProgress(0);
     }, 2000);
+    
+    // التحقق من حدود التحميل مرة أخرى لتحديث المعلومات
+    await checkUserUploadLimits();
   }, [
     addImage, 
     images, 
@@ -482,8 +706,22 @@ export const useFileUpload = ({
     clearQueue, 
     manuallyTriggerProcessingQueue, 
     processImage,
-    toast
+    toast,
+    checkUserUploadLimits,
+    incrementUploadCount
   ]);
+
+  // التحقق من حدود التحميل عند تحميل المكون
+  useEffect(() => {
+    checkUserUploadLimits();
+    
+    // التحقق كل 5 دقائق لتحديث المعلومات
+    const intervalId = setInterval(() => {
+      checkUserUploadLimits();
+    }, 5 * 60 * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [checkUserUploadLimits]);
 
   return { 
     isProcessing, 
@@ -495,6 +733,7 @@ export const useFileUpload = ({
     clearQueue,
     manuallyTriggerProcessingQueue,
     getProcessingState,
-    clearProcessedHashesCache
+    clearProcessedHashesCache,
+    uploadLimitInfo // إضافة معلومات الحدود
   };
 };

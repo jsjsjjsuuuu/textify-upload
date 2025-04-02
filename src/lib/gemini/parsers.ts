@@ -1,223 +1,196 @@
 
 /**
- * وظائف لتحليل استجابات Gemini API
+ * وظائف تحليل استجابة Gemini API
  */
 
-import { enhanceExtractedData, calculateConfidenceScore, formatPrice } from "./utils";
-import { correctProvinceName, IRAQ_PROVINCES } from "@/utils/provinces";
+import { GeminiResponse } from "./types";
+import { ApiResult } from "../apiService";
+import { 
+  autoExtractData, 
+  mergeExtractedData, 
+  validateExtractedData, 
+  calculateDataConfidence,
+  cleanExtractedData
+} from "@/utils/extractionUtils";
+import { formatPrice } from "./utils";
 
 /**
- * استخراج JSON من نص الاستجابة ومعالجته
+ * استخراج النص والبيانات المنظمة من استجابة Gemini
  */
-export function parseGeminiResponse(extractedText: string): {
-  parsedData: Record<string, string>;
-  confidenceScore: number;
-} {
-  // محاولة استخراج JSON من النص
-  let parsedData: Record<string, string> = {};
-  
+export function parseGeminiResponse(response: GeminiResponse): ApiResult {
   try {
-    console.log("Parsing Gemini response text:", extractedText.substring(0, 100) + "...");
+    // التحقق من وجود استجابة
+    if (!response || !response.candidates || response.candidates.length === 0) {
+      console.error("استجابة Gemini فارغة أو لا تحتوي على مرشحين");
+      return {
+        success: false,
+        message: "استجابة فارغة من Gemini API"
+      };
+    }
+
+    // التحقق من وجود أخطاء
+    if (response.promptFeedback?.blockReason) {
+      return {
+        success: false,
+        message: `تم حظر المطالبة: ${response.promptFeedback.blockReason}`
+      };
+    }
+
+    const candidate = response.candidates[0];
     
-    // نبحث عن أي نص JSON في الاستجابة
-    const jsonMatch = extractedText.match(/```json\s*([\s\S]*?)\s*```/) || 
-                      extractedText.match(/{[\s\S]*?}/);
-    
-    if (jsonMatch) {
-      const jsonText = jsonMatch[0].replace(/```json|```/g, '').trim();
-      console.log("Found JSON in response:", jsonText);
-      try {
-        parsedData = JSON.parse(jsonText);
-        console.log("Successfully parsed JSON:", parsedData);
-      } catch (jsonError) {
-        console.error("Error parsing JSON:", jsonError);
+    // التحقق من وجود محتوى
+    if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+      console.error("لا يوجد محتوى في استجابة Gemini");
+      return {
+        success: false,
+        message: "استجابة Gemini لا تحتوي على محتوى"
+      };
+    }
+
+    // استخراج النص من الاستجابة
+    let extractedText = "";
+    let jsonData: Record<string, string> = {};
+    let confidence = 0;
+
+    // تجميع جميع أجزاء النص
+    candidate.content.parts.forEach(part => {
+      if (part.text) {
+        extractedText += part.text;
+      }
+    });
+
+    if (!extractedText) {
+      return {
+        success: false,
+        message: "لم يتم استخراج أي نص من الاستجابة"
+      };
+    }
+
+    console.log("النص المستخرج من Gemini:", extractedText);
+
+    // محاولة استخراج JSON من النص
+    try {
+      // 1. محاولة استخراج JSON باستخدام أنماط أكثر دقة
+      const jsonPatterns = [
+        // نمط ال JSON في كتل markdown
+        /```(?:json)?\s*({[\s\S]*?})\s*```/i,
+        // نمط ال JSON العادي (أي كائن بين {} قوسين)
+        /{[\s\S]*?"companyName"[\s\S]*?}/i,
+        // نمط أكثر مرونة لاستخراج أي كائن JSON
+        /{[\s\S]*?}/
+      ];
+
+      let foundJson = false;
+      
+      for (const pattern of jsonPatterns) {
+        if (foundJson) break;
         
-        // إذا فشل تحليل JSON، نحاول إصلاحه
-        try {
-          // تنظيف النص وإضافة علامات اقتباس للمفاتيح والقيم
-          const cleanedText = jsonText
-            .replace(/([{,]\s*)([^"}\s][^":,}]*?)(\s*:)/g, '$1"$2"$3')
-            .replace(/(:(?:\s*)(?!true|false|null|{|\[|"|')([^,}\s]+))/g, ':"$2"')
-            .replace(/'/g, '"');
+        const match = extractedText.match(pattern);
+        if (match && match[1] || (match && !match[1] && match[0].includes('companyName'))) {
+          const jsonText = match[1] || match[0];
           
-          console.log("Cleaned JSON text:", cleanedText);
-          parsedData = JSON.parse(cleanedText);
-          console.log("Successfully parsed cleaned JSON:", parsedData);
-        } catch (cleanJsonError) {
-          console.error("Error parsing cleaned JSON:", cleanJsonError);
-          
-          // إذا فشل تنظيف JSON، نحاول استخراج أزواج المفاتيح والقيم
           try {
-            const keyValuePattern = /"?([^":,}\s]+)"?\s*:\s*"?([^",}]+)"?/g;
-            const matches = [...extractedText.matchAll(keyValuePattern)];
-            
-            matches.forEach(match => {
-              const key = match[1].trim();
-              const value = match[2].trim();
-              if (key && value) {
-                parsedData[key] = value;
-              }
-            });
-            
-            console.log("Extracted key-value pairs:", parsedData);
-          } catch (extractionError) {
-            console.error("Error extracting key-value pairs:", extractionError);
+            // تنظيف النص قبل التحليل
+            const cleanedJson = jsonText
+              .replace(/[\u201C\u201D]/g, '"') // استبدال علامات الاقتباس الذكية
+              .replace(/[\u2018\u2019]/g, "'") // استبدال علامات الاقتباس المفردة
+              .replace(/،/g, ',')  // استبدال الفاصلة العربية بالإنجليزية
+              .replace(/\n/g, ' ') // استبدال السطور الجديدة بمسافات
+              .replace(/\s+/g, ' ') // تقليل المسافات المتعددة إلى مسافة واحدة
+              .replace(/:\s*""/g, ': ""') // تنظيف المسافات حول القيم الفارغة
+              .replace(/,\s*}/g, '}'); // إزالة الفواصل الزائدة في النهاية
+              
+            jsonData = JSON.parse(cleanedJson);
+            console.log("تم استخراج JSON من النص:", jsonData);
+            foundJson = true;
+          } catch (e) {
+            console.error("خطأ في تحليل JSON من النمط:", e);
           }
         }
       }
-    }
-    
-    // إذا لم يتم العثور على JSON أو كان فارغًا، فنبحث في النص عن أنماط محددة
-    if (Object.keys(parsedData).length === 0) {
-      console.log("No JSON format found in response or JSON was empty. Extracting data from text directly.");
       
-      // استخراج رقم الكود
-      const codeMatches = extractedText.match(/رقم الوصل[:\s]+([0-9]+)/i) ||
-                          extractedText.match(/كود[:\s]+([0-9]+)/i) ||
-                          extractedText.match(/الكود[:\s]+([0-9]+)/i) ||
-                          extractedText.match(/code[:\s]+([0-9]+)/i) ||
-                          extractedText.match(/رقم[:\s]+([0-9]+)/i);
-      
-      if (codeMatches && codeMatches[1]) {
-        parsedData.code = codeMatches[1].trim();
-        console.log("Extracted code:", parsedData.code);
-      }
-      
-      // استخراج اسم المرسل
-      const senderNameMatches = extractedText.match(/اسم المرسل[:\s]+([^\n]+)/i) ||
-                               extractedText.match(/المرسل[:\s]+([^\n]+)/i) ||
-                               extractedText.match(/اسم الزبون[:\s]+([^\n]+)/i) ||
-                               extractedText.match(/الزبون[:\s]+([^\n]+)/i);
-      
-      if (senderNameMatches && senderNameMatches[1]) {
-        parsedData.senderName = senderNameMatches[1].trim();
-        console.log("Extracted sender name:", parsedData.senderName);
-      }
-      
-      // استخراج رقم الهاتف
-      const phoneNumberMatches = extractedText.match(/هاتف[:\s]+([0-9\s\-]+)/i) ||
-                                extractedText.match(/رقم الهاتف[:\s]+([0-9\s\-]+)/i) ||
-                                // البحث عن رقم هاتف عراقي نموذجي (يبدأ بـ 07)
-                                extractedText.match(/\b(07\d{2}[0-9\s\-]{7,8})\b/);
-      
-      if (phoneNumberMatches && phoneNumberMatches[1]) {
-        // تنظيف رقم الهاتف (إزالة المسافات والشرطات)
-        parsedData.phoneNumber = phoneNumberMatches[1].replace(/\D/g, '');
-        console.log("Extracted phone number:", parsedData.phoneNumber);
-      }
-      
-      // استخراج المحافظة
-      const provinceMatches = extractedText.match(/المحافظة[:\s]+([^\n]+)/i) ||
-                             extractedText.match(/محافظة[:\s]+([^\n]+)/i) ||
-                             extractedText.match(/عنوان الزبون[^:\n]*[:\s]+([^\n]+)/i);
-      
-      if (provinceMatches && provinceMatches[1]) {
-        // استخراج اسم المحافظة من النص وتصحيحه
-        const provinceText = provinceMatches[1].trim();
-        
-        // البحث عن اسم محافظة في النص
-        for (const province of IRAQ_PROVINCES) {
-          if (provinceText.includes(province)) {
-            parsedData.province = province;
-            break;
+      // 2. إذا لم ينجح أي نمط، نحاول استخراج JSON كصيغة نصية
+      if (!foundJson) {
+        try {
+          // البحث عن أزواج الخصائص والقيم في النص
+          const keyValuePairs: Record<string, string> = {};
+          const properties = ['companyName', 'code', 'senderName', 'phoneNumber', 'province', 'price'];
+          
+          for (const prop of properties) {
+            // نمط أكثر مرونة للبحث عن الخصائص
+            const propPattern = new RegExp(`"?${prop}"?\\s*:\\s*"([^"]*)"`, 'i');
+            const match = extractedText.match(propPattern);
+            if (match && match[1]) {
+              keyValuePairs[prop] = match[1].trim();
+            }
           }
-        }
-        
-        // إذا لم يتم العثور على اسم محافظة، استخدم النص كما هو
-        if (!parsedData.province) {
-          parsedData.province = correctProvinceName(provinceText);
-        }
-        
-        console.log("Extracted province:", parsedData.province);
-      }
-      
-      // استخراج السعر
-      const priceMatches = extractedText.match(/السعر[:\s]+([0-9\s\-,\.]+)/i) ||
-                          extractedText.match(/المبلغ[:\s]+([0-9\s\-,\.]+)/i) ||
-                          extractedText.match(/سعر[:\s]+([0-9\s\-,\.]+)/i) ||
-                          extractedText.match(/قيمة[:\s]+([0-9\s\-,\.]+)/i);
-      
-      if (priceMatches && priceMatches[1]) {
-        parsedData.price = priceMatches[1].trim();
-        console.log("Extracted price:", parsedData.price);
-      }
-      
-      // استخراج اسم الشركة
-      const companyNameMatches = extractedText.match(/شركة\s+([^\n]+)/i) ||
-                                extractedText.match(/مؤسسة\s+([^\n]+)/i) ||
-                                extractedText.match(/اسم الشركة[:\s]+([^\n]+)/i);
-      
-      if (companyNameMatches && companyNameMatches[1]) {
-        parsedData.companyName = companyNameMatches[1].trim();
-        console.log("Extracted company name:", parsedData.companyName);
-      } else {
-        // إذا لم يتم العثور على اسم الشركة، فحاول استخدام السطر الأول من النص
-        const firstLine = extractedText.split('\n')[0].trim();
-        if (firstLine && firstLine.length > 3 && firstLine.length < 50) {
-          parsedData.companyName = firstLine;
-          console.log("Using first line as company name:", parsedData.companyName);
+          
+          if (Object.keys(keyValuePairs).length > 0) {
+            jsonData = keyValuePairs;
+            console.log("تم استخراج أزواج الخصائص والقيم:", jsonData);
+            foundJson = true;
+          }
+        } catch (e) {
+          console.error("خطأ في استخراج أزواج الخصائص والقيم:", e);
         }
       }
+    } catch (e) {
+      console.error("خطأ عام في محاولة استخراج JSON:", e);
+    }
+
+    // 3. إذا لم يتم العثور على JSON، استخدم الاستخراج التلقائي
+    if (Object.keys(jsonData).length === 0) {
+      console.log("لم يتم العثور على JSON، جاري محاولة استخراج البيانات من النص");
+      jsonData = autoExtractData(extractedText);
+      console.log("البيانات المستخرجة تلقائياً:", jsonData);
     }
     
-    // البحث عن رقم هاتف عراقي في النص بشكل مباشر إذا لم يتم العثور عليه سابقًا
-    if (!parsedData.phoneNumber) {
-      const iraqiPhoneRegex = /\b(07[0-9]{2}[0-9\s\-]{7,8})\b/;
-      const phoneMatchDirect = extractedText.match(iraqiPhoneRegex);
-      if (phoneMatchDirect && phoneMatchDirect[1]) {
-        parsedData.phoneNumber = phoneMatchDirect[1].replace(/\D/g, '');
-        console.log("Found Iraqi phone number directly:", parsedData.phoneNumber);
-      }
+    // تنظيف وتصحيح البيانات المستخرجة
+    jsonData = cleanExtractedData(jsonData);
+    
+    // محاولة تحسين البيانات بدمج النتائج من استخراج JSON واستخراج النص
+    if (Object.keys(jsonData).length > 0) {
+      // استخراج بيانات إضافية من النص للحقول الفارغة
+      const textExtractedData = autoExtractData(extractedText);
+      jsonData = mergeExtractedData(jsonData, textExtractedData);
     }
     
-    // البحث عن أرقام بصيغ مختلفة قد تكون كود الشحنة
-    if (!parsedData.code) {
-      const possibleCodes = extractedText.match(/\b\d{5,10}\b/g);
-      if (possibleCodes && possibleCodes.length > 0) {
-        // استخدام أول رقم طويل (5-10 أرقام) كرمز محتمل
-        parsedData.code = possibleCodes[0];
-        console.log("Using first numeric sequence as code:", parsedData.code);
-      }
-    }
+    // التحقق من صحة البيانات المستخرجة
+    const validationResults = validateExtractedData(jsonData);
     
-    // معالجة وتحسين البيانات المستخرجة
-    const enhancedData = enhanceExtractedData(parsedData, extractedText);
-    console.log("Enhanced extracted data:", enhancedData);
+    // حساب درجة الثقة في البيانات
+    confidence = calculateDataConfidence(jsonData);
     
-    // تصحيح اسم المحافظة إذا وجد
-    if (enhancedData.province) {
-      enhancedData.province = correctProvinceName(enhancedData.province);
-      console.log("Corrected province name:", enhancedData.province);
-    } else {
-      // البحث في النص كاملاً عن أي اسم محافظة عراقية
-      for (const province of IRAQ_PROVINCES) {
-        if (extractedText.includes(province)) {
-          enhancedData.province = province;
-          console.log("Found province name in text:", enhancedData.province);
-          break;
-        }
-      }
-    }
-    
-    // تنسيق السعر وفقًا لقواعد العمل
-    if (enhancedData.price) {
-      enhancedData.price = formatPrice(enhancedData.price);
-      console.log("Formatted price:", enhancedData.price);
-    }
-    
-    // تقييم جودة البيانات المستخرجة
-    const confidenceScore = calculateConfidenceScore(enhancedData);
-    console.log("Calculated confidence score:", confidenceScore);
-    
+    console.log("نتائج التحقق:", validationResults);
+    console.log("البيانات النهائية المستخرجة:", {
+      jsonData,
+      confidence
+    });
+
+    // ضمان أن كل الحقول موجودة حتى لو كانت فارغة
+    const finalData = {
+      companyName: jsonData.companyName || "",
+      code: jsonData.code || "",
+      senderName: jsonData.senderName || "",
+      phoneNumber: jsonData.phoneNumber || "",
+      province: jsonData.province || "",
+      price: jsonData.price || ""
+    };
+
     return {
-      parsedData: enhancedData,
-      confidenceScore
+      success: true,
+      data: {
+        extractedText: extractedText,
+        parsedData: finalData,
+        confidence: confidence
+      },
+      message: "تم تحليل استجابة Gemini بنجاح"
     };
   } catch (error) {
-    console.error("Error in parseGeminiResponse:", error);
+    console.error("خطأ في تحليل استجابة Gemini:", error);
     return {
-      parsedData: {},
-      confidenceScore: 0
+      success: false,
+      message: `خطأ في تحليل استجابة Gemini: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 }

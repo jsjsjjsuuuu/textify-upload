@@ -3,18 +3,12 @@
  * مدير مفاتيح API لجيمناي - يقوم بتدوير المفاتيح وإدارة استخدامها
  */
 
-// تخزين مفاتيح API المتعددة
+// تخزين مفتاح API الرئيسي - نستخدم مفتاح جديد ذو صلاحيات أفضل
+const PRIMARY_API_KEY = "AIzaSyBKczW8k6fNBXnjD5y7P2vLC5nYgJM7I4o";
+
+// تخزين مفاتيح API المتعددة، نستخدم الآن فقط المفتاح المحدد
 const API_KEYS = [
-  "AIzaSyAKa3HnGszEpnhx2SXJbuQTjFNfL2Un2d8",
-  "AIzaSyCzHmpOdtuRu07jP0P4GNlCMeQB_InKT7E",
-  "AIzaSyCw3ET1HuGtfJtuY1ABK4GdLuOHtkqceKo",
-  "AIzaSyCp7rVtu_IAdBSICRSd5RmNCvdrkiXQ7SI",
-  "AIzaSyBUwu7p61Rk1BHYJb5sa-CUMuN_6ImuQOc", // المفتاح الافتراضي السابق
-  // إضافة مفاتيح إضافية للتناوب
-  "AIzaSyDi_K0m6y-t62a_fqxFV8DToF9sVpmm7YI",
-  "AIzaSyCn-oXnIxQWiYy-wYI5-UpHbr_P-3Ni68Y",
-  "AIzaSyDGPa1F9XH4nh3rxtwCnBBHMEDVHrygUUk",
-  "AIzaSyBL8PnaeEL4tKUCJzrVPFDk5-UJGD9M4vQ"
+  PRIMARY_API_KEY,
 ];
 
 // مؤشر للمفتاح الحالي
@@ -47,127 +41,83 @@ const keyUsageMap = new Map<string, KeyUsage>(
 );
 
 /**
- * الحصول على المفتاح التالي بناءً على خوارزمية توزيع الحمل
+ * الحصول على المفتاح التالي - نستخدم الآن دائماً المفتاح الرئيسي
  */
 export const getNextApiKey = (): string => {
-  const now = Date.now();
+  console.log("استخدام مفتاح API الرئيسي:", PRIMARY_API_KEY.substring(0, 8) + "...");
   
-  // تحديث حالة فترة التهدئة للمفاتيح
-  for (const usage of keyUsageMap.values()) {
-    if (usage.cooldownUntil > 0 && now > usage.cooldownUntil) {
-      console.log(`انتهت فترة التهدئة للمفتاح ${usage.key.substring(0, 5)}...`);
-      usage.cooldownUntil = 0;
-      usage.rateLimit = false;
-      usage.errors = 0;
-    }
+  // تسجيل الاستخدام
+  const usage = keyUsageMap.get(PRIMARY_API_KEY);
+  if (usage) {
+    usage.usageCount++;
+    usage.lastUsed = Date.now();
+    keyUsageMap.set(PRIMARY_API_KEY, usage);
   }
   
-  // البحث عن المفتاح الأقل استخدامًا الذي ليس لديه قيود معدل
-  const availableKeys = [...keyUsageMap.values()]
-    .filter(usage => !usage.rateLimit && usage.cooldownUntil <= now); // استبعاد المفاتيح التي تجاوزت الحد أو في فترة تهدئة
-  
-  if (availableKeys.length === 0) {
-    console.log("جميع المفاتيح وصلت للحد الأقصى أو في فترة تهدئة. اختيار أقدم مفتاح...");
-    
-    // استخدم المفتاح الذي مر على فترة التهدئة أطول وقت
-    const oldestKey = [...keyUsageMap.values()]
-      .sort((a, b) => (a.cooldownUntil || a.lastUsed) - (b.cooldownUntil || b.lastUsed))[0];
-    
-    // إعادة تعيين حالة المفتاح للاستخدام مرة أخرى
-    oldestKey.rateLimit = false;
-    oldestKey.errors = 0;
-    oldestKey.cooldownUntil = 0;
-    
-    console.log(`إعادة استخدام المفتاح ${oldestKey.key.substring(0, 5)}... بعد انتهاء فترة التهدئة`);
-    
-    // تحديث بيانات الاستخدام
-    oldestKey.usageCount += 1;
-    oldestKey.lastUsed = now;
-    
-    return oldestKey.key;
-  }
-
-  // ترتيب المفاتيح المتاحة حسب الأقل استخدامًا والأقدم استخدامًا
-  const sortedKeys = availableKeys.sort((a, b) => {
-    // أولوية للمفاتيح الأقل استخدامًا
-    if (a.usageCount !== b.usageCount) {
-      return a.usageCount - b.usageCount;
-    }
-    // إذا كان الاستخدام متساويًا، استخدم الأقدم آخر استخدام
-    return a.lastUsed - b.lastUsed;
-  });
-  
-  // استخدام المفتاح الأقل استخدامًا
-  const nextKey = sortedKeys[0].key;
-  
-  // تحديث بيانات الاستخدام
-  const usage = keyUsageMap.get(nextKey)!;
-  usage.usageCount += 1;
-  usage.lastUsed = now;
-  
-  console.log(`استخدام مفتاح API: ${nextKey.substring(0, 5)}... (الاستخدام: ${usage.usageCount})`);
-  
-  return nextKey;
+  return PRIMARY_API_KEY;
 };
 
 /**
  * تسجيل خطأ لمفتاح محدد
  */
 export const reportApiKeyError = (apiKey: string, errorMessage: string): void => {
+  // تسجيل الخطأ في سجل استخدام المفتاح
   const usage = keyUsageMap.get(apiKey);
-  if (!usage) return;
-  
-  usage.errors += 1;
-  
-  // التحقق مما إذا كان الخطأ بسبب تجاوز حدود الاستخدام
-  const isRateLimitError = 
-    errorMessage.includes("quota") || 
-    errorMessage.includes("rate limit") || 
-    errorMessage.includes("too many requests") ||
-    errorMessage.includes("exceeded") ||
-    errorMessage.includes("limit") || 
-    errorMessage.includes("dailyLimit") ||
-    errorMessage.includes("429"); // كود حالة تجاوز الحد للطلبات
-  
-  if (isRateLimitError) {
-    console.log(`تم وضع علامة على مفتاح API ${apiKey.substring(0, 5)}... كمفتاح تجاوز الحد`);
-    usage.rateLimit = true;
-    // زيادة فترة التهدئة للمفتاح - 15 دقيقة للأخطاء المتعلقة بتجاوز الحد
-    usage.cooldownUntil = Date.now() + 15 * 60 * 1000;
+  if (usage) {
+    usage.errors++;
+    
+    // فحص إذا كان الخطأ متعلق بتجاوز الحد
+    if (errorMessage.includes('rate') || 
+        errorMessage.includes('limit') || 
+        errorMessage.includes('quota') ||
+        errorMessage.includes('429')) {
+      
+      usage.rateLimit = true;
+      usage.cooldownUntil = Date.now() + (5 * 60 * 1000); // 5 دقائق تهدئة
+      console.log(`تم وضع المفتاح ${apiKey.substring(0, 8)}... في فترة تهدئة لمدة 5 دقائق بسبب تجاوز الحد`);
+    }
+    
+    keyUsageMap.set(apiKey, usage);
   }
   
-  // إذا كان هناك عدد كبير من الأخطاء، ضع علامة على المفتاح كمفتاح تجاوز الحد
-  if (usage.errors >= 3) {
-    console.log(`تم وضع علامة على مفتاح API ${apiKey.substring(0, 5)}... كمفتاح به أخطاء متكررة`);
-    usage.rateLimit = true;
-    // زيادة فترة التهدئة للأخطاء العامة - 5 دقائق
-    usage.cooldownUntil = Date.now() + 5 * 60 * 1000;
-  }
+  console.log(`تم تسجيل خطأ للمفتاح ${apiKey.substring(0, 8)}... - ${errorMessage}`);
 };
 
 /**
  * الحصول على إحصائيات استخدام المفاتيح
  */
 export const getApiKeyStats = (): { active: number, rateLimited: number, total: number, cooldown: number } => {
-  const now = Date.now();
-  const stats = {
-    active: 0,
-    rateLimited: 0,
-    cooldown: 0,
-    total: keyUsageMap.size
-  };
+  let active = 0;
+  let rateLimited = 0;
+  let cooldown = 0;
   
-  for (const usage of keyUsageMap.values()) {
-    if (usage.cooldownUntil > now) {
-      stats.cooldown++;
-    } else if (usage.rateLimit) {
-      stats.rateLimited++;
+  const now = Date.now();
+  
+  for (const [key, usage] of keyUsageMap.entries()) {
+    if (usage.rateLimit) {
+      if (usage.cooldownUntil > now) {
+        rateLimited++;
+      } else {
+        // إعادة تعيين حالة المفتاح بعد انتهاء فترة التهدئة
+        usage.rateLimit = false;
+        active++;
+        keyUsageMap.set(key, usage);
+      }
     } else {
-      stats.active++;
+      active++;
+    }
+    
+    if (usage.cooldownUntil > now) {
+      cooldown++;
     }
   }
   
-  return stats;
+  return {
+    active,
+    rateLimited,
+    total: keyUsageMap.size,
+    cooldown
+  };
 };
 
 /**
@@ -176,27 +126,31 @@ export const getApiKeyStats = (): { active: number, rateLimited: number, total: 
 export const resetApiKeyStatus = (apiKey: string): void => {
   const usage = keyUsageMap.get(apiKey);
   if (usage) {
-    usage.rateLimit = false;
     usage.errors = 0;
+    usage.rateLimit = false;
     usage.cooldownUntil = 0;
-    console.log(`تم إعادة تعيين حالة مفتاح API: ${apiKey.substring(0, 5)}...`);
+    keyUsageMap.set(apiKey, usage);
   }
+  console.log(`تم إعادة تعيين حالة مفتاح API: ${apiKey.substring(0, 8)}...`);
 };
 
 /**
  * إعادة تعيين جميع مفاتيح API
  */
 export const resetAllApiKeys = (): void => {
-  for (const key of API_KEYS) {
-    resetApiKeyStatus(key);
+  for (const [key, usage] of keyUsageMap.entries()) {
+    usage.errors = 0;
+    usage.rateLimit = false;
+    usage.cooldownUntil = 0;
+    keyUsageMap.set(key, usage);
   }
   console.log("تم إعادة تعيين جميع مفاتيح API");
 };
 
 // تصدير المفاتيح للاستخدام في أجزاء أخرى من التطبيق
 export const getAllApiKeys = (): string[] => {
-  return [...API_KEYS];
+  return [PRIMARY_API_KEY];
 };
 
 // تصدير مفتاح API الافتراضي (أول مفتاح)
-export const DEFAULT_GEMINI_API_KEY = API_KEYS[0];
+export const DEFAULT_GEMINI_API_KEY = PRIMARY_API_KEY;

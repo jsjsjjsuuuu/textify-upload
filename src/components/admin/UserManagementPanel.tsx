@@ -13,8 +13,6 @@ interface UserManagementPanelProps {
   activeTab: string;
   isEditingUser: string | null;
   editedUserData: UserProfile | null;
-  newPassword: string;
-  showPassword: boolean;
   isProcessing: boolean;
   selectedDate: Date | undefined;
   userCounts: {
@@ -24,6 +22,8 @@ interface UserManagementPanelProps {
   };
   filteredUsers: UserProfile[];
   isLoading: boolean;
+  isLoadingDetails?: {[key: string]: boolean};
+  detailedUsers?: {[key: string]: UserProfile};
   onSearchChange: (value: string) => void;
   onPlanFilterChange: (value: string) => void;
   onStatusFilterChange: (value: string) => void;
@@ -33,12 +33,10 @@ interface UserManagementPanelProps {
   onReject: (userId: string) => void;
   onCancel: () => void;
   onSave: () => void;
-  onShowPasswordToggle: () => void;
-  onNewPasswordChange: (value: string) => void;
   onUserDataChange: (field: string, value: any) => void;
   onDateSelect: (date: Date | undefined) => void;
-  onPasswordReset: () => void;
   onEmailChange: (userId: string, newEmail: string) => void;
+  onFetchDetails?: (userId: string) => Promise<UserProfile | null>;
 }
 
 const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
@@ -48,13 +46,13 @@ const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
   activeTab,
   isEditingUser,
   editedUserData,
-  newPassword,
-  showPassword,
   isProcessing,
   selectedDate,
   userCounts,
   filteredUsers,
   isLoading,
+  isLoadingDetails = {},
+  detailedUsers = {},
   onSearchChange,
   onPlanFilterChange,
   onStatusFilterChange,
@@ -64,12 +62,10 @@ const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
   onReject,
   onCancel,
   onSave,
-  onShowPasswordToggle,
-  onNewPasswordChange,
   onUserDataChange,
   onDateSelect,
-  onPasswordReset,
-  onEmailChange
+  onEmailChange,
+  onFetchDetails
 }) => {
   return (
     <>
@@ -92,26 +88,24 @@ const UserManagementPanel: React.FC<UserManagementPanelProps> = ({
         {isEditingUser ? (
           <UserEditForm 
             userData={editedUserData!}
-            newPassword={newPassword}
-            showPassword={showPassword}
             isProcessing={isProcessing}
             selectedDate={selectedDate}
             onCancel={onCancel}
             onSave={onSave}
-            onShowPasswordToggle={onShowPasswordToggle}
-            onNewPasswordChange={onNewPasswordChange}
             onUserDataChange={onUserDataChange}
             onDateSelect={onDateSelect}
-            onPasswordReset={onPasswordReset}
-            onEmailChange={onEmailChange}
+            onEmailChange={(newEmail) => onEmailChange(isEditingUser, newEmail)}
           />
         ) : (
           <UserTable 
             users={filteredUsers}
             isLoading={isLoading}
+            isLoadingDetails={isLoadingDetails}
+            detailedUsers={detailedUsers}
             onEdit={onEdit}
             onApprove={onApprove}
             onReject={onReject}
+            onFetchDetails={onFetchDetails}
           />
         )}
       </UserTabsFilter>
