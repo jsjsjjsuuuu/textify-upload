@@ -1,9 +1,9 @@
+
 import { BookmarkletItem } from "@/types/ImageData";
 
 /**
  * وظائف ملء النموذج المحسن
  */
-
 export const fillForm = (data: BookmarkletItem) => {
   // ملء الحقول بناءً على البيانات المستخرجة
   if (data.code) {
@@ -46,4 +46,27 @@ export const fillForm = (data: BookmarkletItem) => {
   if (submitButton) {
     (submitButton as HTMLButtonElement).click();
   }
+};
+
+// تصدير الدالة الرئيسية لملء النماذج المحسن
+export const enhancedFormFiller = () => {
+  console.log('تم تشغيل ملء النموذج المحسن');
+  // هنا يمكن وضع منطق ملء النموذج المحسن
+  alert('تم تشغيل أداة ملء النموذج المحسنة!');
+  
+  // مثال على كيفية استخدام الدالة
+  const sampleData: BookmarkletItem = {
+    id: '1',
+    code: 'ABC123',
+    senderName: 'محمد أحمد',
+    phoneNumber: '07701234567',
+    province: 'بغداد',
+    price: '25000',
+    companyName: 'شركة النقل السريع',
+    exportDate: new Date().toISOString(),
+    status: 'ready'
+  };
+  
+  // استدعاء دالة ملء النموذج
+  fillForm(sampleData);
 };
