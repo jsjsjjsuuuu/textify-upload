@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ImageData } from "@/types/ImageData";

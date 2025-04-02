@@ -1,5 +1,6 @@
-import { BookmarkletItem } from "@/types/ImageData";
-import { saveToLocalStorage as saveToStorage, getStorageStats as getStats } from "@/utils/bookmarklet/storage";
+import { BookmarkletItem, BookmarkletExportData, StorageStats, ImageData } from "@/types/ImageData";
+import { convertImagesToBookmarkletItems } from "./bookmarklet/converter";
+import { generateBookmarkletCode as generateCode, generateEnhancedBookmarkletCode as generateEnhancedCode } from "./bookmarklet/generator";
 
 // استرجاع العناصر من التخزين المحلي
 export const getFromLocalStorage = (): BookmarkletItem[] => {
@@ -86,5 +87,64 @@ export const getErrorItemsCount = (): number => {
 };
 
 // تصدير الوظائف المساعدة بأسماء مختلفة لتجنب الدائرية
-export const saveToLocalStorage = saveToStorage;
-export const getStorageStats = getStats;
+export const saveToLocalStorage = (images: ImageData[]): number => {
+  try {
+    // تحويل بيانات الصور إلى صيغة bookmarklet
+    const items = convertImagesToBookmarkletItems(images);
+
+    if (items.length === 0) {
+      console.log("لا توجد عناصر لحفظها بعد التحويل");
+      return 0;
+    }
+
+    const exportData: BookmarkletExportData = {
+      version: "1.0",
+      exportDate: new Date().toISOString(),
+      items
+    };
+
+    // طباعة البيانات للتشخيص
+    console.log("حفظ البيانات إلى localStorage:", exportData);
+    console.log("عدد العناصر:", items.length);
+
+    localStorage.setItem("bookmarklet_data", JSON.stringify(exportData));
+    return items.length;
+  } catch (error) {
+    console.error("خطأ في حفظ البيانات:", error);
+    return 0;
+  }
+};
+export const getStorageStats = (): StorageStats => {
+  try {
+    const storageData = localStorage.getItem("bookmarklet_data");
+    if (!storageData) {
+      console.log("لا توجد بيانات في localStorage");
+      return {
+        total: 0,
+        ready: 0,
+        success: 0,
+        error: 0,
+        lastUpdate: null
+      };
+    }
+
+    const data = JSON.parse(storageData) as BookmarkletExportData;
+    const stats: StorageStats = {
+      total: data.items.length,
+      ready: data.items.filter(item => item.status === "ready").length,
+      success: data.items.filter(item => item.status === "success").length,
+      error: data.items.filter(item => item.status === "error").length,
+      lastUpdate: data.exportDate ? new Date(data.exportDate) : null
+    };
+    return stats;
+  } catch (error) {
+    console.error("خطأ في استرجاع إحصائيات التخزين:", error);
+    return {
+      total: 0,
+      ready: 0,
+      success: 0,
+      error: 0,
+      lastUpdate: null
+    };
+  }
+};

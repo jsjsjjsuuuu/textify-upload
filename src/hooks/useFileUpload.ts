@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { compressImage } from "@/utils/imageCompression";
@@ -529,6 +528,7 @@ export const useFileUpload = ({
         description: `يمكنك تحميل ${remainingUploads} صورة فقط من أصل ${files.length} صورة محددة. سيتم معالجة أول ${remainingUploads} صورة فقط.`,
         variant: "default"
       });
+      return;
     }
 
     // التحقق من التكرار قبل المعالجة
@@ -570,6 +570,7 @@ export const useFileUpload = ({
         description: `سيتم معالجة أول ${maxBatchSize} صورة فقط. يرجى رفع الباقي في دفعة لاحقة.`,
         variant: "default"
       });
+      return;
     }
     
     // تفكيك العملية إلى مراحل لتحسين تجربة المستخدم

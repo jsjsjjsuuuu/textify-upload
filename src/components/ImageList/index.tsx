@@ -43,6 +43,7 @@ const ImageList = ({
     if (groupedImages[a].length === 0 || groupedImages[b].length === 0) {
       return 0;
     }
+    // استخدام كائن Date
     const dateA = groupedImages[a][0].date.getTime();
     const dateB = groupedImages[b][0].date.getTime();
     return dateB - dateA;
