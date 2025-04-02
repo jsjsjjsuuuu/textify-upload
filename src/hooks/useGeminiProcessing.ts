@@ -118,19 +118,19 @@ export const useGeminiProcessing = () => {
     const attemptKey = image.id;
     const attempts = processingAttempts[attemptKey] || 0;
     
-    // إذا كان هناك أكثر من 5 محاولات للمعالجة، نصل بها إلى حالة خطأ ونعرض رسالة للمستخدم
-    if (attempts >= 5) {
+    // إذا كان هناك أكثر من 3 محاولات للمعالجة، نصل بها إلى حالة خطأ
+    if (attempts >= 3) {
       console.log(`وصلت صورة ${image.id} إلى الحد الأقصى من المحاولات (${attempts})`);
       toast({
         title: "فشل في المعالجة",
-        description: "وصلت الصورة إلى الحد الأقصى من محاولات المعالجة، يرجى تحميل صورة أخرى أو تعديل الصورة الحالية لتكون أوضح",
+        description: "وصلت الصورة إلى الحد الأقصى من محاولات المعالجة، يرجى تحميل صورة أخرى أو إعادة المعالجة يدوياً",
         variant: "destructive"
       });
       
       return {
         ...image,
         status: "error" as const,
-        extractedText: "فشل في معالجة الصورة بعد عدة محاولات. يرجى تحميل صورة أوضح."
+        extractedText: "فشل في معالجة الصورة بعد عدة محاولات. يمكنك محاولة إعادة المعالجة."
       };
     }
     
@@ -148,7 +148,7 @@ export const useGeminiProcessing = () => {
     const processingImage: ImageData = { 
       ...image, 
       status: "processing" as const,
-      extractedText: "جاري معالجة الصورة واستخراج البيانات..."
+      extractedText: `جاري معالجة الصورة واستخراج البيانات... (محاولة ${attempts + 1}/3)`
     };
 
     try {
@@ -179,11 +179,7 @@ export const useGeminiProcessing = () => {
         promptType = "hybridExtractionPrompt"; // استخدام المطالبة الهجينة الجديدة
         modelVersion = 'gemini-1.5-pro';
         temperature = 0.0;
-      } else if (attempts === 3) {
-        promptType = "advancedHandwriting";
-        modelVersion = 'gemini-1.5-pro';
-        temperature = 0.0;
-      } else if (attempts >= 4) {
+      } else if (attempts >= 3) {
         // استخدام المطالبة التالية في القائمة
         promptType = getNextPrompt();
         modelVersion = 'gemini-1.5-pro';
@@ -247,10 +243,18 @@ export const useGeminiProcessing = () => {
           // تعيين الحالة استنادًا إلى وجود البيانات الرئيسية
           let finalImage: ImageData = processedImage;
           
+          // تحقق إذا تم استخراج جميع البيانات الرئيسية
+          const hasAllRequiredData = 
+            finalImage.code && 
+            finalImage.senderName && 
+            finalImage.phoneNumber && 
+            finalImage.price;
+          
           if (finalImage.code || finalImage.senderName || finalImage.phoneNumber) {
             finalImage = {
               ...finalImage,
-              status: "completed" as const
+              status: "completed" as const,
+              extractionSuccess: hasAllRequiredData
             };
           } else {
             finalImage = {
@@ -282,7 +286,6 @@ export const useGeminiProcessing = () => {
             await sleepBetweenRequests(1000);
             
             // إرجاع الصورة بالنص المستخرج ولكن حالتها لا تزال "قيد الانتظار"
-            // تجنب إعادة المحاولة هنا لمنع الحلقة المفرغة
             return {
               ...image,
               status: "pending" as const,
@@ -298,22 +301,14 @@ export const useGeminiProcessing = () => {
             // تأخير قبل المحاولة التالية
             await sleepBetweenRequests(1000);
             
-            // الانتقال للمحاولة التالية مع نموذج مختلف عوضاً عن الدخول في حلقة لانهائية
-            if (attempts < 4) {
-              // بدلاً من استدعاء نفس الوظيفة، نقوم بتحديث حالة الصورة ونرجعها
-              return {
-                ...image,
-                status: "pending" as const,
-                extractedText: "جاري محاولة استخراج البيانات بطريقة أخرى..."
-              };
-            } else {
-              // إذا وصلنا لعدد كبير من المحاولات، نضع الصورة في حالة خطأ
-              return {
-                ...image,
-                status: "error" as const,
-                extractedText: "فشل في استخراج البيانات بعد عدة محاولات. يرجى إدخال البيانات يدوياً."
-              };
-            }
+            // إرجاع الصورة بحالة "قيد الانتظار" للمحاولة التالية
+            return {
+              ...image,
+              status: attempts >= 2 ? "error" as const : "pending" as const,
+              extractedText: attempts >= 2 
+                ? "فشل في استخراج البيانات بعد عدة محاولات. يمكنك محاولة إعادة المعالجة." 
+                : "جاري محاولة استخراج البيانات بطريقة أخرى..."
+            };
           }
         }
       } else {
@@ -322,11 +317,13 @@ export const useGeminiProcessing = () => {
         // تأخير قبل المحاولة التالية
         await sleepBetweenRequests(1500);
         
-        // بدلاً من استدعاء نفس الوظيفة مرة أخرى، نقوم بإرجاع الصورة في حالة انتظار
+        // إرجاع الصورة بحالة "قيد الانتظار" أو "خطأ" بناءً على عدد المحاولات
         return {
           ...image,
-          status: "pending" as const,
-          extractedText: `فشل في استخراج البيانات: ${extractionResult.message}. جاري إعادة المحاولة...`
+          status: attempts >= 2 ? "error" as const : "pending" as const,
+          extractedText: attempts >= 2 
+            ? `فشل في استخراج البيانات بعد ${attempts + 1} محاولات. يمكنك محاولة إعادة المعالجة.` 
+            : `فشل في استخراج البيانات: ${extractionResult.message}. جاري إعادة المحاولة...`
         };
       }
     } catch (geminiError: any) {
@@ -335,11 +332,13 @@ export const useGeminiProcessing = () => {
       // تأخير قبل المحاولة التالية
       await sleepBetweenRequests(2000);
       
-      // بدلاً من إعادة المحاولة بشكل مباشر، نرجع الصورة في حالة انتظار لتجنب الحلقة المفرغة
+      // إرجاع الصورة بحالة "قيد الانتظار" أو "خطأ" بناءً على عدد المحاولات
       return {
         ...image,
-        status: "pending" as const,
-        extractedText: `حدث خطأ أثناء المعالجة: ${geminiError.message || "خطأ غير معروف"}. جاري إعادة المحاولة...`
+        status: attempts >= 2 ? "error" as const : "pending" as const,
+        extractedText: attempts >= 2 
+          ? `حدث خطأ أثناء المعالجة. يمكنك محاولة إعادة المعالجة يدوياً.` 
+          : `حدث خطأ أثناء المعالجة: ${geminiError.message || "خطأ غير معروف"}. جاري إعادة المحاولة...`
       };
     }
   };
@@ -354,24 +353,126 @@ export const useGeminiProcessing = () => {
     });
   }, [toast]);
 
-  // وظيفة إعادة محاولة معالجة صورة معينة
+  // وظيفة إعادة محاولة معالجة صورة معينة - تحسين آلية إعادة المحاولة
   const retryProcessing = useCallback(async (file: File, image: ImageData): Promise<ImageData> => {
-    // إعادة تعيين عدد المحاولات لهذه الصورة
+    // إعادة تعيين عدد المحاولات لهذه الصورة للسماح بمحاولات جديدة
     const attemptKey = image.id;
     setProcessingAttempts(prev => ({
       ...prev,
       [attemptKey]: 0
     }));
     
-    // إعادة محاولة المعالجة
-    console.log("إعادة محاولة معالجة الصورة:", image.id);
+    // تغيير حالة الصورة إلى "قيد المعالجة" فوراً لتوفير ردود فعل فورية
+    const processingImage: ImageData = { 
+      ...image, 
+      status: "processing" as const,
+      extractedText: "جاري إعادة معالجة الصورة واستخراج البيانات..."
+    };
     
+    // إظهار إشعار البدء
     toast({
-      title: "جاري إعادة المعالجة",
-      description: "تم بدء إعادة معالجة الصورة باستخدام نماذج مختلفة"
+      title: "إعادة المعالجة",
+      description: "تم بدء إعادة معالجة الصورة باستخدام نماذج محسنة",
+      variant: "default"
     });
     
-    return processWithGemini(file, image);
+    console.log("إعادة محاولة معالجة الصورة:", image.id);
+    
+    // استخدام استراتيجية مختلفة في إعادة المعالجة - نستخدم نموذج أقوى مباشرة
+    try {
+      console.log("تحويل الملف إلى base64 لإعادة المعالجة");
+      const imageBase64 = await fileToBase64(file);
+      
+      // استخدام استراتيجية مختلفة في إعادة المعالجة - نموذج أقوى ومطالبة مختلفة
+      const extractionResult = await extractDataWithGemini({
+        apiKey: FIXED_API_KEY,
+        imageBase64,
+        extractionPromptType: "stepByStepPrompt", // استخدام مطالبة محسنة خاصة بإعادة المعالجة
+        maxRetries: 1,
+        retryDelayMs: 1000,
+        modelVersion: 'gemini-1.5-pro', // استخدام النموذج الأقوى مباشرة
+        temperature: 0.0 // استخدام درجة حرارة 0 للحصول على نتائج أكثر دقة
+      });
+      
+      console.log("نتيجة إعادة المعالجة:", extractionResult);
+      
+      if (extractionResult.success && extractionResult.data) {
+        const { parsedData, extractedText, confidence } = extractionResult.data;
+        
+        if (parsedData && Object.keys(parsedData).length > 0) {
+          toast({
+            title: "تم الاستخراج بنجاح",
+            description: "تم استخراج البيانات بنجاح من خلال إعادة المعالجة",
+            variant: "success"
+          });
+          
+          // تحديث الصورة بالبيانات المستخرجة
+          const processedImage = updateImageWithExtractedData(
+            image,
+            extractedText || "",
+            parsedData || {},
+            confidence || 90,
+            "gemini"
+          );
+          
+          // تحقق إذا تم استخراج جميع البيانات الرئيسية
+          const hasAllRequiredData = 
+            processedImage.code && 
+            processedImage.senderName && 
+            processedImage.phoneNumber && 
+            processedImage.price;
+          
+          return {
+            ...processedImage,
+            status: "completed" as const,
+            extractionSuccess: hasAllRequiredData
+          };
+        } else {
+          // في حالة فشل استخراج البيانات
+          toast({
+            title: "تنبيه",
+            description: "تم استخراج النص ولكن فشل استخراج البيانات المنظمة. يرجى تعديل البيانات يدوياً.",
+            variant: "warning"
+          });
+          
+          return {
+            ...image,
+            status: "completed" as const,
+            extractedText: extractedText || image.extractedText || "",
+            extractionSuccess: false
+          };
+        }
+      } else {
+        // في حالة فشل إعادة المعالجة
+        toast({
+          title: "فشل إعادة المعالجة",
+          description: extractionResult.message || "فشل إعادة معالجة الصورة. يرجى المحاولة مرة أخرى.",
+          variant: "destructive"
+        });
+        
+        return {
+          ...image,
+          status: "error" as const,
+          extractedText: `فشل إعادة المعالجة: ${extractionResult.message || "خطأ غير معروف"}`,
+          extractionSuccess: false
+        };
+      }
+    } catch (error: any) {
+      console.error("خطأ في إعادة معالجة الصورة:", error);
+      
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء إعادة معالجة الصورة. يرجى المحاولة مرة أخرى.",
+        variant: "destructive"
+      });
+      
+      return {
+        ...image,
+        status: "error" as const,
+        extractedText: `خطأ في إعادة المعالجة: ${error.message || "خطأ غير معروف"}`,
+        extractionSuccess: false
+      };
+    }
   }, [toast]);
 
   return { 

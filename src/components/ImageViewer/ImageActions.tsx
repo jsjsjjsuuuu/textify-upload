@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Loader2, RefreshCw, Send } from "lucide-react";
+import { Trash2, Loader2, RefreshCw, Send, CheckCircle, AlertCircle } from "lucide-react";
 
 interface ImageActionsProps {
   imageId: string;
@@ -12,7 +12,7 @@ interface ImageActionsProps {
   onSubmit: (id: string) => void;
   onReprocess?: (id: string) => void;
   canReprocess?: boolean;
-  extractionSuccess?: boolean; // إضافة معلم لتحديد نجاح استخراج البيانات
+  extractionSuccess?: boolean;
 }
 
 const ImageActions: React.FC<ImageActionsProps> = ({
@@ -77,17 +77,21 @@ const ImageActions: React.FC<ImageActionsProps> = ({
       </div>
       
       <div className="flex items-center gap-2">
-        {/* عرض حالة استخراج البيانات */}
-        {isCompleted && !submitted && extractionSuccess && (
-          <span className="text-xs text-green-600">
-            تم استخراج البيانات بنجاح
-          </span>
-        )}
-        
-        {isCompleted && !submitted && !extractionSuccess && (
-          <span className="text-xs text-amber-600">
-            البيانات غير مكتملة
-          </span>
+        {/* عرض حالة استخراج البيانات بشكل محسن */}
+        {isCompleted && !submitted && (
+          <div className="flex items-center">
+            {extractionSuccess ? (
+              <span className="text-xs text-green-600 flex items-center">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                تم استخراج البيانات
+              </span>
+            ) : (
+              <span className="text-xs text-amber-600 flex items-center">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                البيانات غير مكتملة
+              </span>
+            )}
+          </div>
         )}
         
         <Button
@@ -103,7 +107,10 @@ const ImageActions: React.FC<ImageActionsProps> = ({
               جاري الإرسال...
             </>
           ) : submitted ? (
-            "تم الإرسال"
+            <>
+              <CheckCircle className="h-4 w-4 mr-1" />
+              تم الإرسال
+            </>
           ) : (
             <>
               <Send className="h-4 w-4 mr-1" />

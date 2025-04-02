@@ -68,18 +68,18 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
 
     console.log("النص المستخرج من Gemini:", extractedText);
 
-    // محاولة استخراج JSON من النص - تحسين طريقة استخراج JSON
+    // استخراج JSON من النص - تحسين بشكل كبير 
     try {
-      // 1. محاولة استخراج JSON باستخدام أنماط متعددة ومحسنة
+      // 1. محاولة استخراج JSON باستخدام عدة أنماط محسنة للتعامل مع النصوص العربية
       const jsonPatterns = [
-        // نمط ال JSON في كتل markdown
+        // نمط كتلة markdown للـ JSON
         /```(?:json)?\s*({[\s\S]*?})\s*```/i,
-        // نمط ال JSON العادي (أي كائن بين {} قوسين)
-        /{[\s\S]*?"companyName"[\s\S]*?}/i,
-        // نمط أكثر مرونة لاستخراج أي كائن JSON
-        /{[\s\S]*?}/,
-        // نمط يبحث عن بداية الـ JSON بدقة أكبر
-        /(\{(?:\s*"[^"]+"\s*:\s*"[^"]*"\s*,?)+\})/
+        // نمط خاص بالعربية مع مراعاة الفواصل العربية والاتجاهات
+        /{[\s\S]*?"(?:companyName|اسم_الشركة|شركة)"[\s\S]*?}/i,
+        // نمط أكثر تحديدًا للبحث عن المفاتيح المحددة
+        /{[\s\S]*?(?:"code"|"senderName"|"phoneNumber"|"province"|"price"|"companyName")[\s\S]*?}/i,
+        // نمط عام للبحث عن أي شيء يشبه JSON
+        /{[\s\S]*?}/
       ];
 
       let foundJson = false;
@@ -92,7 +92,7 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
           const jsonText = match[1] || match[0];
           
           try {
-            // تنظيف النص قبل التحليل بطريقة أكثر شمولاً
+            // تنظيف النص قبل التحليل للتعامل مع النصوص العربية
             const cleanedJson = jsonText
               .replace(/[\u201C\u201D]/g, '"') // استبدال علامات الاقتباس الذكية
               .replace(/[\u2018\u2019]/g, "'") // استبدال علامات الاقتباس المفردة
@@ -102,7 +102,8 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
               .replace(/:\s*""/g, ': ""') // تنظيف المسافات حول القيم الفارغة
               .replace(/,\s*}/g, '}') // إزالة الفواصل الزائدة في النهاية
               .replace(/}[^{]*{/g, '},{') // تصحيح التنسيق المحتمل للـ JSON المتعدد
-              .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2":'); // تأكد من أن المفاتيح محاطة بعلامات اقتباس
+              .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2":') // تأكد من أن المفاتيح محاطة بعلامات اقتباس
+              .replace(/(['"])([^'"]*)([\u0600-\u06FF]+)([^'"]*)\1/g, '"$2$3$4"'); // التعامل مع النصوص العربية
               
             console.log("محاولة تحليل JSON المنظف:", cleanedJson);
             jsonData = JSON.parse(cleanedJson);
@@ -110,14 +111,14 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
             foundJson = true;
           } catch (e) {
             console.error("خطأ في تحليل JSON من النمط:", e);
-            // محاولة تنظيف إضافية في حالة الفشل
+            // محاولة إصلاح إضافية للتعامل مع مشاكل تنسيق JSON العربية
             try {
-              // محاولة إصلاح مشاكل التنسيق الشائعة
+              // محاولة إصلاح مشاكل التنسيق الشائعة في النصوص العربية
               const repairJson = jsonText
-                .replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":') // إضافة علامات اقتباس للمفاتيح
-                .replace(/:\s*([a-zA-Z0-9_]+)\s*([,}])/g, ':"$1"$2'); // إضافة علامات اقتباس للقيم النصية
+                .replace(/([{,])\s*([a-zA-Z0-9_\u0600-\u06FF]+)\s*:/g, '$1"$2":') // إضافة علامات اقتباس للمفاتيح (تشمل العربية)
+                .replace(/:\s*([a-zA-Z0-9_\u0600-\u06FF]+)\s*([,}])/g, ':"$1"$2'); // إضافة علامات اقتباس للقيم (تشمل العربية)
               
-              console.log("محاولة إصلاح JSON:", repairJson);
+              console.log("محاولة إصلاح JSON للنصوص العربية:", repairJson);
               jsonData = JSON.parse(repairJson);
               console.log("تم إصلاح JSON بنجاح:", jsonData);
               foundJson = true;
@@ -128,26 +129,41 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
         }
       }
       
-      // 2. إذا لم ينجح أي نمط، نحاول استخراج JSON كصيغة نصية - طريقة محسنة
+      // 2. إذا لم ينجح أي نمط، نستخرج البيانات من النص بشكل أكثر قوة
       if (!foundJson) {
         try {
-          // البحث عن أزواج الخصائص والقيم في النص بطريقة أكثر شمولاً
+          // البحث عن أزواج الخصائص والقيم في النص بطريقة تدعم العربية
           const keyValuePairs: Record<string, string> = {};
           const properties = ['companyName', 'code', 'senderName', 'phoneNumber', 'province', 'price'];
+          const arabicProperties = ['شركة', 'كود', 'اسم المرسل', 'رقم الهاتف', 'محافظة', 'السعر'];
           
-          for (const prop of properties) {
-            // أنماط متعددة للبحث عن كل خاصية
+          // دمج الخصائص الإنجليزية والعربية للبحث
+          const allProperties = [...properties, ...arabicProperties];
+          
+          for (const prop of allProperties) {
+            // أنماط متعددة للبحث عن كل خاصية بدعم العربية
             const propPatterns = [
               new RegExp(`"?${prop}"?\\s*:\\s*"([^"]*)"`, 'i'),
               new RegExp(`"?${prop}"?\\s*:\\s*"?([^",}]*)"?`, 'i'),
               new RegExp(`${prop}\\s*[=:]\\s*([^\\n,}]*)`, 'i'),
-              new RegExp(`[\\b\\s]${prop}[\\b\\s]*:?\\s*([^\\n,}]*)`, 'i')
+              new RegExp(`[\\b\\s]${prop}[\\b\\s]*:?\\s*([^\\n,}]*)`, 'i'),
+              // أنماط إضافية للتعامل مع التنسيقات المختلفة
+              new RegExp(`${prop}\\s*[\\:=]\\s*"?([^"\\n,}]*)"?`, 'i')
             ];
             
             for (const pattern of propPatterns) {
               const match = extractedText.match(pattern);
               if (match && match[1]) {
-                keyValuePairs[prop] = match[1].trim();
+                // تحديد المفتاح المناسب بناءً على الخاصية المطابقة
+                let key = prop;
+                
+                // إذا كانت الخاصية عربية، حولها إلى المفتاح الإنجليزي المقابل
+                if (arabicProperties.includes(prop)) {
+                  const index = arabicProperties.indexOf(prop);
+                  key = properties[index];
+                }
+                
+                keyValuePairs[key] = match[1].trim();
                 break;
               }
             }
@@ -181,6 +197,47 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
       // استخراج بيانات إضافية من النص للحقول الفارغة
       const textExtractedData = autoExtractData(extractedText);
       jsonData = mergeExtractedData(jsonData, textExtractedData);
+    }
+    
+    // محاولة أخيرة لاستخراج البيانات المفقودة باستخدام أنماط قوية للغاية
+    if (!jsonData.code || !jsonData.phoneNumber) {
+      // محاولة العثور على الكود بأنماط أكثر قوة (فقط الأرقام)
+      const codePatterns = [
+        /\bكود\s*[:#=]?\s*(\d+)/i,
+        /\bcode\s*[:#=]?\s*(\d+)/i,
+        /\bرقم\s*[:#=]?\s*(\d+)/i,
+        /\bرمز\s*[:#=]?\s*(\d+)/i,
+        // استخراج أي رقم مكون من 3-8 أرقام كمرشح للكود
+        /\b(\d{3,8})\b/
+      ];
+      
+      for (const pattern of codePatterns) {
+        if (jsonData.code) break;
+        const match = extractedText.match(pattern);
+        if (match && match[1]) {
+          jsonData.code = match[1].trim();
+          console.log("تم استخراج الكود باستخدام نمط قوي:", jsonData.code);
+          break;
+        }
+      }
+      
+      // محاولة العثور على رقم الهاتف بأنماط أكثر قوة
+      const phonePatterns = [
+        /\b(\d{11})\b/, // رقم مكون من 11 رقم متتالي
+        /\b(\d{10})\b/, // رقم مكون من 10 أرقام متتالية
+        /[\+\d]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4,5}/, // تنسيق دولي
+        /\b(07\d{9})\b/ // أرقام العراق تبدأ بـ 07
+      ];
+      
+      for (const pattern of phonePatterns) {
+        if (jsonData.phoneNumber) break;
+        const match = extractedText.match(pattern);
+        if (match && match[1]) {
+          jsonData.phoneNumber = match[1].trim();
+          console.log("تم استخراج رقم الهاتف باستخدام نمط قوي:", jsonData.phoneNumber);
+          break;
+        }
+      }
     }
     
     // التحقق من صحة البيانات المستخرجة

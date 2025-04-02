@@ -1,12 +1,12 @@
 
 import React from "react";
 import { ImageData } from "@/types/ImageData";
-import { RefreshCw } from "lucide-react"; // استيراد أيقونة إعادة المعالجة
+import { RefreshCw, AlertCircle } from "lucide-react"; 
 
 interface ImagePreviewProps {
   image: ImageData;
   onImageClick?: (image: ImageData) => void;
-  onReprocess?: (image: ImageData) => void; // إضافة وظيفة إعادة المعالجة
+  onReprocess?: (image: ImageData) => void;
 }
 
 const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick, onReprocess }) => {
@@ -31,14 +31,29 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick, onRepr
     if (image.status === "pending") {
       return <div className="absolute top-2 right-2 bg-amber-500/90 text-white px-2 py-0.5 rounded text-xs">قيد الانتظار</div>;
     } else if (image.status === "processing") {
-      return <div className="absolute top-2 right-2 bg-blue-500/90 text-white px-2 py-0.5 rounded text-xs">قيد المعالجة</div>;
+      return <div className="absolute top-2 right-2 bg-blue-500/90 text-white px-2 py-0.5 rounded text-xs flex items-center">
+        <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+        قيد المعالجة
+      </div>;
     } else if (image.status === "error") {
-      return <div className="absolute top-2 right-2 bg-red-500/90 text-white px-2 py-0.5 rounded text-xs">فشل</div>;
+      return <div className="absolute top-2 right-2 bg-red-500/90 text-white px-2 py-0.5 rounded text-xs flex items-center">
+        <AlertCircle className="w-3 h-3 mr-1" />
+        فشل
+      </div>;
     } else if (image.status === "completed") {
       return <div className="absolute top-2 right-2 bg-green-500/90 text-white px-2 py-0.5 rounded text-xs">مكتملة</div>;
     }
     return null;
   };
+
+  // التحقق من اكتمال البيانات المستخرجة
+  const hasCompleteData = image.code && image.senderName && image.phoneNumber && image.price;
+  
+  // تحديد ما إذا كان يجب إظهار زر إعادة المعالجة
+  const shouldShowReprocessButton = (onReprocess && 
+    (image.status === "error" || 
+     (image.status === "completed" && !hasCompleteData))
+  );
 
   return (
     <div 
@@ -67,24 +82,34 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick, onRepr
         {image.file?.name || image.id.substring(0, 8)}
       </div>
       
+      {/* تحسين عرض حالة الخطأ */}
       {image.status === "error" && (
         <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
-          <div className="bg-red-500 text-white px-3 py-1 rounded text-sm">
-            حدث خطأ أثناء المعالجة
+          <div className="bg-red-500 text-white px-3 py-1 rounded text-sm flex items-center">
+            <AlertCircle className="w-4 h-4 mr-1" />
+            فشل في معالجة الصورة
           </div>
         </div>
       )}
       
-      {/* زر إعادة المعالجة - يظهر فقط عند فشل المعالجة أو نجاحها مع نتائج ضعيفة */}
-      {(image.status === "error" || (image.status === "completed" && (!image.code || !image.senderName || !image.phoneNumber))) && onReprocess && (
-        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* تحسين زر إعادة المعالجة - ظهور أكثر وضوحاً عند الحاجة */}
+      {shouldShowReprocessButton && (
+        <div className="absolute top-10 left-2 opacity-70 group-hover:opacity-100 transition-opacity">
           <button 
             className="bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-full shadow-sm flex items-center justify-center"
             onClick={handleReprocess}
             title="إعادة معالجة الصورة"
           >
-            <RefreshCw size={14} />
+            <RefreshCw size={16} />
           </button>
+        </div>
+      )}
+      
+      {/* عرض مؤشر إضافي لحالة البيانات غير المكتملة */}
+      {image.status === "completed" && !hasCompleteData && (
+        <div className="absolute bottom-10 right-2 bg-amber-500/90 text-white px-1.5 py-0.5 rounded text-[10px] flex items-center">
+          <AlertCircle className="w-3 h-3 mr-1" />
+          بيانات ناقصة
         </div>
       )}
       
