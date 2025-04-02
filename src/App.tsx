@@ -6,6 +6,7 @@ import { Toaster as SonnerToaster } from "sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import ResetProcessingButton from '@/components/ResetProcessingButton';
 
 function App() {
   console.log("تحميل التطبيق الرئيسي App");
@@ -36,6 +37,7 @@ function App() {
             </Suspense>
             <Toaster />
             <SonnerToaster position="top-center" closeButton />
+            <ResetProcessingButton />
           </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>

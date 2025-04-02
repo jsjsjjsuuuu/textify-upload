@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -10,6 +11,7 @@ import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasAttemptedReprocessing, setHasAttemptedReprocessing] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -103,7 +105,7 @@ export const useImageProcessingCore = () => {
     return true;
   };
 
-  // إنشاء كائن useFileUpload في بداية الملف
+  // إنشاء كائن useFileUpload 
   const fileUploadData = useFileUpload({
     images,
     addImage,
@@ -114,7 +116,7 @@ export const useImageProcessingCore = () => {
     removeDuplicates
   });
   
-  // إضافة وظيفة إعادة تشغيل عملية المعالجة عندما تتجمد العملية
+  // تحسين وظيفة إعادة تشغيل عملية المعالجة
   const retryProcessing = useCallback(() => {
     if (fileUploadData && fileUploadData.manuallyTriggerProcessingQueue) {
       console.log("إعادة تشغيل عملية معالجة الصور...");
@@ -162,10 +164,10 @@ export const useImageProcessingCore = () => {
     useGemini,
     pauseProcessing: filePauseProcessing,
     clearQueue,
-    uploadLimitInfo  // استخراج معلومات حدود التحميل من useFileUpload
+    uploadLimitInfo
   } = fileUploadData;
 
-  // إعادة هيكلة وظيفة handleSubmitToApi لتستخدم وظيفة saveProcessedImage
+  // إعادة هيكلة وظيفة handleSubmitToApi
   const handleSubmitToApi = async (id: string) => {
     // العثور على الصورة حسب المعرف
     const image = images.find(img => img.id === id);
@@ -215,7 +217,7 @@ export const useImageProcessingCore = () => {
     }
   };
 
-  // تعديل وظيفة حذف الصورة لتشمل الحذف من قاعدة البيانات
+  // تعديل وظيفة حذف الصورة 
   const handleDelete = async (id: string) => {
     try {
       // محاولة حذف السجل من قاعدة البيانات أولاً
@@ -239,6 +241,47 @@ export const useImageProcessingCore = () => {
     }
   };
 
+  // تحسين آلية معالجة الصور المعلقة مع الحد من تكرار المحاولات
+  const handlePendingImages = useCallback(async () => {
+    if (hasAttemptedReprocessing || !user || images.length === 0) return;
+    
+    const pendingImages = images.filter(img => img.status === "pending" || img.status === "error");
+    
+    if (pendingImages.length > 0) {
+      console.log(`تم العثور على ${pendingImages.length} صورة في انتظار المعالجة، سيتم محاولة إعادة معالجتها...`);
+      
+      // وضع علامة أننا قمنا بمحاولة إعادة المعالجة
+      setHasAttemptedReprocessing(true);
+      
+      // فحص الصور واحدة تلو الأخرى
+      for (const image of pendingImages) {
+        // فحص عدد محاولات المعالجة السابقة لتجنب الحلقات اللانهائية
+        const attempts = image.processingAttempts || 0;
+        
+        // إذا تجاوز عدد المحاولات 3، نتوقف عن المحاولة
+        if (attempts >= 3) {
+          console.log(`تم تجاوز الحد الأقصى من محاولات المعالجة للصورة ${image.id}، تم تخطيها`);
+          // تحديث حالة الصورة إلى خطأ مع رسالة
+          updateImage(image.id, { 
+            status: "error", 
+            extractedText: "تعذرت معالجة الصورة بعد عدة محاولات. يرجى إعادة رفع الصورة أو المحاولة لاحقاً."
+          });
+          continue;
+        }
+        
+        // للصور القابلة للمعالجة، حاول معالجتها مرة واحدة فقط
+        try {
+          await saveProcessedImage({
+            ...image,
+            processingAttempts: attempts + 1
+          });
+        } catch (error) {
+          console.error(`فشلت إعادة معالجة الصورة ${image.id}:`, error);
+        }
+      }
+    }
+  }, [images, user, saveProcessedImage, updateImage, hasAttemptedReprocessing]);
+
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
   useEffect(() => {
     if (user) {
@@ -249,6 +292,18 @@ export const useImageProcessingCore = () => {
       cleanupOldRecords(user.id);
     }
   }, [user]);
+  
+  // تحسين آلية معالجة الصور المعلقة
+  useEffect(() => {
+    // انتظر لحظة قبل محاولة معالجة الصور المعلقة
+    const timer = setTimeout(() => {
+      if (user && images.length > 0) {
+        handlePendingImages();
+      }
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+  }, [user, images, handlePendingImages]);
 
   return {
     images,
@@ -283,6 +338,13 @@ export const useImageProcessingCore = () => {
     clearQueue,
     activeUploads,
     queueLength,
-    uploadLimitInfo // إضافة معلومات حدود التحميل إلى المخرجات
+    uploadLimitInfo,
+    resetProcessingState: () => {
+      setHasAttemptedReprocessing(false);
+      clearImageCache();
+      if (fileUploadData.clearQueue) {
+        fileUploadData.clearQueue();
+      }
+    }
   };
 };
