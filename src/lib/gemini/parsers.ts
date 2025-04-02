@@ -68,16 +68,18 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
 
     console.log("النص المستخرج من Gemini:", extractedText);
 
-    // محاولة استخراج JSON من النص
+    // محاولة استخراج JSON من النص - تحسين طريقة استخراج JSON
     try {
-      // 1. محاولة استخراج JSON باستخدام أنماط أكثر دقة
+      // 1. محاولة استخراج JSON باستخدام أنماط متعددة ومحسنة
       const jsonPatterns = [
         // نمط ال JSON في كتل markdown
         /```(?:json)?\s*({[\s\S]*?})\s*```/i,
         // نمط ال JSON العادي (أي كائن بين {} قوسين)
         /{[\s\S]*?"companyName"[\s\S]*?}/i,
         // نمط أكثر مرونة لاستخراج أي كائن JSON
-        /{[\s\S]*?}/
+        /{[\s\S]*?}/,
+        // نمط يبحث عن بداية الـ JSON بدقة أكبر
+        /(\{(?:\s*"[^"]+"\s*:\s*"[^"]*"\s*,?)+\})/
       ];
 
       let foundJson = false;
@@ -86,11 +88,11 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
         if (foundJson) break;
         
         const match = extractedText.match(pattern);
-        if (match && match[1] || (match && !match[1] && match[0].includes('companyName'))) {
+        if (match && (match[1] || (match[0] && match[0].includes('"')))) {
           const jsonText = match[1] || match[0];
           
           try {
-            // تنظيف النص قبل التحليل
+            // تنظيف النص قبل التحليل بطريقة أكثر شمولاً
             const cleanedJson = jsonText
               .replace(/[\u201C\u201D]/g, '"') // استبدال علامات الاقتباس الذكية
               .replace(/[\u2018\u2019]/g, "'") // استبدال علامات الاقتباس المفردة
@@ -98,30 +100,56 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
               .replace(/\n/g, ' ') // استبدال السطور الجديدة بمسافات
               .replace(/\s+/g, ' ') // تقليل المسافات المتعددة إلى مسافة واحدة
               .replace(/:\s*""/g, ': ""') // تنظيف المسافات حول القيم الفارغة
-              .replace(/,\s*}/g, '}'); // إزالة الفواصل الزائدة في النهاية
+              .replace(/,\s*}/g, '}') // إزالة الفواصل الزائدة في النهاية
+              .replace(/}[^{]*{/g, '},{') // تصحيح التنسيق المحتمل للـ JSON المتعدد
+              .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2":'); // تأكد من أن المفاتيح محاطة بعلامات اقتباس
               
+            console.log("محاولة تحليل JSON المنظف:", cleanedJson);
             jsonData = JSON.parse(cleanedJson);
             console.log("تم استخراج JSON من النص:", jsonData);
             foundJson = true;
           } catch (e) {
             console.error("خطأ في تحليل JSON من النمط:", e);
+            // محاولة تنظيف إضافية في حالة الفشل
+            try {
+              // محاولة إصلاح مشاكل التنسيق الشائعة
+              const repairJson = jsonText
+                .replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":') // إضافة علامات اقتباس للمفاتيح
+                .replace(/:\s*([a-zA-Z0-9_]+)\s*([,}])/g, ':"$1"$2'); // إضافة علامات اقتباس للقيم النصية
+              
+              console.log("محاولة إصلاح JSON:", repairJson);
+              jsonData = JSON.parse(repairJson);
+              console.log("تم إصلاح JSON بنجاح:", jsonData);
+              foundJson = true;
+            } catch (repairError) {
+              console.error("فشل إصلاح JSON:", repairError);
+            }
           }
         }
       }
       
-      // 2. إذا لم ينجح أي نمط، نحاول استخراج JSON كصيغة نصية
+      // 2. إذا لم ينجح أي نمط، نحاول استخراج JSON كصيغة نصية - طريقة محسنة
       if (!foundJson) {
         try {
-          // البحث عن أزواج الخصائص والقيم في النص
+          // البحث عن أزواج الخصائص والقيم في النص بطريقة أكثر شمولاً
           const keyValuePairs: Record<string, string> = {};
           const properties = ['companyName', 'code', 'senderName', 'phoneNumber', 'province', 'price'];
           
           for (const prop of properties) {
-            // نمط أكثر مرونة للبحث عن الخصائص
-            const propPattern = new RegExp(`"?${prop}"?\\s*:\\s*"([^"]*)"`, 'i');
-            const match = extractedText.match(propPattern);
-            if (match && match[1]) {
-              keyValuePairs[prop] = match[1].trim();
+            // أنماط متعددة للبحث عن كل خاصية
+            const propPatterns = [
+              new RegExp(`"?${prop}"?\\s*:\\s*"([^"]*)"`, 'i'),
+              new RegExp(`"?${prop}"?\\s*:\\s*"?([^",}]*)"?`, 'i'),
+              new RegExp(`${prop}\\s*[=:]\\s*([^\\n,}]*)`, 'i'),
+              new RegExp(`[\\b\\s]${prop}[\\b\\s]*:?\\s*([^\\n,}]*)`, 'i')
+            ];
+            
+            for (const pattern of propPatterns) {
+              const match = extractedText.match(pattern);
+              if (match && match[1]) {
+                keyValuePairs[prop] = match[1].trim();
+                break;
+              }
             }
           }
           
@@ -138,7 +166,7 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
       console.error("خطأ عام في محاولة استخراج JSON:", e);
     }
 
-    // 3. إذا لم يتم العثور على JSON، استخدم الاستخراج التلقائي
+    // 3. إذا لم يتم العثور على JSON، استخدم الاستخراج التلقائي المحسن
     if (Object.keys(jsonData).length === 0) {
       console.log("لم يتم العثور على JSON، جاري محاولة استخراج البيانات من النص");
       jsonData = autoExtractData(extractedText);

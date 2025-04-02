@@ -27,11 +27,12 @@ export const useGeminiProcessing = () => {
   // مؤشر لتتبع استخدام الطلبات المتعددة
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
 
-  // قائمة المطالبات المختلفة للتجربة
+  // قائمة المطالبات المختلفة للتجربة - تمت إضافة مطالبات جديدة محسنة
   const prompts = [
     "enhancedExtraction",
+    "codeFocusedPrompt", // مطالبة جديدة تركز على الكود
     "handwritingExtraction",
-    "simplifiedExtraction",
+    "hybridExtractionPrompt", // مطالبة هجينة جديدة
     "structuredExtraction",
     "stepByStepPrompt",
     "advancedHandwriting"
@@ -117,7 +118,7 @@ export const useGeminiProcessing = () => {
     const attemptKey = image.id;
     const attempts = processingAttempts[attemptKey] || 0;
     
-    // إذا كان هناك أكثر من 3 محاولات للمعالجة، نصل بها إلى حالة خطأ ونعرض رسالة للمستخدم
+    // إذا كان هناك أكثر من 5 محاولات للمعالجة، نصل بها إلى حالة خطأ ونعرض رسالة للمستخدم
     if (attempts >= 5) {
       console.log(`وصلت صورة ${image.id} إلى الحد الأقصى من المحاولات (${attempts})`);
       toast({
@@ -171,13 +172,13 @@ export const useGeminiProcessing = () => {
       
       // تغيير الاستراتيجية حسب عدد المحاولات
       if (attempts === 1) {
-        promptType = "handwritingExtraction";
+        promptType = "codeFocusedPrompt"; // استخدام المطالبة الجديدة التي تركز على الكود
         modelVersion = 'gemini-1.5-flash';
         temperature = 0.1;
       } else if (attempts === 2) {
-        promptType = "stepByStepPrompt";
+        promptType = "hybridExtractionPrompt"; // استخدام المطالبة الهجينة الجديدة
         modelVersion = 'gemini-1.5-pro';
-        temperature = 0.1;
+        temperature = 0.0;
       } else if (attempts === 3) {
         promptType = "advancedHandwriting";
         modelVersion = 'gemini-1.5-pro';
@@ -280,11 +281,13 @@ export const useGeminiProcessing = () => {
             // تأخير قبل المحاولة التالية
             await sleepBetweenRequests(1000);
             
-            return processWithGemini(file, {
+            // إرجاع الصورة بالنص المستخرج ولكن حالتها لا تزال "قيد الانتظار"
+            // تجنب إعادة المحاولة هنا لمنع الحلقة المفرغة
+            return {
               ...image,
               status: "pending" as const,
               extractedText: extractedText
-            });
+            };
           } else {
             toast({
               title: "محاولة أخرى",
@@ -295,7 +298,22 @@ export const useGeminiProcessing = () => {
             // تأخير قبل المحاولة التالية
             await sleepBetweenRequests(1000);
             
-            return processWithGemini(file, image);
+            // الانتقال للمحاولة التالية مع نموذج مختلف عوضاً عن الدخول في حلقة لانهائية
+            if (attempts < 4) {
+              // بدلاً من استدعاء نفس الوظيفة، نقوم بتحديث حالة الصورة ونرجعها
+              return {
+                ...image,
+                status: "pending" as const,
+                extractedText: "جاري محاولة استخراج البيانات بطريقة أخرى..."
+              };
+            } else {
+              // إذا وصلنا لعدد كبير من المحاولات، نضع الصورة في حالة خطأ
+              return {
+                ...image,
+                status: "error" as const,
+                extractedText: "فشل في استخراج البيانات بعد عدة محاولات. يرجى إدخال البيانات يدوياً."
+              };
+            }
           }
         }
       } else {
@@ -304,7 +322,12 @@ export const useGeminiProcessing = () => {
         // تأخير قبل المحاولة التالية
         await sleepBetweenRequests(1500);
         
-        return processWithGemini(file, image);
+        // بدلاً من استدعاء نفس الوظيفة مرة أخرى، نقوم بإرجاع الصورة في حالة انتظار
+        return {
+          ...image,
+          status: "pending" as const,
+          extractedText: `فشل في استخراج البيانات: ${extractionResult.message}. جاري إعادة المحاولة...`
+        };
       }
     } catch (geminiError: any) {
       console.error("خطأ في معالجة Gemini:", geminiError);
@@ -312,8 +335,12 @@ export const useGeminiProcessing = () => {
       // تأخير قبل المحاولة التالية
       await sleepBetweenRequests(2000);
       
-      // لا نصل إلى نهاية محاولات مباشرة، نحاول مرة أخرى
-      return processWithGemini(file, image);
+      // بدلاً من إعادة المحاولة بشكل مباشر، نرجع الصورة في حالة انتظار لتجنب الحلقة المفرغة
+      return {
+        ...image,
+        status: "pending" as const,
+        extractedText: `حدث خطأ أثناء المعالجة: ${geminiError.message || "خطأ غير معروف"}. جاري إعادة المحاولة...`
+      };
     }
   };
 

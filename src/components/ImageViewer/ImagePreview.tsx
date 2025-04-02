@@ -1,19 +1,28 @@
 
 import React from "react";
 import { ImageData } from "@/types/ImageData";
+import { RefreshCw } from "lucide-react"; // استيراد أيقونة إعادة المعالجة
 
 interface ImagePreviewProps {
   image: ImageData;
   onImageClick?: (image: ImageData) => void;
+  onReprocess?: (image: ImageData) => void; // إضافة وظيفة إعادة المعالجة
 }
 
-const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick }) => {
+const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick, onReprocess }) => {
   // إنشاء عنوان URL للمعاينة من الملف أو استخدام URL الموجود
   const previewUrl = image.previewUrl || '';
   
   const handleClick = () => {
     if (onImageClick) {
       onImageClick(image);
+    }
+  };
+  
+  const handleReprocess = (e: React.MouseEvent) => {
+    e.stopPropagation(); // منع انتشار الحدث للعنصر الأب
+    if (onReprocess) {
+      onReprocess(image);
     }
   };
   
@@ -40,6 +49,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick }) => {
         src={previewUrl} 
         alt={`صورة ${image.id}`} 
         className="w-full h-auto object-contain rounded max-h-[300px] group-hover:opacity-95 transition-opacity"
+        onError={(e) => {
+          // استخدام صورة بديلة في حالة فشل تحميل الصورة
+          (e.target as HTMLImageElement).src = '/placeholder-image.jpg';
+        }}
       />
       
       {getStatusBadge()}
@@ -59,6 +72,26 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick }) => {
           <div className="bg-red-500 text-white px-3 py-1 rounded text-sm">
             حدث خطأ أثناء المعالجة
           </div>
+        </div>
+      )}
+      
+      {/* زر إعادة المعالجة - يظهر فقط عند فشل المعالجة أو نجاحها مع نتائج ضعيفة */}
+      {(image.status === "error" || (image.status === "completed" && (!image.code || !image.senderName || !image.phoneNumber))) && onReprocess && (
+        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button 
+            className="bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-full shadow-sm flex items-center justify-center"
+            onClick={handleReprocess}
+            title="إعادة معالجة الصورة"
+          >
+            <RefreshCw size={14} />
+          </button>
+        </div>
+      )}
+      
+      {/* عرض مؤشر لمستوى الثقة إذا كان متوفراً */}
+      {image.confidence && image.status === "completed" && (
+        <div className="absolute top-10 right-2 bg-black/50 text-white px-1.5 py-0.5 rounded text-[10px]">
+          الدقة: {image.confidence}%
         </div>
       )}
     </div>
