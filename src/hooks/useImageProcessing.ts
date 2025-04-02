@@ -6,6 +6,10 @@ import { DEFAULT_GEMINI_API_KEY, resetAllApiKeys } from "@/lib/gemini/apiKeyMana
 import { useToast } from "@/hooks/use-toast";
 import { useFileUpload } from "@/hooks/useFileUpload";
 
+// تتبع عدد المحاولات الإجمالية للجلسة
+let sessionRetryAttempts = 0;
+const MAX_SESSION_RETRIES = 5;
+
 export const useImageProcessing = () => {
   const coreProcessing = useImageProcessingCore();
   const { toast } = useToast();
@@ -29,23 +33,30 @@ export const useImageProcessing = () => {
     resetAllApiKeys();
     console.log("تم إعادة تعيين جميع مفاتيح API عند بدء التطبيق");
     
-    // محاولة معالجة الصور العالقة في حالة "قيد الانتظار"
+    // إعادة تعيين عدد محاولات الجلسة عند بدء التطبيق
+    sessionRetryAttempts = 0;
+    
+    // محاولة معالجة الصور العالقة في حالة "قيد الانتظار" مع حد للمحاولات
     if (coreProcessing.images && coreProcessing.images.length > 0) {
       const pendingImages = coreProcessing.images.filter(img => img.status === "pending" || img.status === "processing");
       
-      if (pendingImages.length > 0) {
+      if (pendingImages.length > 0 && sessionRetryAttempts < MAX_SESSION_RETRIES) {
         console.log(`تم العثور على ${pendingImages.length} صورة في انتظار المعالجة، سيتم محاولة إعادة معالجتها...`);
         
         // محاولة إعادة التشغيل تلقائيًا بعد قليل
         setTimeout(() => {
           if (coreProcessing.retryProcessing) {
-            coreProcessing.retryProcessing();
-            toast({
-              title: "إعادة المعالجة",
-              description: `تم العثور على ${pendingImages.length} صورة في انتظار المعالجة، وتمت محاولة إعادة معالجتها تلقائيًا`,
-            });
+            sessionRetryAttempts++;
+            const success = coreProcessing.retryProcessing();
+            
+            if (success) {
+              toast({
+                title: "إعادة المعالجة",
+                description: `تم العثور على ${pendingImages.length} صورة في انتظار المعالجة، وتمت محاولة إعادة معالجتها تلقائيًا`,
+              });
+            }
           }
-        }, 3000); // انتظار 3 ثوانٍ قبل محاولة المعالجة
+        }, 5000); // انتظار 5 ثوانٍ قبل محاولة المعالجة
       }
     }
   }, [coreProcessing.images]);
@@ -72,23 +83,39 @@ export const useImageProcessing = () => {
     setDefaultSheetId(sheetId);
   };
   
-  // يمكن إعادة تشغيل عملية المعالجة عندما تتوقف
+  // تحسين وظيفة إعادة تشغيل المعالجة مع منع الحلقة التكرارية
   const retryProcessing = useCallback(() => {
+    // زيادة عدد المحاولات في الجلسة
+    sessionRetryAttempts++;
+    
+    // إيقاف المحاولات إذا تجاوزت الحد الأقصى
+    if (sessionRetryAttempts > MAX_SESSION_RETRIES) {
+      console.log(`تجاوز الحد الأقصى للمحاولات في الجلسة (${MAX_SESSION_RETRIES})`);
+      toast({
+        title: "تنبيه",
+        description: "تم تجاوز الحد الأقصى للمحاولات. يرجى إعادة تحميل الصفحة.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
     // إعادة تعيين جميع مفاتيح API قبل إعادة التشغيل
     resetAllApiKeys();
-    console.log("تم إعادة تعيين جميع مفاتيح API قبل إعادة المحاولة");
+    console.log("تم إعادة تعيين جميع مفاتيح API قبل إعادة المحاولة (المحاولة رقم " + sessionRetryAttempts + ")");
     
     if (coreProcessing.retryProcessing) {
       console.log("إعادة تشغيل عملية معالجة الصور...");
-      coreProcessing.retryProcessing();
+      const success = coreProcessing.retryProcessing();
       
-      // عرض إشعار للمستخدم
-      toast({
-        title: "إعادة تشغيل",
-        description: "تم إعادة تشغيل المعالجة للصور في قائمة الانتظار",
-      });
+      if (success) {
+        // عرض إشعار للمستخدم
+        toast({
+          title: "إعادة تشغيل",
+          description: "تم إعادة تشغيل المعالجة للصور في قائمة الانتظار",
+        });
+      }
       
-      return true;
+      return success;
     }
     return false;
   }, [coreProcessing.retryProcessing, toast]);
@@ -130,6 +157,17 @@ export const useImageProcessing = () => {
     }
   }, [coreProcessing.saveProcessedImage, toast]);
   
+  // وظيفة إعادة تعيين المتغيرات العامة
+  const resetGlobalState = useCallback(() => {
+    sessionRetryAttempts = 0;
+    console.log("تم إعادة تعيين متغيرات الحالة العامة");
+    
+    // إعادة استدعاء وظيفة إعادة التعيين في الكائن الأساسي
+    if (coreProcessing.resetProcessingState) {
+      return coreProcessing.resetProcessingState();
+    }
+  }, [coreProcessing.resetProcessingState]);
+  
   // الحصول على معلومات حدود التحميل من useFileUpload في coreProcessing
   const uploadLimitInfo = coreProcessing.uploadLimitInfo || {
     subscription: 'standard',
@@ -156,6 +194,7 @@ export const useImageProcessing = () => {
     queueLength: coreProcessing.queueLength || 0,
     useGemini: coreProcessing.useGemini || false,
     saveProcessedImage,
-    uploadLimitInfo // إضافة معلومات حدود التحميل للواجهة
+    uploadLimitInfo, // إضافة معلومات حدود التحميل للواجهة
+    resetProcessingState: resetGlobalState // استخدام الوظيفة المحسنة
   };
 };

@@ -43,7 +43,7 @@ const ResetProcessingButton = () => {
         try {
           // تحديث حالة جميع الصور التي في حالة "processing" إلى "pending"
           const { error } = await supabase
-            .from('receipt_images')
+            .from('images') // تصحيح اسم الجدول من receipt_images إلى images
             .update({ status: 'pending' })
             .eq('user_id', user.id)
             .eq('status', 'processing');

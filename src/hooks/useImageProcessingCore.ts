@@ -10,14 +10,22 @@ import { useImageDatabase } from "@/hooks/useImageDatabase";
 import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
 import { supabase } from "@/integrations/supabase/client";
 
-// إضافة متغير عام لتتبع حالة الإعادة
+// محددات عدد محاولات إعادة المعالجة لتجنب الحلقات اللانهائية
+const MAX_PROCESSING_ATTEMPTS = 3;
+const RETRY_DELAY = 5000; // 5 ثوانٍ
+const GLOBAL_RETRY_LIMIT = 10; // الحد الأقصى للمحاولات العامة
+
+// إضافة متغير عام لتتبع حالة الإعادة والمحاولات
 let hasGlobalReset = false;
+let globalRetryCount = 0;
+let lastRetryTime = 0;
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasAttemptedReprocessing, setHasAttemptedReprocessing] = useState(false);
   const [pendingImageCount, setPendingImageCount] = useState(0);
   const [lastPendingCheck, setLastPendingCheck] = useState(0);
+  const [processingAttempts, setProcessingAttempts] = useState<Record<string, number>>({});
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -122,18 +130,39 @@ export const useImageProcessingCore = () => {
     removeDuplicates
   });
   
-  // تحسين وظيفة إعادة تشغيل عملية المعالجة
+  // تحسين وظيفة إعادة تشغيل عملية المعالجة مع منع الحلقة التكرارية
   const retryProcessing = useCallback(() => {
-    // تحقق ما إذا كانت هناك حلقة تكرارية (تجاوز الحد المسموح)
+    // فحص الوقت المنقضي منذ آخر محاولة
     const now = Date.now();
-    if (now - lastPendingCheck < 5000 && pendingImageCount > 3) {
-      console.log("تم اكتشاف محاولات متكررة في وقت قصير، تجاهل العملية...");
+    const timeSinceLastRetry = now - lastRetryTime;
+    
+    // تجنب المحاولات المتكررة جدًا
+    if (timeSinceLastRetry < RETRY_DELAY) {
+      console.log(`تجاهل المحاولة: مر فقط ${timeSinceLastRetry}ms منذ آخر محاولة، مطلوب ${RETRY_DELAY}ms على الأقل`);
       return false;
     }
-
-    // تعيين وقت آخر فحص ومسح عداد المحاولات السابقة
+    
+    // تحقق ما إذا تم الوصول إلى الحد العام للمحاولات
+    if (globalRetryCount >= GLOBAL_RETRY_LIMIT) {
+      console.log(`تجاوز الحد الأقصى للمحاولات العام (${GLOBAL_RETRY_LIMIT}). إعادة تعيين العداد...`);
+      toast({
+        title: "تم تجاوز الحد الأقصى للمحاولات",
+        description: "لقد تم محاولة إعادة المعالجة عدة مرات دون نجاح. يرجى إعادة تحميل الصفحة أو المحاولة لاحقًا.",
+        variant: "destructive"
+      });
+      
+      // إعادة تعيين العداد بعد 10 دقائق
+      setTimeout(() => {
+        globalRetryCount = 0;
+      }, 10 * 60 * 1000);
+      
+      return false;
+    }
+    
+    // تعيين وقت آخر محاولة ومسح عداد المحاولات السابقة
     setLastPendingCheck(now);
-    setPendingImageCount(0);
+    lastRetryTime = now;
+    globalRetryCount++;
     
     // التحقق من وجود معالجة فعلية قبل المحاولة
     const hasProcessingImages = images.some(img => img.status === "processing");
@@ -144,9 +173,36 @@ export const useImageProcessingCore = () => {
       return false;
     }
     
+    // التحقق من عدد محاولات كل صورة وتحديث الصور التي تجاوزت الحد
+    let attemptedToFixImages = false;
+    
+    images.forEach(img => {
+      if (img.status === "processing") {
+        const attempts = processingAttempts[img.id] || 0;
+        
+        if (attempts >= MAX_PROCESSING_ATTEMPTS) {
+          console.log(`الصورة ${img.id} تجاوزت الحد الأقصى من المحاولات (${MAX_PROCESSING_ATTEMPTS})، تغيير الحالة إلى 'error'`);
+          updateImage(img.id, { status: "error", extractedText: "تجاوز الحد الأقصى من محاولات المعالجة" });
+          attemptedToFixImages = true;
+        } else {
+          // زيادة عدد المحاولات
+          setProcessingAttempts(prev => ({
+            ...prev,
+            [img.id]: (prev[img.id] || 0) + 1
+          }));
+        }
+      }
+    });
+    
+    if (attemptedToFixImages) {
+      console.log("تم تحديث حالة الصور العالقة، لا حاجة لإعادة تشغيل المعالجة");
+      return true;
+    }
+    
     if (fileUploadData && fileUploadData.manuallyTriggerProcessingQueue) {
-      console.log("إعادة تشغيل عملية معالجة الصور...");
+      console.log("إعادة تشغيل عملية معالجة الصور... (المحاولة العامة رقم " + globalRetryCount + ")");
       fileUploadData.manuallyTriggerProcessingQueue();
+      
       toast({
         title: "تم إعادة التشغيل",
         description: "تم إعادة تشغيل عملية معالجة الصور بنجاح",
@@ -154,7 +210,7 @@ export const useImageProcessingCore = () => {
       return true;
     }
     return false;
-  }, [toast, fileUploadData, images, lastPendingCheck, pendingImageCount]);
+  }, [toast, fileUploadData, images, processingAttempts, updateImage]);
 
   // وظيفة مسح ذاكرة التخزين المؤقت للصور المعالجة
   const clearImageCache = useCallback(() => {
@@ -162,6 +218,10 @@ export const useImageProcessingCore = () => {
     if (fileUploadData && fileUploadData.clearProcessedHashesCache) {
       fileUploadData.clearProcessedHashesCache();
     }
+    // إعادة تعيين عدادات المحاولات
+    setProcessingAttempts({});
+    globalRetryCount = 0;
+    
     toast({
       title: "تم المسح",
       description: "تم مسح ذاكرة التخزين المؤقت للصور المعالجة",
@@ -270,8 +330,8 @@ export const useImageProcessingCore = () => {
   // تحسين آلية معالجة الصور المعلقة مع الحد من تكرار المحاولات
   const handlePendingImages = useCallback(async () => {
     // تجاهل المعالجة إذا تم بالفعل محاولة معالجة الصور المعلقة في هذه الجلسة
-    // أو إذا تم إعادة تعيين النظام مؤخرًا
-    if (hasAttemptedReprocessing || hasGlobalReset || !user || images.length === 0) {
+    // أو إذا تم إعادة تعيين النظام مؤخرًا أو وصلنا للحد الأقصى من المحاولات
+    if (hasAttemptedReprocessing || hasGlobalReset || !user || images.length === 0 || globalRetryCount >= GLOBAL_RETRY_LIMIT) {
       return;
     }
     
@@ -304,16 +364,19 @@ export const useImageProcessingCore = () => {
     // تعيين المتغير العام لمنع المزيد من المحاولات التلقائية
     hasGlobalReset = true;
     
-    // إعادة تعيين متغيرات الحالة
+    // إعادة تعيين المتغيرات وعدادات المحاولات
     setHasAttemptedReprocessing(false);
     setPendingImageCount(0);
+    setProcessingAttempts({});
+    globalRetryCount = 0;
+    lastRetryTime = 0;
     
     // تحديث الصور العالقة في قاعدة البيانات
     if (user?.id) {
       try {
         // تحديث حالة جميع الصور التي في حالة "processing" إلى "pending"
         const { error } = await supabase
-          .from('receipt_images')
+          .from('images') // تصحيح اسم الجدول من receipt_images إلى images
           .update({ status: 'pending' })
           .eq('user_id', user.id)
           .eq('status', 'processing');
@@ -357,7 +420,7 @@ export const useImageProcessingCore = () => {
   useEffect(() => {
     // انتظر فترة قصيرة قبل محاولة معالجة الصور المعلقة
     const timer = setTimeout(() => {
-      if (user && images.length > 0 && !hasGlobalReset) {
+      if (user && images.length > 0 && !hasGlobalReset && globalRetryCount < GLOBAL_RETRY_LIMIT) {
         handlePendingImages();
       }
     }, 3000);
