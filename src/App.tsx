@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 function App() {
   console.log("تحميل التطبيق الرئيسي App");
@@ -25,15 +26,17 @@ function App() {
     <React.StrictMode>
       <ThemeProvider defaultTheme="light" storageKey="app-theme">
         <AuthProvider>
-          <Suspense fallback={
-            <div className="flex justify-center items-center h-screen">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            </div>
-          }>
-            <AppRoutes />
-          </Suspense>
-          <Toaster />
-          <SonnerToaster position="top-center" closeButton />
+          <TooltipProvider>
+            <Suspense fallback={
+              <div className="flex justify-center items-center h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            }>
+              <AppRoutes />
+            </Suspense>
+            <Toaster />
+            <SonnerToaster position="top-center" closeButton />
+          </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>
     </React.StrictMode>

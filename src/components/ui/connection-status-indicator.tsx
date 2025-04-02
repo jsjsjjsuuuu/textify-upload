@@ -10,7 +10,7 @@ import {
   getAutomationServerUrl,
   RENDER_ALLOWED_IPS
 } from "@/utils/automationServerUrl";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ServerStatusResponse } from "@/utils/automation/types";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -205,105 +205,103 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   };
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div 
-            onClick={handleManualCheck}
-            className={cn(
-              "inline-flex items-center gap-2 cursor-pointer px-2 py-1 rounded-md transition-colors",
-              isChecking ? "bg-amber-50 dark:bg-amber-950/30" :
-              isConnected ? "bg-green-50 dark:bg-green-950/30" : 
-              "bg-red-50 dark:bg-red-950/30",
-              className
-            )}
-          >
-            {isChecking ? (
-              <Activity className="h-4 w-4 animate-pulse text-amber-500" />
-            ) : isConnected ? (
-              <Wifi className="h-4 w-4 text-green-500" />
-            ) : (
-              <WifiOff className="h-4 w-4 text-red-500" />
-            )}
-            
-            {showText && (
-              <span className={cn(
-                "text-xs font-medium",
-                isChecking ? "text-amber-600 dark:text-amber-400" : 
-                isConnected ? "text-green-600 dark:text-green-400" : 
-                "text-red-600 dark:text-red-400"
-              )}>
-                {getStatusText()}
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div 
+          onClick={handleManualCheck}
+          className={cn(
+            "inline-flex items-center gap-2 cursor-pointer px-2 py-1 rounded-md transition-colors",
+            isChecking ? "bg-amber-50 dark:bg-amber-950/30" :
+            isConnected ? "bg-green-50 dark:bg-green-950/30" : 
+            "bg-red-50 dark:bg-red-950/30",
+            className
+          )}
+        >
+          {isChecking ? (
+            <Activity className="h-4 w-4 animate-pulse text-amber-500" />
+          ) : isConnected ? (
+            <Wifi className="h-4 w-4 text-green-500" />
+          ) : (
+            <WifiOff className="h-4 w-4 text-red-500" />
+          )}
+          
+          {showText && (
+            <span className={cn(
+              "text-xs font-medium",
+              isChecking ? "text-amber-600 dark:text-amber-400" : 
+              isConnected ? "text-green-600 dark:text-green-400" : 
+              "text-red-600 dark:text-red-400"
+            )}>
+              {getStatusText()}
+            </span>
+          )}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent className="p-4 max-w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
+        <div className="space-y-3">
+          <div className="font-medium">حالة اتصال خادم الأتمتة</div>
+          
+          <div className="flex items-center gap-2">
+            <div className={cn(
+              "w-3 h-3 rounded-full",
+              isConnected ? "bg-green-500" : "bg-red-500"
+            )} />
+            <span className="text-sm">
+              {isConnected ? "متصل" : "غير متصل"}
+            </span>
+            {lastCheckTime && (
+              <span className="text-xs text-muted-foreground mr-auto">
+                آخر تحديث: {lastCheckTime.toLocaleTimeString()}
               </span>
             )}
           </div>
-        </TooltipTrigger>
-        <TooltipContent className="p-4 max-w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
-          <div className="space-y-3">
-            <div className="font-medium">حالة اتصال خادم الأتمتة</div>
-            
-            <div className="flex items-center gap-2">
-              <div className={cn(
-                "w-3 h-3 rounded-full",
-                isConnected ? "bg-green-500" : "bg-red-500"
-              )} />
-              <span className="text-sm">
-                {isConnected ? "متصل" : "غير متصل"}
-              </span>
-              {lastCheckTime && (
-                <span className="text-xs text-muted-foreground mr-auto">
-                  آخر تحديث: {lastCheckTime.toLocaleTimeString()}
-                </span>
-              )}
-            </div>
-            
-            {!isConnected && (
-              <div className="text-xs bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-200 p-2 rounded flex items-start gap-2 mt-2">
-                <ServerCrash className="h-4 w-4 text-red-500 mt-0.5" />
-                <div>
-                  <p className="font-medium">تعذر الاتصال بخادم Render</p>
-                  <p className="mt-1">قد يكون الخادم في وضع السكون أو غير متاح حالياً. جاري إعادة المحاولة تلقائياً.</p>
-                  <p className="mt-1 text-[10px] flex items-center">
-                    <span className="font-mono bg-red-100 dark:bg-red-900 px-1 rounded">{getAutomationServerUrl()}</span>
+          
+          {!isConnected && (
+            <div className="text-xs bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-200 p-2 rounded flex items-start gap-2 mt-2">
+              <ServerCrash className="h-4 w-4 text-red-500 mt-0.5" />
+              <div>
+                <p className="font-medium">تعذر الاتصال بخادم Render</p>
+                <p className="mt-1">قد يكون الخادم في وضع السكون أو غير متاح حالياً. جاري إعادة المحاولة تلقائياً.</p>
+                <p className="mt-1 text-[10px] flex items-center">
+                  <span className="font-mono bg-red-100 dark:bg-red-900 px-1 rounded">{getAutomationServerUrl()}</span>
+                </p>
+                {reconnectAttempts > 0 && (
+                  <p className="mt-1 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span>محاولات إعادة الاتصال: {reconnectAttempts}</span>
                   </p>
-                  {reconnectAttempts > 0 && (
-                    <p className="mt-1 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      <span>محاولات إعادة الاتصال: {reconnectAttempts}</span>
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
-            )}
-            
-            {serverInfo && (
-              <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                <div>الوقت: {new Date(serverInfo.time).toLocaleTimeString()}</div>
-                <div>مدة التشغيل: {Math.floor(serverInfo.uptime / 60)} دقيقة</div>
-                <div>البيئة: {serverInfo.environment}</div>
-              </div>
-            )}
-            
-            <div className="flex gap-2 mt-2">
-              {!isConnected ? (
-                <Button variant="default" size="sm" onClick={handleForceReconnect} className="w-full text-xs bg-purple-600 hover:bg-purple-700">
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  إعادة اتصال فورية
-                </Button>
-              ) : (
-                <Button variant="secondary" size="sm" onClick={handleManualCheck} className="w-full text-xs">
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  تحديث الحالة
-                </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={handleGoToSettings} className="w-full text-xs">
-                الإعدادات
-              </Button>
             </div>
+          )}
+          
+          {serverInfo && (
+            <div className="text-xs text-muted-foreground mt-2 space-y-1">
+              <div>الوقت: {new Date(serverInfo.time).toLocaleTimeString()}</div>
+              <div>مدة التشغيل: {Math.floor(serverInfo.uptime / 60)} دقيقة</div>
+              <div>البيئة: {serverInfo.environment}</div>
+            </div>
+          )}
+          
+          <div className="flex gap-2 mt-2">
+            {!isConnected ? (
+              <Button variant="default" size="sm" onClick={handleForceReconnect} className="w-full text-xs bg-purple-600 hover:bg-purple-700">
+                <RefreshCw className="h-3 w-3 mr-1" />
+                إعادة اتصال فورية
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm" onClick={handleManualCheck} className="w-full text-xs">
+                <RefreshCw className="h-3 w-3 mr-1" />
+                تحديث الحالة
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={handleGoToSettings} className="w-full text-xs">
+              الإعدادات
+            </Button>
           </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 };
 
