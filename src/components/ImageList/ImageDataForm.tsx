@@ -1,28 +1,29 @@
+
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IRAQ_PROVINCES } from "@/utils/provinces";
 import { ImageData } from "@/types/ImageData";
-import { useState, useEffect } from "react";
 import { formatPrice } from "@/lib/gemini/utils";
 import { Button } from "@/components/ui/button";
 import { Check, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
 interface ImageDataFormProps {
   image: ImageData;
   onTextChange: (id: string, field: string, value: string) => void;
 }
+
 const ImageDataForm = ({
   image,
   onTextChange
 }: ImageDataFormProps) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
 
-  // State to manage temporary price value before formatting
+  // حالة لإدارة قيمة السعر المؤقتة قبل التنسيق
   const [priceInput, setPriceInput] = useState(image.price || '');
   const [priceFormatted, setPriceFormatted] = useState(false);
   const [isPriceValid, setIsPriceValid] = useState(true);
@@ -59,14 +60,14 @@ const ImageDataForm = ({
     return true;
   };
 
-  // Handle price change and formatting
+  // معالجة تغيير السعر وتنسيقه
   const handlePriceChange = (value: string) => {
     setPriceInput(value);
     setPriceFormatted(false);
     validatePrice(value);
   };
 
-  // Format and save price
+  // تنسيق وحفظ السعر
   const handleFormatPrice = () => {
     const originalPrice = priceInput;
     const formattedPrice = formatPrice(priceInput);
@@ -91,134 +92,176 @@ const ImageDataForm = ({
     }
   };
 
-  // Calculate field confidence scores based on overall confidence
-  const getFieldConfidence = (field: string): number => {
-    if (!image.confidence) return 0;
-    const baseConfidence = image.confidence;
+  // تحديد عناصر مطلوبة
+  const requiredFields = ['code', 'senderName', 'phoneNumber', 'province', 'price'];
+  const isRequired = (field: string) => requiredFields.includes(field);
 
-    // Adjust confidence based on specific field criteria
-    switch (field) {
-      case "phoneNumber":
-        return isPhoneNumberValid ? baseConfidence : Math.floor(baseConfidence * 0.7);
-      case "price":
-        return isPriceValid ? baseConfidence : Math.floor(baseConfidence * 0.7);
-      default:
-        return baseConfidence;
-    }
-  };
-  return <div className="p-4">
-      <h3 className="text-lg font-semibold mb-3 text-gray-900 text-center">البيانات المستخرجة</h3>
+  return (
+    <div className="p-2">
+      <h3 className="text-base font-semibold mb-4 text-center">البيانات المستخرجة</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mx-0 my-[101px]">
+      <div className="grid grid-cols-2 gap-4">
         {/* اسم الشركة */}
         <div className="space-y-1">
-          <label className="block text-xs font-medium flex justify-between">
+          <label className="block text-xs font-medium rtl">
             <span>اسم الشركة:</span>
-            {image.confidence}
           </label>
-          <Input value={image.companyName || ''} onChange={e => onTextChange(image.id, "companyName", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل اسم الشركة" />
+          <Input 
+            value={image.companyName || ''} 
+            onChange={e => onTextChange(image.id, "companyName", e.target.value)} 
+            className="rtl-textarea bg-white dark:bg-gray-900 h-9 text-sm" 
+            placeholder="أدخل اسم الشركة" 
+          />
         </div>
         
         {/* الكود */}
         <div className="space-y-1">
-          <label className="block text-xs font-medium flex justify-between">
+          <label className="block text-xs font-medium rtl flex items-center gap-1">
             <span>الكود:</span>
-            {image.confidence}
+            {isRequired('code') && <span className="text-red-500">*</span>}
           </label>
-          <Input value={image.code || ''} onChange={e => onTextChange(image.id, "code", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل الكود" />
+          <Input 
+            value={image.code || ''} 
+            onChange={e => onTextChange(image.id, "code", e.target.value)} 
+            className="rtl-textarea bg-white dark:bg-gray-900 h-9 text-sm" 
+            placeholder="أدخل الكود" 
+          />
         </div>
         
         {/* اسم المرسل */}
         <div className="space-y-1">
-          <label className="block text-xs font-medium flex justify-between">
+          <label className="block text-xs font-medium rtl flex items-center gap-1">
             <span>اسم المرسل:</span>
-            {image.confidence}
+            {isRequired('senderName') && <span className="text-red-500">*</span>}
           </label>
-          <Input value={image.senderName || ''} onChange={e => onTextChange(image.id, "senderName", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل اسم المرسل" />
+          <Input 
+            value={image.senderName || ''} 
+            onChange={e => onTextChange(image.id, "senderName", e.target.value)} 
+            className="rtl-textarea bg-white dark:bg-gray-900 h-9 text-sm" 
+            placeholder="أدخل اسم المرسل" 
+          />
         </div>
         
         {/* رقم الهاتف مع التحقق */}
         <div className="space-y-1">
-          <label className="block text-xs font-medium flex justify-between">
-            <span>رقم الهاتف:</span>
-            <div className="flex items-center space-x-2 space-x-reverse">
-              {image.confidence}
-              {image.phoneNumber && !isPhoneNumberValid && <span className="text-xs text-destructive font-normal flex items-center">
-                  <AlertCircle className="h-3 w-3 ml-1" />
-                  خطأ
-                </span>}
+          <label className="block text-xs font-medium rtl flex items-center gap-1 justify-between">
+            <div className="flex items-center gap-1">
+              <span>رقم الهاتف:</span>
+              {isRequired('phoneNumber') && <span className="text-red-500">*</span>}
             </div>
+            {image.phoneNumber && !isPhoneNumberValid && (
+              <span className="text-xs text-destructive font-normal flex items-center">
+                <AlertCircle className="h-3 w-3 ml-1" />
+                خطأ
+              </span>
+            )}
           </label>
-          <div className="space-y-1">
-            <Input value={image.phoneNumber || ''} onChange={e => onTextChange(image.id, "phoneNumber", e.target.value)} className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm ${image.phoneNumber && !isPhoneNumberValid ? "border-destructive" : ""}`} placeholder="أدخل رقم الهاتف" />
-            {image.phoneNumber && !isPhoneNumberValid && <p className="text-xs text-destructive">
-                يجب أن يكون رقم الهاتف 11 رقم بالضبط
-              </p>}
-          </div>
+          <Input 
+            value={image.phoneNumber || ''} 
+            onChange={e => onTextChange(image.id, "phoneNumber", e.target.value)} 
+            className={`rtl-textarea bg-white dark:bg-gray-900 h-9 text-sm ${image.phoneNumber && !isPhoneNumberValid ? "border-destructive" : ""}`} 
+            placeholder="أدخل رقم الهاتف" 
+          />
+          {image.phoneNumber && !isPhoneNumberValid && (
+            <p className="text-xs text-destructive">
+              يجب أن يكون رقم الهاتف 11 رقم بالضبط
+            </p>
+          )}
         </div>
         
         {/* المحافظة */}
         <div className="space-y-1">
-          <label className="block text-xs font-medium flex justify-between">
+          <label className="block text-xs font-medium rtl flex items-center gap-1">
             <span>المحافظة:</span>
-            {image.confidence}
+            {isRequired('province') && <span className="text-red-500">*</span>}
           </label>
-          <Select value={image.province || ''} onValueChange={value => onTextChange(image.id, "province", value)} dir="rtl">
-            <SelectTrigger className="bg-white dark:bg-gray-900 h-8 text-sm">
+          <Select 
+            value={image.province || ''} 
+            onValueChange={value => onTextChange(image.id, "province", value)}
+            dir="rtl"
+          >
+            <SelectTrigger className="bg-white dark:bg-gray-900 h-9 text-sm">
               <SelectValue placeholder="اختر المحافظة" />
             </SelectTrigger>
             <SelectContent>
-              {IRAQ_PROVINCES.map(province => <SelectItem key={province} value={province}>
+              {IRAQ_PROVINCES.map(province => (
+                <SelectItem key={province} value={province}>
                   {province}
-                </SelectItem>)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         
         {/* السعر مع زر التحقق والتنبيهات */}
         <div className="space-y-1">
-          <label className="block text-xs font-medium flex justify-between">
-            <span>السعر:</span>
+          <label className="block text-xs font-medium rtl flex items-center gap-1 justify-between">
+            <div className="flex items-center gap-1">
+              <span>السعر:</span>
+              {isRequired('price') && <span className="text-red-500">*</span>}
+            </div>
             <div className="flex items-center space-x-2 space-x-reverse">
-              {image.confidence}
-              {priceFormatted && <span className="text-[10px] bg-green-100 text-green-700 flex items-center px-1 rounded">
+              {priceFormatted && (
+                <span className="text-[10px] bg-green-100 text-green-700 flex items-center px-1 rounded">
                   <Check className="h-2.5 w-2.5 ml-0.5" />
                   تم التنسيق
-                </span>}
-              {!isPriceValid && <span className="text-xs text-destructive font-normal flex items-center">
+                </span>
+              )}
+              {!isPriceValid && (
+                <span className="text-xs text-destructive font-normal flex items-center">
                   <AlertCircle className="h-3 w-3 ml-1" />
                   غير صالح
-                </span>}
+                </span>
+              )}
             </div>
           </label>
           <div className="flex">
-            <Input value={priceInput} onChange={e => handlePriceChange(e.target.value)} className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm rounded-l-none ${!isPriceValid ? "border-destructive" : ""}`} placeholder="أدخل السعر" />
-            <Button size="sm" className="h-8 px-2 rounded-r-none" onClick={handleFormatPrice} variant="outline">
+            <Input 
+              value={priceInput} 
+              onChange={e => handlePriceChange(e.target.value)} 
+              className={`rtl-textarea bg-white dark:bg-gray-900 h-9 text-sm rounded-l-none ${!isPriceValid ? "border-destructive" : ""}`} 
+              placeholder="أدخل السعر" 
+            />
+            <Button 
+              size="sm" 
+              className="h-9 px-2 rounded-r-none" 
+              onClick={handleFormatPrice} 
+              variant="outline"
+            >
               <Check className="h-3.5 w-3.5" />
               <span className="text-[10px] mr-1">تحقق</span>
             </Button>
           </div>
-          {!isPriceValid && <p className="text-xs text-destructive">
-              {priceInput && parseFloat(priceInput.replace(/[^\d.]/g, '')) < 1000 ? "يجب أن يكون السعر 1000 أو أكبر، اضغط على 'تحقق' للتصحيح" : "صيغة السعر غير صحيحة، اضغط على 'تحقق' للتصحيح"}
-            </p>}
-          
+          {!isPriceValid && (
+            <p className="text-xs text-destructive">
+              {priceInput && parseFloat(priceInput.replace(/[^\d.]/g, '')) < 1000 
+                ? "يجب أن يكون السعر 1000 أو أكبر، اضغط على 'تحقق' للتصحيح" 
+                : "صيغة السعر غير صحيحة، اضغط على 'تحقق' للتصحيح"}
+            </p>
+          )}
         </div>
-        
-        {/* النص المستخرج */}
-        {image.extractedText && <div className="col-span-2 mt-1">
-            <details className="text-xs">
-              <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors py-1 flex items-center">
-                <span>عرض النص المستخرج كاملاً</span>
-                {image.confidence && <span className="mr-2 bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full text-[10px]">
-                    دقة الاستخراج: {image.confidence}%
-                  </span>}
-              </summary>
-              <div className="bg-muted/30 p-2 mt-1 rounded-md rtl-textarea text-muted-foreground max-h-24 overflow-y-auto text-xs">
-                {image.extractedText}
-              </div>
-            </details>
-          </div>}
       </div>
-    </div>;
+      
+      {/* النص المستخرج */}
+      {image.extractedText && (
+        <div className="mt-4">
+          <details className="text-xs">
+            <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors py-1 flex items-center">
+              <span>عرض النص المستخرج كاملاً</span>
+              {image.confidence && (
+                <span className="mr-2 bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full text-[10px]">
+                  دقة الاستخراج: {image.confidence}%
+                </span>
+              )}
+            </summary>
+            <div className="bg-muted/30 p-2 mt-1 rounded-md rtl-textarea text-muted-foreground max-h-24 overflow-y-auto text-xs">
+              {image.extractedText}
+            </div>
+          </details>
+        </div>
+      )}
+    </div>
+  );
 };
+
 export default ImageDataForm;

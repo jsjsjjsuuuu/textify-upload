@@ -51,7 +51,7 @@ const ImageViewer = ({
     setImgError(true);
   };
 
-  // إضافة وظيفة إعادة المحاولة
+  // وظيفة إعادة المحاولة
   const handleRetry = useCallback(() => {
     setImgError(false);
     setRetryCount(prev => prev + 1);

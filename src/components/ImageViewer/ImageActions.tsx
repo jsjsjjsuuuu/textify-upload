@@ -1,8 +1,7 @@
 
-import React from 'react';
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Send, Trash2, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Trash2, Loader2, RefreshCw, Send } from "lucide-react";
 
 interface ImageActionsProps {
   imageId: string;
@@ -12,7 +11,7 @@ interface ImageActionsProps {
   onDelete: (id: string) => void;
   onSubmit: (id: string) => void;
   onReprocess?: (id: string) => void;
-  canReprocess?: boolean; // إضافة خاصية للتحكم في إمكانية إعادة المعالجة
+  canReprocess?: boolean;
 }
 
 const ImageActions: React.FC<ImageActionsProps> = ({
@@ -23,17 +22,19 @@ const ImageActions: React.FC<ImageActionsProps> = ({
   onDelete,
   onSubmit,
   onReprocess,
-  canReprocess = true // القيمة الافتراضية true تسمح بإعادة المعالجة
+  canReprocess = true
 }) => {
+  const isCompleted = status === "completed";
+  const isProcessing = status === "processing";
   
   const handleDelete = () => {
-    if (window.confirm("هل أنت متأكد من رغبتك بحذف هذه الصورة؟")) {
+    if (isProcessing) {
+      if (confirm("هذه الصورة قيد المعالجة حالياً. هل أنت متأكد من حذفها؟")) {
+        onDelete(imageId);
+      }
+    } else {
       onDelete(imageId);
     }
-  };
-  
-  const handleSubmit = () => {
-    onSubmit(imageId);
   };
   
   const handleReprocess = () => {
@@ -41,101 +42,56 @@ const ImageActions: React.FC<ImageActionsProps> = ({
       onReprocess(imageId);
     }
   };
-  
-  // تحديد ما إذا كان يجب عرض زر إعادة المعالجة
-  // فقط عرضه إذا كان canReprocess = true وكانت الحالة ليست "processing"
-  const showReprocessButton = canReprocess && onReprocess && status !== "processing";
-  
+
   return (
-    <div className="flex gap-2 justify-end mt-2">
-      {status === "processing" ? (
-        <Button variant="outline" size="sm" disabled className="text-blue-500">
-          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-          جاري المعالجة
+    <div className="flex justify-between items-center gap-2">
+      <div className="flex items-center gap-2">
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleDelete}
+          disabled={isSubmitting}
+          className="h-8"
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          حذف
         </Button>
-      ) : (
-        <>
-          {!submitted && status === "completed" && (
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={handleSubmit}
-                  variant="default"
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4 mr-1" />
-                  )}
-                  إرسال البيانات
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>إرسال البيانات المستخرجة إلى API</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          
-          {showReprocessButton && (
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={handleReprocess}
-                  variant="outline"
-                  size="sm"
-                  className="text-blue-500"
-                  disabled={status === "processing"}
-                >
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  إعادة المعالجة
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>إعادة معالجة الصورة واستخراج البيانات</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          
-          {submitted && (
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-green-500"
-                  disabled
-                >
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  تم الإرسال
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>تم إرسال البيانات بنجاح</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={handleDelete}
-                variant="outline"
-                size="sm"
-                className="text-red-500"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                حذف
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>حذف الصورة</p>
-            </TooltipContent>
-          </Tooltip>
-        </>
-      )}
+        
+        {onReprocess && canReprocess && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReprocess}
+            disabled={isSubmitting || isProcessing}
+            className="h-8"
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            إعادة معالجة
+          </Button>
+        )}
+      </div>
+      
+      <Button
+        variant="default"
+        size="sm"
+        onClick={() => onSubmit(imageId)}
+        disabled={isSubmitting || !isCompleted || submitted}
+        className="h-8"
+      >
+        {isSubmitting ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            جاري الإرسال...
+          </>
+        ) : submitted ? (
+          "تم الإرسال"
+        ) : (
+          <>
+            <Send className="h-4 w-4 mr-1" />
+            إرسال
+          </>
+        )}
+      </Button>
     </div>
   );
 };
