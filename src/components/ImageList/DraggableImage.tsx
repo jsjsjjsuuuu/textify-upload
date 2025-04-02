@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ImageData } from "@/types/ImageData";
@@ -37,14 +36,9 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
         if (image.storage_path) {
           console.log(`محاولة استخدام storage_path للصورة ${image.id}: ${image.storage_path}`);
           
-          const { data, error } = await supabase.storage
+          const { data } = await supabase.storage
             .from('receipt_images')
             .getPublicUrl(image.storage_path);
-          
-          if (error) {
-            console.error('خطأ في استرجاع URL من Supabase:', error);
-            throw error;
-          }
           
           if (data?.publicUrl) {
             console.log(`تم جلب عنوان Supabase للصورة ${image.id}: ${data.publicUrl}`);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { ImageData } from "@/types/ImageData";
 import ZoomControls from "./ZoomControls";
@@ -41,14 +40,9 @@ const ImageViewer = ({
         if (selectedImage.storage_path) {
           console.log(`محاولة استخدام storage_path للصورة ${selectedImage.id}: ${selectedImage.storage_path}`);
           
-          const { data, error } = await supabase.storage
+          const { data } = await supabase.storage
             .from('receipt_images')
             .getPublicUrl(selectedImage.storage_path);
-          
-          if (error) {
-            console.error('خطأ في استرجاع URL من Supabase:', error);
-            throw error;
-          }
           
           if (data?.publicUrl) {
             console.log(`تم جلب عنوان Supabase للصورة ${selectedImage.id}: ${data.publicUrl}`);

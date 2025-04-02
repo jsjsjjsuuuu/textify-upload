@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,20 +39,19 @@ export const useSupabaseStorage = () => {
       console.log(`بدء رفع الملف ${file.name} إلى المسار ${filePath}`);
       
       // محاولة رفع الملف إلى Supabase Storage
-      const { data, error } = await supabase.storage
+      const { data, error: uploadError } = await supabase.storage
         .from('receipt_images')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false,
-          onUploadProgress: (progress) => {
-            const percentage = (progress.loaded / progress.total) * 100;
-            setUploadProgress(Math.round(percentage));
-          }
+          upsert: false
         });
       
-      if (error) {
-        console.error('خطأ في رفع الملف إلى Supabase:', error);
-        throw error;
+      // تحديث شريط التقدم عند الانتهاء
+      setUploadProgress(100);
+      
+      if (uploadError) {
+        console.error('خطأ في رفع الملف إلى Supabase:', uploadError);
+        throw uploadError;
       }
       
       console.log(`تم رفع الملف بنجاح إلى المسار ${data?.path}`);
