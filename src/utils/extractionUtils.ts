@@ -86,6 +86,15 @@ export const autoExtractData = (text: string): Record<string, string> => {
   // استخراج الكود
   result.code = tryExtractField(cleanedText, codePatterns);
   
+  // البحث عن أي كود في النص (مجموعة من الأحرف والأرقام)
+  if (!result.code) {
+    const codeRegex = /\b([A-Z0-9]{4,})\b/;
+    const codeMatch = cleanedText.match(codeRegex);
+    if (codeMatch && codeMatch[1]) {
+      result.code = codeMatch[1];
+    }
+  }
+  
   // أنماط استخراج اسم المرسل
   const senderNamePatterns = [
     /(?:اسم العميل|اسم المرسل|اسم الزبون|المرسل|الزبون|sender|customer)(?:\s|:|؛|_|-)+([^:\n\r]+?)(?:\s*(?:\n|\r|$))/i,
@@ -107,6 +116,15 @@ export const autoExtractData = (text: string): Record<string, string> => {
   // استخراج واستخلاص رقم الهاتف
   const phoneRaw = tryExtractField(cleanedText, phoneNumberPatterns);
   result.phoneNumber = formatPhoneNumber(phoneRaw);
+  
+  // البحث عن أي رقم هاتف في النص (11 رقم يبدأ بـ 07)
+  if (!result.phoneNumber) {
+    const phoneRegex = /\b(07\d{9})\b/;
+    const phoneMatch = cleanedText.match(phoneRegex);
+    if (phoneMatch && phoneMatch[1]) {
+      result.phoneNumber = phoneMatch[1];
+    }
+  }
   
   // أنماط استخراج المحافظة
   const provincePatterns = [
@@ -151,6 +169,15 @@ export const autoExtractData = (text: string): Record<string, string> => {
   const priceRaw = tryExtractField(cleanedText, pricePatterns);
   result.price = cleanNumericValue(priceRaw);
   
+  // البحث عن أي سعر في النص (أرقام أكبر من 1000)
+  if (!result.price) {
+    const priceRegex = /\b(\d{4,})\b/;
+    const priceMatch = cleanedText.match(priceRegex);
+    if (priceMatch && priceMatch[1]) {
+      result.price = priceMatch[1];
+    }
+  }
+  
   console.log("النتائج المستخرجة تلقائيًا:", result);
   
   return result;
@@ -165,9 +192,9 @@ export const mergeExtractedData = (
 ): Record<string, string> => {
   const result = { ...existingData };
   
-  // دمج البيانات مع إعطاء الأولوية للبيانات الجديدة
+  // دمج البيانات مع إعطاء الأولوية للبيانات الجديدة فقط إذا كان الحقل الحالي فارغاً
   for (const [key, value] of Object.entries(newData)) {
-    if (value && value.trim() !== '') {
+    if (value && value.trim() !== '' && (!result[key] || result[key].trim() === '')) {
       result[key] = value;
     }
   }

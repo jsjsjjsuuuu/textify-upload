@@ -5,7 +5,7 @@
 
 import { GeminiResponse } from "./types";
 import { ApiResult } from "../apiService";
-import { autoExtractData } from "@/utils/extractionUtils";
+import { autoExtractData, mergeExtractedData } from "@/utils/extractionUtils";
 import { formatPrice } from "./utils";
 
 /**
@@ -60,103 +60,105 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
       };
     }
 
-    // تحسين طريقة البحث عن JSON في النص المستخرج
-    // 1. محاولة استخراج JSON بين علامات التنصيص ```json و ```
-    const jsonMarkdownRegex = /```json\s*([\s\S]*?)\s*```/gm;
-    const jsonMarkdownMatches = extractedText.match(jsonMarkdownRegex);
-    
-    if (jsonMarkdownMatches && jsonMarkdownMatches.length > 0) {
-      for (const jsonMatch of jsonMarkdownMatches) {
+    console.log("النص المستخرج من Gemini:", extractedText);
+
+    // محاولة استخراج JSON من النص
+    try {
+      // 1. البحث عن نمط ```json ... ``` في النص
+      const jsonMarkdownPattern = /```(?:json)?\s*({[\s\S]*?})\s*```/i;
+      const jsonMarkdownMatch = extractedText.match(jsonMarkdownPattern);
+      
+      if (jsonMarkdownMatch && jsonMarkdownMatch[1]) {
         try {
-          const jsonContent = jsonMatch.replace(/```json\s*/g, '').replace(/\s*```/g, '');
-          const parsedJson = JSON.parse(jsonContent);
-          
-          if (parsedJson && typeof parsedJson === 'object') {
-            console.log("تم العثور على JSON في صيغة Markdown:", parsedJson);
-            jsonData = parsedJson;
-            confidence = calculateConfidence(jsonData);
-            break;
-          }
+          const cleanedJson = jsonMarkdownMatch[1]
+            .replace(/[\u201C\u201D]/g, '"') // استبدال علامات الاقتباس الذكية
+            .replace(/[\u2018\u2019]/g, "'") // استبدال علامات الاقتباس المفردة
+            .replace(/،/g, ',');  // استبدال الفاصلة العربية بالإنجليزية
+            
+          jsonData = JSON.parse(cleanedJson);
+          console.log("تم استخراج JSON من نمط Markdown:", jsonData);
         } catch (e) {
-          console.log("فشل تحليل JSON من Markdown:", e);
+          console.error("خطأ في تحليل JSON من نمط Markdown:", e);
         }
       }
-    }
-    
-    // 2. إذا لم يتم العثور على JSON في Markdown، ابحث عن أي تنسيق JSON
-    if (Object.keys(jsonData).length === 0) {
-      try {
-        // استخدام تعبير منتظم أكثر تساهلاً لاستخراج JSON
-        const jsonRegex = /{[\s\S]*?}/gm;
-        const jsonMatches = extractedText.match(jsonRegex);
+      
+      // 2. إذا لم ينجح الخيار الأول، نبحث عن أي كائن JSON في النص
+      if (Object.keys(jsonData).length === 0) {
+        // البحث عن أي نص محاط بأقواس {}
+        const simpleJsonPattern = /{[\s\S]*?}/;
+        const simpleJsonMatch = extractedText.match(simpleJsonPattern);
         
-        if (jsonMatches && jsonMatches.length > 0) {
-          // محاولة تحليل كل تطابق JSON محتمل
-          for (const jsonMatch of jsonMatches) {
-            try {
-              // تنظيف النص قبل تحليله كـ JSON
-              const cleanedJson = jsonMatch
-                .replace(/[\u201C\u201D]/g, '"') // استبدال علامات الاقتباس الذكية
-                .replace(/[\u2018\u2019]/g, "'") // استبدال علامات الاقتباس المفردة الذكية
-                .replace(/،/g, ','); // استبدال الفاصلة العربية بالفاصلة الإنجليزية
+        if (simpleJsonMatch && simpleJsonMatch[0]) {
+          try {
+            const cleanedJson = simpleJsonMatch[0]
+              .replace(/[\u201C\u201D]/g, '"')
+              .replace(/[\u2018\u2019]/g, "'")
+              .replace(/،/g, ',');
               
-              const parsedJson = JSON.parse(cleanedJson);
-              
-              // التحقق مما إذا كان هذا هو JSON الذي نبحث عنه
-              if (parsedJson.code || parsedJson.companyName || parsedJson.senderName || parsedJson.phoneNumber) {
-                console.log("تم العثور على JSON محتمل:", parsedJson);
-                jsonData = parsedJson;
-                
-                // تنسيق السعر إذا وجد
-                if (jsonData.price) {
-                  jsonData.price = formatPrice(jsonData.price);
-                }
-                
-                // تقدير نسبة الثقة بناءً على اكتمال البيانات
-                confidence = calculateConfidence(jsonData);
-                break;
-              }
-            } catch (e) {
-              console.log(`فشل تحليل JSON المحتمل: ${jsonMatch}`);
-              // متابعة البحث عن تطابقات أخرى
-            }
+            jsonData = JSON.parse(cleanedJson);
+            console.log("تم استخراج JSON من النص مباشرة:", jsonData);
+          } catch (e) {
+            console.error("خطأ في تحليل JSON المباشر:", e);
           }
         }
-      } catch (e) {
-        console.error("خطأ في البحث عن JSON في النص:", e);
       }
+    } catch (e) {
+      console.error("خطأ عام في محاولة استخراج JSON:", e);
     }
 
-    // 3. إذا لم يتم العثور على JSON، استخدام الاستخراج التلقائي من النص
+    // 3. إذا لم يتم العثور على JSON، استخدم الاستخراج التلقائي
     if (Object.keys(jsonData).length === 0) {
-      console.log("لم يتم العثور على JSON، محاولة استخراج البيانات من النص");
-      
-      // محاولة استخراج البيانات من النص باستخدام تعبيرات منتظمة وإرشادات
+      console.log("لم يتم العثور على JSON، جاري محاولة استخراج البيانات من النص");
       jsonData = autoExtractData(extractedText);
-      
-      // تنسيق السعر إذا وجد
+      console.log("البيانات المستخرجة تلقائياً:", jsonData);
+    } else {
+      // تنظيف وتصحيح البيانات في JSON
       if (jsonData.price) {
         jsonData.price = formatPrice(jsonData.price);
       }
       
-      // حساب نسبة الثقة
-      confidence = calculateConfidence(jsonData);
-      
-      console.log("البيانات المستخرجة تلقائياً:", jsonData);
+      if (jsonData.phoneNumber) {
+        jsonData.phoneNumber = jsonData.phoneNumber.trim();
+        // التأكد من أن رقم الهاتف يحتوي على أرقام فقط
+        jsonData.phoneNumber = jsonData.phoneNumber.replace(/\D/g, '');
+        
+        // إضافة 0 في البداية إذا كان يبدأ بـ 7 وطوله 10 أرقام
+        if (jsonData.phoneNumber.startsWith('7') && jsonData.phoneNumber.length === 10) {
+          jsonData.phoneNumber = '0' + jsonData.phoneNumber;
+        }
+      }
     }
     
-    // طباعة البيانات المستخرجة النهائية
+    // محاولة تحسين البيانات بدمج النتائج من استخراج JSON واستخراج النص
+    if (Object.keys(jsonData).length > 0) {
+      // استخراج بيانات إضافية من النص للحقول الفارغة
+      const textExtractedData = autoExtractData(extractedText);
+      jsonData = mergeExtractedData(jsonData, textExtractedData);
+    }
+    
+    // حساب درجة الثقة في البيانات
+    confidence = calculateConfidence(jsonData);
+    
     console.log("البيانات النهائية المستخرجة:", {
-      extractedText: extractedText.substring(0, 100) + "...",
-      parsedData: jsonData,
-      confidence: confidence
+      jsonData,
+      confidence
     });
+
+    // ضمان أن كل الحقول موجودة حتى لو كانت فارغة
+    const finalData = {
+      companyName: jsonData.companyName || "",
+      code: jsonData.code || "",
+      senderName: jsonData.senderName || "",
+      phoneNumber: jsonData.phoneNumber || "",
+      province: jsonData.province || "",
+      price: jsonData.price || ""
+    };
 
     return {
       success: true,
       data: {
         extractedText: extractedText,
-        parsedData: jsonData,
+        parsedData: finalData,
         confidence: confidence
       },
       message: "تم تحليل استجابة Gemini بنجاح"
