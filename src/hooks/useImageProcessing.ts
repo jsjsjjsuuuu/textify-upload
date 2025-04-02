@@ -10,6 +10,10 @@ import { useFileUpload } from "@/hooks/useFileUpload";
 let sessionRetryAttempts = 0;
 const MAX_SESSION_RETRIES = 5;
 
+// سجل عام للأخطاء
+let processingErrorsCount = 0;
+const MAX_PROCESSING_ERRORS = 3;
+
 export const useImageProcessing = () => {
   const coreProcessing = useImageProcessingCore();
   const { toast } = useToast();
@@ -33,8 +37,9 @@ export const useImageProcessing = () => {
     resetAllApiKeys();
     console.log("تم إعادة تعيين جميع مفاتيح API عند بدء التطبيق");
     
-    // إعادة تعيين عدد محاولات الجلسة عند بدء التطبيق
+    // إعادة تعيين عدد محاولات الجلسة وعداد الأخطاء عند بدء التطبيق
     sessionRetryAttempts = 0;
+    processingErrorsCount = 0;
     
     // محاولة معالجة الصور العالقة في حالة "قيد الانتظار" مع حد للمحاولات
     if (coreProcessing.images && coreProcessing.images.length > 0) {
@@ -58,6 +63,14 @@ export const useImageProcessing = () => {
           }
         }, 5000); // انتظار 5 ثوانٍ قبل محاولة المعالجة
       }
+    }
+    
+    // التحقق من وجود أي أخطاء في الصور السابقة وإعدادها لإعادة المعالجة
+    const errorImages = coreProcessing.images.filter(img => img.status === "error");
+    if (errorImages.length > 0) {
+      // تسجيل عدد الأخطاء في المحاولات السابقة
+      localStorage.setItem('gemini_processing_errors', String(errorImages.length));
+      console.log(`تم العثور على ${errorImages.length} صورة بحالة خطأ، تم تسجيلها لتنبيه المستخدم`);
     }
   }, [coreProcessing.images]);
   
@@ -146,6 +159,14 @@ export const useImageProcessing = () => {
     } catch (error) {
       console.error("خطأ في معالجة الصورة:", error);
       
+      // زيادة عداد الأخطاء العام
+      processingErrorsCount++;
+      
+      // إذا تجاوزنا الحد الأقصى من الأخطاء، نخزن ذلك للتنبيه عند إعادة تحميل التطبيق
+      if (processingErrorsCount >= MAX_PROCESSING_ERRORS) {
+        localStorage.setItem('gemini_processing_errors', String(processingErrorsCount));
+      }
+      
       // عرض إشعار فشل
       toast({
         title: "فشل المعالجة",
@@ -160,6 +181,11 @@ export const useImageProcessing = () => {
   // وظيفة إعادة تعيين المتغيرات العامة
   const resetGlobalState = useCallback(() => {
     sessionRetryAttempts = 0;
+    processingErrorsCount = 0;
+    
+    // مسح سجل الأخطاء في التخزين المحلي
+    localStorage.removeItem('gemini_processing_errors');
+    
     console.log("تم إعادة تعيين متغيرات الحالة العامة");
     
     // إعادة استدعاء وظيفة إعادة التعيين في الكائن الأساسي

@@ -161,7 +161,8 @@ export const useGeminiProcessing = () => {
         retryDelayMs: 2000
       });
       
-      const extractionResult = await extractDataWithGemini({
+      // محاولة استخراج البيانات باستخدام المطالبة المحسنة أولاً
+      let extractionResult = await extractDataWithGemini({
         apiKey: geminiApiKey,
         imageBase64,
         enhancedExtraction: true,
@@ -170,10 +171,43 @@ export const useGeminiProcessing = () => {
         modelVersion: 'gemini-1.5-flash'
       });
       
-      console.log("نتيجة استخراج Gemini:", extractionResult);
+      console.log("نتيجة استخراج Gemini الأولية:", extractionResult);
+      
+      // التحقق من نجاح الاستخراج وجودة البيانات
+      let dataQuality = 0;
+      if (extractionResult.success && extractionResult.data?.parsedData) {
+        const { parsedData } = extractionResult.data;
+        
+        // حساب جودة البيانات بناءً على وجود الحقول الرئيسية
+        const requiredFields = ['code', 'senderName', 'phoneNumber', 'province'];
+        const filledFields = requiredFields.filter(field => parsedData[field] && parsedData[field].length > 0);
+        dataQuality = (filledFields.length / requiredFields.length) * 100;
+        
+        console.log("جودة البيانات المستخرجة:", dataQuality);
+      }
+      
+      // إذا كانت جودة البيانات منخفضة، جرب مطالبة أبسط
+      if (dataQuality < 50 && attempts < 2) {
+        console.log("جودة البيانات منخفضة، محاولة استخدام مطالبة أبسط...");
+        
+        // تأخير قبل المحاولة الثانية
+        await sleepBetweenRequests(1000);
+        
+        // استخدام مطالبة أبسط في المحاولة الثانية
+        extractionResult = await extractDataWithGemini({
+          apiKey: geminiApiKey,
+          imageBase64,
+          enhancedExtraction: false, // استخدام المطالبة البسيطة
+          maxRetries: 1,
+          retryDelayMs: 1000,
+          modelVersion: 'gemini-1.5-flash'
+        });
+        
+        console.log("نتيجة استخراج Gemini مع المطالبة البسيطة:", extractionResult);
+      }
       
       if (extractionResult.success && extractionResult.data) {
-        const { parsedData, extractedText } = extractionResult.data;
+        const { parsedData, extractedText, confidence } = extractionResult.data;
         
         // تحقق من وجود بيانات تم استخراجها
         if (parsedData && Object.keys(parsedData).length > 0) {
@@ -199,7 +233,7 @@ export const useGeminiProcessing = () => {
             image,
             extractedText || "",
             parsedData || {},
-            parsedData.confidence ? parseInt(String(parsedData.confidence)) : 95,
+            parsedData.confidence ? parseInt(String(parsedData.confidence)) : confidence || 85,
             "gemini"
           );
           
@@ -274,7 +308,7 @@ export const useGeminiProcessing = () => {
         
         // محاولة استخدام مطالبة أبسط إذا فشلت المطالبة المحسنة
         if (attempts < 2) {
-          console.log("محاولة استخدام مطالبة أبسط للاستخراج...");
+          console.log("محاولة استخدام مطالبة أخرى للاستخراج...");
           await sleepBetweenRequests(1000);
           
           return processWithGemini(file, image);

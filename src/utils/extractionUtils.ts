@@ -1,8 +1,12 @@
 
-import { correctProvinceName } from "./provinces";
+/**
+ * وظائف مساعدة لاستخراج البيانات من النص
+ */
+
+import { correctProvinceName, IRAQ_PROVINCES, CITY_PROVINCE_MAP } from "./provinces";
 
 /**
- * Attempts to extract a field from text based on various patterns
+ * استخراج قيمة حقل معين من النص باستخدام مجموعة من التعبيرات المنتظمة
  */
 export const tryExtractField = (text: string, patterns: RegExp[]): string => {
   for (const pattern of patterns) {
@@ -15,62 +19,158 @@ export const tryExtractField = (text: string, patterns: RegExp[]): string => {
 };
 
 /**
- * Auto-extracts data from extracted text using various patterns
+ * إزالة الأحرف غير الرقمية من النص
  */
-export const autoExtractData = (extractedText: string) => {
-  if (!extractedText) return {};
+export const cleanNumericValue = (value: string): string => {
+  if (!value) return "";
+  return value.replace(/[^\d]/g, '');
+};
+
+/**
+ * تنظيف رقم الهاتف وتنسيقه
+ */
+export const formatPhoneNumber = (phoneNumber: string): string => {
+  if (!phoneNumber) return "";
   
-  // استخراج اسم الشركة (يكون عادة في أعلى اليسار بخط كبير)
+  // إزالة الأحرف غير الرقمية
+  const digitsOnly = phoneNumber.replace(/\D/g, '');
+  
+  // تحقق مما إذا كان الرقم يبدأ بـ 07 وطوله 11 رقم
+  if (digitsOnly.startsWith('07') && digitsOnly.length === 11) {
+    return digitsOnly;
+  }
+  
+  // إذا كان يبدأ برقم 7 فقط، أضف 0 في البداية
+  if (digitsOnly.startsWith('7') && digitsOnly.length === 10) {
+    return '0' + digitsOnly;
+  }
+  
+  // إعادة الرقم كما هو إذا لم يطابق الشروط
+  return digitsOnly;
+};
+
+/**
+ * استخراج البيانات من النص باستخدام تعبيرات منتظمة متعددة
+ */
+export const autoExtractData = (text: string): Record<string, string> => {
+  console.log("استخراج البيانات تلقائيًا من النص");
+  
+  const result: Record<string, string> = {};
+  
+  // تنظيف النص قبل المعالجة (إزالة الأحرف الخاصة وتوحيد المسافات)
+  const cleanedText = text
+    .replace(/[\u201C\u201D]/g, '"') // استبدال علامات الاقتباس الذكية
+    .replace(/[\u2018\u2019]/g, "'") // استبدال علامات الاقتباس المفردة الذكية
+    .replace(/،/g, ','); // استبدال الفاصلة العربية بالفاصلة الإنجليزية
+  
+  // أنماط استخراج اسم الشركة
   const companyNamePatterns = [
-    // البحث عن نص في بداية النص المستخرج (يكون غالبًا في الأعلى)
-    /^([^:\n\r]+?)(?:\n|\r|$)/i,
-    // البحث عن "شركة" أو "مؤسسة" أو "مجموعة"
-    /شركة\s+(.+?)(?:\n|\r|$)/i,
-    /مؤسسة\s+(.+?)(?:\n|\r|$)/i,
-    /مجموعة\s+(.+?)(?:\n|\r|$)/i,
-    // البحث عن "company" باللغة الإنجليزية
-    /company[:\s]+(.+?)(?:\n|\r|$)/i
+    /شركة\s+([^:\n\r]+?)(?:للنقل|للشحن|للتوصيل|\s*(?:\n|\r|$))/i,
+    /مجموعة\s+([^:\n\r]+?)(?:\s*(?:\n|\r|$))/i,
+    /مؤسسة\s+([^:\n\r]+?)(?:\s*(?:\n|\r|$))/i,
+    /^([^:\n\r]+?)(?:\s*(?:\n|\r|$))/
   ];
   
-  const extractedData = {
-    companyName: tryExtractField(extractedText, companyNamePatterns),
-    code: tryExtractField(extractedText, [
-      /كود[:\s]+([0-9]+)/i, 
-      /code[:\s]+([0-9]+)/i, 
-      /رقم[:\s]+([0-9]+)/i,
-      /رمز[:\s]+([0-9]+)/i
-    ]),
-    senderName: tryExtractField(extractedText, [
-      /اسم المرسل[:\s]+(.+?)(?:\n|\r|$)/i, 
-      /sender[:\s]+(.+?)(?:\n|\r|$)/i, 
-      /الاسم[:\s]+(.+?)(?:\n|\r|$)/i,
-      /الراسل[:\s]+(.+?)(?:\n|\r|$)/i
-    ]),
-    phoneNumber: tryExtractField(extractedText, [
-      /هاتف[:\s]+([0-9\-\s]+)/i, 
-      /phone[:\s]+([0-9\-\s]+)/i, 
-      /جوال[:\s]+([0-9\-\s]+)/i, 
-      /رقم الهاتف[:\s]+([0-9\-\s]+)/i,
-      /رقم[:\s]+([0-9\-\s]+)/i
-    ]),
-    province: tryExtractField(extractedText, [
-      /محافظة[:\s]+(.+?)(?:\n|\r|$)/i, 
-      /province[:\s]+(.+?)(?:\n|\r|$)/i, 
-      /المدينة[:\s]+(.+?)(?:\n|\r|$)/i,
-      /المنطقة[:\s]+(.+?)(?:\n|\r|$)/i
-    ]),
-    price: tryExtractField(extractedText, [
-      /سعر[:\s]+(.+?)(?:\n|\r|$)/i, 
-      /price[:\s]+(.+?)(?:\n|\r|$)/i, 
-      /المبلغ[:\s]+(.+?)(?:\n|\r|$)/i,
-      /قيمة[:\s]+(.+?)(?:\n|\r|$)/i
-    ])
-  };
-
-  // تصحيح اسم المحافظة
-  if (extractedData.province) {
-    extractedData.province = correctProvinceName(extractedData.province);
+  // استخراج اسم الشركة
+  result.companyName = tryExtractField(cleanedText, companyNamePatterns);
+  
+  // أنماط استخراج الكود
+  const codePatterns = [
+    /(?:كود|رقم|code)\s*[:;#]\s*([a-zA-Z0-9]+)/i,
+    /(?:كود|رقم|code)\s*[:#]\s*([a-zA-Z0-9]+)/i,
+    /(?:كود|رقم|code|رقم الوصل)(?:\s|:|؛|_|-)+([a-zA-Z0-9]+)/i,
+    /#([a-zA-Z0-9]+)/i,
+    /([A-Z]{2,}\d+)/
+  ];
+  
+  // استخراج الكود
+  result.code = tryExtractField(cleanedText, codePatterns);
+  
+  // أنماط استخراج اسم المرسل
+  const senderNamePatterns = [
+    /(?:اسم العميل|اسم المرسل|اسم الزبون|المرسل|الزبون|sender|customer)(?:\s|:|؛|_|-)+([^:\n\r]+?)(?:\s*(?:\n|\r|$))/i,
+    /الاسم(?:\s|:|؛|_|-)+([^:\n\r]+?)(?:\s*(?:\n|\r|$))/i,
+    /الى(?:\s|:|؛|_|-)+([^:\n\r]+?)(?:\s*(?:\n|\r|$))/i
+  ];
+  
+  // استخراج اسم المرسل
+  result.senderName = tryExtractField(cleanedText, senderNamePatterns);
+  
+  // أنماط استخراج رقم الهاتف
+  const phoneNumberPatterns = [
+    /(?:رقم الهاتف|رقم|هاتف|تلفون|موبايل|الرقم|phone|mobile)(?:\s|:|؛|_|-)+(\d[\d\s-]{8,}\d)/i,
+    /(?:رقم الهاتف|رقم|هاتف|تلفون|موبايل|الرقم|phone|mobile)(?:\s|:|؛|_|-)+([0-9٠-٩]{8,})/i,
+    /(\b07\d{9}\b)/,
+    /(\b0\d{10}\b)/
+  ];
+  
+  // استخراج واستخلاص رقم الهاتف
+  const phoneRaw = tryExtractField(cleanedText, phoneNumberPatterns);
+  result.phoneNumber = formatPhoneNumber(phoneRaw);
+  
+  // أنماط استخراج المحافظة
+  const provincePatterns = [
+    /(?:محافظة|المحافظة|province|city)(?:\s|:|؛|_|-)+([^:\n\r]+?)(?:\s*(?:\n|\r|$))/i,
+    /(?:إلى|الى)(?:\s|:|؛|_|-)+([^:\n\r]+?)(?:\s*(?:\n|\r|$))/i
+  ];
+  
+  // استخراج المحافظة
+  const rawProvince = tryExtractField(cleanedText, provincePatterns);
+  result.province = correctProvinceName(rawProvince);
+  
+  // البحث عن المحافظة في النص الكامل إذا لم يتم العثور عليها
+  if (!result.province) {
+    // البحث عن أسماء المحافظات مباشرة في النص
+    for (const province of IRAQ_PROVINCES) {
+      if (cleanedText.includes(province)) {
+        result.province = province;
+        break;
+      }
+    }
+    
+    // البحث عن أسماء المدن إذا لم نجد المحافظة
+    if (!result.province) {
+      for (const [city, province] of Object.entries(CITY_PROVINCE_MAP)) {
+        if (cleanedText.includes(city)) {
+          result.province = province;
+          break;
+        }
+      }
+    }
   }
+  
+  // أنماط استخراج السعر
+  const pricePatterns = [
+    /(?:سعر|المبلغ|قيمة|price|amount)(?:\s|:|؛|_|-)+([0-9٠-٩.,]+\s*(?:د\.ع|دينار|IQD)?)/i,
+    /(?:سعر|المبلغ|قيمة|price|amount)(?:\s|:|؛|_|-)+(\d[\d.,\s]*)/i,
+    /(\d{4,})\s*(?:د\.ع|دينار|IQD)/i,
+    /المبلغ(?:\s|:|؛|_|-)+([0-9٠-٩.,]+)/i
+  ];
+  
+  // استخراج السعر
+  const priceRaw = tryExtractField(cleanedText, pricePatterns);
+  result.price = cleanNumericValue(priceRaw);
+  
+  console.log("النتائج المستخرجة تلقائيًا:", result);
+  
+  return result;
+};
 
-  return extractedData;
+/**
+ * دمج بيانات من مصادر متعددة مع إعطاء الأولوية للبيانات الجديدة
+ */
+export const mergeExtractedData = (
+  existingData: Record<string, string>,
+  newData: Record<string, string>
+): Record<string, string> => {
+  const result = { ...existingData };
+  
+  // دمج البيانات مع إعطاء الأولوية للبيانات الجديدة
+  for (const [key, value] of Object.entries(newData)) {
+    if (value && value.trim() !== '') {
+      result[key] = value;
+    }
+  }
+  
+  return result;
 };
