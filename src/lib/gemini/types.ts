@@ -1,13 +1,12 @@
 
-/**
- * أنواع البيانات لواجهة Gemini API
- */
+// الواجهات والأنواع المستخدمة في نظام Gemini API
 
 // معلمات استخراج البيانات
 export interface GeminiExtractParams {
   apiKey: string;
   imageBase64: string;
   extractionPrompt?: string;
+  extractionPromptType?: string; // نوع المطالبة المستخدمة
   temperature?: number;
   modelVersion?: string;
   enhancedExtraction?: boolean;
@@ -18,15 +17,13 @@ export interface GeminiExtractParams {
 // طلب Gemini API
 export interface GeminiRequest {
   contents: {
-    parts: (
-      | { text: string }
-      | {
-          inline_data: {
-            mime_type: string;
-            data: string;
-          };
-        }
-    )[];
+    parts: {
+      text?: string;
+      inline_data?: {
+        mime_type: string;
+        data: string;
+      };
+    }[];
   }[];
   generationConfig: {
     temperature: number;
@@ -36,7 +33,7 @@ export interface GeminiRequest {
   };
 }
 
-// نوع استجابة Gemini API
+// استجابة Gemini API
 export interface GeminiResponse {
   candidates: {
     content: {
@@ -44,24 +41,30 @@ export interface GeminiResponse {
         text?: string;
       }[];
     };
-    finishReason: string;
-    safetyRatings: {
-      category: string;
-      probability: string;
-    }[];
+    finishReason?: string;
+    safetyRatings?: any[];
   }[];
   promptFeedback?: {
     blockReason?: string;
-    safetyRatings?: {
-      category: string;
-      probability: string;
-    }[];
+    safetyRatings?: any[];
   };
 }
 
-// نوع البيانات المستخرجة
+// بيانات مستخرجة
+export interface ParsedData {
+  companyName?: string;
+  code?: string;
+  senderName?: string;
+  phoneNumber?: string;
+  province?: string;
+  price?: string;
+  confidence?: number;
+  [key: string]: any;
+}
+
+// بيانات مستخرجة مع النص المستخرج
 export interface ExtractedData {
   extractedText: string;
-  parsedData: Record<string, string>;
+  parsedData: ParsedData;
   confidence: number;
 }

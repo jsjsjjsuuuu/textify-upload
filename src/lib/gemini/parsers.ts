@@ -9,7 +9,8 @@ import {
   autoExtractData, 
   mergeExtractedData, 
   validateExtractedData, 
-  calculateDataConfidence 
+  calculateDataConfidence,
+  cleanExtractedData
 } from "@/utils/extractionUtils";
 import { formatPrice } from "./utils";
 
@@ -93,7 +94,11 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
             const cleanedJson = jsonText
               .replace(/[\u201C\u201D]/g, '"') // استبدال علامات الاقتباس الذكية
               .replace(/[\u2018\u2019]/g, "'") // استبدال علامات الاقتباس المفردة
-              .replace(/،/g, ',');  // استبدال الفاصلة العربية بالإنجليزية
+              .replace(/،/g, ',')  // استبدال الفاصلة العربية بالإنجليزية
+              .replace(/\n/g, ' ') // استبدال السطور الجديدة بمسافات
+              .replace(/\s+/g, ' ') // تقليل المسافات المتعددة إلى مسافة واحدة
+              .replace(/:\s*""/g, ': ""') // تنظيف المسافات حول القيم الفارغة
+              .replace(/,\s*}/g, '}'); // إزالة الفواصل الزائدة في النهاية
               
             jsonData = JSON.parse(cleanedJson);
             console.log("تم استخراج JSON من النص:", jsonData);
@@ -112,7 +117,8 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
           const properties = ['companyName', 'code', 'senderName', 'phoneNumber', 'province', 'price'];
           
           for (const prop of properties) {
-            const propPattern = new RegExp(`"${prop}"\\s*:\\s*"([^"]*)"`, 'i');
+            // نمط أكثر مرونة للبحث عن الخصائص
+            const propPattern = new RegExp(`"?${prop}"?\\s*:\\s*"([^"]*)"`, 'i');
             const match = extractedText.match(propPattern);
             if (match && match[1]) {
               keyValuePairs[prop] = match[1].trim();
@@ -137,23 +143,10 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
       console.log("لم يتم العثور على JSON، جاري محاولة استخراج البيانات من النص");
       jsonData = autoExtractData(extractedText);
       console.log("البيانات المستخرجة تلقائياً:", jsonData);
-    } else {
-      // تنظيف وتصحيح البيانات في JSON
-      if (jsonData.price) {
-        jsonData.price = formatPrice(jsonData.price);
-      }
-      
-      if (jsonData.phoneNumber) {
-        jsonData.phoneNumber = jsonData.phoneNumber.trim();
-        // التأكد من أن رقم الهاتف يحتوي على أرقام فقط
-        jsonData.phoneNumber = jsonData.phoneNumber.replace(/\D/g, '');
-        
-        // إضافة 0 في البداية إذا كان يبدأ بـ 7 وطوله 10 أرقام
-        if (jsonData.phoneNumber.startsWith('7') && jsonData.phoneNumber.length === 10) {
-          jsonData.phoneNumber = '0' + jsonData.phoneNumber;
-        }
-      }
     }
+    
+    // تنظيف وتصحيح البيانات المستخرجة
+    jsonData = cleanExtractedData(jsonData);
     
     // محاولة تحسين البيانات بدمج النتائج من استخراج JSON واستخراج النص
     if (Object.keys(jsonData).length > 0) {

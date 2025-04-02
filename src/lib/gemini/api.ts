@@ -12,7 +12,9 @@ import {
   getTextOnlyExtractionPrompt, 
   getHandwritingExtractionPrompt,
   getSimplifiedExtractionPrompt,
-  getStructuredExtractionPrompt 
+  getStructuredExtractionPrompt,
+  getAdvancedHandwritingPrompt,
+  getStepByStepPrompt
 } from "./prompts";
 import { reportApiKeyError } from "./apiKeyManager";
 
@@ -26,6 +28,32 @@ const AVAILABLE_MODELS = [
   'gemini-pro-vision'
 ];
 
+// وظيفة اختيار المطالبة المناسبة
+function getPromptByType(promptType: string | undefined): string {
+  if (!promptType) return getEnhancedExtractionPrompt();
+  
+  switch (promptType) {
+    case "enhancedExtraction":
+      return getEnhancedExtractionPrompt();
+    case "basicExtraction":
+      return getBasicExtractionPrompt();
+    case "textOnlyExtraction":
+      return getTextOnlyExtractionPrompt();
+    case "handwritingExtraction":
+      return getHandwritingExtractionPrompt();
+    case "simplifiedExtraction":
+      return getSimplifiedExtractionPrompt();
+    case "structuredExtraction":
+      return getStructuredExtractionPrompt();
+    case "advancedHandwriting":
+      return getAdvancedHandwritingPrompt();
+    case "stepByStepPrompt":
+      return getStepByStepPrompt();
+    default:
+      return getEnhancedExtractionPrompt();
+  }
+}
+
 /**
  * استخراج البيانات من الصور باستخدام Gemini API
  */
@@ -33,6 +61,7 @@ export async function extractDataWithGemini({
   apiKey,
   imageBase64,
   extractionPrompt,
+  extractionPromptType,
   temperature = 0.2,
   modelVersion = 'gemini-1.5-flash',
   enhancedExtraction = true,
@@ -55,7 +84,11 @@ export async function extractDataWithGemini({
   let prompt = extractionPrompt;
   
   if (!prompt) {
-    if (enhancedExtraction) {
+    // استخدام نوع المطالبة إذا تم توفيره
+    if (extractionPromptType) {
+      prompt = getPromptByType(extractionPromptType);
+      console.log(`استخدام نوع المطالبة: ${extractionPromptType}`);
+    } else if (enhancedExtraction) {
       prompt = getEnhancedExtractionPrompt();
     } else {
       prompt = getBasicExtractionPrompt();
@@ -84,6 +117,7 @@ export async function extractDataWithGemini({
     console.log("أول 5 أحرف من مفتاح API:", apiKey.substring(0, 5));
     console.log("طول صورة Base64:", imageBase64.length);
     console.log("استخدام إصدار النموذج:", model);
+    console.log("درجة الحرارة:", temperature);
     
     // التحقق من حجم صورة Base64
     if (imageBase64.length > 1000000) {
@@ -193,6 +227,7 @@ export async function extractDataWithGemini({
             apiKey,
             imageBase64,
             extractionPrompt: prompt,
+            extractionPromptType,
             temperature,
             modelVersion: nextModel,
             enhancedExtraction,
@@ -235,25 +270,25 @@ export async function extractDataWithGemini({
       console.warn("فشل استخراج البيانات المنظمة من استجابة Gemini:", parsedResult.message);
       
       // محاولة إعادة المحاولة مع مطالبة مختلفة
-      if (enhancedExtraction && !extractionPrompt) {
+      if (enhancedExtraction && !extractionPromptType) {
         // استراتيجية التراجع - استخدام مطالبات مختلفة بالترتيب
         const fallbackPrompts = [
-          getSimplifiedExtractionPrompt(),
-          getStructuredExtractionPrompt(),
-          getTextOnlyExtractionPrompt(),
-          getHandwritingExtractionPrompt()
+          "handwritingExtraction",
+          "simplifiedExtraction",
+          "structuredExtraction",
+          "advancedHandwriting"
         ];
         
         // اختيار المطالبة التالية
-        const nextPrompt = fallbackPrompts[0];
-        console.log("محاولة استخدام مطالبة بديلة...");
+        const nextPromptType = fallbackPrompts[0];
+        console.log("محاولة استخدام مطالبة بديلة:", nextPromptType);
         
         return await extractDataWithGemini({
           apiKey,
           imageBase64,
-          extractionPrompt: nextPrompt,
+          extractionPromptType: nextPromptType,
           temperature,
-          modelVersion: model,
+          modelVersion: 'gemini-1.5-pro', // استخدام نموذج أقوى
           enhancedExtraction: false,
           maxRetries,
           retryDelayMs
