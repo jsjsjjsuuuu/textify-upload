@@ -28,7 +28,7 @@ interface GeminiExtractionResult {
  */
 export const useGeminiProcessing = () => {
   const { toast } = useToast();
-  const { setImageData } = useImageStore();
+  const { updateImage } = useImageStore();
   const { geminiExtractData } = useGemini();
   const { tesseractExtract } = useTesseract();
   const [isGeminiProcessing, setIsGeminiProcessing] = useState(false);
@@ -82,7 +82,7 @@ export const useGeminiProcessing = () => {
     } finally {
       setIsGeminiProcessing(false);
     }
-  }, [geminiExtractData, tesseractExtract, setImageData, toast]);
+  }, [geminiExtractData, tesseractExtract, updateImage, toast]);
 
   /**
    * دالة مساعدة للتعامل مع النجاح في استخراج البيانات باستخدام Gemini
@@ -103,69 +103,49 @@ export const useGeminiProcessing = () => {
     // تعديل نوع البيانات من string إلى boolean
     const extractionSuccess = result.extractionSuccess === true || result.extractionSuccess === "true";
 
-    setImageData(prev =>
-      prev.map(img =>
-        img.id === imageId
-          ? {
-              ...img,
-              status: "completed",
-              extractedText: parsedText || result.rawText || img.extractedText,
-              code: result.code || img.code,
-              senderName: result.senderName || img.senderName,
-              phoneNumber: formattedPhone || img.phoneNumber,
-              province: correctedProvince || img.province,
-              companyName: result.companyName || img.companyName,
-              price: result.price || img.price,
-              confidence: result.confidence || img.confidence,
-              extractionMethod: "gemini",
-              extractionSuccess: extractionSuccess,
-              // تعديلات إضافية للحقول الجديدة
-              recipientName: result.recipientName || img.recipientName,
-              notes: result.notes || img.notes,
-              delegateName: result.delegateName || img.delegateName,
-              packageType: result.packageType || img.packageType,
-              pieceCount: result.pieceCount || img.pieceCount
-            }
-          : img
-      )
-    );
+    // تحديث الصورة بالبيانات المستخرجة
+    updateImage(imageId, {
+      status: "completed",
+      extractedText: parsedText || result.rawText || "",
+      code: result.code || "",
+      senderName: result.senderName || "",
+      phoneNumber: formattedPhone || "",
+      province: correctedProvince || "",
+      companyName: result.companyName || "",
+      price: result.price || "",
+      confidence: result.confidence || 0,
+      extractionMethod: "gemini",
+      extractionSuccess: extractionSuccess,
+      // تعديلات إضافية للحقول الجديدة
+      recipientName: result.recipientName || "",
+      notes: result.notes || "",
+      delegateName: result.delegateName || "",
+      packageType: result.packageType || "",
+      pieceCount: result.pieceCount || ""
+    });
   };
 
   /**
    * دالة مساعدة للتعامل مع النجاح في استخراج البيانات باستخدام Tesseract
    */
   const handleTesseractSuccess = (imageId: string, text: string) => {
-    setImageData(prev =>
-      prev.map(img =>
-        img.id === imageId
-          ? {
-              ...img,
-              status: "completed",
-              extractedText: text,
-              extractionMethod: "ocr",
-              extractionSuccess: true
-            }
-          : img
-      )
-    );
+    updateImage(imageId, {
+      status: "completed",
+      extractedText: text,
+      extractionMethod: "ocr",
+      extractionSuccess: true
+    });
   };
 
   /**
    * دالة مساعدة للتعامل مع أخطاء استخراج البيانات
    */
   const handleExtractionError = (imageId: string, errorMessage: string) => {
-    setImageData(prev =>
-      prev.map(img =>
-        img.id === imageId
-          ? {
-              ...img,
-              status: "error",
-              bookmarkletMessage: errorMessage,
-              extractionSuccess: false
-            }
-          : img
-      )
-    );
+    updateImage(imageId, {
+      status: "error",
+      bookmarkletMessage: errorMessage,
+      extractionSuccess: false
+    });
   };
 
   /**
@@ -179,7 +159,7 @@ export const useGeminiProcessing = () => {
         toast({
           title: `تم استخراج البيانات ${isTesseractFallback ? 'باستخدام OCR كبديل' : ''}`,
           description: "تم استخراج البيانات بنجاح",
-          variant: "default", // تم تغيير "success" إلى "default"
+          variant: "default", // تم تغيير من success إلى default
         });
         return;
       }
@@ -192,7 +172,7 @@ export const useGeminiProcessing = () => {
       toast({
         title: `تم استخراج بعض البيانات ${isTesseractFallback ? 'باستخدام OCR' : ''}`,
         description: "قد تحتاج لمراجعة وتصحيح البيانات المستخرجة",
-        variant: "default", // تم تغيير "warning" إلى "default"
+        variant: "default", // تم تغيير من warning إلى default
       });
     }
   };

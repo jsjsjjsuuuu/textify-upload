@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -120,15 +119,7 @@ export const useImageProcessingCore = () => {
   };
 
   // إنشاء كائن useFileUpload 
-  const fileUploadData = useFileUpload({
-    images,
-    addImage,
-    updateImage,
-    setProcessingProgress,
-    saveProcessedImage,
-    isDuplicateImage,
-    removeDuplicates
-  });
+  const fileUploadData = useFileUpload();
   
   // تحسين وظيفة إعادة تشغيل عملية المعالجة مع منع الحلقة التكرارية
   const retryProcessing = useCallback(() => {
@@ -242,16 +233,33 @@ export const useImageProcessingCore = () => {
     return false;
   }, [toast, fileUploadData]);
 
+  // استخدام خصائص fileUploadData
   const { 
     isProcessing, 
-    handleFileChange,
-    activeUploads,
-    queueLength,
-    useGemini,
-    pauseProcessing: filePauseProcessing,
-    clearQueue,
-    uploadLimitInfo
+    handleImageUpload
   } = fileUploadData;
+
+  // إنشاء وظائف الواجهة المطلوبة
+  const handleFileChange = useCallback((files: FileList) => {
+    return handleImageUpload(files);
+  }, [handleImageUpload]);
+
+  const activeUploads = fileUploadData?.activeUploads || 0;
+  const queueLength = fileUploadData?.queueLength || 0;
+  const useGemini = fileUploadData?.useGemini || false;
+  const uploadLimitInfo = fileUploadData?.uploadLimitInfo || {
+    subscription: 'standard',
+    dailyLimit: 3,
+    currentCount: 0,
+    remainingUploads: 3
+  };
+  
+  const clearQueue = useCallback(() => {
+    if (fileUploadData && fileUploadData.clearQueue) {
+      return fileUploadData.clearQueue();
+    }
+    return false;
+  }, [fileUploadData]);
 
   // إعادة هيكلة وظيفة handleSubmitToApi
   const handleSubmitToApi = async (id: string) => {

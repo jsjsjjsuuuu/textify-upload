@@ -23,7 +23,7 @@ export interface ImageData {
   processingAttempts?: number;
   createdAt?: string;
   updatedAt?: string;
-  extractionMethod?: "ocr" | "gemini";
+  extractionMethod?: "ocr" | "gemini" | "none";
   extractionSuccess?: boolean;
   
   // الخصائص الإضافية المطلوبة
@@ -38,6 +38,7 @@ export interface ImageData {
   delegateName?: string;
   packageType?: string;
   pieceCount?: string;
+  uploadedDate?: Date;
 }
 
 /**
