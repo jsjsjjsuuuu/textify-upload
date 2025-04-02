@@ -8,10 +8,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useImageStats } from "@/hooks/useImageStats";
 import { useImageDatabase } from "@/hooks/useImageDatabase";
 import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
+import { supabase } from "@/integrations/supabase/client";
+
+// إضافة متغير عام لتتبع حالة الإعادة
+let hasGlobalReset = false;
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasAttemptedReprocessing, setHasAttemptedReprocessing] = useState(false);
+  const [pendingImageCount, setPendingImageCount] = useState(0);
+  const [lastPendingCheck, setLastPendingCheck] = useState(0);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -118,6 +124,26 @@ export const useImageProcessingCore = () => {
   
   // تحسين وظيفة إعادة تشغيل عملية المعالجة
   const retryProcessing = useCallback(() => {
+    // تحقق ما إذا كانت هناك حلقة تكرارية (تجاوز الحد المسموح)
+    const now = Date.now();
+    if (now - lastPendingCheck < 5000 && pendingImageCount > 3) {
+      console.log("تم اكتشاف محاولات متكررة في وقت قصير، تجاهل العملية...");
+      return false;
+    }
+
+    // تعيين وقت آخر فحص ومسح عداد المحاولات السابقة
+    setLastPendingCheck(now);
+    setPendingImageCount(0);
+    
+    // التحقق من وجود معالجة فعلية قبل المحاولة
+    const hasProcessingImages = images.some(img => img.status === "processing");
+    const hasPendingImages = images.some(img => img.status === "pending");
+    
+    if (!hasProcessingImages && !hasPendingImages) {
+      console.log("لا توجد صور في قائمة الانتظار أو المعالجة قيد التقدم بالفعل");
+      return false;
+    }
+    
     if (fileUploadData && fileUploadData.manuallyTriggerProcessingQueue) {
       console.log("إعادة تشغيل عملية معالجة الصور...");
       fileUploadData.manuallyTriggerProcessingQueue();
@@ -128,7 +154,7 @@ export const useImageProcessingCore = () => {
       return true;
     }
     return false;
-  }, [toast, fileUploadData]);
+  }, [toast, fileUploadData, images, lastPendingCheck, pendingImageCount]);
 
   // وظيفة مسح ذاكرة التخزين المؤقت للصور المعالجة
   const clearImageCache = useCallback(() => {
@@ -243,44 +269,78 @@ export const useImageProcessingCore = () => {
 
   // تحسين آلية معالجة الصور المعلقة مع الحد من تكرار المحاولات
   const handlePendingImages = useCallback(async () => {
-    if (hasAttemptedReprocessing || !user || images.length === 0) return;
+    // تجاهل المعالجة إذا تم بالفعل محاولة معالجة الصور المعلقة في هذه الجلسة
+    // أو إذا تم إعادة تعيين النظام مؤخرًا
+    if (hasAttemptedReprocessing || hasGlobalReset || !user || images.length === 0) {
+      return;
+    }
     
+    // زيادة عدد صور في الانتظار
+    setPendingImageCount(prev => prev + 1);
+    
+    // تحقق من وجود صور في انتظار المعالجة
     const pendingImages = images.filter(img => img.status === "pending" || img.status === "error");
     
     if (pendingImages.length > 0) {
       console.log(`تم العثور على ${pendingImages.length} صورة في انتظار المعالجة، سيتم محاولة إعادة معالجتها...`);
       
-      // وضع علامة أننا قمنا بمحاولة إعادة المعالجة
+      // وضع علامة أننا قمنا بمحاولة إعادة المعالجة لتجنب التكرار
       setHasAttemptedReprocessing(true);
       
-      // فحص الصور واحدة تلو الأخرى
-      for (const image of pendingImages) {
-        // فحص عدد محاولات المعالجة السابقة لتجنب الحلقات اللانهائية
-        const attempts = image.processingAttempts || 0;
-        
-        // إذا تجاوز عدد المحاولات 3، نتوقف عن المحاولة
-        if (attempts >= 3) {
-          console.log(`تم تجاوز الحد الأقصى من محاولات المعالجة للصورة ${image.id}، تم تخطيها`);
-          // تحديث حالة الصورة إلى خطأ مع رسالة
-          updateImage(image.id, { 
-            status: "error", 
-            extractedText: "تعذرت معالجة الصورة بعد عدة محاولات. يرجى إعادة رفع الصورة أو المحاولة لاحقاً."
-          });
-          continue;
+      // محاولة إعادة المعالجة فقط مرة واحدة
+      retryProcessing();
+      
+      // منع المزيد من المحاولات تلقائيًا لتجنب الحلقات اللانهائية
+      setTimeout(() => {
+        setHasAttemptedReprocessing(false);
+      }, 60000); // السماح بمحاولة أخرى بعد دقيقة واحدة
+    }
+  }, [images, user, retryProcessing, hasAttemptedReprocessing]);
+
+  // تحسين وظيفة إعادة التعيين
+  const resetProcessingState = useCallback(async () => {
+    console.log("إعادة تعيين حالة المعالجة بالكامل...");
+    
+    // تعيين المتغير العام لمنع المزيد من المحاولات التلقائية
+    hasGlobalReset = true;
+    
+    // إعادة تعيين متغيرات الحالة
+    setHasAttemptedReprocessing(false);
+    setPendingImageCount(0);
+    
+    // تحديث الصور العالقة في قاعدة البيانات
+    if (user?.id) {
+      try {
+        // تحديث حالة جميع الصور التي في حالة "processing" إلى "pending"
+        const { error } = await supabase
+          .from('receipt_images')
+          .update({ status: 'pending' })
+          .eq('user_id', user.id)
+          .eq('status', 'processing');
+          
+        if (error) {
+          console.error("خطأ في تحديث حالة الصور العالقة:", error);
+        } else {
+          console.log("تم تحديث حالة الصور العالقة بنجاح");
         }
-        
-        // للصور القابلة للمعالجة، حاول معالجتها مرة واحدة فقط
-        try {
-          await saveProcessedImage({
-            ...image,
-            processingAttempts: attempts + 1
-          });
-        } catch (error) {
-          console.error(`فشلت إعادة معالجة الصورة ${image.id}:`, error);
-        }
+      } catch (error) {
+        console.error("خطأ في تحديث قاعدة البيانات:", error);
       }
     }
-  }, [images, user, saveProcessedImage, updateImage, hasAttemptedReprocessing]);
+    
+    // السماح بمحاولات المعالجة التلقائية مرة أخرى بعد دقيقتين
+    setTimeout(() => {
+      hasGlobalReset = false;
+    }, 120000);
+    
+    // مسح ذاكرة التخزين المؤقت
+    clearImageCache();
+    
+    // مسح قائمة الانتظار
+    if (fileUploadData && fileUploadData.clearQueue) {
+      fileUploadData.clearQueue();
+    }
+  }, [user, clearImageCache, fileUploadData]);
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
   useEffect(() => {
@@ -293,18 +353,19 @@ export const useImageProcessingCore = () => {
     }
   }, [user]);
   
-  // تحسين آلية معالجة الصور المعلقة
+  // تحسين آلية معالجة الصور المعلقة - تشغيل مرة واحدة فقط عند تحميل المكون
   useEffect(() => {
-    // انتظر لحظة قبل محاولة معالجة الصور المعلقة
+    // انتظر فترة قصيرة قبل محاولة معالجة الصور المعلقة
     const timer = setTimeout(() => {
-      if (user && images.length > 0) {
+      if (user && images.length > 0 && !hasGlobalReset) {
         handlePendingImages();
       }
     }, 3000);
     
     return () => clearTimeout(timer);
-  }, [user, images, handlePendingImages]);
+  }, [user, images.length]); // تعتمد فقط على وجود المستخدم وعدد الصور
 
+  // تصدير كائن النتائج
   return {
     images,
     sessionImages,
@@ -339,12 +400,6 @@ export const useImageProcessingCore = () => {
     activeUploads,
     queueLength,
     uploadLimitInfo,
-    resetProcessingState: () => {
-      setHasAttemptedReprocessing(false);
-      clearImageCache();
-      if (fileUploadData.clearQueue) {
-        fileUploadData.clearQueue();
-      }
-    }
+    resetProcessingState
   };
 };

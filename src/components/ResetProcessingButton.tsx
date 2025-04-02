@@ -1,14 +1,17 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ResetProcessingButton = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // استخدام hook معالجة الصور للوصول إلى وظائف إعادة التعيين
   const { 
@@ -24,6 +27,8 @@ const ResetProcessingButton = () => {
     
     setIsResetting(true);
     try {
+      console.log("جاري إعادة تعيين حالة معالجة الصور...");
+      
       // إعادة تعيين حالة المعالجة
       resetProcessingState();
       
@@ -33,8 +38,31 @@ const ResetProcessingButton = () => {
       // مسح قائمة الانتظار
       clearQueue();
       
+      // تنظيف أي سجلات عالقة في supabase
+      if (user?.id) {
+        try {
+          // تحديث حالة جميع الصور التي في حالة "processing" إلى "pending"
+          const { error } = await supabase
+            .from('receipt_images')
+            .update({ status: 'pending' })
+            .eq('user_id', user.id)
+            .eq('status', 'processing');
+            
+          if (error) {
+            console.error("خطأ في تحديث حالة الصور العالقة:", error);
+          } else {
+            console.log("تم تحديث حالة الصور العالقة بنجاح");
+          }
+        } catch (dbError) {
+          console.error("خطأ في تحديث قاعدة البيانات:", dbError);
+        }
+      }
+      
       // إعادة تحميل صور المستخدم
-      await loadUserImages();
+      if (user) {
+        await loadUserImages();
+        console.log("تم إعادة تحميل صور المستخدم بعد إعادة التعيين");
+      }
       
       // إعلام المستخدم بنجاح العملية
       toast({
@@ -42,10 +70,10 @@ const ResetProcessingButton = () => {
         description: "تم إعادة تعيين حالة معالجة الصور بنجاح"
       });
       
-      // إخفاء الزر بعد الإعادة
+      // إخفاء الزر بعد نجاح العملية
       setTimeout(() => {
         setIsVisible(false);
-      }, 3000);
+      }, 5000);
     } catch (error) {
       console.error("خطأ في إعادة تعيين حالة المعالجة:", error);
       toast({
@@ -62,7 +90,7 @@ const ResetProcessingButton = () => {
   const [escapeCount, setEscapeCount] = useState(0);
   const [lastKeyTime, setLastKeyTime] = useState(0);
   
-  React.useEffect(() => {
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         const now = Date.now();
