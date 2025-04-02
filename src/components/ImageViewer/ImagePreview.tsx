@@ -51,7 +51,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick }) => {
       )}
       
       <div className="absolute bottom-2 left-2 text-[10px] text-white bg-black/60 px-2 py-0.5 rounded truncate max-w-[70%]">
-        {image.fileName || image.id.substring(0, 8)}
+        {image.file?.name || image.id.substring(0, 8)}
       </div>
       
       {image.status === "error" && (
