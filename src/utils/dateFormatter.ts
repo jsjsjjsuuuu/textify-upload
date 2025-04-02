@@ -1,6 +1,8 @@
 
-export const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
+export const formatDate = (dateInput: string | Date) => {
+  // تحويل الإدخال إلى كائن تاريخ بناءً على نوعه
+  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  
   return date.toLocaleDateString('ar-SA', {
     year: 'numeric',
     month: '2-digit',

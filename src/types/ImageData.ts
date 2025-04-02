@@ -1,3 +1,4 @@
+
 export interface ImageData {
   id: string;
   file: File;
@@ -66,7 +67,6 @@ export interface ImageData {
   imageHash?: string;     // قيمة هاش فريدة للصورة
   added_at?: number;      // وقت إضافة الصورة (timestamp)
   processed?: boolean;    // هل تمت معالجة الصورة بالفعل
-  processingAttempts?: number; // عدد محاولات المعالجة
 }
 
 // واجهة لتصدير البيانات إلى Bookmarklet
