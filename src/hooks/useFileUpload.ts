@@ -5,18 +5,23 @@ import { useToast } from "@/hooks/use-toast";
 import { useImageStore } from "@/store/imageStore";
 import { ImageData } from "@/types/ImageData";
 import { useGeminiProcessing } from "./useGeminiProcessing";
+import { useSupabaseStorage } from "./useSupabaseStorage";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * هوك مخصص لإدارة رفع الصور ومعالجتها
  */
 export const useFileUpload = () => {
   const { toast } = useToast();
-  const { images, setImages, addImage, updateImage, removeImage, clearImages } = useImageStore();
+  const { user } = useAuth();
+  const { images, addImage, updateImage, removeImage, clearImages } = useImageStore();
   const [isUploading, setIsUploading] = useState(false);
   const [processingImage, setProcessingImage] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [processingProgress, setProcessingProgress] = useState(0);
   const [geminiProcessingError, setGeminiProcessingError] = useState<string | null>(null);
   const geminiProcessing = useGeminiProcessing();
+  const supabaseStorage = useSupabaseStorage();
   const geminiProcessingRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -34,22 +39,68 @@ export const useFileUpload = () => {
       return;
     }
     
+    // تعيين معالجة Gemini كنشطة
+    geminiProcessingRef.current = true;
+    
     try {
-      // تغيير استدعاء الوظائف المفقودة
+      let processedCount = 0;
+      const totalImages = pendingOrErrorImages.length;
+      
+      // معالجة الصور واحدة تلو الأخرى
       for (const image of pendingOrErrorImages) {
-        if (geminiProcessingRef.current) break;
+        if (!geminiProcessingRef.current) break; // التحقق مما إذا تم إيقاف المعالجة
         
         try {
-          // استبدال الوظائف المفقودة بالوظائف المتاحة
           setIsProcessing(true);
           setProcessingImage(image.id);
+          
+          // تحديث حالة الصورة إلى "processing"
+          updateImage(image.id, { status: "processing" });
+          
+          // رفع الصورة إلى Supabase إذا لم تكن مرفوعة بالفعل
+          if (user && !image.storage_path && image.file) {
+            const uploadResult = await supabaseStorage.uploadImageToStorage(
+              image.file,
+              user.id,
+              image.batch_id || 'default'
+            );
+            
+            if (uploadResult.success && uploadResult.path) {
+              // تحديث الصورة بمسار التخزين
+              updateImage(image.id, { storage_path: uploadResult.path });
+              
+              // تحديث الصورة التي سيتم معالجتها بمسار التخزين
+              image.storage_path = uploadResult.path;
+            }
+          }
+          
+          // معالجة الصورة باستخدام Gemini
           await geminiProcessing.processImage(image);
+          
+          // تحديث نسبة التقدم
+          processedCount++;
+          const progress = Math.round((processedCount / totalImages) * 100);
+          setProcessingProgress(progress);
+          
         } catch (error) {
           console.error(`خطأ في معالجة الصورة ${image.id}:`, error);
+          updateImage(image.id, { 
+            status: "error", 
+            bookmarkletMessage: `فشل المعالجة: ${error.message || "خطأ غير معروف"}`
+          });
         }
       }
+      
+      // إعادة تعيين الحالة بعد الانتهاء
       setIsProcessing(false);
       setProcessingImage(null);
+      setProcessingProgress(100);
+      
+      // تأخير صغير قبل إعادة تعيين التقدم
+      setTimeout(() => {
+        setProcessingProgress(0);
+      }, 1000);
+      
     } catch (error: any) {
       console.error("Error processing images:", error);
       setGeminiProcessingError(`حدث خطأ أثناء معالجة الصور: ${error.message}`);
@@ -58,8 +109,13 @@ export const useFileUpload = () => {
         description: `حدث خطأ أثناء معالجة الصور: ${error.message}`,
         variant: "destructive",
       });
+    } finally {
+      // إعادة تعيين حالة المعالجة
+      geminiProcessingRef.current = false;
+      setIsProcessing(false);
+      setProcessingImage(null);
     }
-  }, [geminiProcessing, images, setProcessingImage, toast]);
+  }, [geminiProcessing, images, updateImage, toast, user, supabaseStorage.uploadImageToStorage]);
 
   /**
    * دالة لمعالجة الصور المرفوعة
@@ -69,6 +125,7 @@ export const useFileUpload = () => {
     setUploadError(null);
 
     try {
+      const batchId = uuidv4(); // إنشاء معرف دفعة للصور المرفوعة معًا
       const newImages: ImageData[] = [];
 
       for (let i = 0; i < files.length; i++) {
@@ -79,13 +136,15 @@ export const useFileUpload = () => {
         const newImage: ImageData = {
           id: id,
           file: file,
+          fileName: file.name, // حفظ اسم الملف
           previewUrl: previewUrl,
           status: "pending",
           uploadedDate: new Date(),
           date: new Date(),
           extractedText: "",
+          extractionMethod: "none",
+          batch_id: batchId,
           bookmarkletMessage: "",
-          extractionMethod: "none", // تم تصحيح هذا من "none" إلى النوع الصحيح
           extractionSuccess: false,
           confidence: 0,
           code: "",
@@ -107,11 +166,14 @@ export const useFileUpload = () => {
 
       toast({
         title: "تم رفع الصور بنجاح",
-        description: `تم رفع ${files.length} صورة بنجاح`,
+        description: `تم رفع ${files.length} صورة بنجاح، وسيتم معالجتها تلقائيًا`,
       });
 
       // بدء معالجة الصور تلقائيًا بعد الرفع
-      processImages();
+      setTimeout(() => {
+        processImages();
+      }, 500);
+      
     } catch (error: any) {
       console.error("Error uploading images:", error);
       setUploadError(`حدث خطأ أثناء رفع الصور: ${error.message}`);
@@ -128,24 +190,46 @@ export const useFileUpload = () => {
   /**
    * دالة لحذف صورة
    */
-  const handleImageDelete = useCallback((id: string) => {
+  const handleImageDelete = useCallback(async (id: string) => {
+    // الحصول على الصورة قبل حذفها
+    const imageToDelete = images.find(img => img.id === id);
+    
+    if (imageToDelete && imageToDelete.storage_path) {
+      // محاولة حذف الملف من التخزين أولاً إذا كان موجودًا
+      await supabaseStorage.deleteImageFromStorage(imageToDelete.storage_path);
+    }
+    
+    // حذف الصورة من الحالة المحلية
     removeImage(id);
+    
+    // حذف أي مصادر للكائنات URL
+    if (imageToDelete && imageToDelete.previewUrl) {
+      URL.revokeObjectURL(imageToDelete.previewUrl);
+    }
+    
     toast({
       title: "تم حذف الصورة",
       description: "تم حذف الصورة بنجاح",
     });
-  }, [removeImage, toast]);
+  }, [removeImage, toast, images, supabaseStorage]);
 
   /**
    * دالة لمسح جميع الصور
    */
   const handleClearImages = useCallback(() => {
+    // حذف جميع مصادر URL للكائنات قبل المسح
+    images.forEach(img => {
+      if (img.previewUrl) {
+        URL.revokeObjectURL(img.previewUrl);
+      }
+    });
+    
     clearImages();
     toast({
       title: "تم مسح جميع الصور",
       description: "تم مسح جميع الصور بنجاح",
     });
-  }, [clearImages, toast]);
+  }, [clearImages, toast, images]);
 
   /**
    * دالة لتحديث بيانات الصورة
@@ -165,24 +249,38 @@ export const useFileUpload = () => {
   }, []);
 
   const pauseProcessing = useCallback(() => {
-    geminiProcessingRef.current = true;
+    geminiProcessingRef.current = false;
     console.log("تم إيقاف معالجة الصور مؤقتًا");
     setIsProcessing(false);
     return true;
   }, []);
 
   const clearQueue = useCallback(() => {
-    geminiProcessingRef.current = true;
+    geminiProcessingRef.current = false;
     console.log("تم مسح قائمة انتظار معالجة الصور");
+    // إعادة تعيين الصور المعلقة إلى "pending"
+    images.forEach(img => {
+      if (img.status === "processing") {
+        updateImage(img.id, { status: "pending" });
+      }
+    });
+    
     // إعادة تعيين بعد فترة قصيرة
     setTimeout(() => {
       geminiProcessingRef.current = false;
     }, 1000);
     return true;
-  }, []);
+  }, [images, updateImage]);
 
   // معلومات حدود التحميل
-  const uploadLimitInfo = {
+  const uploadLimitInfo = user?.subscription_plan ? {
+    subscription: user.subscription_plan,
+    dailyLimit: user.subscription_plan === 'pro' ? 3500 : 
+                user.subscription_plan === 'vip' ? 1600 : 3,
+    currentCount: 0, // يمكن تحديثها من قاعدة البيانات
+    remainingUploads: user.subscription_plan === 'pro' ? 3500 : 
+                      user.subscription_plan === 'vip' ? 1600 : 3
+  } : {
     subscription: 'standard',
     dailyLimit: 3,
     currentCount: 0,
@@ -207,13 +305,14 @@ export const useFileUpload = () => {
     images,
     isUploading,
     processingImage,
+    processingProgress,
     uploadError,
     geminiProcessingError,
     handleImageUpload,
     handleFileChange,
-    handleImageDelete: removeImage,
-    handleClearImages: clearImages,
-    handleImageUpdate: updateImage,
+    handleImageDelete,
+    handleClearImages,
+    handleImageUpdate,
     processImages,
     isProcessing,
     manuallyTriggerProcessingQueue,

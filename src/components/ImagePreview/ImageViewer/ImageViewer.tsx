@@ -29,78 +29,114 @@ const ImageViewer = ({
   const [retryCount, setRetryCount] = useState(0);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   
-  // Reset image loaded state and get image URL when selected image changes
+  // تحسين طريقة جلب الصور وتحديد مصدرها
   useEffect(() => {
     setImageLoaded(false);
     setImgError(false);
     setRetryCount(0);
     
     const getImageSource = async () => {
-      // إذا كان هناك مسار تخزين، استخدم Supabase Storage
-      if (selectedImage.storage_path) {
-        try {
-          const { data } = supabase.storage
+      try {
+        // محاولة استخدام storage_path أولاً إذا كان موجودًا
+        if (selectedImage.storage_path) {
+          console.log(`محاولة استخدام storage_path للصورة ${selectedImage.id}: ${selectedImage.storage_path}`);
+          
+          const { data, error } = await supabase.storage
             .from('receipt_images')
             .getPublicUrl(selectedImage.storage_path);
+          
+          if (error) {
+            console.error('خطأ في استرجاع URL من Supabase:', error);
+            throw error;
+          }
           
           if (data?.publicUrl) {
             console.log(`تم جلب عنوان Supabase للصورة ${selectedImage.id}: ${data.publicUrl}`);
             setImageSrc(`${data.publicUrl}?t=${Date.now()}`);
             return;
           }
-        } catch (error) {
-          console.error('خطأ في جلب رابط Supabase:', error);
         }
+        
+        // استخدام previewUrl كبديل إذا كان متوفرًا
+        if (selectedImage.previewUrl) {
+          console.log(`استخدام previewUrl للصورة ${selectedImage.id}: ${selectedImage.previewUrl}`);
+          setImageSrc(selectedImage.previewUrl);
+          return;
+        }
+        
+        // محاولة إنشاء URL من كائن الملف إذا كان متوفرًا
+        if (selectedImage.file) {
+          console.log(`إنشاء objectURL من كائن الملف للصورة ${selectedImage.id}`);
+          const objectUrl = URL.createObjectURL(selectedImage.file);
+          setImageSrc(objectUrl);
+          return;
+        }
+        
+        // لا توجد مصادر للصورة
+        console.log(`لا توجد مصادر صور متاحة للصورة ${selectedImage.id}`);
+        setImageSrc(null);
+        setImgError(true);
+      } catch (error) {
+        console.error('خطأ في جلب مصدر الصورة:', error);
+        setImgError(true);
       }
-      
-      // إذا كان هناك previewUrl، استخدمه
-      if (selectedImage.previewUrl) {
-        console.log(`استخدام previewUrl للصورة ${selectedImage.id}: ${selectedImage.previewUrl}`);
-        setImageSrc(selectedImage.previewUrl);
-        return;
-      }
-      
-      // استخدام صورة بديلة
-      console.log(`لا توجد صورة متاحة للصورة ${selectedImage.id}`);
-      setImageSrc(null);
-      setImgError(true);
     };
     
     getImageSource();
-  }, [selectedImage.id, selectedImage.previewUrl, selectedImage.storage_path]);
+    
+    // تنظيف عناوين URL الموضوعية عند تفكيك المكون
+    return () => {
+      if (imageSrc && !selectedImage.previewUrl && !selectedImage.storage_path) {
+        URL.revokeObjectURL(imageSrc);
+      }
+    };
+  }, [selectedImage.id, selectedImage.previewUrl, selectedImage.storage_path, selectedImage.file]);
 
-  const handleImageLoad = () => {
+  const handleImageLoad = useCallback(() => {
     console.log(`تم تحميل الصورة ${selectedImage.id} بنجاح`);
     setImageLoaded(true);
     setImgError(false);
-  };
+  }, [selectedImage.id]);
 
-  const handleImageError = () => {
+  const handleImageError = useCallback(() => {
     console.error(`فشل تحميل الصورة ${selectedImage.id}`);
     setImageLoaded(false);
     setImgError(true);
-  };
+  }, [selectedImage.id]);
 
-  // وظيفة إعادة المحاولة
+  // تحسين وظيفة إعادة المحاولة
   const handleRetry = useCallback(() => {
+    console.log(`إعادة محاولة تحميل الصورة ${selectedImage.id} (المحاولة رقم ${retryCount + 1})`);
     setImgError(false);
     setRetryCount(prev => prev + 1);
     
     // إعادة جلب الصورة مع تجنب التخزين المؤقت
     if (selectedImage.storage_path) {
-      // إذا كان هناك مسار تخزين، استخدم Supabase Storage
-      const { data } = supabase.storage
-        .from('receipt_images')
-        .getPublicUrl(selectedImage.storage_path);
-      
-      if (data?.publicUrl) {
-        setImageSrc(`${data.publicUrl}?retry=${Date.now()}`);
+      try {
+        const { data } = supabase.storage
+          .from('receipt_images')
+          .getPublicUrl(selectedImage.storage_path);
+        
+        if (data?.publicUrl) {
+          setImageSrc(`${data.publicUrl}?retry=${Date.now()}`);
+        }
+      } catch (error) {
+        console.error('خطأ في جلب رابط Supabase أثناء إعادة المحاولة:', error);
       }
     } else if (selectedImage.previewUrl) {
       // تحديث الصورة بإضافة معلمة عشوائية لتجنب التخزين المؤقت
-      setImageSrc(`${selectedImage.previewUrl.split('?')[0]}?retry=${Date.now()}`);
+      const baseUrl = selectedImage.previewUrl.split('?')[0];
+      setImageSrc(`${baseUrl}?retry=${Date.now()}`);
+    } else if (selectedImage.file) {
+      // إعادة إنشاء URL الموضوع من الملف
+      try {
+        const objectUrl = URL.createObjectURL(selectedImage.file);
+        setImageSrc(objectUrl);
+      } catch (error) {
+        console.error('خطأ في إعادة إنشاء objectURL:', error);
+      }
     }
-  }, [selectedImage.previewUrl, selectedImage.storage_path]);
+  }, [selectedImage.previewUrl, selectedImage.storage_path, selectedImage.file, selectedImage.id, retryCount]);
 
   // تحديد حالة البوكماركلت للعرض
   const getBookmarkletStatusBadge = () => {
@@ -171,7 +207,7 @@ const ImageViewer = ({
         number={selectedImage.number}
         date={selectedImage.date}
         confidence={selectedImage.confidence}
-        extractionMethod={selectedImage.extractionMethod}
+        extractionMethod={selectedImage.extractionMethod || "none"}
         formatDate={formatDate}
       />
     </div>

@@ -26,40 +26,68 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
 
-  // تعيين مصدر الصورة عند التحميل الأولي
+  // تحسين تعيين مصدر الصورة عند التحميل الأولي
   useEffect(() => {
-    const initImageSource = () => {
-      if (image.storage_path) {
-        // إذا كان هناك مسار تخزين، استخدم Supabase Storage
-        try {
-          const { data } = supabase.storage
+    const getImageSource = async () => {
+      setIsImageLoading(true);
+      setIsImageError(false);
+      
+      try {
+        // إذا كان هناك مسار تخزين في Supabase
+        if (image.storage_path) {
+          console.log(`محاولة استخدام storage_path للصورة ${image.id}: ${image.storage_path}`);
+          
+          const { data, error } = await supabase.storage
             .from('receipt_images')
             .getPublicUrl(image.storage_path);
+          
+          if (error) {
+            console.error('خطأ في استرجاع URL من Supabase:', error);
+            throw error;
+          }
           
           if (data?.publicUrl) {
             console.log(`تم جلب عنوان Supabase للصورة ${image.id}: ${data.publicUrl}`);
             setImageSrc(`${data.publicUrl}?t=${Date.now()}`);
             return;
           }
-        } catch (error) {
-          console.error('خطأ في جلب رابط Supabase:', error);
         }
+        
+        // إذا كان هناك previewUrl، استخدمه
+        if (image.previewUrl) {
+          console.log(`استخدام previewUrl للصورة ${image.id}: ${image.previewUrl}`);
+          setImageSrc(image.previewUrl);
+          return;
+        }
+        
+        // محاولة إنشاء URL من كائن الملف
+        if (image.file) {
+          console.log(`إنشاء objectURL من كائن الملف للصورة ${image.id}`);
+          const objectUrl = URL.createObjectURL(image.file);
+          setImageSrc(objectUrl);
+          return;
+        }
+        
+        // استخدام صورة بديلة إذا لم تتوفر أي مصادر أخرى
+        console.log(`استخدام صورة بديلة للصورة ${image.id}`);
+        setImageSrc(PLACEHOLDER_IMAGE_URL);
+        
+      } catch (error) {
+        console.error(`خطأ في تهيئة مصدر الصورة ${image.id}:`, error);
+        setImageSrc(PLACEHOLDER_IMAGE_URL);
+        setIsImageError(true);
       }
-      
-      // إذا كان هناك previewUrl، استخدمه
-      if (image.previewUrl) {
-        console.log(`استخدام previewUrl للصورة ${image.id}: ${image.previewUrl}`);
-        setImageSrc(image.previewUrl);
-        return;
-      }
-      
-      // استخدام صورة بديلة
-      console.log(`استخدام صورة بديلة للصورة ${image.id}`);
-      setImageSrc(PLACEHOLDER_IMAGE_URL);
     };
     
-    initImageSource();
-  }, [image.id, image.previewUrl, image.storage_path]);
+    getImageSource();
+    
+    // تنظيف عناوين URL الموضوعية عند تفكيك المكون
+    return () => {
+      if (imageSrc && !image.previewUrl && !image.storage_path && imageSrc !== PLACEHOLDER_IMAGE_URL) {
+        URL.revokeObjectURL(imageSrc);
+      }
+    };
+  }, [image.id, image.previewUrl, image.storage_path, image.file]);
 
   const handleImageError = useCallback(() => {
     console.error(`فشل تحميل الصورة: ${image.id} - URL: ${imageSrc}`);
@@ -81,22 +109,35 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
     
     // إعادة جلب الصورة مع تجنب التخزين المؤقت
     if (image.storage_path) {
-      // إذا كان هناك مسار تخزين، استخدم Supabase Storage
-      const { data } = supabase.storage
-        .from('receipt_images')
-        .getPublicUrl(image.storage_path);
-      
-      if (data?.publicUrl) {
-        setImageSrc(`${data.publicUrl}?retry=${Date.now()}`);
+      try {
+        const { data } = supabase.storage
+          .from('receipt_images')
+          .getPublicUrl(image.storage_path);
+        
+        if (data?.publicUrl) {
+          setImageSrc(`${data.publicUrl}?retry=${Date.now()}`);
+        }
+      } catch (error) {
+        console.error('خطأ في جلب رابط Supabase أثناء إعادة المحاولة:', error);
       }
     } else if (image.previewUrl) {
       // تحديث الصورة بإضافة معلمة عشوائية لتجنب التخزين المؤقت
-      setImageSrc(`${image.previewUrl.split('?')[0]}?retry=${Date.now()}`);
+      const baseUrl = image.previewUrl.split('?')[0];
+      setImageSrc(`${baseUrl}?retry=${Date.now()}`);
+    } else if (image.file) {
+      // إعادة إنشاء URL الموضوع من الملف
+      try {
+        const objectUrl = URL.createObjectURL(image.file);
+        setImageSrc(objectUrl);
+      } catch (error) {
+        console.error('خطأ في إعادة إنشاء objectURL:', error);
+        setImageSrc(PLACEHOLDER_IMAGE_URL);
+      }
     } else {
       // استخدام صورة بديلة
       setImageSrc(`${PLACEHOLDER_IMAGE_URL}?t=${Date.now()}`);
     }
-  }, [image.previewUrl, image.storage_path, image.id, retryCount]);
+  }, [image.previewUrl, image.storage_path, image.file, image.id, retryCount]);
 
   return (
     <div 
@@ -109,11 +150,13 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
           className={`bg-white/90 hover:bg-white text-black px-2 py-1 text-xs backdrop-blur-sm ${
             image.status === "completed" ? "border-green-500" : 
             image.status === "processing" ? "border-blue-500" : 
+            image.status === "error" ? "border-red-500" : 
             "border-gray-300"
           }`}
         >
           {image.status === "completed" ? "مكتمل" : 
            image.status === "processing" ? "جاري المعالجة" : 
+           image.status === "error" ? "خطأ" :
            "جديد"}
         </Badge>
         

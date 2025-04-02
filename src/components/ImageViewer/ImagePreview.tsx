@@ -1,7 +1,9 @@
 
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { ImageData } from "@/types/ImageData";
 import { RefreshCw, AlertCircle } from "lucide-react"; 
+import { supabase } from "@/integrations/supabase/client";
+import ImageErrorDisplay from "@/components/ImagePreview/ImageViewer/ImageErrorDisplay";
 
 interface ImagePreviewProps {
   image: ImageData;
@@ -10,8 +12,112 @@ interface ImagePreviewProps {
 }
 
 const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick, onReprocess }) => {
-  // إنشاء عنوان URL للمعاينة من الملف أو استخدام URL الموجود
-  const previewUrl = image.previewUrl || '';
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  
+  // إعداد مصدر الصورة عند تحميل المكون
+  useEffect(() => {
+    const setupImageSource = async () => {
+      setIsLoading(true);
+      setIsError(false);
+      
+      try {
+        // إذا كان هناك مسار تخزين في Supabase
+        if (image.storage_path) {
+          console.log(`محاولة استخدام storage_path للصورة ${image.id}: ${image.storage_path}`);
+          
+          const { data, error } = await supabase.storage
+            .from('receipt_images')
+            .getPublicUrl(image.storage_path);
+          
+          if (error) {
+            console.error('خطأ في استرجاع URL من Supabase:', error);
+            throw error;
+          }
+          
+          if (data?.publicUrl) {
+            console.log(`تم جلب عنوان Supabase للصورة ${image.id}: ${data.publicUrl}`);
+            setPreviewUrl(`${data.publicUrl}?t=${Date.now()}`);
+            return;
+          }
+        }
+        
+        // إذا كان هناك previewUrl، استخدمه
+        if (image.previewUrl) {
+          console.log(`استخدام previewUrl للصورة ${image.id}: ${image.previewUrl}`);
+          setPreviewUrl(image.previewUrl);
+          return;
+        }
+        
+        // محاولة إنشاء URL من كائن الملف
+        if (image.file) {
+          console.log(`إنشاء objectURL من كائن الملف للصورة ${image.id}`);
+          const objectUrl = URL.createObjectURL(image.file);
+          setPreviewUrl(objectUrl);
+          return;
+        }
+        
+        // لا توجد مصادر للصورة
+        console.log(`لا توجد مصادر صور متاحة للصورة ${image.id}`);
+        setIsError(true);
+        setPreviewUrl('/placeholder-image.jpg');
+      } catch (error) {
+        console.error(`خطأ في إعداد مصدر الصورة ${image.id}:`, error);
+        setIsError(true);
+        setPreviewUrl('/placeholder-image.jpg');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    setupImageSource();
+    
+    // تنظيف عناوين URL الموضوعية عند تفكيك المكون
+    return () => {
+      if (previewUrl && !image.previewUrl && !image.storage_path && previewUrl !== '/placeholder-image.jpg') {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [image.id, image.previewUrl, image.storage_path, image.file]);
+  
+  const handleRetry = useCallback(() => {
+    console.log(`إعادة محاولة تحميل الصورة: ${image.id} - محاولة رقم: ${retryCount + 1}`);
+    setRetryCount(prev => prev + 1);
+    setIsLoading(true);
+    setIsError(false);
+    
+    // إعادة جلب الصورة مع تجنب التخزين المؤقت
+    if (image.storage_path) {
+      try {
+        const { data } = supabase.storage
+          .from('receipt_images')
+          .getPublicUrl(image.storage_path);
+        
+        if (data?.publicUrl) {
+          setPreviewUrl(`${data.publicUrl}?retry=${Date.now()}`);
+        }
+      } catch (error) {
+        console.error('خطأ في جلب رابط Supabase أثناء إعادة المحاولة:', error);
+      }
+    } else if (image.previewUrl) {
+      // تحديث الصورة بإضافة معلمة عشوائية لتجنب التخزين المؤقت
+      const baseUrl = image.previewUrl.split('?')[0];
+      setPreviewUrl(`${baseUrl}?retry=${Date.now()}`);
+    } else if (image.file) {
+      // إعادة إنشاء URL الموضوع من الملف
+      try {
+        const objectUrl = URL.createObjectURL(image.file);
+        setPreviewUrl(objectUrl);
+      } catch (error) {
+        console.error('خطأ في إعادة إنشاء objectURL:', error);
+        setPreviewUrl('/placeholder-image.jpg');
+      }
+    }
+    
+    setIsLoading(false);
+  }, [image.previewUrl, image.storage_path, image.file, image.id, retryCount]);
   
   const handleClick = () => {
     if (onImageClick) {
@@ -24,6 +130,18 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick, onRepr
     if (onReprocess) {
       onReprocess(image);
     }
+  };
+  
+  const handleImageLoad = () => {
+    console.log(`تم تحميل الصورة بنجاح: ${image.id}`);
+    setIsLoading(false);
+    setIsError(false);
+  };
+  
+  const handleImageError = () => {
+    console.error(`فشل تحميل الصورة: ${image.id}`);
+    setIsLoading(false);
+    setIsError(true);
   };
   
   // تحديد نص الحالة بناءً على حالة الصورة
@@ -60,15 +178,31 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick, onRepr
       className="relative bg-gray-100 dark:bg-gray-800 rounded overflow-hidden cursor-pointer group"
       onClick={handleClick}
     >
-      <img 
-        src={previewUrl} 
-        alt={`صورة ${image.id}`} 
-        className="w-full h-auto object-contain rounded max-h-[300px] group-hover:opacity-95 transition-opacity"
-        onError={(e) => {
-          // استخدام صورة بديلة في حالة فشل تحميل الصورة
-          (e.target as HTMLImageElement).src = '/placeholder-image.jpg';
-        }}
-      />
+      {isError ? (
+        <div className="w-full h-[300px]">
+          <ImageErrorDisplay
+            onRetry={handleRetry}
+            retryCount={retryCount}
+            errorMessage="تعذر تحميل الصورة"
+          />
+        </div>
+      ) : (
+        <div className="relative">
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-muted/20">
+              <div className="animate-pulse w-8 h-8 rounded-full bg-muted/50"></div>
+            </div>
+          )}
+          <img 
+            src={previewUrl} 
+            alt={`صورة ${image.id}`} 
+            className="w-full h-auto object-contain rounded max-h-[300px] group-hover:opacity-95 transition-opacity"
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+            style={{opacity: isLoading ? 0 : 1}}
+          />
+        </div>
+      )}
       
       {getStatusBadge()}
       
@@ -83,7 +217,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ image, onImageClick, onRepr
       </div>
       
       {/* تحسين عرض حالة الخطأ */}
-      {image.status === "error" && (
+      {image.status === "error" && !isError && (
         <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
           <div className="bg-red-500 text-white px-3 py-1 rounded text-sm flex items-center">
             <AlertCircle className="w-4 h-4 mr-1" />
