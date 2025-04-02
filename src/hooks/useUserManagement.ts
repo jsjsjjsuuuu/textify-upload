@@ -11,14 +11,11 @@ export const useUserManagement = (): UserManagement => {
   // استدعاء الخطافات الفرعية
   const { 
     users, 
-    detailedUsers,
     setUsers, 
     isLoading, 
-    isLoadingDetails,
     fetchAttempted, 
     fetchError, 
     fetchUsers, 
-    fetchUserDetails,
     ErrorAlert 
   } = useFetchUsers();
 
@@ -50,22 +47,17 @@ export const useUserManagement = (): UserManagement => {
 
   const { 
     newPassword, 
-    confirmPassword,
     showPassword, 
     showConfirmReset, 
     userToReset, 
     isProcessing: passwordProcessing, 
-    passwordError,
     setNewPassword, 
-    setConfirmPassword,
     setShowPassword, 
     setShowConfirmReset, 
     setUserToReset, 
-    setPasswordError,
     resetPasswordStates, 
     prepareUserPasswordReset, 
-    resetUserPassword,
-    validatePassword
+    resetUserPassword 
   } = usePasswordManagement();
 
   const { 
@@ -82,9 +74,7 @@ export const useUserManagement = (): UserManagement => {
   return {
     // حالة المستخدمين والتحميل
     users,
-    detailedUsers,
     isLoading,
-    isLoadingDetails,
     fetchAttempted,
     fetchError,
     
@@ -98,9 +88,7 @@ export const useUserManagement = (): UserManagement => {
     isEditingUser,
     editedUserData,
     newPassword,
-    confirmPassword,
     showPassword,
-    passwordError,
     isProcessing,
     selectedDate,
     
@@ -114,16 +102,12 @@ export const useUserManagement = (): UserManagement => {
     setFilterStatus,
     setSearchQuery,
     setNewPassword,
-    setConfirmPassword,
     setShowPassword,
     setShowConfirmReset,
     setUserToReset,
-    setPasswordError,
     
     // وظائف المستخدمين
     fetchUsers,
-    fetchUserDetails,
-    setUsers,
     addNewUser,
     approveUser,
     rejectUser,
@@ -138,7 +122,6 @@ export const useUserManagement = (): UserManagement => {
     prepareUserPasswordReset,
     handleDateSelect,
     resetPasswordStates,
-    validatePassword,
     
     // مكونات
     ErrorAlert,

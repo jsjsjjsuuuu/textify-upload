@@ -14,15 +14,13 @@ interface ProfileEditCardProps {
   isUpdating: boolean;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleUpdateProfile: () => Promise<void>;
-  handleSignOut: () => Promise<void>;
 }
 
 const ProfileEditCard: React.FC<ProfileEditCardProps> = ({
   userData,
   isUpdating,
   handleInputChange,
-  handleUpdateProfile,
-  handleSignOut
+  handleUpdateProfile
 }) => {
   return (
     <Card className="md:col-span-2 apple-card">
@@ -40,12 +38,12 @@ const ProfileEditCard: React.FC<ProfileEditCardProps> = ({
             <ProfileInfoTab 
               userData={userData}
               isUpdating={isUpdating}
-              onInputChange={handleInputChange}
-              onUpdateProfile={handleUpdateProfile}
+              handleInputChange={handleInputChange}
+              handleUpdateProfile={handleUpdateProfile}
             />
           </TabsContent>
           <TabsContent value="security">
-            <SecurityTab onSignOut={handleSignOut} />
+            <SecurityTab />
           </TabsContent>
         </Tabs>
       </CardContent>

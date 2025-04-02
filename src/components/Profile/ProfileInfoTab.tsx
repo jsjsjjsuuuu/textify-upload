@@ -5,32 +5,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 
-export interface ProfileInfoTabProps {
+interface ProfileInfoTabProps {
   userData: {
     email: string;
     username: string;
     fullName: string;
   };
-  stats?: {
-    totalImages: number;
-    processedImages: number;
-    pendingImages: number;
-  };
-  uploadingAvatar?: boolean;
   isUpdating: boolean;
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onAvatarUpload?: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
-  onUpdateProfile: () => Promise<void>;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleUpdateProfile: () => Promise<void>;
 }
 
 const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
   userData,
-  stats,
   isUpdating,
-  uploadingAvatar,
-  onInputChange,
-  onAvatarUpload,
-  onUpdateProfile
+  handleInputChange,
+  handleUpdateProfile
 }) => {
   return (
     <div className="space-y-4 pt-4">
@@ -40,7 +30,7 @@ const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
           id="fullName"
           name="fullName"
           value={userData.fullName}
-          onChange={onInputChange}
+          onChange={handleInputChange}
           placeholder="أدخل الاسم الكامل"
         />
       </div>
@@ -50,7 +40,7 @@ const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
           id="username"
           name="username"
           value={userData.username}
-          onChange={onInputChange}
+          onChange={handleInputChange}
           placeholder="أدخل اسم المستخدم"
         />
       </div>
@@ -66,7 +56,7 @@ const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
         <p className="text-xs text-muted-foreground">لا يمكن تغيير البريد الإلكتروني</p>
       </div>
       <Button 
-        onClick={onUpdateProfile} 
+        onClick={handleUpdateProfile} 
         className="w-full mt-4"
         disabled={isUpdating}
       >

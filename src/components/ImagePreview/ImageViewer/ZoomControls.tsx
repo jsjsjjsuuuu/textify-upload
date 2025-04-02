@@ -1,7 +1,7 @@
 
 import { ZoomIn, ZoomOut, Maximize2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useState } from "react";
 
 interface ZoomControlsProps {
@@ -29,32 +29,34 @@ const ZoomControls = ({
         <Maximize2 size={16} />
       </Button>
       
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button 
-            variant="secondary" 
-            size="icon" 
-            disabled={isAnalyzing}
-            onClick={() => {
-              setIsAnalyzing(true);
-              // هنا يمكن إضافة رمز التحليل المتقدم في المستقبل
-              setTimeout(() => {
-                setIsAnalyzing(false);
-              }, 1500);
-            }} 
-            className="h-8 w-8 bg-white/90 hover:bg-white"
-          >
-            {isAnalyzing ? (
-              <RefreshCw size={16} className="animate-spin" />
-            ) : (
-              <RefreshCw size={16} />
-            )}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>تحليل متقدم للصورة</p>
-        </TooltipContent>
-      </Tooltip>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="secondary" 
+              size="icon" 
+              disabled={isAnalyzing}
+              onClick={() => {
+                setIsAnalyzing(true);
+                // هنا يمكن إضافة رمز التحليل المتقدم في المستقبل
+                setTimeout(() => {
+                  setIsAnalyzing(false);
+                }, 1500);
+              }} 
+              className="h-8 w-8 bg-white/90 hover:bg-white"
+            >
+              {isAnalyzing ? (
+                <RefreshCw size={16} className="animate-spin" />
+              ) : (
+                <RefreshCw size={16} />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>تحليل متقدم للصورة</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { motion } from "framer-motion";
@@ -21,9 +22,6 @@ import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ImageErrorDisplay from "@/components/ImagePreview/ImageViewer/ImageErrorDisplay";
-
-// صورة تعبئة افتراضية للصور التي لا يمكن تحميلها
-const PLACEHOLDER_IMAGE_URL = '/placeholder-image.jpg';
 
 // مكون الصفحة الرئيسي
 const Records = () => {
@@ -282,23 +280,14 @@ const Records = () => {
 
   // قم بإنشاء عنوان URL للصورة من Storage
   const getImageUrl = (image) => {
-    // التحقق من وجود مسار التخزين
     if (image.storage_path) {
       const { data } = supabase.storage
         .from('receipt_images')
         .getPublicUrl(image.storage_path);
-      
       // إضافة طابع زمني لمنع مشاكل التخزين المؤقت
-      return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : (image.previewUrl || PLACEHOLDER_IMAGE_URL);
+      return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : image.previewUrl;
     }
-    
-    // التحقق من وجود URL المعاينة وأنه ليس blob URL (يسبب أخطاء)
-    if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
-      return image.previewUrl;
-    }
-    
-    // استخدام الصورة الافتراضية إذا لم تكن هناك صورة صالحة
-    return PLACEHOLDER_IMAGE_URL;
+    return image.previewUrl;
   };
 
   return (
@@ -451,7 +440,7 @@ const Records = () => {
                           {image.number || "-"}
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <span className="text-muted-foreground">{formatDate(image.date)}</span>
+                          <span className="text-muted-foreground">{formatImageDate(image.date)}</span>
                         </TableCell>
                         <TableCell className="px-6 py-4">
                           <div className="w-16 h-16 rounded-lg overflow-hidden bg-transparent relative flex items-center justify-center border border-border/40 dark:border-gray-700/40">

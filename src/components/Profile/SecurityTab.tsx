@@ -23,11 +23,7 @@ const passwordSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
-export interface SecurityTabProps {
-  onSignOut: () => Promise<void>;
-}
-
-const SecurityTab: React.FC<SecurityTabProps> = ({ onSignOut }) => {
+const SecurityTab: React.FC = () => {
   const { toast } = useToast();
   const { resetPassword } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -204,17 +200,6 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ onSignOut }) => {
           </Button>
         </form>
       </Form>
-
-      <div className="pt-6 border-t mt-6">
-        <h3 className="text-lg font-medium mb-4">تسجيل الخروج</h3>
-        <Button 
-          variant="destructive" 
-          className="w-full"
-          onClick={onSignOut}
-        >
-          تسجيل الخروج
-        </Button>
-      </div>
     </div>
   );
 };

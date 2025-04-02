@@ -23,7 +23,7 @@ export interface ImageData {
   // حقل جديد لمسار التخزين في Supabase Storage
   storage_path?: string;
   // حقل جديد لعدد محاولات إعادة المعالجة
-  processingAttempts?: number;
+  retryCount?: number;
   // حقول لدعم عملية Bookmarklet
   bookmarkletStatus?: "ready" | "pending" | "success" | "error";
   bookmarkletMessage?: string;
@@ -67,6 +67,7 @@ export interface ImageData {
   imageHash?: string;     // قيمة هاش فريدة للصورة
   added_at?: number;      // وقت إضافة الصورة (timestamp)
   processed?: boolean;    // هل تمت معالجة الصورة بالفعل
+  processingAttempts?: number; // عدد محاولات المعالجة
 }
 
 // واجهة لتصدير البيانات إلى Bookmarklet

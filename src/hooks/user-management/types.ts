@@ -5,9 +5,7 @@ import { UserProfile } from '@/types/UserProfile';
 export interface UserManagementState {
   // حالة المستخدمين والتحميل
   users: UserProfile[];
-  detailedUsers: {[key: string]: UserProfile};
   isLoading: boolean;
-  isLoadingDetails: {[key: string]: boolean};
   fetchAttempted: boolean;
   fetchError: string | null;
   
@@ -21,9 +19,7 @@ export interface UserManagementState {
   isEditingUser: string | null;
   editedUserData: UserProfile | null;
   newPassword: string;
-  confirmPassword: string;
   showPassword: boolean;
-  passwordError: string | null;
   isProcessing: boolean;
   selectedDate: Date | undefined;
   
@@ -35,8 +31,6 @@ export interface UserManagementState {
 export interface UserManagementActions {
   // عمليات جلب البيانات
   fetchUsers: () => Promise<void>;
-  fetchUserDetails: (userId: string) => Promise<UserProfile | null>;
-  setUsers: React.Dispatch<React.SetStateAction<UserProfile[]>>;
   
   // عمليات التصفية
   setActiveTab: (tab: string) => void;
@@ -67,15 +61,12 @@ export interface UserManagementActions {
   
   // عمليات كلمة المرور
   setNewPassword: (password: string) => void;
-  setConfirmPassword: (password: string) => void;
   setShowPassword: (show: boolean) => void;
   setShowConfirmReset: (show: boolean) => void;
   setUserToReset: (userId: string | null) => void;
-  setPasswordError: (error: string | null) => void;
-  resetUserPassword: (userId: string, newPassword: string) => Promise<boolean>;
+  resetUserPassword: (userId: string, newPassword: string) => Promise<void>;
   prepareUserPasswordReset: (userId: string) => void;
   resetPasswordStates: () => void;
-  validatePassword: () => boolean;
   
   // عمليات تحديث البيانات
   updateUserEmail: (userId: string, newEmail: string) => Promise<void>;

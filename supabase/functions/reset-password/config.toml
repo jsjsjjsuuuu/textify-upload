@@ -1,8 +1,0 @@
-
-project_id = "fepwckdjnmizplgqebgq"
-
-[functions.reset-password.secrets]
-SUPABASE_URL = "SUPABASE_URL"
-SUPABASE_ANON_KEY = "SUPABASE_ANON_KEY"
-SUPABASE_SERVICE_ROLE_KEY = "SUPABASE_SERVICE_ROLE_KEY"
-
