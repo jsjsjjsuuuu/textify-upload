@@ -168,11 +168,10 @@ const Index = () => {
     });
   };
   
-  // تعديل وظيفة handleFileChange لتتوافق مع نوع (files: File[])
+  // تعديل وظيفة handleFileChange لتتوافق مع نوع FileList
   const handleImageUploadWrapped = (files: File[]) => {
-    // تحويل مصفوفة الملفات إلى كائن FileList
     if (files && files.length > 0) {
-      // إنشاء كائن شبيه بـ FileList
+      // إنشاء كائن DataTransfer لتحويل مصفوفة الملفات إلى FileList
       const dataTransfer = new DataTransfer();
       files.forEach(file => {
         dataTransfer.items.add(file);
@@ -180,7 +179,11 @@ const Index = () => {
       const fileList = dataTransfer.files;
       
       // استدعاء الدالة الأصلية مع كائن FileList
-      handleFileChange(fileList);
+      if (handleFileChange) {
+        handleFileChange(fileList);
+      }
+    } else {
+      console.error("لم يتم توفير ملفات للرفع");
     }
   };
   
