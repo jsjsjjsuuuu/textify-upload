@@ -1,5 +1,6 @@
 
-export const formatDate = (date: Date) => {
+export const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
   return date.toLocaleDateString('ar-SA', {
     year: 'numeric',
     month: '2-digit',

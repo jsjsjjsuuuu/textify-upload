@@ -1,4 +1,3 @@
-
 export interface ImageData {
   id: string;
   file: File;
@@ -23,7 +22,7 @@ export interface ImageData {
   // حقل جديد لمسار التخزين في Supabase Storage
   storage_path?: string;
   // حقل جديد لعدد محاولات إعادة المعالجة
-  retryCount?: number;
+  processingAttempts?: number;
   // حقول لدعم عملية Bookmarklet
   bookmarkletStatus?: "ready" | "pending" | "success" | "error";
   bookmarkletMessage?: string;

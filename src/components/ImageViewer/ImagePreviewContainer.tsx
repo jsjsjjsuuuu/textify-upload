@@ -38,7 +38,7 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
   
   // تصفية الصور بناءً على showOnlySession
   const filteredImages = showOnlySession
-    ? images.filter(img => !img.from_db) // فقط الصور من الجلسة الحالية
+    ? images.filter(img => !img.storage_path) // استخدام storage_path بدلاً من from_db
     : images;
   
   // تجميع الصور حسب الحالة
@@ -119,7 +119,7 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
                       </Badge>
                     </div>
                     <small className="text-muted-foreground text-xs">
-                      {formatDate(image.created_at || new Date().toISOString())}
+                      {formatDate(image.date.toISOString())}
                     </small>
                   </div>
                   
