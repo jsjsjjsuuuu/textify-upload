@@ -5,6 +5,7 @@
 export interface ImageData {
   id: string;
   file: File;
+  fileName?: string; // إضافة حقل fileName كخاصية اختيارية
   previewUrl?: string;
   status: "pending" | "processing" | "completed" | "error";
   date: Date; // تغيير من string إلى Date
@@ -23,7 +24,7 @@ export interface ImageData {
   processingAttempts?: number;
   createdAt?: string;
   updatedAt?: string;
-  extractionMethod?: "ocr" | "gemini" | "none";
+  extractionMethod?: "ocr" | "gemini" | "none"; // إضافة "none" كقيمة مقبولة
   extractionSuccess?: boolean;
   
   // الخصائص الإضافية المطلوبة

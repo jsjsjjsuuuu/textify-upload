@@ -142,7 +142,7 @@ const ImageViewer = ({
       
       <ImageInfoBadges 
         number={selectedImage.number}
-        date={selectedImage.date} // استخدام كائن Date
+        date={selectedImage.date}
         confidence={selectedImage.confidence}
         extractionMethod={selectedImage.extractionMethod}
         formatDate={formatDate}

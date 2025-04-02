@@ -168,6 +168,22 @@ const Index = () => {
     });
   };
   
+  // تعديل وظيفة handleFileChange لتتوافق مع نوع (files: File[])
+  const handleImageUploadWrapped = (files: File[]) => {
+    // تحويل مصفوفة الملفات إلى كائن FileList
+    if (files && files.length > 0) {
+      // إنشاء كائن شبيه بـ FileList
+      const dataTransfer = new DataTransfer();
+      files.forEach(file => {
+        dataTransfer.items.add(file);
+      });
+      const fileList = dataTransfer.files;
+      
+      // استدعاء الدالة الأصلية مع كائن FileList
+      handleFileChange(fileList);
+    }
+  };
+  
   return <div className="min-h-screen bg-background">
       <AppHeader />
       
@@ -305,7 +321,7 @@ const Index = () => {
                     <ImageUploader 
                       isProcessing={isProcessing} 
                       processingProgress={processingProgress} 
-                      onFileChange={handleFileChange} 
+                      onFileChange={handleImageUploadWrapped} 
                       onCancelUpload={handleCancelUpload} 
                     />
                   )}

@@ -78,7 +78,6 @@ export const useFileUpload = () => {
         const newImage: ImageData = {
           id: id,
           file: file,
-          fileName: file.name,
           previewUrl: previewUrl,
           status: "pending",
           uploadedDate: new Date(),
