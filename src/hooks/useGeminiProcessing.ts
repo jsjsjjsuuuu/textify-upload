@@ -12,10 +12,12 @@ import {
 } from "@/lib/gemini";
 import { useToast } from "@/hooks/use-toast";
 import { updateImageWithExtractedData } from "@/utils/imageDataParser";
-import { isPreviewEnvironment } from "@/utils/automationServerUrl";
+
+// المفتاح الجديد الذي تم توفيره من المستخدم
+const CUSTOM_API_KEY = "AIzaSyBKczW8k6fNBXnjD5y7P2vLC5nYgJM7I4o";
 
 export const useGeminiProcessing = () => {
-  const [useGemini, setUseGemini] = useState(true); // تعيين القيمة الافتراضية إلى true
+  const [useGemini, setUseGemini] = useState(true);
   const [connectionTested, setConnectionTested] = useState(false);
   const { toast } = useToast();
   
@@ -23,20 +25,19 @@ export const useGeminiProcessing = () => {
   const [processingAttempts, setProcessingAttempts] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    // فحص الاتصال مع مجموعة المفاتيح
+    // فحص الاتصال باستخدام المفتاح المخصص
     const testConnection = async () => {
       if (!connectionTested) {
-        const apiKey = getNextApiKey();
-        console.log("اختبار اتصال Gemini API عند بدء التشغيل...");
-        await testGeminiApiConnection(apiKey);
+        console.log("اختبار اتصال Gemini API باستخدام المفتاح المخصص...");
+        await testGeminiApiConnection(CUSTOM_API_KEY);
       }
     };
     
     testConnection();
   }, [connectionTested]);
 
-  // اختبار اتصال Gemini API
-  const testGeminiApiConnection = async (apiKey: string) => {
+  // اختبار اتصال Gemini API باستخدام المفتاح المخصص
+  const testGeminiApiConnection = async (apiKey: string): Promise<boolean> => {
     try {
       console.log("اختبار اتصال Gemini API...");
       const result = await testGeminiConnection(apiKey);
@@ -124,8 +125,8 @@ export const useGeminiProcessing = () => {
       [attemptKey]: attempts + 1
     }));
     
-    // الحصول على المفتاح التالي
-    const geminiApiKey = getNextApiKey();
+    // استخدام المفتاح المخصص
+    const geminiApiKey = CUSTOM_API_KEY;
     console.log("استخدام مفتاح Gemini API:", geminiApiKey.substring(0, 8) + "...");
 
     // تحديث الصورة لتظهر أنها قيد المعالجة
@@ -168,7 +169,8 @@ export const useGeminiProcessing = () => {
         enhancedExtraction: true,
         maxRetries: 2,
         retryDelayMs: 2000,
-        modelVersion: 'gemini-1.5-flash'
+        modelVersion: 'gemini-1.5-flash',
+        temperature: 0.2
       });
       
       console.log("نتيجة استخراج Gemini الأولية:", extractionResult);
@@ -186,24 +188,25 @@ export const useGeminiProcessing = () => {
         console.log("جودة البيانات المستخرجة:", dataQuality);
       }
       
-      // إذا كانت جودة البيانات منخفضة، جرب مطالبة أبسط
+      // إذا كانت جودة البيانات منخفضة، جرب نموذج آخر
       if (dataQuality < 50 && attempts < 2) {
-        console.log("جودة البيانات منخفضة، محاولة استخدام مطالبة أبسط...");
+        console.log("جودة البيانات منخفضة، محاولة استخدام نموذج أفضل...");
         
         // تأخير قبل المحاولة الثانية
-        await sleepBetweenRequests(1000);
+        await sleepBetweenRequests(1500);
         
-        // استخدام مطالبة أبسط في المحاولة الثانية
+        // استخدام نموذج أفضل في المحاولة الثانية
         extractionResult = await extractDataWithGemini({
           apiKey: geminiApiKey,
           imageBase64,
-          enhancedExtraction: false, // استخدام المطالبة البسيطة
+          enhancedExtraction: true,
           maxRetries: 1,
           retryDelayMs: 1000,
-          modelVersion: 'gemini-1.5-flash'
+          modelVersion: 'gemini-1.5-pro', // استخدام نموذج أكثر قوة
+          temperature: 0.1 // درجة حرارة أقل للحصول على نتائج أكثر دقة
         });
         
-        console.log("نتيجة استخراج Gemini مع المطالبة البسيطة:", extractionResult);
+        console.log("نتيجة استخراج Gemini مع النموذج الأفضل:", extractionResult);
       }
       
       if (extractionResult.success && extractionResult.data) {
@@ -303,13 +306,10 @@ export const useGeminiProcessing = () => {
       } else {
         console.log("فشل استخراج Gemini:", extractionResult.message);
         
-        // الإبلاغ عن الخطأ لمدير المفاتيح
-        reportApiKeyError(geminiApiKey, extractionResult.message || "خطأ غير معروف");
-        
         // محاولة استخدام مطالبة أبسط إذا فشلت المطالبة المحسنة
         if (attempts < 2) {
           console.log("محاولة استخدام مطالبة أخرى للاستخراج...");
-          await sleepBetweenRequests(1000);
+          await sleepBetweenRequests(1500);
           
           return processWithGemini(file, image);
         }
@@ -329,9 +329,6 @@ export const useGeminiProcessing = () => {
       }
     } catch (geminiError: any) {
       console.error("خطأ في معالجة Gemini:", geminiError);
-      
-      // الإبلاغ عن الخطأ لمدير المفاتيح
-      reportApiKeyError(geminiApiKey, geminiError.message || "خطأ غير معروف");
       
       // تحسين رسالة الخطأ
       let errorMessage = geminiError.message || 'خطأ غير معروف';

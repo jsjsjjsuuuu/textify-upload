@@ -1,13 +1,30 @@
 
+/**
+ * وظائف الاتصال بـ Gemini API
+ */
+
 import { GeminiExtractParams, GeminiRequest, GeminiResponse } from "./types";
 import { ApiResult } from "../apiService";
 import { parseGeminiResponse } from "./parsers";
-import { getEnhancedExtractionPrompt, getBasicExtractionPrompt, getTextOnlyExtractionPrompt, getHandwritingExtractionPrompt } from "./prompts";
-import { createFetchOptions, fetchWithRetry, getConnectionTimeout } from "@/utils/automationServerUrl";
+import { 
+  getEnhancedExtractionPrompt, 
+  getBasicExtractionPrompt, 
+  getTextOnlyExtractionPrompt, 
+  getHandwritingExtractionPrompt,
+  getSimplifiedExtractionPrompt,
+  getStructuredExtractionPrompt 
+} from "./prompts";
 import { reportApiKeyError } from "./apiKeyManager";
 
 // تتبع آخر استدعاء API
 const lastApiCallTime = new Map<string, number>();
+
+// قائمة بالنماذج المتاحة وترتيب استخدامها
+const AVAILABLE_MODELS = [
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
+  'gemini-pro-vision'
+];
 
 /**
  * استخراج البيانات من الصور باستخدام Gemini API
@@ -16,7 +33,7 @@ export async function extractDataWithGemini({
   apiKey,
   imageBase64,
   extractionPrompt,
-  temperature = 0.1,
+  temperature = 0.2,
   modelVersion = 'gemini-1.5-flash',
   enhancedExtraction = true,
   maxRetries = 2,
@@ -30,7 +47,11 @@ export async function extractDataWithGemini({
     };
   }
 
-  // تحديد المطالبة المناسبة بناءً على الإعدادات
+  // تحقق من صحة النموذج المطلوب
+  const model = AVAILABLE_MODELS.includes(modelVersion) ? modelVersion : AVAILABLE_MODELS[0];
+  console.log(`استخدام نموذج Gemini: ${model}`);
+
+  // استراتيجية اختيار المطالبة المناسبة
   let prompt = extractionPrompt;
   
   if (!prompt) {
@@ -47,7 +68,7 @@ export async function extractDataWithGemini({
   const timeSinceLastCall = currentTime - lastCallTime;
   
   // التأكد من أن هناك على الأقل ثانية واحدة بين الطلبات
-  const minDelayBetweenCalls = 1000; // ثانية واحدة
+  const minDelayBetweenCalls = 1500; // 1.5 ثانية
   
   if (timeSinceLastCall < minDelayBetweenCalls) {
     const delayNeeded = minDelayBetweenCalls - timeSinceLastCall;
@@ -62,17 +83,17 @@ export async function extractDataWithGemini({
     console.log("إرسال طلب إلى Gemini API...");
     console.log("أول 5 أحرف من مفتاح API:", apiKey.substring(0, 5));
     console.log("طول صورة Base64:", imageBase64.length);
-    console.log("استخدام إصدار النموذج:", modelVersion);
+    console.log("استخدام إصدار النموذج:", model);
     
     // التحقق من حجم صورة Base64
     if (imageBase64.length > 1000000) {
-      console.log("حجم الصورة كبير جدًا، لكن سنستمر في المحاولة");
+      console.log("حجم الصورة كبير، سيتم محاولة ضغطها في المستقبل");
     }
     
     // تنظيف معرف صورة Base64
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
     
-    // إنشاء محتوى الطلب
+    // إنشاء محتوى الطلب مع تحسينات لزيادة الدقة
     const requestBody: GeminiRequest = {
       contents: [
         {
@@ -96,7 +117,7 @@ export async function extractDataWithGemini({
     };
     
     // إنشاء عنوان URL للطلب
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
     console.log("إرسال طلب إلى نقطة نهاية Gemini API:", endpoint);
     
     // إنشاء خيارات الطلب
@@ -117,7 +138,7 @@ export async function extractDataWithGemini({
     // محاولة طلب API مع إعادة المحاولة
     let response;
     let attemptCount = 0;
-    const maxAttempts = 3;
+    const maxAttempts = maxRetries + 1;
     
     while (attemptCount < maxAttempts) {
       try {
@@ -134,7 +155,7 @@ export async function extractDataWithGemini({
         }
         
         // انتظار قبل إعادة المحاولة
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
       }
     }
     
@@ -157,6 +178,29 @@ export async function extractDataWithGemini({
       
       // الإبلاغ عن الخطأ لمدير المفاتيح
       reportApiKeyError(apiKey, `${response.status}: ${errorText}`);
+      
+      // إذا كان الخطأ بسبب وصول الحد الأقصى للاستخدام، يمكن تجربة نموذج آخر
+      if (response.status === 429 || errorText.includes('quota') || errorText.includes('rate limit')) {
+        console.log("تم الوصول إلى حد الاستخدام، محاولة استخدام نموذج آخر...");
+        
+        // العثور على النموذج التالي في القائمة
+        const currentModelIndex = AVAILABLE_MODELS.indexOf(model);
+        if (currentModelIndex >= 0 && currentModelIndex < AVAILABLE_MODELS.length - 1) {
+          const nextModel = AVAILABLE_MODELS[currentModelIndex + 1];
+          console.log(`محاولة استخدام النموذج البديل: ${nextModel}`);
+          
+          return await extractDataWithGemini({
+            apiKey,
+            imageBase64,
+            extractionPrompt: prompt,
+            temperature,
+            modelVersion: nextModel,
+            enhancedExtraction,
+            maxRetries,
+            retryDelayMs
+          });
+        }
+      }
       
       return {
         success: false,
@@ -192,14 +236,24 @@ export async function extractDataWithGemini({
       
       // محاولة إعادة المحاولة مع مطالبة مختلفة
       if (enhancedExtraction && !extractionPrompt) {
-        console.log("محاولة استخدام مطالبة استخراج النص فقط...");
+        // استراتيجية التراجع - استخدام مطالبات مختلفة بالترتيب
+        const fallbackPrompts = [
+          getSimplifiedExtractionPrompt(),
+          getStructuredExtractionPrompt(),
+          getTextOnlyExtractionPrompt(),
+          getHandwritingExtractionPrompt()
+        ];
+        
+        // اختيار المطالبة التالية
+        const nextPrompt = fallbackPrompts[0];
+        console.log("محاولة استخدام مطالبة بديلة...");
         
         return await extractDataWithGemini({
           apiKey,
           imageBase64,
-          extractionPrompt: getTextOnlyExtractionPrompt(),
+          extractionPrompt: nextPrompt,
           temperature,
-          modelVersion,
+          modelVersion: model,
           enhancedExtraction: false,
           maxRetries,
           retryDelayMs
@@ -262,6 +316,14 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
     
     if (data && Array.isArray(data.models)) {
       console.log("نجح اختبار اتصال Gemini API:", data.models.length, "نماذج متاحة");
+      
+      // التحقق من توفر النماذج المطلوبة
+      const availableModels = data.models.map((model: any) => model.name);
+      const ourModels = AVAILABLE_MODELS.filter(model => 
+        availableModels.some((availableModel: string) => availableModel.includes(model))
+      );
+      
+      console.log("النماذج المتاحة للاستخدام:", ourModels);
       
       return {
         success: true,

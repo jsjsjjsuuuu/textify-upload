@@ -5,7 +5,12 @@
 
 import { GeminiResponse } from "./types";
 import { ApiResult } from "../apiService";
-import { autoExtractData, mergeExtractedData } from "@/utils/extractionUtils";
+import { 
+  autoExtractData, 
+  mergeExtractedData, 
+  validateExtractedData, 
+  calculateDataConfidence 
+} from "@/utils/extractionUtils";
 import { formatPrice } from "./utils";
 
 /**
@@ -64,42 +69,63 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
 
     // محاولة استخراج JSON من النص
     try {
-      // 1. البحث عن نمط ```json ... ``` في النص
-      const jsonMarkdownPattern = /```(?:json)?\s*({[\s\S]*?})\s*```/i;
-      const jsonMarkdownMatch = extractedText.match(jsonMarkdownPattern);
+      // 1. محاولة استخراج JSON باستخدام أنماط أكثر دقة
+      const jsonPatterns = [
+        // نمط ال JSON في كتل markdown
+        /```(?:json)?\s*({[\s\S]*?})\s*```/i,
+        // نمط ال JSON العادي (أي كائن بين {} قوسين)
+        /{[\s\S]*?"companyName"[\s\S]*?}/i,
+        // نمط أكثر مرونة لاستخراج أي كائن JSON
+        /{[\s\S]*?}/
+      ];
+
+      let foundJson = false;
       
-      if (jsonMarkdownMatch && jsonMarkdownMatch[1]) {
-        try {
-          const cleanedJson = jsonMarkdownMatch[1]
-            .replace(/[\u201C\u201D]/g, '"') // استبدال علامات الاقتباس الذكية
-            .replace(/[\u2018\u2019]/g, "'") // استبدال علامات الاقتباس المفردة
-            .replace(/،/g, ',');  // استبدال الفاصلة العربية بالإنجليزية
-            
-          jsonData = JSON.parse(cleanedJson);
-          console.log("تم استخراج JSON من نمط Markdown:", jsonData);
-        } catch (e) {
-          console.error("خطأ في تحليل JSON من نمط Markdown:", e);
+      for (const pattern of jsonPatterns) {
+        if (foundJson) break;
+        
+        const match = extractedText.match(pattern);
+        if (match && match[1] || (match && !match[1] && match[0].includes('companyName'))) {
+          const jsonText = match[1] || match[0];
+          
+          try {
+            // تنظيف النص قبل التحليل
+            const cleanedJson = jsonText
+              .replace(/[\u201C\u201D]/g, '"') // استبدال علامات الاقتباس الذكية
+              .replace(/[\u2018\u2019]/g, "'") // استبدال علامات الاقتباس المفردة
+              .replace(/،/g, ',');  // استبدال الفاصلة العربية بالإنجليزية
+              
+            jsonData = JSON.parse(cleanedJson);
+            console.log("تم استخراج JSON من النص:", jsonData);
+            foundJson = true;
+          } catch (e) {
+            console.error("خطأ في تحليل JSON من النمط:", e);
+          }
         }
       }
       
-      // 2. إذا لم ينجح الخيار الأول، نبحث عن أي كائن JSON في النص
-      if (Object.keys(jsonData).length === 0) {
-        // البحث عن أي نص محاط بأقواس {}
-        const simpleJsonPattern = /{[\s\S]*?}/;
-        const simpleJsonMatch = extractedText.match(simpleJsonPattern);
-        
-        if (simpleJsonMatch && simpleJsonMatch[0]) {
-          try {
-            const cleanedJson = simpleJsonMatch[0]
-              .replace(/[\u201C\u201D]/g, '"')
-              .replace(/[\u2018\u2019]/g, "'")
-              .replace(/،/g, ',');
-              
-            jsonData = JSON.parse(cleanedJson);
-            console.log("تم استخراج JSON من النص مباشرة:", jsonData);
-          } catch (e) {
-            console.error("خطأ في تحليل JSON المباشر:", e);
+      // 2. إذا لم ينجح أي نمط، نحاول استخراج JSON كصيغة نصية
+      if (!foundJson) {
+        try {
+          // البحث عن أزواج الخصائص والقيم في النص
+          const keyValuePairs: Record<string, string> = {};
+          const properties = ['companyName', 'code', 'senderName', 'phoneNumber', 'province', 'price'];
+          
+          for (const prop of properties) {
+            const propPattern = new RegExp(`"${prop}"\\s*:\\s*"([^"]*)"`, 'i');
+            const match = extractedText.match(propPattern);
+            if (match && match[1]) {
+              keyValuePairs[prop] = match[1].trim();
+            }
           }
+          
+          if (Object.keys(keyValuePairs).length > 0) {
+            jsonData = keyValuePairs;
+            console.log("تم استخراج أزواج الخصائص والقيم:", jsonData);
+            foundJson = true;
+          }
+        } catch (e) {
+          console.error("خطأ في استخراج أزواج الخصائص والقيم:", e);
         }
       }
     } catch (e) {
@@ -136,9 +162,13 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
       jsonData = mergeExtractedData(jsonData, textExtractedData);
     }
     
-    // حساب درجة الثقة في البيانات
-    confidence = calculateConfidence(jsonData);
+    // التحقق من صحة البيانات المستخرجة
+    const validationResults = validateExtractedData(jsonData);
     
+    // حساب درجة الثقة في البيانات
+    confidence = calculateDataConfidence(jsonData);
+    
+    console.log("نتائج التحقق:", validationResults);
     console.log("البيانات النهائية المستخرجة:", {
       jsonData,
       confidence
@@ -170,59 +200,4 @@ export function parseGeminiResponse(response: GeminiResponse): ApiResult {
       message: `خطأ في تحليل استجابة Gemini: ${error instanceof Error ? error.message : String(error)}`
     };
   }
-}
-
-/**
- * حساب درجة الثقة بناء على اكتمال البيانات
- */
-function calculateConfidence(data: Record<string, string>): number {
-  // بدون بيانات = ثقة 0
-  if (!data || Object.keys(data).length === 0) {
-    return 0;
-  }
-
-  // تعيين وزن لكل حقل
-  const weights = {
-    code: 15,
-    senderName: 15,
-    phoneNumber: 20,
-    province: 15,
-    price: 15,
-    companyName: 10
-  };
-
-  let totalWeight = 0;
-  let scoreSum = 0;
-
-  // حساب الدرجة لكل حقل
-  for (const [field, weight] of Object.entries(weights)) {
-    totalWeight += weight;
-    
-    if (data[field]) {
-      // فحص صحة رقم الهاتف
-      if (field === 'phoneNumber') {
-        const digits = data[field].replace(/\D/g, '');
-        if (digits.length === 11) {
-          scoreSum += weight;
-        } else {
-          scoreSum += weight * 0.5; // نصف الدرجة لرقم هاتف غير صالح
-        }
-      } 
-      // فحص صحة الكود
-      else if (field === 'code') {
-        if (data[field].length > 2) {
-          scoreSum += weight;
-        } else {
-          scoreSum += weight * 0.5; // نصف الدرجة لكود قصير جداً
-        }
-      }
-      // للحقول النصية الأخرى
-      else {
-        scoreSum += weight;
-      }
-    }
-  }
-
-  // حساب النسبة المئوية للثقة
-  return Math.min(Math.round((scoreSum / totalWeight) * 100), 100);
 }
