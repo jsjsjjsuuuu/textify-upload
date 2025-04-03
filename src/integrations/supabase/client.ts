@@ -5,6 +5,16 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// التحقق من القيم قبل إنشاء العميل
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('متغيرات البيئة الخاصة بـ Supabase غير محددة', {
+    supabaseUrl: Boolean(supabaseUrl),
+    supabaseAnonKey: Boolean(supabaseAnonKey)
+  });
+  
+  throw new Error('VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY مطلوبة. الرجاء التأكد من وجود ملف .env أو .env.local يحتوي على هذه المتغيرات.');
+}
+
 // إنشاء مثيل Supabase
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
