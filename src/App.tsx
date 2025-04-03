@@ -1,9 +1,9 @@
 
 import { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
-import { router } from './router';
+import { router } from './routes';
 import { Toaster } from "@/components/ui/toaster";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "@/components/ui/theme-provider";
 import SupabaseStorageCheck from "@/components/SupabaseStorageCheck";
 import { AuthProvider } from '@/contexts/AuthContext';
 
