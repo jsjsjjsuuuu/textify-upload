@@ -5,32 +5,30 @@ import { Button } from '@/components/ui/button';
 
 interface ImageErrorDisplayProps {
   onRetry: () => void;
+  retryCount: number;
   errorMessage?: string;
-  retryCount?: number;
 }
 
 const ImageErrorDisplay: React.FC<ImageErrorDisplayProps> = ({ 
-  onRetry,
-  errorMessage = "تعذر تحميل الصورة",
-  retryCount = 0
+  onRetry, 
+  retryCount, 
+  errorMessage = "تعذر تحميل الصورة"
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full p-6 bg-gray-50 dark:bg-gray-800/50 rounded-md">
-      <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-      <p className="text-center text-muted-foreground mb-4">{errorMessage}</p>
-      {retryCount > 0 && (
-        <p className="text-sm text-muted-foreground mb-2">
-          عدد المحاولات: {retryCount}
-        </p>
-      )}
+    <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/10 text-muted-foreground">
+      <AlertCircle className="h-8 w-8 mb-2 text-destructive" />
+      <p className="text-sm mb-3 text-center max-w-[80%]">{errorMessage}</p>
       <Button 
-        variant="outline" 
-        size="sm" 
-        className="flex items-center gap-1"
-        onClick={onRetry}
+        variant="outline"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRetry();
+        }}
+        className="flex items-center gap-1.5"
       >
-        <RefreshCw className="h-4 w-4" />
-        إعادة المحاولة
+        <RefreshCw className="h-3.5 w-3.5" />
+        <span>إعادة المحاولة {retryCount > 0 ? `(${retryCount})` : ''}</span>
       </Button>
     </div>
   );
