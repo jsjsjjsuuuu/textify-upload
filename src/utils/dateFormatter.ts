@@ -4,24 +4,30 @@ import { ar } from 'date-fns/locale';
 
 /**
  * تنسيق التاريخ بالصيغة العربية
- * @param dateString سلسلة التاريخ
+ * @param dateString سلسلة التاريخ أو كائن Date
  * @param formatPattern نمط التنسيق (اختياري)
  */
-export const formatDate = (dateString?: string | null, formatPattern: string = 'PPP'): string => {
+export const formatDate = (dateString?: string | Date | null, formatPattern: string = 'PPP'): string => {
   if (!dateString) return '-';
   
   try {
     // محاولة تحليل التاريخ
-    const date = parseISO(dateString);
+    let date: Date;
+    
+    if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      date = parseISO(dateString);
+    }
     
     if (!isValid(date)) {
-      return dateString; // إرجاع القيمة الأصلية إذا كانت التاريخ غير صالح
+      return typeof dateString === 'string' ? dateString : '-';
     }
     
     // تنسيق التاريخ باللغة العربية
     return format(date, formatPattern, { locale: ar });
   } catch (error) {
     console.error('خطأ في تنسيق التاريخ:', error);
-    return dateString;
+    return typeof dateString === 'string' ? dateString : '-';
   }
 };

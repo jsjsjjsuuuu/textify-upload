@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
-import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
+import UserManagementPanel from "@/components/admin/UserManagementPanel";
+import ResetPasswordDialog from "@/components/admin/ResetPasswordDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";

@@ -27,6 +27,9 @@ export interface ImageData {
   extractionMethod?: "ocr" | "gemini" | "none"; // إضافة "none" كقيمة مقبولة
   extractionSuccess?: boolean;
   
+  // إضافة خاصية النص الخام المفقودة
+  rawText?: string;
+  
   // الخصائص الإضافية المطلوبة
   storage_path?: string;
   batch_id?: string;

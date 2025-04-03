@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserEditForm } from "@/components/admin/UserEditForm";
+import UserEditForm from "@/components/admin/UserEditForm";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, User, Clock, Shield, AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
