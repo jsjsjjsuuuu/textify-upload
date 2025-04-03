@@ -1,12 +1,27 @@
 
-export const formatDate = (dateInput: string | Date) => {
-  // تحويل الإدخال إلى كائن تاريخ بناءً على نوعه
-  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+import { format, parseISO, isValid } from 'date-fns';
+import { ar } from 'date-fns/locale';
+
+/**
+ * تنسيق التاريخ بالصيغة العربية
+ * @param dateString سلسلة التاريخ
+ * @param formatPattern نمط التنسيق (اختياري)
+ */
+export const formatDate = (dateString?: string | null, formatPattern: string = 'PPP'): string => {
+  if (!dateString) return '-';
   
-  return date.toLocaleDateString('ar-SA', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    calendar: 'gregory'
-  }).replace(/[\u0660-\u0669]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 0x30));
+  try {
+    // محاولة تحليل التاريخ
+    const date = parseISO(dateString);
+    
+    if (!isValid(date)) {
+      return dateString; // إرجاع القيمة الأصلية إذا كانت التاريخ غير صالح
+    }
+    
+    // تنسيق التاريخ باللغة العربية
+    return format(date, formatPattern, { locale: ar });
+  } catch (error) {
+    console.error('خطأ في تنسيق التاريخ:', error);
+    return dateString;
+  }
 };
