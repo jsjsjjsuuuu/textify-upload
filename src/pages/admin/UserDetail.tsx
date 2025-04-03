@@ -216,7 +216,7 @@ const UserDetail = () => {
                     <CardTitle>تعديل بيانات المستخدم</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <UserEditForm userId={id || ''} userData={user} />
+                    <UserEditForm userData={user} />
                   </CardContent>
                 </Card>
               </TabsContent>

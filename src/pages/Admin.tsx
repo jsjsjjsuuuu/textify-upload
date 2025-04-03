@@ -7,12 +7,16 @@ import ResetPasswordDialog from "@/components/admin/ResetPasswordDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { useUserManagement } from "@/hooks/useUserManagement";
 
 const Admin = () => {
   const { userProfile } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
+  
+  // استدعاء خطاف إدارة المستخدمين
+  const userManagement = useUserManagement();
+  
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
@@ -71,7 +75,34 @@ const Admin = () => {
           </TabsList>
           
           <TabsContent value="users">
-            <UserManagementPanel />
+            <UserManagementPanel 
+              searchQuery={userManagement.searchQuery}
+              filterPlan={userManagement.filterPlan}
+              filterStatus={userManagement.filterStatus}
+              activeTab={userManagement.activeTab}
+              isEditingUser={userManagement.isEditingUser}
+              editedUserData={userManagement.editedUserData}
+              isProcessing={userManagement.isProcessing}
+              selectedDate={userManagement.selectedDate}
+              userCounts={userManagement.getUserCounts()}
+              filteredUsers={userManagement.getFilteredUsers()}
+              isLoading={userManagement.isLoading}
+              isLoadingDetails={userManagement.isLoadingDetails}
+              detailedUsers={userManagement.detailedUsers}
+              onSearchChange={userManagement.setSearchQuery}
+              onPlanFilterChange={userManagement.setFilterPlan}
+              onStatusFilterChange={userManagement.setFilterStatus}
+              onTabChange={userManagement.setActiveTab}
+              onEdit={userManagement.startEditing}
+              onApprove={userManagement.approveUser}
+              onReject={userManagement.rejectUser}
+              onCancel={userManagement.cancelEditing}
+              onSave={userManagement.saveUserData}
+              onUserDataChange={userManagement.handleEditChange}
+              onDateSelect={userManagement.handleDateSelect}
+              onEmailChange={userManagement.updateUserEmail}
+              onFetchDetails={userManagement.fetchUserDetails}
+            />
           </TabsContent>
           
           <TabsContent value="settings">
@@ -84,7 +115,22 @@ const Admin = () => {
       </div>
       
       {/* حوار إعادة تعيين كلمة المرور - سيظهر عند تفعيله */}
-      <ResetPasswordDialog />
+      <ResetPasswordDialog 
+        isOpen={userManagement.showConfirmReset}
+        onOpenChange={userManagement.setShowConfirmReset}
+        onConfirm={() => {
+          if (userManagement.userToReset) {
+            userManagement.resetUserPassword(
+              userManagement.userToReset, 
+              userManagement.newPassword
+            );
+          }
+        }}
+        onCancel={() => {
+          userManagement.resetPasswordStates();
+        }}
+        isProcessing={userManagement.isProcessing}
+      />
     </div>
   );
 };
