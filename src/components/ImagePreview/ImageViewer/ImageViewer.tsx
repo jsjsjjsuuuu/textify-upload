@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { ImageData } from "@/types/ImageData";
 import ZoomControls from "./ZoomControls";
