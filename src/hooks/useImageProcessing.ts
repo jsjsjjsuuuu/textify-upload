@@ -20,7 +20,7 @@ export const useImageProcessing = () => {
   const [processingProgress, setProcessingProgress] = useState<{ total: number; current: number; errors: number; }>({ total: 0, current: 0, errors: 0 });
   
   // وظائف للتعامل مع الصور المحفوظة
-  const { markImageAsProcessed, incrementImageStats, clearImageStats } = useImageStats();
+  const { markImageAsProcessed, incrementImageStats, clearImageStats, clearProcessedImagesCache } = useImageStats();
   
   // وظيفة لحساب عدد الصور المكررة
   const countDuplicateImages = (newImage: ImageData, allImages: ImageData[]): number => {
@@ -170,13 +170,13 @@ export const useImageProcessing = () => {
       }
       
       // تحديث حالة الصورة إلى "جاري الإرسال"
-      updateImage(imageId, { status: "processing" }); // تغيير من "submitting" إلى "processing"
+      updateImage(imageId, { status: "processing" }); // تصحيح من "submitting" إلى "processing"
       
       // حفظ الصورة في قاعدة البيانات
       await saveImageToDatabase(image);
       
       // تحديث حالة الصورة إلى "تم الإرسال"
-      updateImage(imageId, { status: "completed" }); // تغيير من "submitted" إلى "completed"
+      updateImage(imageId, { status: "completed" }); // تصحيح من "submitted" إلى "completed"
       
       toast({
         title: "تم الإرسال",
@@ -233,6 +233,42 @@ export const useImageProcessing = () => {
     }
   };
 
+  // إضافة وظيفة إعادة معالجة الصورة
+  const reprocessImage = async (imageId: string) => {
+    console.log("بدء إعادة معالجة الصورة:", imageId);
+    try {
+      const image = sessionImages.find(img => img.id === imageId);
+      if (!image || !image.file) {
+        console.error("الصورة غير موجودة أو لا تحتوي على ملف:", imageId);
+        toast({
+          title: "خطأ في إعادة المعالجة",
+          description: "لا يمكن إعادة معالجة الصورة. الملف غير موجود.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // تحديث حالة الصورة إلى "جاري المعالجة"
+      updateImage(imageId, { status: "processing" });
+      
+      // استخدام وظيفة processFiles من useFileUpload مع ملف واحد فقط
+      await processFiles([image.file]);
+      
+      toast({
+        title: "إعادة المعالجة",
+        description: "تمت إعادة معالجة الصورة بنجاح",
+      });
+    } catch (error) {
+      console.error("خطأ في إعادة معالجة الصورة:", error);
+      updateImage(imageId, { status: "error" });
+      toast({
+        title: "خطأ في إعادة المعالجة",
+        description: "حدث خطأ أثناء إعادة معالجة الصورة",
+        variant: "destructive"
+      });
+    }
+  };
+
   const {
     handleFileChange: processFiles,
     isProcessing,
@@ -256,12 +292,13 @@ export const useImageProcessing = () => {
     removeDuplicates
   });
   
-  // تعديل وظيفة handleFileChange لتقبل File[] بدلاً من FileList
+  // تعديل وظيفة handleFileChange لتقبل File[] أو FileList
   const handleFileChange = useCallback((files: File[] | FileList | null) => {
     if (!files) return;
     
     // إذا كان من نوع FileList، حوله إلى مصفوفة
     const fileArray = Array.isArray(files) ? files : Array.from(files);
+    console.log("معالجة الملفات:", fileArray.length, "ملف");
     
     // ثم استدعاء الدالة من useFileUpload
     processFiles(fileArray);
@@ -290,6 +327,7 @@ export const useImageProcessing = () => {
     clearQueue,
     clearImageCache,
     useGemini: useGeminiOption,
-    processingError
+    processingError,
+    reprocessImage
   };
 };

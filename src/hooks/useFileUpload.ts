@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+
+import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { v4 as uuidv4 } from 'uuid';
@@ -45,6 +46,7 @@ export const useFileUpload = (params: FileUploadParams) => {
   const { useGemini, processWithGemini } = useGeminiProcessing();
   const { extractTextFromImage } = useOcrExtraction();
   const { toast } = useToast();
+  const { markImageAsProcessed } = useImageStats();
   
   // إضافة متغيرات معالجة إضافية
   const [retryCount, setRetryCount] = useState<Record<string, number>>({});
@@ -55,6 +57,13 @@ export const useFileUpload = (params: FileUploadParams) => {
   
   // وظيفة مساعدة لتأخير التنفيذ
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // إضافة وظيفة لتتبع معالجة الصور
+  useEffect(() => {
+    if (isProcessing) {
+      console.log(`جاري معالجة ${fileQueue.length} صورة. النشطة: ${activeUploads}`);
+    }
+  }, [isProcessing, fileQueue.length, activeUploads]);
 
   // معالجة الملف بشكل فردي
   const processFileDirectly = async (file: File, image: ImageData): Promise<ImageData> => {
@@ -81,12 +90,15 @@ export const useFileUpload = (params: FileUploadParams) => {
       updateImage(image.id, { status: "processing" });
       
       let resultImage: ImageData;
+      let extractionSuccessful = false;
       
       // استخدام Gemini أو OCR بناءً على الإعدادات
       if (useGeminiOption && useGemini) {
         try {
           console.log(`معالجة الصورة ${file.name} باستخدام Gemini`);
           resultImage = await processWithGemini(file, image);
+          extractionSuccessful = true;
+          console.log("نتيجة Gemini:", resultImage);
         } catch (geminiError) {
           console.error(`فشل Gemini في معالجة الصورة ${file.name}:`, geminiError);
           console.log("الرجوع إلى OCR...");
@@ -106,6 +118,7 @@ export const useFileUpload = (params: FileUploadParams) => {
               result.confidence,
               "ocr"
             );
+            extractionSuccessful = true;
           } catch (ocrError) {
             console.error(`فشل OCR في معالجة الصورة ${file.name}:`, ocrError);
             resultImage = {
@@ -133,6 +146,7 @@ export const useFileUpload = (params: FileUploadParams) => {
             result.confidence,
             "ocr"
           );
+          extractionSuccessful = true;
         } catch (ocrError) {
           console.error(`فشل OCR في معالجة الصورة ${file.name}:`, ocrError);
           resultImage = {
@@ -143,6 +157,21 @@ export const useFileUpload = (params: FileUploadParams) => {
         }
       }
       
+      // طباعة تفاصيل البيانات المستخرجة للتحقق
+      if (extractionSuccessful) {
+        console.log("تفاصيل البيانات المستخرجة:", {
+          id: resultImage.id,
+          code: resultImage.code,
+          senderName: resultImage.senderName,
+          phoneNumber: resultImage.phoneNumber,
+          province: resultImage.province,
+          price: resultImage.price,
+          companyName: resultImage.companyName,
+          status: resultImage.status,
+          method: resultImage.extractionMethod
+        });
+      }
+      
       // وضع علامة على الصورة كمعالجة باستخدام الهاش
       if (resultImage.imageHash) {
         setProcessedHashes(prev => {
@@ -151,6 +180,9 @@ export const useFileUpload = (params: FileUploadParams) => {
           return newSet;
         });
       }
+      
+      // تحديث الصورة في الواجهة قبل محاولة الحفظ
+      updateImage(resultImage.id, resultImage);
       
       // حفظ الصورة المعالجة
       if (saveProcessedImage && resultImage.status !== 'error') {
@@ -163,7 +195,6 @@ export const useFileUpload = (params: FileUploadParams) => {
       }
       
       // وضع علامة على الصورة كمعالجة
-      const { markImageAsProcessed } = useImageStats();
       markImageAsProcessed(resultImage.id);
       
       return resultImage;
@@ -176,12 +207,17 @@ export const useFileUpload = (params: FileUploadParams) => {
         errors: (prevProgress.errors || 0) + 1,
       }));
       
-      // إرجاع الصورة مع حالة الخطأ
-      return {
+      // تحديث الصورة مع حالة الخطأ
+      const errorImage = {
         ...image,
         status: "error" as const,
         extractedText: `فشل في معالجة الصورة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`
       };
+      
+      // تحديث حالة الصورة في الواجهة
+      updateImage(image.id, errorImage);
+      
+      return errorImage;
     }
   };
 
@@ -245,9 +281,13 @@ export const useFileUpload = (params: FileUploadParams) => {
       return;
     }
     
+    console.log("إضافة صورة جديدة إلى قائمة الانتظار:", newImage.id);
+    
+    // إضافة الصورة إلى الواجهة
+    addImage(newImage);
+    
     // إضافة الصورة إلى قائمة الانتظار
     setFileQueue(prevQueue => [...prevQueue, { file, image: newImage }]);
-    addImage(newImage);
     
     // بدء المعالجة إذا لم تكن قيد التشغيل بالفعل
     if (!isProcessing && !processingPaused) {
@@ -271,13 +311,14 @@ export const useFileUpload = (params: FileUploadParams) => {
     setIsProcessing(true);
     setActiveUploads(prev => prev + 1);
     
-    let currentQueue = fileQueue;
+    let currentQueue = [...fileQueue];
     
     while (currentQueue.length > 0 && !processingPaused) {
       const [nextItem, ...remainingQueue] = currentQueue;
       setFileQueue(remainingQueue);
       
       try {
+        console.log("معالجة الملف التالي من القائمة:", nextItem.file.name);
         // معالجة الملف الحالي
         const updatedImage = await processFile(nextItem);
         
@@ -302,11 +343,16 @@ export const useFileUpload = (params: FileUploadParams) => {
     } else {
       console.log("اكتملت معالجة قائمة الانتظار");
     }
-  }, [fileQueue, isProcessing, processingPaused, processFile, updateImage, setProcessingError]);
+  }, [fileQueue, isProcessing, processingPaused, processFile, updateImage]);
 
   // وظيفة لتغيير الملف
-  const handleFileChange = useCallback(async (files: File[] | null) => {
-    if (!files) return;
+  const handleFileChange = useCallback(async (files: File[]) => {
+    if (!files || files.length === 0) {
+      console.log("لا توجد ملفات للمعالجة");
+      return;
+    }
+    
+    console.log(`معالجة ${files.length} ملف...`);
     
     // إضافة الملفات إلى قائمة الانتظار
     for (const file of files) {
@@ -365,8 +411,6 @@ export const useFileUpload = (params: FileUploadParams) => {
       return false;
     }
   };
-
-  const { markImageAsProcessed } = useImageStats();
   
   return {
     handleFileChange,

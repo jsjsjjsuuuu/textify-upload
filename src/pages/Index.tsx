@@ -1,338 +1,227 @@
 
-import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
-import AppHeader from '@/components/AppHeader';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
-import ImageUploader from '@/components/ImageUploader';
-import { useDataFormatting } from '@/hooks/useDataFormatting';
-import { motion } from 'framer-motion';
-import DirectExportTools from '@/components/DataExport/DirectExportTools';
-import { Button } from '@/components/ui/button';
-import { Link, useNavigate } from 'react-router-dom';
-import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ImageData } from '@/types/ImageData';
+import FileUploader from '@/components/FileUploader';
+import ImageViewer from '@/components/ImageViewer';
+import NoImagesPlaceholder from '@/components/NoImagesPlaceholder';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
+import Layout from '@/components/Layout';
+import Header from '@/components/Header';
+import { EmptyContent } from '@/components/EmptyContent';
+import ImageList from '@/components/ImageList';
+import ProcessingInfo from '@/components/ProcessingInfo';
+import { Button } from '@/components/ui/button';
+import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("upload");
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  
-  // استدعاء hook بشكل ثابت في كل تحميل للمكون
+
   const {
     sessionImages,
-    isProcessing,
-    processingProgress,
-    isSubmitting,
-    bookmarkletStats,
     handleFileChange,
     handleTextChange,
     handleDelete,
     handleSubmitToApi,
-    saveImageToDatabase,
-    formatDate: formatImageDate,
+    isSubmitting,
+    isProcessing,
+    processingProgress,
     clearSessionImages,
     loadUserImages,
-    runCleanupNow,
-    saveProcessedImage,
-    activeUploads,
-    queueLength,
-    retryProcessing,
     pauseProcessing,
+    resumeProcessing,
+    retryProcessing,
     clearQueue,
-    clearImageCache
+    useGemini,
+    setUseGemini: setUseGeminiOption,
+    reprocessImage
   } = useImageProcessing();
-  
-  const {
-    formatPhoneNumber,
-    formatPrice,
-    formatProvinceName
-  } = useDataFormatting();
 
-  // وظيفة تنفيذ التنظيف يدوياً
-  const handleManualCleanup = async () => {
-    if (user) {
-      await runCleanupNow(user.id);
-      // إعادة تحميل الصور بعد التنظيف
+  // تحميل الصور عند تسجيل الدخول
+  useEffect(() => {
+    if (user && !authLoading) {
       loadUserImages();
-      toast({
-        title: "تم التنظيف",
-        description: "تم تنظيف السجلات القديمة بنجاح",
-      });
     }
-  };
-  
-  // وظيفة إعادة المعالجة للصورة
+  }, [user, authLoading, loadUserImages]);
+
+  // وظيفة إعادة المعالجة
   const handleReprocessImage = async (imageId: string) => {
-    const imageToReprocess = sessionImages.find(img => img.id === imageId);
-    if (!imageToReprocess) {
-      console.error("الصورة غير موجودة:", imageId);
-      return;
-    }
-    
     try {
-      // تحديث حالة الصورة إلى "جاري المعالجة"
-      handleTextChange(imageId, "status", "processing");
-      
-      // التحقق من وجود ملف الصورة
-      if (!imageToReprocess.file) {
-        throw new Error("ملف الصورة غير موجود، لا يمكن إعادة المعالجة");
-      }
-      
-      // إعادة معالجة الصورة
-      await saveProcessedImage(imageToReprocess);
-      
+      await reprocessImage(imageId);
       toast({
-        title: "تمت إعادة المعالجة",
-        description: "تمت إعادة معالجة الصورة بنجاح",
+        title: "إعادة المعالجة",
+        description: "تم جدولة الصورة لإعادة المعالجة",
       });
     } catch (error) {
       console.error("خطأ في إعادة معالجة الصورة:", error);
-      handleTextChange(imageId, "status", "error");
-      handleTextChange(imageId, "extractedText", `فشل في إعادة المعالجة: ${error.message || "خطأ غير معروف"}`);
-      
       toast({
-        title: "خطأ في إعادة المعالجة",
-        description: "حدث خطأ أثناء إعادة معالجة الصورة",
+        title: "خطأ",
+        description: "فشل في إعادة معالجة الصورة",
         variant: "destructive"
       });
-      
-      throw error; // إعادة رمي الخطأ للتعامل معه في المكون الأصلي
     }
   };
 
-  // إعادة تشغيل المعالجة إذا توقفت عن العمل
-  const handleRetryProcessing = () => {
-    if (retryProcessing()) {
-      toast({
-        title: "إعادة تشغيل",
-        description: "تم إعادة تشغيل قائمة المعالجة بنجاح",
-      });
-    } else {
-      toast({
-        title: "تنبيه",
-        description: "لا توجد صور في قائمة الانتظار حالياً",
-        variant: "default"
-      });
-    }
-  };
+  // وظيفة فتح المعاينة
+  const openImageViewer = useCallback((image: ImageData) => {
+    setSelectedImage(image);
+    setIsViewerOpen(true);
+  }, []);
 
-  // إيقاف المعالجة مؤقتًا
-  const handlePauseProcessing = () => {
-    if (pauseProcessing()) {
-      toast({
-        title: "إيقاف مؤقت",
-        description: "تم إيقاف قائمة المعالجة مؤقتًا",
-      });
-    } else {
-      toast({
-        title: "تنبيه",
-        description: "لا توجد عمليات معالجة نشطة حاليًا",
-        variant: "default"
-      });
+  // وظيفة إغلاق المعاينة
+  const closeImageViewer = useCallback(() => {
+    setIsViewerOpen(false);
+    setSelectedImage(null);
+  }, []);
+
+  // تهيئة منطقة السحب والإفلات
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.bmp', '.tiff']
+    },
+    onDrop: async (acceptedFiles) => {
+      console.log(`تم استلام ${acceptedFiles.length} ملف`);
+      await handleFileChange(acceptedFiles);
     }
-  };
-  
-  // وظيفة مسح القائمة
-  const handleClearQueue = () => {
-    clearQueue();
-    toast({
-      title: "تم المسح",
-      description: "تم مسح قائمة انتظار المعالجة",
-    });
-  };
-  
-  // معالج تحميل الملفات للتوافق مع واجهة المكون
-  const handleFileUpload = (files: File[]) => {
-    // استدعاء وظيفة معالجة الملفات الأصلية مباشرة مع ملفات من نوع File[]
-    handleFileChange(files);
-  };
-  
+  });
+
+  // عرض شاشة التحميل
+  if (authLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // فرز الصور تنازليًا حسب وقت الإنشاء
+  const sortedImages = [...sessionImages].sort((a, b) => {
+    // استخدام created_at إذا كان متاحًا
+    if (a.created_at && b.created_at) {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    // الرجوع إلى تاريخ الإنشاء الافتراضي
+    return b.date.getTime() - a.date.getTime();
+  });
+
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader />
+    <Layout>
+      <Header title="معالجة الوصولات" />
       
-      <main className="pt-10 pb-20">
-        <section className="py-16 px-6">
-          <div className="container mx-auto">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ duration: 0.6 }} 
-              className="text-center max-w-3xl mx-auto mb-12"
-            >
-              <h1 className="apple-header mb-4">معالج الصور والبيانات</h1>
-              <p className="text-xl text-muted-foreground mb-8">
-                استخرج البيانات من الصور بسهولة وفعالية باستخدام تقنية الذكاء الاصطناعي المتطورة
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button className="apple-button bg-primary text-primary-foreground" size="lg">
-                  ابدأ الآن
-                </Button>
-                <Button variant="outline" className="apple-button" size="lg" asChild>
-                  <Link to="/records">
-                    استعراض السجلات
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-              
-              {/* معلومات حول حالة المعالجة */}
-              {(isProcessing || queueLength > 0) && (
-                <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                  <Clock className="h-4 w-4 text-blue-500 animate-spin" />
-                  <AlertDescription className="text-sm text-blue-600 dark:text-blue-300 flex items-center justify-between">
-                    <div>
-                      جاري معالجة الصور... 
-                      <div className="mt-1 space-x-2 rtl:space-x-reverse">
-                        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
-                          الصور النشطة: {activeUploads}
-                        </Badge>
-                        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
-                          في قائمة الانتظار: {queueLength}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handlePauseProcessing} 
-                        className="text-yellow-600 border-yellow-300 bg-yellow-50 hover:bg-yellow-100"
-                      >
-                        <Pause className="h-3 w-3 ml-1" />
-                        إيقاف مؤقت
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handleRetryProcessing} 
-                        className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
-                      >
-                        <RefreshCw className="h-3 w-3 ml-1" />
-                        إعادة تشغيل
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              {/* معلومات عن ميزة تنظيف البيانات */}
-              <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                <Info className="h-4 w-4 text-blue-500" />
-                <AlertDescription className="text-sm text-blue-600 dark:text-blue-300">
-                  لتحسين أداء النظام، يتم الاحتفاظ فقط بأحدث 100 سجل. السجلات القديمة يتم حذفها تلقائياً.
-                  <div className="mt-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={handleManualCleanup} 
-                      className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
-                    >
-                      <RefreshCw className="h-3 w-3 ml-1" />
-                      تنفيذ التنظيف الآن
-                    </Button>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            </motion.div>
-          </div>
-        </section>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-6xl mx-auto px-4">
+        <TabsList className="mb-6">
+          <TabsTrigger value="upload">رفع الصور</TabsTrigger>
+          <TabsTrigger value="list">الصور المستخرجة 
+            {sessionImages.length > 0 && <span className="ml-2 bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs">
+              {sessionImages.length}
+            </span>}
+          </TabsTrigger>
+        </TabsList>
         
-        <section className="py-16 px-6 bg-transparent">
-          <div className="container mx-auto bg-transparent">
-            <div className="max-w-3xl mx-auto">
-              <div className="bg-card rounded-2xl shadow-lg overflow-hidden">
-                <div className="p-8">
-                  <h2 className="apple-subheader mb-4 text-center">تحميل الصور</h2>
-                  <p className="text-muted-foreground text-center mb-6">قم بتحميل صور الإيصالات أو الفواتير وسنقوم باستخراج البيانات منها تلقائياً</p>
-                  <ImageUploader 
-                    isProcessing={isProcessing} 
-                    processingProgress={processingProgress}
-                    onFileChange={handleFileUpload} 
-                    onCancelUpload={handlePauseProcessing}
+        <TabsContent value="upload" className="focus-visible:outline-none">
+          {/* قسم رفع الملفات */}
+          <div className="space-y-6">
+            {/* الإعدادات العامة */}
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center">
+                  <span className="text-sm ml-2">استخدام Gemini AI:</span>
+                  <input
+                    type="checkbox"
+                    checked={useGemini}
+                    onChange={(e) => setUseGeminiOption(e.target.checked)}
+                    className="ml-1 w-4 h-4"
                   />
                 </div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {sessionImages.length > 0 && (
-          <section className="py-16 px-6">
-            <div className="container mx-auto">
-              <div className="max-w-7xl mx-auto">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold">الصور التي تم رفعها</h2>
-                  
-                  {(isProcessing || queueLength > 0) && (
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
-                        الصور النشطة: {activeUploads}
-                      </Badge>
-                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
-                        في قائمة الانتظار: {queueLength}
-                      </Badge>
-                    </div>
-                  )}
-                </div>
-                <p className="text-muted-foreground mb-8">
-                  هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.
-                </p>
-                <ImagePreviewContainer 
-                  images={sessionImages} 
-                  isSubmitting={isSubmitting} 
-                  onTextChange={handleTextChange} 
-                  onDelete={handleDelete} 
-                  onSubmit={id => handleSubmitToApi(id)} 
-                  formatDate={formatImageDate} 
-                  showOnlySession={true}
-                  onReprocess={handleReprocessImage}
-                />
+              
+              <div className="flex gap-2">
+                {isProcessing ? (
+                  <Button size="sm" variant="outline" onClick={pauseProcessing}>
+                    إيقاف مؤقت
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={retryProcessing} disabled={!sessionImages.length}>
+                    استئناف
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" onClick={clearQueue} disabled={!isProcessing}>
+                  مسح القائمة
+                </Button>
               </div>
             </div>
-          </section>
-        )}
-          
-        {/* عرض رابط للسجلات */}
-        <section className="py-16 px-6 bg-gray-50 dark:bg-gray-800/20">
-          <div className="container mx-auto">
-            <div className="max-w-7xl mx-auto text-center">
-              <h2 className="text-3xl font-medium tracking-tight mb-6">سجلات الوصولات</h2>
-              <p className="text-muted-foreground mb-8">
-                يمكنك الاطلاع على جميع سجلات الوصولات والبيانات المستخرجة في صفحة السجلات
-              </p>
-              <Button size="lg" className="apple-button" asChild>
-                <Link to="/records">
-                  عرض جميع السجلات
-                  <ArrowRight className="mr-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
+            
+            {/* معلومات المعالجة */}
+            <ProcessingInfo 
+              isProcessing={isProcessing} 
+              progress={processingProgress} 
+            />
+            
+            {/* منطقة السحب والإفلات */}
+            <FileUploader
+              getRootProps={getRootProps}
+              getInputProps={getInputProps}
+              isDragActive={isDragActive}
+            />
           </div>
-        </section>
-      </main>
+        </TabsContent>
+        
+        <TabsContent value="list" className="focus-visible:outline-none">
+          {/* عرض الصور */}
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">الصور المستخرجة</h2>
+              <div className="flex gap-2">
+                {sortedImages.length > 0 && (
+                  <Button size="sm" variant="outline" onClick={() => {
+                    if (window.confirm('هل أنت متأكد من رغبتك في مسح جميع الصور؟')) {
+                      clearSessionImages();
+                    }
+                  }}>
+                    مسح الكل
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            {sortedImages.length > 0 ? (
+              <ImageList
+                images={sortedImages}
+                onImageClick={openImageViewer}
+                onTextChange={handleTextChange}
+                onDelete={handleDelete}
+                onSubmit={handleSubmitToApi}
+                isSubmitting={isSubmitting}
+                formatDate={(date: Date) => date.toLocaleDateString('ar-AE')}
+                onReprocess={handleReprocessImage}
+              />
+            ) : (
+              <EmptyContent
+                title="لا توجد صور"
+                description="لم يتم رفع أي صور بعد. يرجى استخدام قسم الرفع أعلاه."
+                icon="image"
+              />
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
       
-      <footer className="border-t py-8 bg-transparent">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground">
-              نظام استخراج البيانات - &copy; {new Date().getFullYear()}
-            </p>
-            <div className="flex gap-4">
-              <Link to="/records" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                السجلات
-              </Link>
-              <Link to="/profile" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                الملف الشخصي
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+      {/* عارض الصور */}
+      {isViewerOpen && selectedImage && (
+        <ImageViewer
+          image={selectedImage}
+          onClose={closeImageViewer}
+        />
+      )}
+    </Layout>
   );
 };
 

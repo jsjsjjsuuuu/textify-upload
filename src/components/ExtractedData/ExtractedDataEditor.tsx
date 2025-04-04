@@ -42,18 +42,19 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
       // تعيين حالة التحميل لإظهار مؤشر التحميل
       setIsDataLoading(true);
       
+      // طباعة البيانات الحالية للتشخيص
+      console.log("البيانات الجديدة القادمة:", {
+        code: image.code,
+        senderName: image.senderName,
+        phoneNumber: image.phoneNumber,
+        province: image.province,
+        price: image.price,
+        companyName: image.companyName,
+        extractedText: image.extractedText?.substring(0, 100) + "..."
+      });
+      
       // تأخير قصير لإظهار مؤشر التحميل
       setTimeout(() => {
-        console.log("البيانات الجديدة:", {
-          code: image.code || "",
-          senderName: image.senderName || "",
-          phoneNumber: image.phoneNumber || "",
-          province: image.province || "",
-          price: image.price || "",
-          companyName: image.companyName || ""
-        });
-        
-        // تعيين البيانات المؤقتة
         setTempData({
           code: image.code || "",
           senderName: image.senderName || "",
@@ -106,10 +107,22 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
     image.province, 
     image.price, 
     image.companyName, 
+    image.extractedText,
     setTempData,
     loadedImageId,
     tempData
   ]);
+
+  // محاولة استخراج البيانات تلقائيًا إذا كان النص المستخرج متاحًا ولكن البيانات غير متاحة
+  useEffect(() => {
+    const hasExtractedText = !!image.extractedText;
+    const hasNoData = !image.code && !image.senderName && !image.phoneNumber && !image.province && !image.price;
+    
+    if (hasExtractedText && hasNoData && image.status === "pending") {
+      console.log("محاولة استخراج البيانات تلقائيًا من النص المستخرج");
+      handleAutoExtract();
+    }
+  }, [image.extractedText, image.code, image.senderName, image.phoneNumber, image.province, image.price, image.status, handleAutoExtract]);
 
   // التحقق من اكتمال البيانات المطلوبة
   const isAllDataComplete = useMemo(() => {
@@ -154,6 +167,15 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
       </div>
     </div>
   ) : null;
+
+  // طباعة بيانات التشخيص
+  console.log("ExtractedDataEditor rendering:", {
+    imageId: image.id,
+    status: image.status,
+    hasExtractedText: !!image.extractedText,
+    tempDataKeys: Object.keys(tempData).filter(key => !!tempData[key as keyof typeof tempData]),
+    isDataLoading
+  });
 
   return (
     <motion.div
