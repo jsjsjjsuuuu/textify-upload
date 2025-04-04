@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
@@ -45,7 +46,7 @@ const Index = () => {
     if (user) {
       // إضافة تأخير قصير لتجنب تعارضات التحميل المتتالية
       const timeoutId = setTimeout(() => {
-        loadUserImages(); // Call without arguments
+        loadUserImages(); // استدعاء بدون وسائط
       }, 200);
       
       return () => clearTimeout(timeoutId);
