@@ -96,9 +96,9 @@ export const useImageProcessing = () => {
     return true;
   }, [images, processWithGemini, saveProcessedImage, addToQueue]);
 
-  // وظيفة تحميل الصور - تم إصلاح الخطأ هنا بإزالة المعاملات
+  // وظيفة تحميل الصور - تصحيح الاستدعاء بدون معاملات
   const loadUserImages = useCallback(() => {
-    // استدعاء loadUserImages بدون معاملات
+    // استدعاء coreLoadUserImages بدون معاملات
     coreLoadUserImages();
   }, [coreLoadUserImages]);
 

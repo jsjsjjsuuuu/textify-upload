@@ -40,7 +40,7 @@ const Index = () => {
     reprocessImage
   } = useImageProcessing();
   
-  // تحميل الصور عند تسجيل الدخول - تم إصلاح الخطأ هنا
+  // تحميل الصور عند تسجيل الدخول - تصحيح الاستدعاء بدون معاملات
   useEffect(() => {
     if (user) {
       // استدعاء loadUserImages بدون معلمات

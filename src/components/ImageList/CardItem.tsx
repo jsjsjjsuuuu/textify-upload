@@ -107,7 +107,7 @@ const CardItem = ({
             variant={
               image.status === 'completed' ? "success" : 
               image.status === 'error' ? "destructive" : 
-              "warning"
+              "secondary"
             } 
             className="text-xs"
           >
