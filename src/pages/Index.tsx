@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
@@ -47,6 +46,14 @@ const Index = () => {
       loadUserImages();
     }
   }, [user, loadUserImages]);
+  
+  // تأكد من تفعيل Gemini
+  useEffect(() => {
+    // دائمًا تأكد من أن Gemini مفعل
+    if (!useGemini) {
+      setUseGemini(true);
+    }
+  }, [useGemini, setUseGemini]);
 
   // وظيفة إعادة المعالجة
   const handleReprocessImage = async (imageId: string) => {
@@ -116,15 +123,15 @@ const Index = () => {
         <TabsContent value="upload" className="focus-visible:outline-none">
           {/* قسم رفع الملفات */}
           <div className="space-y-6">
-            {/* الإعدادات العامة */}
+            {/* الإعدادات العامة - Gemini مفعل دائمًا */}
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <div className="flex items-center">
                   <span className="text-sm ml-2">استخدام Gemini AI:</span>
                   <input
                     type="checkbox"
-                    checked={useGemini}
-                    onChange={(e) => setUseGemini(e.target.checked)}
+                    checked={true} // دائمًا مفعل
+                    disabled={true} // غير قابل للتعديل
                     className="ml-1 w-4 h-4"
                   />
                 </div>

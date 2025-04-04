@@ -3,18 +3,9 @@
  * مدير مفاتيح API لجيمناي - يقوم بتدوير المفاتيح وإدارة استخدامها
  */
 
-// تخزين مفاتيح API المتعددة
+// تخزين مفتاح API المحدد
 const API_KEYS = [
-  "AIzaSyAKa3HnGszEpnhx2SXJbuQTjFNfL2Un2d8",
-  "AIzaSyCzHmpOdtuRu07jP0P4GNlCMeQB_InKT7E",
-  "AIzaSyCw3ET1HuGtfJtuY1ABK4GdLuOHtkqceKo",
-  "AIzaSyCp7rVtu_IAdBSICRSd5RmNCvdrkiXQ7SI",
-  "AIzaSyBUwu7p61Rk1BHYJb5sa-CUMuN_6ImuQOc", // المفتاح الافتراضي السابق
-  // إضافة مفاتيح إضافية للتناوب
-  "AIzaSyDi_K0m6y-t62a_fqxFV8DToF9sVpmm7YI",
-  "AIzaSyCn-oXnIxQWiYy-wYI5-UpHbr_P-3Ni68Y",
-  "AIzaSyDGPa1F9XH4nh3rxtwCnBBHMEDVHrygUUk",
-  "AIzaSyBL8PnaeEL4tKUCJzrVPFDk5-UJGD9M4vQ"
+  "AIzaSyAW9EbEuvXYdg6FmLjlhl_jXv-SGtFHCC4", // المفتاح المقدم من المستخدم
 ];
 
 // مؤشر للمفتاح الحالي
@@ -47,67 +38,11 @@ const keyUsageMap = new Map<string, KeyUsage>(
 );
 
 /**
- * الحصول على المفتاح التالي بناءً على خوارزمية توزيع الحمل
+ * الحصول على المفتاح التالي
  */
 export const getNextApiKey = (): string => {
-  const now = Date.now();
-  
-  // تحديث حالة فترة التهدئة للمفاتيح
-  for (const usage of keyUsageMap.values()) {
-    if (usage.cooldownUntil > 0 && now > usage.cooldownUntil) {
-      console.log(`انتهت فترة التهدئة للمفتاح ${usage.key.substring(0, 5)}...`);
-      usage.cooldownUntil = 0;
-      usage.rateLimit = false;
-      usage.errors = 0;
-    }
-  }
-  
-  // البحث عن المفتاح الأقل استخدامًا الذي ليس لديه قيود معدل
-  const availableKeys = [...keyUsageMap.values()]
-    .filter(usage => !usage.rateLimit && usage.cooldownUntil <= now); // استبعاد المفاتيح التي تجاوزت الحد أو في فترة تهدئة
-  
-  if (availableKeys.length === 0) {
-    console.log("جميع المفاتيح وصلت للحد الأقصى أو في فترة تهدئة. اختيار أقدم مفتاح...");
-    
-    // استخدم المفتاح الذي مر على فترة التهدئة أطول وقت
-    const oldestKey = [...keyUsageMap.values()]
-      .sort((a, b) => (a.cooldownUntil || a.lastUsed) - (b.cooldownUntil || b.lastUsed))[0];
-    
-    // إعادة تعيين حالة المفتاح للاستخدام مرة أخرى
-    oldestKey.rateLimit = false;
-    oldestKey.errors = 0;
-    oldestKey.cooldownUntil = 0;
-    
-    console.log(`إعادة استخدام المفتاح ${oldestKey.key.substring(0, 5)}... بعد انتهاء فترة التهدئة`);
-    
-    // تحديث بيانات الاستخدام
-    oldestKey.usageCount += 1;
-    oldestKey.lastUsed = now;
-    
-    return oldestKey.key;
-  }
-
-  // ترتيب المفاتيح المتاحة حسب الأقل استخدامًا والأقدم استخدامًا
-  const sortedKeys = availableKeys.sort((a, b) => {
-    // أولوية للمفاتيح الأقل استخدامًا
-    if (a.usageCount !== b.usageCount) {
-      return a.usageCount - b.usageCount;
-    }
-    // إذا كان الاستخدام متساويًا، استخدم الأقدم آخر استخدام
-    return a.lastUsed - b.lastUsed;
-  });
-  
-  // استخدام المفتاح الأقل استخدامًا
-  const nextKey = sortedKeys[0].key;
-  
-  // تحديث بيانات الاستخدام
-  const usage = keyUsageMap.get(nextKey)!;
-  usage.usageCount += 1;
-  usage.lastUsed = now;
-  
-  console.log(`استخدام مفتاح API: ${nextKey.substring(0, 5)}... (الاستخدام: ${usage.usageCount})`);
-  
-  return nextKey;
+  // دائما نستخدم المفتاح الوحيد المحدد
+  return API_KEYS[0];
 };
 
 /**
@@ -149,25 +84,12 @@ export const reportApiKeyError = (apiKey: string, errorMessage: string): void =>
  * الحصول على إحصائيات استخدام المفاتيح
  */
 export const getApiKeyStats = (): { active: number, rateLimited: number, total: number, cooldown: number } => {
-  const now = Date.now();
-  const stats = {
-    active: 0,
+  return {
+    active: 1, // دائمًا مفتاح واحد نشط
     rateLimited: 0,
     cooldown: 0,
-    total: keyUsageMap.size
+    total: 1
   };
-  
-  for (const usage of keyUsageMap.values()) {
-    if (usage.cooldownUntil > now) {
-      stats.cooldown++;
-    } else if (usage.rateLimit) {
-      stats.rateLimited++;
-    } else {
-      stats.active++;
-    }
-  }
-  
-  return stats;
 };
 
 /**

@@ -15,12 +15,13 @@ import { updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { isPreviewEnvironment } from "@/utils/automationServerUrl";
 
 export const useGeminiProcessing = () => {
-  const [useGemini, setUseGemini] = useState(false);
+  // تغيير الإعداد الافتراضي لاستخدام Gemini إلى true
+  const [useGemini, setUseGemini] = useState(true);
   const [connectionTested, setConnectionTested] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // فحص الاتصال مع مجموعة المفاتيح
+    // فحص الاتصال مع المفتاح المحدد
     const testConnection = async () => {
       if (!connectionTested) {
         const apiKey = getNextApiKey();
@@ -40,23 +41,28 @@ export const useGeminiProcessing = () => {
         console.log("اتصال Gemini API ناجح");
         setConnectionTested(true);
         setUseGemini(true);
+        toast({
+          title: "اتصال ناجح",
+          description: `تم الاتصال بخدمة Gemini AI بنجاح وجاهز لاستخراج البيانات`,
+          variant: "default"
+        });
       } else {
         console.warn("فشل اختبار اتصال Gemini API:", result.message);
-        // محاولة مفتاح آخر
-        const newKey = getNextApiKey();
-        if (newKey !== apiKey) {
-          await testGeminiApiConnection(newKey);
-        } else {
-          toast({
-            title: "تحذير",
-            description: `فشل اختبار اتصال Gemini API: ${result.message}`,
-            variant: "default"
-          });
-        }
+        toast({
+          title: "تحذير",
+          description: `فشل اختبار اتصال Gemini API: ${result.message}`,
+          variant: "destructive"
+        });
+        setUseGemini(false);
       }
     } catch (error) {
       console.error("خطأ في اختبار اتصال Gemini API:", error);
       setUseGemini(false);
+      toast({
+        title: "خطأ",
+        description: `فشل الاتصال بخدمة Gemini AI: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`,
+        variant: "destructive"
+      });
     }
   };
 
@@ -67,15 +73,8 @@ export const useGeminiProcessing = () => {
   };
 
   // زيادة التأخير بين الطلبات
-  const getApiDelayTime = (apiStats: { active: number, rateLimited: number }) => {
-    // زيادة التأخير كلما قل عدد المفاتيح النشطة
-    if (apiStats.active <= 1) {
-      return 5000; // 5 ثوانٍ عندما يكون هناك مفتاح واحد فقط
-    } else if (apiStats.active <= 2) {
-      return 3000; // 3 ثوانٍ عندما يكون هناك مفتاحان
-    } else {
-      return 1500; // 1.5 ثانية للمفاتيح الثلاثة أو أكثر
-    }
+  const getApiDelayTime = () => {
+    return 2000; // 2 ثوانٍ بين الطلبات (لضمان عدم تجاوز الحد)
   };
 
   const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
@@ -95,16 +94,16 @@ export const useGeminiProcessing = () => {
       };
     }
     
-    // الحصول على المفتاح التالي من نظام الدوران
+    // الحصول على المفتاح الوحيد المحدد
     const geminiApiKey = getNextApiKey();
-    console.log("استخدام مفتاح Gemini API بطول:", geminiApiKey.length);
+    console.log("استخدام مفتاح Gemini API المحدد");
 
     // في بيئة المعاينة، نحاول استخدام Gemini مع تحذير المستخدم
     if (isPreviewEnvironment()) {
-      console.log("تشغيل في بيئة معاينة (Lovable). محاولة استخدام Gemini قد تواجه قيود CORS.");
+      console.log("تشغيل في بيئة معاينة. محاولة استخدام Gemini قد تواجه قيود CORS.");
       toast({
         title: "تنبيه",
-        description: "استخدام Gemini في بيئة المعاينة قد يواجه قيود CORS، يرجى التحلي بالصبر في حالة بطء المعالجة",
+        description: "استخدام Gemini في بيئة المعاينة قد يواجه قيود CORS، يرجى التحلي بالصبر",
         variant: "default"
       });
     }
@@ -131,10 +130,8 @@ export const useGeminiProcessing = () => {
         extractedText: "جاري معالجة الصورة واستخراج البيانات..."
       };
       
-      // الحصول على إحصائيات المفاتيح لتحديد وقت التأخير
-      const apiStats = getApiKeyStats();
       // تأخير قبل الاستخراج لمنع تجاوز حد الاستخدام
-      await sleepBetweenRequests(getApiDelayTime(apiStats));
+      await sleepBetweenRequests(getApiDelayTime());
       
       // إضافة معلومات تشخيصية أكثر
       console.log("بدء استدعاء extractDataWithGemini");
@@ -142,8 +139,9 @@ export const useGeminiProcessing = () => {
         apiKeyLength: geminiApiKey.length,
         imageBase64Length: imageBase64.length,
         enhancedExtraction: true,
-        maxRetries: 2, // تقليل عدد المحاولات
-        retryDelayMs: 3000 // تقليل وقت الانتظار بين المحاولات
+        maxRetries: 2,
+        retryDelayMs: 3000,
+        modelVersion: 'gemini-1.5-flash'
       });
       
       try {
@@ -293,7 +291,6 @@ export const useGeminiProcessing = () => {
         errorMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى تحميل صورة أصغر حجمًا أو المحاولة مرة أخرى لاحقًا.';
       } else if (errorMessage.includes('quota') || errorMessage.includes('limit exceeded')) {
         errorMessage = 'تم تجاوز حصة API. جاري تحويلك تلقائيًا إلى مفتاح آخر للمحاولة مرة أخرى.';
-        // محاولة مفتاح آخر تلقائيًا في الاستدعاء التالي
       }
       
       toast({
@@ -316,7 +313,7 @@ export const useGeminiProcessing = () => {
     resetAllApiKeys();
     toast({
       title: "تم إعادة تعيين المفاتيح",
-      description: "تم إعادة تعيين جميع مفاتيح API",
+      description: "تم إعادة تعيين مفتاح API",
     });
   }, [toast]);
 
@@ -324,6 +321,8 @@ export const useGeminiProcessing = () => {
     useGemini, 
     processWithGemini,
     resetApiKeys,
-    getApiStats: getApiKeyStats
+    getApiStats: getApiKeyStats,
+    // تعيين useGemini لتكون دائمًا true للتأكد من استخدام Gemini
+    setUseGemini: () => setUseGemini(true)
   };
 };
