@@ -1,117 +1,542 @@
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import Layout from '@/components/Layout';
-import Header from '@/components/Header';
-import { EmptyContent } from '@/components/EmptyContent';
-import ImageList from '@/components/ImageList';
-import { ImageData } from '@/types/ImageData';
-import { Button } from '@/components/ui/button';
-import { useImageProcessing } from '@/hooks/useImageProcessing';
-import ImageViewer from '@/components/ImageViewer';
+import React, { useState, useEffect } from "react";
+import AppHeader from "@/components/AppHeader";
+import { motion } from "framer-motion";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
+import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays, Trash, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { formatDate } from "@/utils/dateFormatter";
+import { ImageData } from "@/types/ImageData";
+import { useImageProcessing } from "@/hooks/useImageProcessing";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import ImageErrorDisplay from "@/components/ImagePreview/ImageViewer/ImageErrorDisplay";
 
+// صورة تعبئة افتراضية للصور التي لا يمكن تحميلها
+const PLACEHOLDER_IMAGE_URL = '/placeholder-image.jpg';
+
+// مكون الصفحة الرئيسي
 const Records = () => {
-  const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("number");
+  const [sortDirection, setSortDirection] = useState("desc");
   const { toast } = useToast();
   
+  // استخدام hook معالجة الصور للحصول على بيانات الصور
   const {
-    images: sessionImages,
-    handleTextChange,
+    images,
+    isSubmitting,
     handleDelete,
     handleSubmitToApi,
-    isSubmitting,
+    formatDate: formatImageDate,
     loadUserImages,
-    reprocessImage
+    saveProcessedImage
   } = useImageProcessing();
+  
+  // إضافة حالة لتتبع حالة تحميل الصور
+  const [imageLoadErrors, setImageLoadErrors] = useState<{[key: string]: number}>({});
 
-  // تصحيح استدعاء loadUserImages ليكون بدون معاملات
-  useEffect(() => {
-    if (user) {
-      // استدعاء loadUserImages بدون معلمات
-      loadUserImages();
-    }
-  }, [user, loadUserImages]);
-
-  // وظيفة إعادة المعالجة
-  const handleReprocessImage = async (imageId: string) => {
+  // التعامل مع حذف صورة
+  const onDeleteImage = async (id: string) => {
     try {
-      await reprocessImage(imageId);
-      toast({
-        title: "إعادة المعالجة",
-        description: "تم جدولة الصورة لإعادة المعالجة",
-      });
+      if (confirm("هل أنت متأكد من حذف هذا السجل؟")) {
+        // استدعاء وظيفة الحذف التي تم تعديلها لتشمل الحذف من قاعدة البيانات
+        const success = await handleDelete(id);
+        
+        if (success) {
+          toast({
+            title: "تم الحذف بنجاح",
+            description: "تم حذف السجل بنجاح من قاعدة البيانات والتطبيق"
+          });
+          
+          // إعادة تحميل البيانات بعد الحذف للتأكد من التزامن
+          if (user) {
+            loadUserImages();
+          }
+        }
+      }
     } catch (error) {
-      console.error("خطأ في إعادة معالجة الصورة:", error);
+      console.error("خطأ في حذف السجل:", error);
       toast({
-        title: "خطأ",
-        description: "فشل في إعادة معالجة الصورة",
+        title: "خطأ في الحذف",
+        description: "حدث خطأ أثناء محاولة حذف السجل",
         variant: "destructive"
       });
     }
   };
-
-  // وظيفة فتح المعاينة
-  const openImageViewer = (image: ImageData) => {
-    setSelectedImage(image);
-    setIsViewerOpen(true);
-  };
-
-  // وظيفة إغلاق المعاينة
-  const closeImageViewer = () => {
-    setIsViewerOpen(false);
-    setSelectedImage(null);
-  };
-
-  // فرز الصور تنازليًا حسب وقت الإنشاء
-  const sortedImages = [...sessionImages].sort((a, b) => {
-    // استخدام created_at إذا كان متاحًا
-    if (a.created_at && b.created_at) {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  
+  // وظيفة لإعادة معالجة صورة
+  const handleReprocessImage = async (imageId: string) => {
+    try {
+      const imageToReprocess = images.find(img => img.id === imageId);
+      if (!imageToReprocess) {
+        toast({
+          title: "خطأ",
+          description: "لم يتم العثور على الصورة",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      toast({
+        title: "جاري المعالجة",
+        description: "جاري إعادة معالجة الصورة..."
+      });
+      
+      await saveProcessedImage(imageToReprocess);
+      
+      toast({
+        title: "تم بنجاح",
+        description: "تم إعادة معالجة الصورة بنجاح"
+      });
+      
+      // إعادة تحميل البيانات بعد المعالجة
+      loadUserImages();
+    } catch (error) {
+      console.error("خطأ في إعادة معالجة الصورة:", error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء إعادة معالجة الصورة",
+        variant: "destructive"
+      });
     }
-    // الرجوع إلى تاريخ الإنشاء الافتراضي
-    return b.date.getTime() - a.date.getTime();
-  });
+  };
+  
+  // معالجة فشل تحميل الصورة
+  const handleImageError = (imageId: string) => {
+    setImageLoadErrors(prev => ({
+      ...prev,
+      [imageId]: (prev[imageId] || 0) + 1
+    }));
+  };
+  
+  // إعادة محاولة تحميل الصورة
+  const retryLoadImage = (imageId: string, storagePath: string | null, previewUrl: string | null) => {
+    // تحديث العداد
+    setImageLoadErrors(prev => ({
+      ...prev,
+      [imageId]: (prev[imageId] || 0) + 1
+    }));
+    
+    // إعادة تحميل الصورة
+    if (storagePath) {
+      const { data } = supabase.storage
+        .from('receipt_images')
+        .getPublicUrl(storagePath);
+        
+      if (data?.publicUrl) {
+        // إضافة طابع زمني لمنع التخزين المؤقت
+        const timestamp = Date.now();
+        const url = `${data.publicUrl}?t=${timestamp}`;
+        
+        // تحديث عنصر الصورة إذا كان موجوداً
+        const imgElement = document.querySelector(`img[data-image-id="${imageId}"]`) as HTMLImageElement;
+        if (imgElement) {
+          imgElement.src = url;
+        }
+        
+        toast({
+          title: "إعادة تحميل",
+          description: "جاري إعادة تحميل الصورة..."
+        });
+      }
+    } else if (previewUrl) {
+      // استخدام URL المعاينة مع إضافة طابع زمني
+      const timestamp = Date.now();
+      const url = `${previewUrl}?t=${timestamp}`;
+      
+      // تحديث عنصر الصورة
+      const imgElement = document.querySelector(`img[data-image-id="${imageId}"]`) as HTMLImageElement;
+      if (imgElement) {
+        imgElement.src = url;
+      }
+      
+      toast({
+        title: "إعادة تحميل",
+        description: "جاري إعادة تحميل الصورة من URL المعاينة..."
+      });
+    }
+  };
+
+  // التعامل مع الفرز
+  const handleSort = (field) => {
+    if (sortField === field) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortField(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // تطبيق الفرز والبحث على البيانات
+  const filteredAndSortedImages = React.useMemo(() => {
+    let recordImages = [...images];
+
+    // تطبيق البحث
+    if (searchTerm) {
+      recordImages = recordImages.filter(
+        (image) =>
+          (image.code && image.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (image.senderName && image.senderName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (image.phoneNumber && image.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (image.province && image.province.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // تطبيق الفرز
+    if (sortField && sortDirection) {
+      recordImages.sort((a, b) => {
+        let valueA = a[sortField];
+        let valueB = b[sortField];
+
+        // تعامل خاص مع قيم التاريخ
+        if (sortField === "date") {
+          valueA = new Date(a.date).getTime();
+          valueB = new Date(b.date).getTime();
+        }
+
+        if (typeof valueA === "string" && typeof valueB === "string") {
+          valueA = valueA.toLowerCase();
+          valueB = valueB.toLowerCase();
+        }
+
+        if (!valueA) return sortDirection === "asc" ? -1 : 1;
+        if (!valueB) return sortDirection === "asc" ? 1 : -1;
+
+        if (valueA < valueB) return sortDirection === "asc" ? -1 : 1;
+        if (valueA > valueB) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return recordImages;
+  }, [images, searchTerm, sortField, sortDirection]);
+
+  // رمز السهم للفرز
+  const getSortIcon = (field) => {
+    if (sortField !== field) return <ChevronDown className="h-4 w-4 opacity-50" />;
+    if (sortDirection === "asc") return <ArrowUp className="h-4 w-4" />;
+    return <ArrowDown className="h-4 w-4" />;
+  };
+
+  // أيقونة الحالة
+  const getStatusBadge = (status, isSubmitted) => {
+    if (isSubmitted) {
+      return (
+        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30">
+          <span className="w-1 h-1 bg-green-500 rounded-full mr-1.5"></span>
+          تم الإرسال
+        </Badge>
+      );
+    }
+    
+    if (status === "processing") {
+      return (
+        <Badge variant="outline" className="text-[11px] px-2 py-0.5 h-5 font-medium bg-yellow-100/50 border-yellow-200 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-800/40 dark:text-yellow-300">
+          <span className="w-1 h-1 bg-yellow-500 rounded-full animate-pulse mr-1.5"></span>
+          قيد المعالجة
+        </Badge>
+      );
+    }
+    
+    if (status === "completed") {
+      return (
+        <Badge variant="outline" className="text-[11px] px-2 py-0.5 h-5 font-medium bg-blue-100/50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800/40 dark:text-blue-300">
+          <span className="w-1 h-1 bg-blue-500 rounded-full mr-1.5"></span>
+          تم المعالجة
+        </Badge>
+      );
+    }
+    
+    if (status === "error") {
+      return (
+        <Badge variant="outline" className="text-[11px] px-2 py-0.5 h-5 font-medium bg-red-100/50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800/40 dark:text-red-300">
+          <span className="w-1 h-1 bg-red-500 rounded-full mr-1.5"></span>
+          فشل
+        </Badge>
+      );
+    }
+    
+    return (
+      <Badge variant="outline" className="bg-gray-200 text-gray-800 dark:bg-gray-800/40 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60">
+        انتظار
+      </Badge>
+    );
+  };
+
+  // قم بإنشاء عنوان URL للصورة من Storage
+  const getImageUrl = (image) => {
+    // التحقق من وجود مسار التخزين
+    if (image.storage_path) {
+      const { data } = supabase.storage
+        .from('receipt_images')
+        .getPublicUrl(image.storage_path);
+      
+      // إضافة طابع زمني لمنع مشاكل التخزين المؤقت
+      return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : (image.previewUrl || PLACEHOLDER_IMAGE_URL);
+    }
+    
+    // التحقق من وجود URL المعاينة وأنه ليس blob URL (يسبب أخطاء)
+    if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
+      return image.previewUrl;
+    }
+    
+    // استخدام الصورة الافتراضية إذا لم تكن هناك صورة صالحة
+    return PLACEHOLDER_IMAGE_URL;
+  };
 
   return (
-    <Layout>
-      <Header title="سجل الوصولات" />
-      
-      <div className="container mx-auto py-10">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold">الصور المستخرجة</h2>
-        </div>
-        
-        {sortedImages.length > 0 ? (
-          <ImageList
-            images={sortedImages}
-            onImageClick={openImageViewer}
-            onTextChange={handleTextChange}
-            onDelete={handleDelete}
-            onSubmit={handleSubmitToApi}
-            isSubmitting={isSubmitting}
-            formatDate={(date: Date) => date.toLocaleDateString('ar-AE')}
-            onReprocess={handleReprocessImage}
-          />
-        ) : (
-          <EmptyContent
-            title="لا توجد صور"
-            description="لم يتم رفع أي صور بعد."
-            icon="image"
-          />
-        )}
-      </div>
-      
-      {/* عارض الصور */}
-      {isViewerOpen && selectedImage && (
-        <ImageViewer
-          image={selectedImage}
-          onClose={closeImageViewer}
-        />
-      )}
-    </Layout>
+    <div className="min-h-screen bg-background">
+      <AppHeader />
+      <main className="container mx-auto p-6 max-w-7xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-8"
+        >
+          {/* عنوان الصفحة */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-medium tracking-tight">سجلات الوصولات</h1>
+              <p className="text-muted-foreground mt-1">
+                إدارة ومراجعة سجلات الوصولات المستخرجة
+              </p>
+            </div>
+            <Button asChild>
+              <Link to="/upload" className="flex items-center gap-2">
+                <Receipt className="h-4 w-4" />
+                إضافة وصولات جديدة
+              </Link>
+            </Button>
+          </div>
+
+          {/* فلتر البحث */}
+          <div className="relative">
+            <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="البحث في السجلات... (الكود، الاسم، رقم الهاتف، المحافظة)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-9 text-right"
+            />
+          </div>
+
+          {/* جدول السجلات */}
+          <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table className="w-full">
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("number")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>الرقم</span>
+                        {getSortIcon("number")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("date")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>التاريخ</span>
+                        {getSortIcon("date")}
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-right font-medium px-6 py-4">
+                      صورة
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("code")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>الكود</span>
+                        {getSortIcon("code")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("senderName")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>اسم المرسل</span>
+                        {getSortIcon("senderName")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("phoneNumber")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>رقم الهاتف</span>
+                        {getSortIcon("phoneNumber")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("province")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>المحافظة</span>
+                        {getSortIcon("province")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("price")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>السعر</span>
+                        {getSortIcon("price")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right font-medium cursor-pointer px-6 py-4 hover:bg-muted/60 transition-colors"
+                      onClick={() => handleSort("status")}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>الحالة</span>
+                        {getSortIcon("status")}
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-right font-medium px-6 py-4">
+                      الإجراءات
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedImages.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                        {images.length === 0 ? 
+                          <div className="flex flex-col items-center gap-2">
+                            <CalendarDays className="h-10 w-10 text-muted-foreground/60" />
+                            <p>لا توجد سجلات بعد.</p>
+                            <Button asChild size="sm" className="mt-2">
+                              <Link to="/upload">إضافة وصولات جديدة</Link>
+                            </Button>
+                          </div>
+                          : 
+                          "لم يتم العثور على أي سجلات مطابقة لكلمة البحث."
+                        }
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredAndSortedImages.map((image) => (
+                      <TableRow 
+                        key={image.id}
+                        className="hover:bg-muted/30 transition-colors"
+                      >
+                        <TableCell className="font-medium px-6 py-4">
+                          {image.number || "-"}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <span className="text-muted-foreground">{formatImageDate(image.date)}</span>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-transparent relative flex items-center justify-center border border-border/40 dark:border-gray-700/40">
+                            {imageLoadErrors[image.id] && imageLoadErrors[image.id] > 2 ? (
+                              <div className="absolute inset-0">
+                                <ImageErrorDisplay 
+                                  onRetry={() => retryLoadImage(image.id, image.storage_path, image.previewUrl)} 
+                                  retryCount={imageLoadErrors[image.id]} 
+                                />
+                              </div>
+                            ) : (
+                              <img 
+                                data-image-id={image.id}
+                                src={getImageUrl(image)} 
+                                alt="صورة مصغرة" 
+                                className="object-contain h-full w-full" 
+                                style={{ mixBlendMode: 'multiply' }} 
+                                onError={() => handleImageError(image.id)}
+                                loading="lazy"
+                              />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 font-medium">
+                          {image.code || "-"}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          {image.senderName || "-"}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <span className={!image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11 ? "" : "text-destructive"}>
+                            {image.phoneNumber || "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          {image.province || "-"}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <span className={image.price && parseFloat(image.price.replace(/[^\d.]/g, '')) < 0 ? "text-destructive" : ""}>
+                            {image.price || "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          {getStatusBadge(image.status, image.submitted)}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 rounded-full bg-muted/30 text-destructive hover:bg-destructive/10" 
+                              onClick={() => onDeleteImage(image.id)}
+                              title="حذف السجل"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                            
+                            {/* زر إعادة معالجة الصورة */}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 rounded-full bg-muted/30 text-blue-600 hover:bg-blue-50" 
+                              onClick={() => handleReprocessImage(image.id)}
+                              title="إعادة معالجة"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* معلومات إضافية */}
+          <p className="text-center text-sm text-muted-foreground">
+            تم عرض {filteredAndSortedImages.length} من إجمالي {images.length} سجل
+          </p>
+        </motion.div>
+      </main>
+    </div>
   );
 };
 

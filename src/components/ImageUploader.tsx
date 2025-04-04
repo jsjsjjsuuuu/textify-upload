@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 interface ImageUploaderProps {
   isProcessing: boolean;
-  processingProgress: { total: number; current: number; errors: number; };
+  processingProgress: number;
   onFileChange: (files: File[]) => void;
   onCancelUpload?: () => void;
 }
@@ -51,15 +51,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     onDragEnter: () => setDragOver(true),
     onDragLeave: () => setDragOver(false),
   });
-  
-  // حساب النسبة المئوية للتقدم
-  const calculateProgressPercentage = () => {
-    if (processingProgress.total === 0) return 0;
-    return Math.min(
-      100, 
-      Math.round((processingProgress.current / processingProgress.total) * 100)
-    );
-  };
 
   return (
     <div className="relative">
@@ -80,12 +71,12 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
             <>
               <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
               <p className="text-sm text-muted-foreground font-medium">
-                جاري المعالجة {calculateProgressPercentage()}%
+                جاري المعالجة {processingProgress}%
               </p>
               <div className="w-full max-w-xs bg-gray-200 rounded-full h-2.5 mt-3 overflow-hidden dark:bg-gray-700">
                 <div 
                   className="bg-primary h-2.5 rounded-full transition-all duration-300" 
-                  style={{ width: `${calculateProgressPercentage()}%` }}
+                  style={{ width: `${processingProgress}%` }}
                 ></div>
               </div>
             </>

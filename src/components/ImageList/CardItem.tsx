@@ -1,11 +1,13 @@
 
-import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { ImageData } from "@/types/ImageData";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Trash2, RefreshCw, Send, ChevronUp, ChevronDown, Image as ImageIcon } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
+import DraggableImage from "./DraggableImage";
+import ImageDataForm from "./ImageDataForm";
+import ActionButtons from "./ActionButtons";
+import { AutomationButton } from "@/components/ExtractedData";
+import BatchArrow from "./BatchArrow";
+import { useEffect, useMemo } from "react";
 
 interface CardItemProps {
   image: ImageData;
@@ -18,275 +20,92 @@ interface CardItemProps {
   showBatchArrow?: boolean;
   isFirstInBatch?: boolean;
   isLastInBatch?: boolean;
-  onReprocess?: (id: string) => Promise<void>;
 }
 
-const CardItem = ({
-  image,
-  isSubmitting,
-  onImageClick,
-  onTextChange,
-  onDelete,
-  onSubmit,
+const CardItem = ({ 
+  image, 
+  isSubmitting, 
+  onImageClick, 
+  onTextChange, 
+  onDelete, 
+  onSubmit, 
   formatDate,
   showBatchArrow = false,
   isFirstInBatch = false,
-  isLastInBatch = false,
-  onReprocess
+  isLastInBatch = false
 }: CardItemProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(image.previewUrl || null);
+  // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
+  const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
   
-  // تحديث URL الصورة عند تغيير الصورة
+  // التحقق من اكتمال جميع الحقول المطلوبة
+  const isAllFieldsFilled = useMemo(() => {
+    return !!(
+      image.code && 
+      image.senderName && 
+      image.phoneNumber && 
+      image.province && 
+      image.price && 
+      isPhoneNumberValid
+    );
+  }, [image.code, image.senderName, image.phoneNumber, image.province, image.price, isPhoneNumberValid]);
+  
+  // مراقبة البيانات والتأكد من عنوان URL للصورة
   useEffect(() => {
-    if (image.previewUrl) {
-      setImageUrl(`${image.previewUrl}?t=${Date.now()}`);
-      setImageError(false);
-    } else {
-      setImageUrl(null);
-    }
+    console.log(`عرض بطاقة الصورة ${image.id} مع عنوان: ${image.previewUrl}`);
   }, [image.id, image.previewUrl]);
 
-  const handleReprocess = async () => {
-    if (!onReprocess) return;
-    
-    setIsLoading(true);
-    try {
-      await onReprocess(image.id);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // إعادة تحميل الصورة عند حدوث خطأ
-  const handleRetryLoadImage = () => {
-    setImageError(false);
-    if (image.previewUrl) {
-      // إضافة معلمة وقت لمنع التخزين المؤقت
-      setImageUrl(`${image.previewUrl}?t=${Date.now()}`);
-    }
-  };
-
   return (
-    <Card className="relative">
-      {/* سهم الدفعة */}
-      {showBatchArrow && !isLastInBatch && (
-        <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-6 h-6 flex items-center justify-center bg-muted rounded-full z-10 border-2 border-background">
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-5xl mx-auto relative"
+    >
+      {showBatchArrow && (
+        <BatchArrow isFirst={isFirstInBatch} isLast={isLastInBatch} />
       )}
       
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-base mb-0">
-            {image.file?.name || "صورة"}
-            {image.number && (
-              <Badge variant="outline" className="ml-2">
-                #{image.number}
-              </Badge>
-            )}
-          </CardTitle>
-          <div className="flex items-center space-x-1 space-x-reverse">
-            {/* زر إعادة المعالجة */}
-            {image.status && onReprocess && (
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={handleReprocess}
-                disabled={isLoading || image.status === 'processing'}
-                title="إعادة معالجة الصورة"
-                className="h-7 w-7 mr-1"
-              >
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              </Button>
-            )}
+      <Card className="overflow-hidden bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow border-border/60 dark:border-gray-700/60 rounded-xl">
+        <CardContent className="p-0">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-0">
+            {/* صورة العنصر (55% العرض) */}
+            <div className="md:col-span-7 border-b md:border-b-0 md:border-l border-border/30 dark:border-gray-700/30">
+              <DraggableImage 
+                image={image} 
+                onImageClick={onImageClick} 
+                formatDate={formatDate} 
+              />
+            </div>
             
-            {/* زر الحذف */}
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => onDelete(image.id)}
-              className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
-              title="حذف الصورة"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {/* بيانات العنصر (45% العرض) */}
+            <div className="md:col-span-5">
+              <ImageDataForm 
+                image={image} 
+                onTextChange={onTextChange} 
+              />
+            </div>
           </div>
-        </div>
-        
-        {/* شارات الحالة */}
-        <div className="flex flex-wrap gap-1 mt-2">
-          {image.extractionMethod && (
-            <Badge variant={image.extractionMethod === 'gemini' ? "default" : "secondary"} className="text-xs">
-              {image.extractionMethod === 'gemini' ? 'Gemini AI' : 'OCR'}
-            </Badge>
-          )}
           
-          <Badge 
-            variant={
-              image.status === 'completed' ? "success" : 
-              image.status === 'error' ? "destructive" : 
-              "secondary"
-            } 
-            className="text-xs"
-          >
-            {image.status === 'completed' ? 'مكتمل' : 
-             image.status === 'error' ? 'خطأ' : 
-             image.status === 'processing' ? 'قيد المعالجة' : 'معلق'}
-          </Badge>
-          
-          {image.date && (
-            <Badge variant="outline" className="text-xs">
-              {formatDate(image.date)}
-            </Badge>
-          )}
-          
-          {image.submitted && (
-            <Badge variant="success" className="text-xs">
-              تم الإرسال
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-      
-      <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* معاينة الصورة */}
-        <div 
-          className="relative h-48 bg-muted rounded-md overflow-hidden cursor-pointer flex items-center justify-center"
-          onClick={() => onImageClick(image)}
-        >
-          {!imageError && imageUrl ? (
-            <img 
-              src={imageUrl} 
-              alt={image.file?.name || "صورة"} 
-              className="h-full w-full object-contain"
-              onError={() => setImageError(true)} 
-              onLoad={() => console.log("تم تحميل الصورة", image.id)}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center p-4">
-              <ImageIcon className="h-12 w-12 text-muted-foreground opacity-50" />
-              <div className="text-xs text-muted-foreground mt-2">
-                {imageError ? "فشل تحميل الصورة" : "الصورة غير متاحة"}
+          <div className="px-4 pb-4 border-t border-border/30 dark:border-gray-700/30 mt-2">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="w-full sm:w-auto">
+                <AutomationButton image={image} />
               </div>
-              {imageError && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-2" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRetryLoadImage();
-                  }}
-                >
-                  إعادة تحميل
-                </Button>
-              )}
+              <ActionButtons 
+                imageId={image.id}
+                isSubmitting={isSubmitting}
+                isCompleted={image.status === "completed"}
+                isSubmitted={!!image.submitted}
+                isPhoneNumberValid={isPhoneNumberValid}
+                isAllFieldsFilled={isAllFieldsFilled} // تمرير حالة اكتمال الحقول
+                onDelete={onDelete}
+                onSubmit={onSubmit}
+              />
             </div>
-          )}
-          
-          {/* شارة الثقة */}
-          {image.confidence && !imageError && imageUrl && (
-            <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs">
-              الدقة: {image.confidence}%
-            </div>
-          )}
-        </div>
-        
-        {/* حقول البيانات */}
-        <div className="md:col-span-2 grid grid-cols-1 gap-3">
-          {/* حقل الكود */}
-          <div className="grid grid-cols-3 items-center gap-2">
-            <label htmlFor={`code-${image.id}`} className="text-sm font-medium">
-              الكود:
-            </label>
-            <Input
-              id={`code-${image.id}`}
-              className="col-span-2"
-              value={image.code || ""}
-              onChange={(e) => onTextChange(image.id, "code", e.target.value)}
-            />
           </div>
-          
-          {/* حقل اسم المرسل */}
-          <div className="grid grid-cols-3 items-center gap-2">
-            <label htmlFor={`senderName-${image.id}`} className="text-sm font-medium">
-              اسم المرسل:
-            </label>
-            <Input
-              id={`senderName-${image.id}`}
-              className="col-span-2"
-              value={image.senderName || ""}
-              onChange={(e) => onTextChange(image.id, "senderName", e.target.value)}
-            />
-          </div>
-          
-          {/* حقل رقم الهاتف */}
-          <div className="grid grid-cols-3 items-center gap-2">
-            <label htmlFor={`phoneNumber-${image.id}`} className="text-sm font-medium">
-              رقم الهاتف:
-            </label>
-            <Input
-              id={`phoneNumber-${image.id}`}
-              className="col-span-2"
-              value={image.phoneNumber || ""}
-              onChange={(e) => onTextChange(image.id, "phoneNumber", e.target.value)}
-            />
-          </div>
-          
-          {/* حقل المحافظة */}
-          <div className="grid grid-cols-3 items-center gap-2">
-            <label htmlFor={`province-${image.id}`} className="text-sm font-medium">
-              المحافظة:
-            </label>
-            <Input
-              id={`province-${image.id}`}
-              className="col-span-2"
-              value={image.province || ""}
-              onChange={(e) => onTextChange(image.id, "province", e.target.value)}
-            />
-          </div>
-          
-          {/* حقل السعر */}
-          <div className="grid grid-cols-3 items-center gap-2">
-            <label htmlFor={`price-${image.id}`} className="text-sm font-medium">
-              السعر:
-            </label>
-            <Input
-              id={`price-${image.id}`}
-              className="col-span-2"
-              value={image.price || ""}
-              onChange={(e) => onTextChange(image.id, "price", e.target.value)}
-            />
-          </div>
-          
-          {/* حقل اسم الشركة */}
-          <div className="grid grid-cols-3 items-center gap-2">
-            <label htmlFor={`companyName-${image.id}`} className="text-sm font-medium">
-              اسم الشركة:
-            </label>
-            <Input
-              id={`companyName-${image.id}`}
-              className="col-span-2"
-              value={image.companyName || ""}
-              onChange={(e) => onTextChange(image.id, "companyName", e.target.value)}
-            />
-          </div>
-        </div>
-      </CardContent>
-      
-      <CardFooter className="pt-0">
-        <Button
-          onClick={() => onSubmit(image.id)}
-          disabled={isSubmitting || image.submitted}
-          className={`w-full ${image.submitted ? 'bg-green-500 hover:bg-green-600' : ''}`}
-        >
-          <Send className="h-4 w-4 ml-2" />
-          {image.submitted ? 'تم الإرسال' : 'إرسال البيانات'}
-        </Button>
-      </CardFooter>
-    </Card>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 

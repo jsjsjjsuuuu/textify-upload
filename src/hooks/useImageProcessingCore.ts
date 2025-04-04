@@ -8,18 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useImageStats } from "@/hooks/useImageStats";
 import { useImageDatabase } from "@/hooks/useImageDatabase";
 import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
-import { useImageStorage } from "@/hooks/useImageStorage";
-import { useCleanupSystem } from "./processing/useCleanupSystem";
-import { useImageHandlers } from "./processing/useImageHandlers";
-import { useSubmitSystem } from "./processing/useSubmitSystem";
-import { useDuplicateCheck } from "./processing/useDuplicateCheck";
 
 export const useImageProcessingCore = () => {
-  const [processingProgress, setProcessingProgress] = useState<{ total: number; current: number; errors: number; }>({
-    total: 0,
-    current: 0,
-    errors: 0
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -38,6 +29,8 @@ export const useImageProcessingCore = () => {
   } = useImageState();
   
   const {
+    processingProgress,
+    setProcessingProgress,
     bookmarkletStats,
     setBookmarkletStats,
     isImageProcessed,
@@ -47,43 +40,69 @@ export const useImageProcessingCore = () => {
   
   const { saveProcessedImage } = useSavedImageProcessing(updateImage, setAllImages);
   
-  const {
-    isUploading,
-    uploadImageToStorage,
-    deleteImageFromStorage,
-    prepareNewImage,
-    ensureStorageBucketExists
-  } = useImageStorage();
-  
   const { 
     isLoadingUserImages,
-    loadUserImages: loadUserImagesFromDb,
+    loadUserImages,
     saveImageToDatabase,
-    handleSubmitToApi: dbSubmitToApi,
+    handleSubmitToApi: submitToApi,
     deleteImageFromDatabase,
     cleanupOldRecords,
-    runCleanupNow: runDbCleanupNow
+    runCleanupNow
   } = useImageDatabase(updateImage);
+  
+  // التحقق مما إذا كانت الصورة مكررة بناءً على خصائص متعددة
+  const isDuplicateImage = useCallback((newImage: ImageData, allImages: ImageData[]): boolean => {
+    // التحقق من التكرار باستخدام المعرف
+    if (allImages.some(img => img.id === newImage.id)) {
+      return true;
+    }
 
-  // استخدام الأنظمة المساعدة
-  const { isDuplicateImage } = useDuplicateCheck(isImageProcessed);
-  
-  const { validateRequiredFields, handleDelete } = useImageHandlers(
-    images, 
-    updateImage, 
-    deleteImage, 
-    deleteImageFromStorage, 
-    deleteImageFromDatabase
-  );
-  
-  const { runCleanupNow, isCleanupRunning } = useCleanupSystem(runDbCleanupNow, user);
-  
-  const { isSubmitting, handleSubmitToApi } = useSubmitSystem(
-    images,
-    updateImage,
-    saveImageToDatabase,
-    validateRequiredFields
-  );
+    // التحقق من التكرار باستخدام اسم الملف والحجم (قد يكون نفس الملف)
+    if (allImages.some(img => 
+      img.file && newImage.file && 
+      img.file.name === newImage.file.name && 
+      img.file.size === newImage.file.size &&
+      img.user_id === newImage.user_id
+    )) {
+      return true;
+    }
+    
+    // التحقق مما إذا كانت الصورة قد تمت معالجتها بالفعل
+    if (newImage.id && isImageProcessed(newImage.id)) {
+      return true;
+    }
+    
+    // إذا كان هناك هاش للصورة، استخدمه للمقارنة
+    if (newImage.imageHash && allImages.some(img => img.imageHash === newImage.imageHash)) {
+      return true;
+    }
+
+    return false;
+  }, [isImageProcessed]);
+
+  // التحقق من اكتمال البيانات المطلوبة للصورة
+  const validateRequiredFields = (image: ImageData): boolean => {
+    if (!image.code || !image.senderName || !image.phoneNumber || !image.province || !image.price) {
+      toast({
+        title: "بيانات غير مكتملة",
+        description: "يرجى ملء جميع الحقول المطلوبة: الكود، اسم المرسل، رقم الهاتف، المحافظة، السعر",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    // التحقق من صحة رقم الهاتف (11 رقم)
+    if (image.phoneNumber.replace(/[^\d]/g, '').length !== 11) {
+      toast({
+        title: "رقم هاتف غير صحيح",
+        description: "يجب أن يكون رقم الهاتف 11 رقم بالضبط",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    return true;
+  };
 
   // إنشاء كائن useFileUpload في بداية الملف
   const fileUploadData = useFileUpload({
@@ -146,36 +165,90 @@ export const useImageProcessingCore = () => {
     clearQueue,
   } = fileUploadData;
 
-  // تعديل وظيفة تحميل صور المستخدم ليتم استدعاؤها بدون معاملات
-  const loadUserImages = useCallback(() => {
-    if (user) {
-      console.log("تحميل صور المستخدم...");
-      // استعمال المعاملات المطلوبة داخليًا
-      loadUserImagesFromDb(user.id, setAllImages);
+  // إعادة هيكلة وظيفة handleSubmitToApi لتستخدم وظيفة saveProcessedImage
+  const handleSubmitToApi = async (id: string) => {
+    // العثور على الصورة حسب المعرف
+    const image = images.find(img => img.id === id);
+    
+    if (!image) {
+      toast({
+        title: "خطأ",
+        description: "لم يتم العثور على الصورة المحددة",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // التحقق من اكتمال البيانات قبل الإرسال
+    if (!validateRequiredFields(image)) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      // محاولة إرسال البيانات إلى API وحفظها في قاعدة البيانات
+      const success = await submitToApi(id, image, user?.id);
       
-      // تشغيل التنظيف مرة واحدة فقط عند التحميل الأولي
-      if (!isCleanupRunning()) {
-        console.log("تشغيل التنظيف التلقائي عند تحميل الصور...");
-        runCleanupNow();
+      if (success) {
+        toast({
+          title: "تم الإرسال",
+          description: "تم إرسال البيانات وحفظها بنجاح",
+        });
+        
+        // تحديث الصورة محلياً
+        updateImage(id, { submitted: true, status: "completed" });
+        
+        // إعادة تحميل الصور من قاعدة البيانات للتأكد من التزامن
+        if (user) {
+          loadUserImages(user.id, setAllImages);
+        }
       }
+    } catch (error) {
+      console.error("خطأ في إرسال البيانات:", error);
+      toast({
+        title: "خطأ في الإرسال",
+        description: "حدث خطأ أثناء محاولة إرسال البيانات",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [user, loadUserImagesFromDb, setAllImages, runCleanupNow, isCleanupRunning]);
+  };
 
-  // التأكد من وجود مخزن الصور
-  useEffect(() => {
-    if (user) {
-      ensureStorageBucketExists();
+  // تعديل وظيفة حذف الصورة لتشمل الحذف من قاعدة البيانات
+  const handleDelete = async (id: string) => {
+    try {
+      // محاولة حذف السجل من قاعدة البيانات أولاً
+      if (user) {
+        await deleteImageFromDatabase(id);
+      }
+      
+      // ثم حذفه من الحالة المحلية
+      deleteImage(id);
+      
+      return true;
+    } catch (error) {
+      console.error("خطأ في حذف السجل:", error);
+      toast({
+        title: "خطأ في الحذف",
+        description: "حدث خطأ أثناء محاولة حذف السجل",
+        variant: "destructive"
+      });
+      
+      return false;
     }
-  }, [user, ensureStorageBucketExists]);
-  
-  // تحميل صور المستخدم عند تسجيل الدخول - تم تصحيح الكود هنا لتجنب استدعاءات متعددة
+  };
+
+  // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
   useEffect(() => {
     if (user) {
       console.log("تم تسجيل الدخول، جاري جلب صور المستخدم:", user.id);
-      // استدعاء بدون معاملات
-      loadUserImages();
+      loadUserImages(user.id, setAllImages);
+      
+      // تنظيف السجلات القديمة عند بدء التطبيق
+      cleanupOldRecords(user.id);
     }
-  }, [user, loadUserImages]);
+  }, [user]);
 
   return {
     images,
@@ -188,11 +261,17 @@ export const useImageProcessingCore = () => {
     handleFileChange,
     handleTextChange,
     handleDelete,
-    handleSubmitToApi: (id: string) => handleSubmitToApi(id, user),
+    handleSubmitToApi,
     saveImageToDatabase,
     saveProcessedImage,
     useGemini,
-    loadUserImages,
+    loadUserImages: () => {
+      if (user) {
+        loadUserImages(user.id, setAllImages);
+        // تنظيف السجلات القديمة أيضًا عند إعادة تحميل الصور يدويًا
+        cleanupOldRecords(user.id);
+      }
+    },
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,

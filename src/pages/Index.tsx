@@ -1,151 +1,324 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
+import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
-import { ImageData } from '@/types/ImageData';
-import ImageViewer from '@/components/ImageViewer';
+import ImageUploader from '@/components/ImageUploader';
+import { useDataFormatting } from '@/hooks/useDataFormatting';
+import { motion } from 'framer-motion';
+import DirectExportTools from '@/components/DataExport/DirectExportTools';
+import { Button } from '@/components/ui/button';
+import { Link, useNavigate } from 'react-router-dom';
+import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
-import Layout from '@/components/Layout';
-import Header from '@/components/Header';
-import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import UploadTab from '@/components/ImageTabs/UploadTab';
-import ImagesTab from '@/components/ImageTabs/ImagesTab';
+import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 const Index = () => {
-  const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("upload");
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-
+  
+  // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
     sessionImages,
+    isProcessing,
+    processingProgress,
+    isSubmitting,
+    bookmarkletStats,
     handleFileChange,
     handleTextChange,
     handleDelete,
     handleSubmitToApi,
-    isSubmitting,
-    isProcessing,
-    processingProgress,
+    saveImageToDatabase,
+    formatDate: formatImageDate,
     clearSessionImages,
     loadUserImages,
-    pauseProcessing,
+    runCleanupNow,
+    saveProcessedImage,
+    activeUploads,
+    queueLength,
     retryProcessing,
-    clearQueue,
-    useGemini,
-    setUseGemini,
-    reprocessImage
+    pauseProcessing,  // استخدام وظيفة الإيقاف المؤقت
+    clearQueue       // استخدام وظيفة مسح القائمة
   } = useImageProcessing();
   
-  // تحميل الصور عند تسجيل الدخول - تصحيح الاستدعاء ليكون بدون معاملات
-  useEffect(() => {
-    if (user) {
-      // إضافة تأخير قصير لتجنب تعارضات التحميل المتتالية
-      const timeoutId = setTimeout(() => {
-        // استدعاء بدون معاملات - تصحيح الخطأ هنا
-        loadUserImages();
-      }, 200);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [user, loadUserImages]);
-  
-  // تأكد من تفعيل Gemini
-  useEffect(() => {
-    // دائمًا تأكد من أن Gemini مفعل
-    if (!useGemini) {
-      setUseGemini(true);
-    }
-  }, [useGemini, setUseGemini]);
+  const {
+    formatPhoneNumber,
+    formatPrice,
+    formatProvinceName
+  } = useDataFormatting();
 
-  // وظيفة إعادة المعالجة
-  const handleReprocessImage = async (imageId: string) => {
-    try {
-      await reprocessImage(imageId);
+  // وظيفة تنفيذ التنظيف يدوياً
+  const handleManualCleanup = async () => {
+    if (user) {
+      await runCleanupNow(user.id);
+      // إعادة تحميل الصور بعد التنظيف
+      loadUserImages();
       toast({
-        title: "إعادة المعالجة",
-        description: "تم جدولة الصورة لإعادة المعالجة",
+        title: "تم التنظيف",
+        description: "تم تنظيف السجلات القديمة بنجاح",
+      });
+    }
+  };
+  
+  // وظيفة إعادة المعالجة للصورة
+  const handleReprocessImage = async (imageId: string) => {
+    const imageToReprocess = sessionImages.find(img => img.id === imageId);
+    if (!imageToReprocess) {
+      console.error("الصورة غير موجودة:", imageId);
+      return;
+    }
+    
+    try {
+      // تحديث حالة الصورة إلى "جاري المعالجة"
+      handleTextChange(imageId, "status", "processing");
+      
+      // إعادة معالجة الصورة
+      await saveProcessedImage(imageToReprocess);
+      
+      toast({
+        title: "تمت إعادة المعالجة",
+        description: "تمت إعادة معالجة الصورة بنجاح",
       });
     } catch (error) {
       console.error("خطأ في إعادة معالجة الصورة:", error);
+      handleTextChange(imageId, "status", "error");
+      handleTextChange(imageId, "extractedText", `فشل في إعادة المعالجة: ${error.message || "خطأ غير معروف"}`);
+      
       toast({
-        title: "خطأ",
-        description: "فشل في إعادة معالجة الصورة",
+        title: "خطأ في إعادة المعالجة",
+        description: "حدث خطأ أثناء إعادة معالجة الصورة",
         variant: "destructive"
+      });
+      
+      throw error; // إعادة رمي الخطأ للتعامل معه في المكون الأصلي
+    }
+  };
+
+  // إعادة تشغيل المعالجة إذا توقفت عن العمل
+  const handleRetryProcessing = () => {
+    if (retryProcessing()) {
+      toast({
+        title: "إعادة تشغيل",
+        description: "تم إعادة تشغيل قائمة المعالجة بنجاح",
+      });
+    } else {
+      toast({
+        title: "تنبيه",
+        description: "لا توجد صور في قائمة الانتظار حالياً",
+        variant: "default"
       });
     }
   };
 
-  // وظيفة فتح المعاينة
-  const openImageViewer = (image: ImageData) => {
-    setSelectedImage(image);
-    setIsViewerOpen(true);
-  };
-
-  // وظيفة إغلاق المعاينة
-  const closeImageViewer = () => {
-    setIsViewerOpen(false);
-    setSelectedImage(null);
-  };
-
-  // فرز الصور تنازليًا حسب وقت الإنشاء
-  const sortedImages = [...sessionImages].sort((a, b) => {
-    // استخدام created_at إذا كان متاحًا
-    if (a.created_at && b.created_at) {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  // إيقاف المعالجة مؤقتًا
+  const handlePauseProcessing = () => {
+    if (pauseProcessing()) {
+      toast({
+        title: "إيقاف مؤقت",
+        description: "تم إيقاف قائمة المعالجة مؤقتًا",
+      });
+    } else {
+      toast({
+        title: "تنبيه",
+        description: "لا توجد عمليات معالجة نشطة حاليًا",
+        variant: "default"
+      });
     }
-    // الرجوع إلى تاريخ الإنشاء الافتراضي
-    return b.date.getTime() - a.date.getTime();
-  });
-
+  };
+  
+  // وظيفة مسح القائمة
+  const handleClearQueue = () => {
+    clearQueue();
+    toast({
+      title: "تم المسح",
+      description: "تم مسح قائمة انتظار المعالجة",
+    });
+  };
+  
   return (
-    <Layout>
-      <Header title="معالجة الوصولات" />
+    <div className="min-h-screen bg-background">
+      <AppHeader />
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-6xl mx-auto px-4">
-        <TabsList className="mb-6">
-          <TabsTrigger value="upload">رفع الصور</TabsTrigger>
-          <TabsTrigger value="list">الصور المستخرجة 
-            {sessionImages.length > 0 && <span className="ml-2 bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs">
-              {sessionImages.length}
-            </span>}
-          </TabsTrigger>
-        </TabsList>
+      <main className="pt-10 pb-20">
+        <section className="py-16 px-6">
+          <div className="container mx-auto">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ duration: 0.6 }} 
+              className="text-center max-w-3xl mx-auto mb-12"
+            >
+              <h1 className="apple-header mb-4">معالج الصور والبيانات</h1>
+              <p className="text-xl text-muted-foreground mb-8">
+                استخرج البيانات من الصور بسهولة وفعالية باستخدام تقنية الذكاء الاصطناعي المتطورة
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button className="apple-button bg-primary text-primary-foreground" size="lg">
+                  ابدأ الآن
+                </Button>
+                <Button variant="outline" className="apple-button" size="lg" asChild>
+                  <Link to="/records">
+                    استعراض السجلات
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+              
+              {/* معلومات حول حالة المعالجة */}
+              {(isProcessing || queueLength > 0) && (
+                <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                  <Clock className="h-4 w-4 text-blue-500 animate-spin" />
+                  <AlertDescription className="text-sm text-blue-600 dark:text-blue-300 flex items-center justify-between">
+                    <div>
+                      جاري معالجة الصور... 
+                      <div className="mt-1 space-x-2 rtl:space-x-reverse">
+                        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                          الصور النشطة: {activeUploads}
+                        </Badge>
+                        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                          في قائمة الانتظار: {queueLength}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={handlePauseProcessing} 
+                        className="text-yellow-600 border-yellow-300 bg-yellow-50 hover:bg-yellow-100"
+                      >
+                        <Pause className="h-3 w-3 ml-1" />
+                        إيقاف مؤقت
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={handleRetryProcessing} 
+                        className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
+                      >
+                        <RefreshCw className="h-3 w-3 ml-1" />
+                        إعادة تشغيل
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* معلومات عن ميزة تنظيف البيانات */}
+              <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <Info className="h-4 w-4 text-blue-500" />
+                <AlertDescription className="text-sm text-blue-600 dark:text-blue-300">
+                  لتحسين أداء النظام، يتم الاحتفاظ فقط بأحدث 100 سجل. السجلات القديمة يتم حذفها تلقائياً.
+                  <div className="mt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleManualCleanup} 
+                      className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
+                    >
+                      <RefreshCw className="h-3 w-3 ml-1" />
+                      تنفيذ التنظيف الآن
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </motion.div>
+          </div>
+        </section>
         
-        <TabsContent value="upload" className="focus-visible:outline-none">
-          <UploadTab
-            isProcessing={isProcessing}
-            processingProgress={processingProgress}
-            pauseProcessing={pauseProcessing}
-            retryProcessing={retryProcessing}
-            clearQueue={clearQueue}
-            sessionImagesLength={sessionImages.length}
-            handleFileChange={handleFileChange}
-          />
-        </TabsContent>
-        
-        <TabsContent value="list" className="focus-visible:outline-none">
-          <ImagesTab
-            images={sortedImages}
-            onImageClick={openImageViewer}
-            onTextChange={handleTextChange}
-            onDelete={handleDelete}
-            onSubmit={handleSubmitToApi}
-            isSubmitting={isSubmitting}
-            onReprocess={handleReprocessImage}
-            clearSessionImages={clearSessionImages}
-          />
-        </TabsContent>
-      </Tabs>
+        <section className="py-16 px-6 bg-transparent">
+          <div className="container mx-auto bg-transparent">
+            <div className="max-w-3xl mx-auto">
+              <div className="bg-card rounded-2xl shadow-lg overflow-hidden">
+                <div className="p-8">
+                  <h2 className="apple-subheader mb-4 text-center">تحميل الصور</h2>
+                  <p className="text-muted-foreground text-center mb-6">قم بتحميل صور الإيصالات أو الفواتير وسنقوم باستخراج البيانات منها تلقائياً</p>
+                  <ImageUploader 
+                    isProcessing={isProcessing} 
+                    processingProgress={processingProgress} 
+                    onFileChange={handleFileChange} 
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {sessionImages.length > 0 && (
+          <section className="py-16 px-6">
+            <div className="container mx-auto">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold">الصور التي تم رفعها</h2>
+                  
+                  {(isProcessing || queueLength > 0) && (
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                        الصور النشطة: {activeUploads}
+                      </Badge>
+                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                        في قائمة الانتظار: {queueLength}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+                <p className="text-muted-foreground mb-8">
+                  هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.
+                </p>
+                <ImagePreviewContainer 
+                  images={sessionImages} 
+                  isSubmitting={isSubmitting} 
+                  onTextChange={handleTextChange} 
+                  onDelete={handleDelete} 
+                  onSubmit={id => handleSubmitToApi(id)} 
+                  formatDate={formatImageDate} 
+                  showOnlySession={true}
+                  onReprocess={handleReprocessImage}
+                />
+              </div>
+            </div>
+          </section>
+        )}
+          
+        {/* عرض رابط للسجلات */}
+        <section className="py-16 px-6 bg-gray-50 dark:bg-gray-800/20">
+          <div className="container mx-auto">
+            <div className="max-w-7xl mx-auto text-center">
+              <h2 className="text-3xl font-medium tracking-tight mb-6">سجلات الوصولات</h2>
+              <p className="text-muted-foreground mb-8">
+                يمكنك الاطلاع على جميع سجلات الوصولات والبيانات المستخرجة في صفحة السجلات
+              </p>
+              <Button size="lg" className="apple-button" asChild>
+                <Link to="/records">
+                  عرض جميع السجلات
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      </main>
       
-      {/* عارض الصور */}
-      {isViewerOpen && selectedImage && (
-        <ImageViewer
-          image={selectedImage}
-          onClose={closeImageViewer}
-        />
-      )}
-    </Layout>
+      <footer className="border-t py-8 bg-transparent">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-sm text-muted-foreground">
+              نظام استخراج البيانات - &copy; {new Date().getFullYear()}
+            </p>
+            <div className="flex gap-4">
+              <Link to="/records" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                السجلات
+              </Link>
+              <Link to="/profile" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                الملف الشخصي
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 };
 

@@ -1,6 +1,7 @@
 
-import React, { useState, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useRef, useState, useEffect } from "react";
+import ImageErrorDisplay from "./ImageErrorDisplay";
+import { useToast } from "@/hooks/use-toast";
 
 interface DraggableImageProps {
   src: string | null;
@@ -10,111 +11,158 @@ interface DraggableImageProps {
   imageLoaded: boolean;
 }
 
-const DraggableImage: React.FC<DraggableImageProps> = ({ 
-  src, 
+const DraggableImage = ({
+  src,
   zoomLevel,
   onImageLoad,
   onImageError,
   imageLoaded
-}) => {
+}: DraggableImageProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [imgError, setImgError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const { toast } = useToast();
   
-  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Reset position and error state when src changes
+    setPosition({ x: 0, y: 0 });
+    setImgError(false);
+  }, [src]);
   
+  useEffect(() => {
+    // Reset position when zoom level changes
+    if (zoomLevel === 1) {
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [zoomLevel]);
+  
+  // Mouse drag handlers - improved for better performance
   const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
     setIsDragging(true);
     setStartPos({
       x: e.clientX - position.x,
       y: e.clientY - position.y
     });
+    e.preventDefault(); // Prevent default behavior
   };
   
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    
-    setPosition({
-      x: e.clientX - startPos.x,
-      y: e.clientY - startPos.y
-    });
+    if (isDragging) {
+      const newX = e.clientX - startPos.x;
+      const newY = e.clientY - startPos.y;
+      
+      // Calculate bounds to prevent dragging image completely out of view
+      const containerWidth = imageContainerRef.current?.clientWidth || 0;
+      const containerHeight = imageContainerRef.current?.clientHeight || 0;
+      const imageWidth = (imageRef.current?.naturalWidth || 0) * zoomLevel;
+      const imageHeight = (imageRef.current?.naturalHeight || 0) * zoomLevel;
+      
+      const maxX = Math.max(0, (imageWidth - containerWidth) / 2);
+      const maxY = Math.max(0, (imageHeight - containerHeight) / 2);
+      
+      // Bound the position
+      const boundedX = Math.min(Math.max(newX, -maxX), maxX);
+      const boundedY = Math.min(Math.max(newY, -maxY), maxY);
+      
+      // Use requestAnimationFrame for smoother updates
+      requestAnimationFrame(() => {
+        setPosition({ x: boundedX, y: boundedY });
+      });
+      
+      e.preventDefault(); // Prevent default behavior
+    }
   };
   
   const handleMouseUp = () => {
-    setIsDragging(false);
+    if (isDragging) {
+      setIsDragging(false);
+    }
   };
   
-  // معالجة الأحداث اللمسية
-  const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-    const touch = e.touches[0];
-    setStartPos({
-      x: touch.clientX - position.x,
-      y: touch.clientY - position.y
-    });
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false);
+    }
   };
   
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    
-    const touch = e.touches[0];
-    setPosition({
-      x: touch.clientX - startPos.x,
-      y: touch.clientY - startPos.y
-    });
+  const handleImageLoadError = () => {
+    if (retryCount < 2) {
+      // محاولة تحميل الصورة مرة أخرى
+      setRetryCount(prev => prev + 1);
+      // إضافة طابع زمني لتجنب التخزين المؤقت
+      const newSrc = src ? `${src}?t=${Date.now()}` : null;
+      if (newSrc && imageRef.current) {
+        imageRef.current.src = newSrc;
+      } else {
+        setImgError(true);
+        onImageError();
+      }
+    } else {
+      setImgError(true);
+      onImageError();
+    }
   };
   
-  const handleTouchEnd = () => {
-    setIsDragging(false);
+  const handleRetry = () => {
+    if (src) {
+      setRetryCount(0);
+      setImgError(false);
+      // إضافة طابع زمني لتجنب التخزين المؤقت
+      const newSrc = `${src}?t=${Date.now()}`;
+      if (imageRef.current) {
+        imageRef.current.src = newSrc;
+      }
+      toast({
+        title: "إعادة تحميل",
+        description: "جاري محاولة تحميل الصورة مرة أخرى..."
+      });
+    }
   };
-  
-  // إعادة تعيين الموضع عند تغيير الصورة أو مستوى التكبير
-  React.useEffect(() => {
-    setPosition({ x: 0, y: 0 });
-  }, [src, zoomLevel]);
-  
+
   return (
     <div 
-      className="relative overflow-hidden h-[550px] w-full flex items-center justify-center bg-transparent rounded-md"
-      ref={containerRef}
+      ref={imageContainerRef}
+      className="overflow-hidden relative h-[550px] w-full flex items-center justify-center bg-transparent rounded-md cursor-move"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
     >
-      {!imageLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      {src && !imgError && (
+        <div className="relative w-full h-full flex items-center justify-center">
+          {!imageLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-green"></div>
+            </div>
+          )}
+          
+          <img 
+            ref={imageRef}
+            src={src}
+            alt="معاينة موسعة" 
+            className="transition-all duration-150"
+            style={{ 
+              transform: `scale(${zoomLevel}) translate(${position.x / zoomLevel}px, ${position.y / zoomLevel}px)`,
+              opacity: imageLoaded ? 1 : 0,
+              maxHeight: '100%',
+              maxWidth: '100%',
+              objectFit: 'contain',
+              transformOrigin: 'center',
+              pointerEvents: 'none', // Prevents image from capturing mouse events
+              willChange: 'transform', // Optimize for transforms
+            }}
+            onLoad={onImageLoad}
+            onError={handleImageLoadError}
+          />
         </div>
       )}
       
-      {src && (
-        <div
-          className="absolute cursor-grab overflow-visible"
-          style={{
-            transform: `translate(${position.x}px, ${position.y}px)`,
-            transition: isDragging ? 'none' : 'transform 0.1s',
-          }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <img
-            src={src}
-            alt="معاينة الصورة"
-            className="max-h-[500px] max-w-full pointer-events-none"
-            style={{
-              transform: `scale(${zoomLevel})`,
-              transformOrigin: 'center',
-              transition: 'transform 0.2s',
-              opacity: imageLoaded ? 1 : 0,
-            }}
-            onLoad={onImageLoad}
-            onError={onImageError}
-          />
-        </div>
+      {(imgError || !src) && (
+        <ImageErrorDisplay onRetry={handleRetry} />
       )}
     </div>
   );
