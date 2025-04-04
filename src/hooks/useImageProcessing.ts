@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useImageProcessingCore } from './useImageProcessingCore';
@@ -52,7 +53,7 @@ export const useImageProcessing = () => {
     getProcessingState
   } = useImageQueue();
 
-  const { setAllImages } = useImageState(); // Add this to get the setAllImages function
+  const { setAllImages } = useImageState();
 
   // تعديل معالجة الملفات لتكون دائمًا مع Gemini
   const handleFileChange = useCallback(async (files: File[] | FileList) => {
@@ -98,10 +99,10 @@ export const useImageProcessing = () => {
     return true;
   }, [images, processWithGemini, saveProcessedImage, addToQueue]);
 
-  // تعديل دالة loadUserImages لعدم استقبال وسائط
+  // تعديل دالة loadUserImages لتكون متوافقة مع توقيع الدالة في useImageProcessingCore
   const loadUserImages = useCallback(() => {
-    coreLoadUserImages(undefined, setAllImages); // Pass undefined for userId and setAllImages
-  }, [coreLoadUserImages, setAllImages]);
+    coreLoadUserImages();
+  }, [coreLoadUserImages]);
 
   // إرجاع واجهة API
   return useMemo(() => ({
