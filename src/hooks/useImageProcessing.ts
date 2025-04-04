@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useImageProcessingCore } from './useImageProcessingCore';
 import { useGeminiProcessing } from './useGeminiProcessing';
@@ -108,7 +109,7 @@ export const useImageProcessing = () => {
     handleTextChange,
     handleDelete,
     handleSubmitToApi,
-    loadUserImages: () => loadUserImages(),
+    loadUserImages,
     clearSessionImages,
     saveImageToDatabase,
     validateRequiredFields,
