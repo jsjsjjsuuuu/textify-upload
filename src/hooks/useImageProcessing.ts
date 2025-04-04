@@ -75,7 +75,7 @@ export const useImageProcessing = () => {
     const processFunc = async () => {
       try {
         // استخدام Gemini لمعالجة الصورة
-        const processedData = await processWithGemini(image);
+        const processedData = await processWithGemini(image.file, image);
         if (processedData) {
           // حفظ النتائج المعالجة
           await saveProcessedImage({
