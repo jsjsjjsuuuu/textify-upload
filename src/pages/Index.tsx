@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
@@ -40,11 +39,11 @@ const Index = () => {
     setUseGemini,
     reprocessImage
   } = useImageProcessing();
-
+  
   // تحميل الصور عند تسجيل الدخول
   useEffect(() => {
     if (user) {
-      // تم تصحيح الخطأ هنا - لا نقوم بتمرير أي معامل
+      // استدعاء loadUserImages بدون معاملات
       loadUserImages();
     }
   }, [user, loadUserImages]);
@@ -151,7 +150,7 @@ const Index = () => {
                 )}
                 <Button size="sm" variant="outline" onClick={clearQueue} disabled={!isProcessing}>
                   مسح القائمة
-                </Button>
+                  </Button>
               </div>
             </div>
             

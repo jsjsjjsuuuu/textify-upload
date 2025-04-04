@@ -1,9 +1,8 @@
-
-import { useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { ImageData } from "@/types/ImageData";
 import { useImageProcessingCore } from './useImageProcessingCore';
 import { useGeminiProcessing } from './useGeminiProcessing';
 import { useImageQueue } from './useImageQueue';
-import { ImageData } from "@/types/ImageData";
 
 export const useImageProcessing = () => {
   const { 
@@ -109,7 +108,7 @@ export const useImageProcessing = () => {
     handleTextChange,
     handleDelete,
     handleSubmitToApi,
-    loadUserImages, // تصحيح هنا - إزالة المعامل وتركه كما هو
+    loadUserImages: () => loadUserImages(),
     clearSessionImages,
     saveImageToDatabase,
     validateRequiredFields,
