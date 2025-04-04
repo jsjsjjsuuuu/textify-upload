@@ -1,162 +1,93 @@
 
-import React, { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { ImageData } from "@/types/ImageData";
-import { CalendarIcon, Clock, ImageIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import ImageErrorDisplay from "../ImagePreview/ImageViewer/ImageErrorDisplay";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState } from 'react';
+import { ImageData } from '@/types/ImageData';
+import Image from 'next/image';
 
-// صورة تعبئة افتراضية للصور التي لا يمكن تحميلها
-const PLACEHOLDER_IMAGE_URL = '/placeholder-image.jpg';
-
-interface DraggableImageProps {
+export interface DraggableImageProps {
   image: ImageData;
   onImageClick: (image: ImageData) => void;
-  formatDate: (date: Date) => string;
+  formatDate?: (date: Date) => string;
 }
 
-const DraggableImage: React.FC<DraggableImageProps> = ({ 
-  image, 
-  onImageClick,
-  formatDate
-}) => {
-  const [isImageError, setIsImageError] = useState(false);
-  const [isImageLoading, setIsImageLoading] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
+const DraggableImage: React.FC<DraggableImageProps> = ({ image, onImageClick, formatDate }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
-  const handleImageError = useCallback(() => {
-    console.error(`فشل تحميل الصورة: ${image.id} - URL: ${image.previewUrl}`);
-    setIsImageError(true);
-    setIsImageLoading(false);
-  }, [image.id, image.previewUrl]);
-
-  const handleImageLoad = useCallback(() => {
-    console.log(`تم تحميل الصورة بنجاح: ${image.id}`);
-    setIsImageError(false);
-    setIsImageLoading(false);
-  }, [image.id]);
-
-  const retryLoadImage = useCallback(() => {
-    console.log(`إعادة محاولة تحميل الصورة: ${image.id} - محاولة رقم: ${retryCount + 1}`);
-    setIsImageError(false);
-    setIsImageLoading(true);
-    setRetryCount(prev => prev + 1);
-    
-    if (image.storage_path) {
-      // إذا كان هناك مسار تخزين، استخدم Supabase Storage
-      const { data } = supabase.storage
-        .from('receipt_images')
-        .getPublicUrl(image.storage_path);
-      
-      if (data?.publicUrl) {
-        // إضافة طابع زمني لمنع التخزين المؤقت
-        image.previewUrl = `${data.publicUrl}?retry=${Date.now()}`;
-      }
-    } else {
-      // تحديث الصورة بإضافة معلمة عشوائية لتجنب التخزين المؤقت
-      image.previewUrl = image.previewUrl?.split('?')[0] + `?retry=${Date.now()}`;
+  // محاولة تحديد حالة الصورة
+  const getStatusLabel = () => {
+    if (hasError) return "خطأ في تحميل الصورة";
+    switch (image.status) {
+      case "processing": return "جاري المعالجة...";
+      case "pending": return "في انتظار المعالجة";
+      case "completed": return "تمت المعالجة";
+      case "error": return "فشل في المعالجة";
+      default: return "";
     }
-  }, [image, retryCount]);
+  };
 
-  // لوضع صورة بديلة إذا كان عنوان URL للصورة غير صالح أو فارغًا
-  const getImageSrc = useCallback(() => {
-    // التحقق من وجود مسار تخزين
-    if (image.storage_path) {
-      const { data } = supabase.storage
-        .from('receipt_images')
-        .getPublicUrl(image.storage_path);
-      
-      if (data?.publicUrl) {
-        return `${data.publicUrl}?t=${Date.now()}`;
-      }
+  // الحصول على صورة آمنة أو صورة بديلة
+  const getSafeImageUrl = () => {
+    if (!image.previewUrl || hasError) {
+      return '/placeholder-image.jpg';
     }
-    
-    // التحقق مما إذا كان عنوان URL للصورة يبدأ بـ "blob:" وهو ما يسبب الخطأ
-    if (image.previewUrl && image.previewUrl.startsWith('blob:')) {
-      console.warn(`تم اكتشاف عنوان blob غير صالح للصورة: ${image.id}`);
-      // استخدام صورة بديلة بدلاً من blob
-      return PLACEHOLDER_IMAGE_URL;
-    }
-    
-    return image.previewUrl || PLACEHOLDER_IMAGE_URL;
-  }, [image.id, image.previewUrl, image.storage_path]);
+    return image.previewUrl;
+  };
+  
+  // تعامل مع نجاح تحميل الصورة
+  const handleLoad = () => {
+    setIsLoading(false);
+  };
 
-  // تحديث العنوان عند التحميل الأولي
-  useEffect(() => {
-    console.log(`تهيئة الصورة: ${image.id} - URL: ${image.previewUrl}`);
-  }, [image.id, image.previewUrl]);
+  // تعامل مع خطأ تحميل الصورة
+  const handleError = () => {
+    setIsLoading(false);
+    setHasError(true);
+  };
+
+  // معالج النقر على الصورة
+  const handleClick = () => {
+    onImageClick(image);
+  };
+
+  // لون الخلفية بناءً على الحالة
+  const getStatusBgColor = () => {
+    if (hasError) return "bg-red-100 text-red-700";
+    
+    switch (image.status) {
+      case "processing": return "bg-blue-100 text-blue-700";
+      case "pending": return "bg-yellow-100 text-yellow-700";
+      case "completed": return "bg-green-100 text-green-700";
+      case "error": return "bg-red-100 text-red-700";
+      default: return "bg-gray-100 text-gray-700";
+    }
+  };
 
   return (
     <div 
-      className="relative cursor-pointer group h-[400px] flex flex-col" 
-      onClick={() => onImageClick(image)}
+      className="relative h-52 md:h-full overflow-hidden cursor-pointer group"
+      onClick={handleClick}
     >
-      <div className="absolute top-3 left-3 z-10 flex gap-2">
-        <Badge 
-          variant="outline" 
-          className={`bg-white/90 hover:bg-white text-black px-2 py-1 text-xs backdrop-blur-sm ${
-            image.status === "completed" ? "border-green-500" : 
-            image.status === "processing" ? "border-blue-500" : 
-            "border-gray-300"
-          }`}
-        >
-          {image.status === "completed" ? "مكتمل" : 
-           image.status === "processing" ? "جاري المعالجة" : 
-           "جديد"}
-        </Badge>
-        
-        {image.submitted && (
-          <Badge variant="outline" className="bg-green-500/90 hover:bg-green-500 text-white px-2 py-1 text-xs">
-            تم الإرسال
-          </Badge>
-        )}
+      {/* صورة الإيصال */}
+      <img
+        src={getSafeImageUrl()}
+        alt={image.code || "صورة إيصال"}
+        className="w-full h-full object-cover transition-transform transform group-hover:scale-105"
+        onLoad={handleLoad}
+        onError={handleError}
+      />
+      
+      {/* شريط الحالة أسفل الصورة */}
+      <div className={`absolute bottom-0 left-0 right-0 py-1 px-2 text-xs ${getStatusBgColor()} bg-opacity-80 backdrop-blur-sm flex items-center justify-between`}>
+        <span>{getStatusLabel()}</span>
+        {image.date && formatDate && <span>{formatDate(image.date)}</span>}
       </div>
       
-      <div className="overflow-hidden flex-grow bg-muted/20 relative">
-        {isImageLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted/10">
-            <div className="animate-pulse w-12 h-12 rounded-full bg-muted/30 flex items-center justify-center">
-              <ImageIcon className="h-6 w-6 text-muted-foreground" />
-            </div>
-          </div>
-        )}
-        
-        {isImageError ? (
-          <ImageErrorDisplay 
-            onRetry={retryLoadImage} 
-            retryCount={retryCount}
-            errorMessage="تعذر تحميل الصورة. انقر لإعادة المحاولة."
-          />
-        ) : (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isImageLoading ? 0 : 1 }}
-            transition={{ duration: 0.3 }}
-            className="relative h-full"
-          >
-            <img 
-              src={getImageSrc()}
-              alt={`صورة ${image.id}`}
-              className="object-contain w-full h-full"
-              style={{ opacity: isImageLoading ? 0 : 1 }}
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-            />
-          </motion.div>
-        )}
-      </div>
-      
-      <div className="p-3 bg-white dark:bg-gray-800 text-xs text-muted-foreground flex justify-between items-center">
-        <div className="flex items-center gap-1.5">
-          <CalendarIcon className="h-3.5 w-3.5" />
-          <span>{formatDate(image.date)}</span>
+      {/* طبقة تعتيم أثناء التحميل */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse flex items-center justify-center">
+          <span className="text-gray-400">جاري التحميل...</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Clock className="h-3.5 w-3.5" />
-          <span>{image.date.toLocaleTimeString()}</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

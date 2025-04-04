@@ -68,6 +68,9 @@ export interface ImageData {
   added_at?: number;      // وقت إضافة الصورة (timestamp)
   processed?: boolean;    // هل تمت معالجة الصورة بالفعل
   processingAttempts?: number; // عدد محاولات المعالجة
+  
+  // إضافة حقل تاريخ الإنشاء لحل مشكلة الترتيب
+  created_at?: string;    // تاريخ إنشاء السجل
 }
 
 // واجهة لتصدير البيانات إلى Bookmarklet
