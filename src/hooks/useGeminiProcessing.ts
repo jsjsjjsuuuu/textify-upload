@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { isPreviewEnvironment } from "@/utils/automationServerUrl";
+import { toast as sonnerToast } from "sonner";
 
 export const useGeminiProcessing = () => {
   const [useGemini, setUseGemini] = useState(false);
@@ -56,6 +57,13 @@ export const useGeminiProcessing = () => {
       }
     } catch (error) {
       console.error("خطأ في اختبار اتصال Gemini API:", error);
+      // إظهار رسالة خطأ مفصلة للمساعدة في تشخيص المشكلة
+      sonnerToast.error(
+        "خطأ في اتصال Gemini API",
+        {
+          description: `نوع الخطأ: ${error instanceof Error ? error.name : "غير معروف"}\nرسالة الخطأ: ${error instanceof Error ? error.message : String(error)}`
+        }
+      );
     }
   };
 
@@ -85,22 +93,24 @@ export const useGeminiProcessing = () => {
     // في بيئة المعاينة، نحاول استخدام Gemini مع تحذير المستخدم
     if (isPreviewEnvironment()) {
       console.log("تشغيل في بيئة معاينة (Lovable). محاولة استخدام Gemini قد تواجه قيود CORS.");
-      toast({
-        title: "تنبيه",
-        description: "استخدام Gemini في بيئة المعاينة قد يواجه قيود CORS، يرجى التحلي بالصبر في حالة بطء المعالجة",
-        variant: "default"
-      });
+      sonnerToast.warning(
+        "تنبيه",
+        {
+          description: "استخدام Gemini في بيئة المعاينة قد يواجه قيود CORS، يرجى التحلي بالصبر في حالة بطء المعالجة"
+        }
+      );
     }
 
     try {
       // الكشف عن حجم الملف وتقديم تحذير إذا كان كبيرًا جدًا
       const fileSizeMB = file.size / (1024 * 1024);
       if (fileSizeMB > 5) {
-        toast({
-          title: "تنبيه",
-          description: `حجم الصورة كبير (${fileSizeMB.toFixed(1)}MB)، قد تستغرق المعالجة وقتًا أطول`,
-          variant: "default"
-        });
+        sonnerToast.warning(
+          "تنبيه",
+          {
+            description: `حجم الصورة كبير (${fileSizeMB.toFixed(1)}MB)، قد تستغرق المعالجة وقتًا أطول`
+          }
+        );
       }
       
       console.log("تحويل الملف إلى base64");
@@ -157,10 +167,12 @@ export const useGeminiProcessing = () => {
             companyName: parsedData.companyName
           });
           
-          toast({
-            title: "تم الاستخراج بنجاح",
-            description: "تم استخراج البيانات باستخدام Gemini AI",
-          });
+          sonnerToast.success(
+            "تم الاستخراج بنجاح",
+            {
+              description: "تم استخراج البيانات باستخدام Gemini AI"
+            }
+          );
 
           // تحديث الصورة بالبيانات المستخرجة
           const processedImage = updateImageWithExtractedData(
@@ -202,11 +214,12 @@ export const useGeminiProcessing = () => {
           
           // إذا كان هناك نص مستخرج ولكن لا يوجد بيانات منظمة
           if (extractedText && extractedText.length > 10) {
-            toast({
-              title: "تم استخراج النص",
-              description: "تم استخراج النص ولكن لم يتم التعرف على البيانات المنظمة",
-              variant: "default"
-            });
+            sonnerToast.warning(
+              "تم استخراج النص",
+              {
+                description: "تم استخراج النص ولكن لم يتم التعرف على البيانات المنظمة"
+              }
+            );
             
             return {
               ...image,
@@ -214,11 +227,12 @@ export const useGeminiProcessing = () => {
               extractedText: extractedText
             };
           } else {
-            toast({
-              title: "تنبيه",
-              description: "لم يتمكن Gemini من استخراج بيانات من الصورة، يرجى محاولة تحميل صورة أوضح",
-              variant: "default"
-            });
+            sonnerToast.warning(
+              "تنبيه",
+              {
+                description: "لم يتمكن Gemini من استخراج بيانات من الصورة، يرجى محاولة تحميل صورة أوضح"
+              }
+            );
             
             return {
               ...image,
@@ -233,17 +247,19 @@ export const useGeminiProcessing = () => {
         // الإبلاغ عن الخطأ لمدير المفاتيح
         reportApiKeyError(geminiApiKey, extractionResult.message || "خطأ غير معروف");
         
-        toast({
-          title: "فشل الاستخراج",
-          description: "فشل استخراج البيانات: " + extractionResult.message,
-          variant: "destructive"
-        });
+        sonnerToast.error(
+          "فشل الاستخراج",
+          {
+            description: "فشل استخراج البيانات: " + extractionResult.message
+          }
+        );
         
         // إعادة الصورة مع حالة خطأ
         return {
           ...image,
           status: "error" as const,
-          extractedText: "فشل استخراج النص: " + extractionResult.message
+          extractedText: "فشل استخراج النص: " + extractionResult.message,
+          apiKeyError: true // إضافة علامة لتحديد أن الخطأ متعلق بمفتاح API
         };
       }
     } catch (geminiError: any) {
@@ -254,27 +270,31 @@ export const useGeminiProcessing = () => {
       
       // تحسين رسالة الخطأ
       let errorMessage = geminiError.message || 'خطأ غير معروف';
+      let isApiKeyError = false;
       
       if (errorMessage.includes('Failed to fetch')) {
         errorMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك والمحاولة مرة أخرى.';
       } else if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
         errorMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى تحميل صورة أصغر حجمًا أو المحاولة مرة أخرى لاحقًا.';
-      } else if (errorMessage.includes('quota') || errorMessage.includes('limit exceeded')) {
-        errorMessage = 'تم تجاوز حصة API. جاري تحويلك تلقائيًا إلى مفتاح آخر للمحاولة مرة أخرى.';
-        // محاولة مفتاح آخر تلقائيًا في الاستدعاء التالي
+      } else if (errorMessage.includes('quota') || errorMessage.includes('limit exceeded') || 
+                 errorMessage.includes('API key') || errorMessage.includes('invalid')) {
+        errorMessage = 'تم تجاوز حصة API أو المفتاح غير صالح. جاري تحويلك تلقائيًا إلى مفتاح آخر للمحاولة مرة أخرى.';
+        isApiKeyError = true;
       }
       
-      toast({
-        title: "خطأ",
-        description: `فشل في استخراج البيانات: ${errorMessage}`,
-        variant: "destructive"
-      });
+      sonnerToast.error(
+        "خطأ",
+        {
+          description: `فشل في استخراج البيانات: ${errorMessage}`
+        }
+      );
       
       // إعادة الصورة مع حالة خطأ
       return {
         ...image,
         status: "error" as const,
-        extractedText: "خطأ في المعالجة: " + errorMessage
+        extractedText: "خطأ في المعالجة: " + errorMessage,
+        apiKeyError: isApiKeyError // إضافة علامة لتحديد أن الخطأ متعلق بمفتاح API
       };
     }
   };
@@ -282,11 +302,13 @@ export const useGeminiProcessing = () => {
   // وظيفة إعادة تعيين جميع مفاتيح API
   const resetApiKeys = useCallback(() => {
     resetAllApiKeys();
-    toast({
-      title: "تم إعادة تعيين المفاتيح",
-      description: "تم إعادة تعيين جميع مفاتيح API",
-    });
-  }, [toast]);
+    sonnerToast.success(
+      "تم إعادة تعيين المفاتيح",
+      {
+        description: "تم إعادة تعيين جميع مفاتيح API"
+      }
+    );
+  }, []);
 
   return { 
     useGemini, 

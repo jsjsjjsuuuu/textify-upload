@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
+import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause, Key } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -13,11 +13,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { useGeminiProcessing } from '@/hooks/useGeminiProcessing';
 
 const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { resetApiKeys } = useGeminiProcessing();
   
   // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
@@ -39,8 +41,8 @@ const Index = () => {
     activeUploads,
     queueLength,
     retryProcessing,
-    pauseProcessing,  // استخدام وظيفة الإيقاف المؤقت
-    clearQueue       // استخدام وظيفة مسح القائمة
+    pauseProcessing,
+    clearQueue
   } = useImageProcessing();
   
   const {
@@ -60,6 +62,15 @@ const Index = () => {
         description: "تم تنظيف السجلات القديمة بنجاح",
       });
     }
+  };
+  
+  // وظيفة إعادة تعيين مفاتيح API
+  const handleResetApiKeys = () => {
+    resetApiKeys();
+    toast({
+      title: "تم إعادة تعيين المفاتيح",
+      description: "تم إعادة تعيين مفاتيح API بنجاح",
+    });
   };
   
   // وظيفة إعادة المعالجة للصورة
@@ -200,6 +211,27 @@ const Index = () => {
                       >
                         <RefreshCw className="h-3 w-3 ml-1" />
                         إعادة تشغيل
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* إضافة زر لإعادة تعيين مفاتيح API */}
+              {user?.is_admin && (
+                <Alert className="mt-6 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                  <Info className="h-4 w-4 text-amber-500" />
+                  <AlertDescription className="text-sm text-amber-600 dark:text-amber-300">
+                    في حالة واجهت مشاكل مع استخراج البيانات بسبب أخطاء في مفاتيح API، يمكنك إعادة تعيينها.
+                    <div className="mt-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={handleResetApiKeys} 
+                        className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
+                      >
+                        <Key className="h-3 w-3 ml-1" />
+                        إعادة تعيين مفاتيح API
                       </Button>
                     </div>
                   </AlertDescription>

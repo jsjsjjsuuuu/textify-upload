@@ -1,24 +1,16 @@
-
 import { ImageData } from "@/types/ImageData";
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ImagePreview from "@/components/ImagePreview/ImagePreview";
-import { Trash2, Save, SendHorizonal, RotateCcw, Filter, Loader, Image } from "lucide-react";
+import { Trash2, Save, SendHorizonal, RotateCcw, Filter, Loader, Image, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
-
-interface ImagePreviewContainerProps {
-  images: ImageData[];
-  isSubmitting?: boolean;
-  onTextChange: (id: string, field: string, value: string) => void;
-  onDelete: (id: string) => void;
-  onSubmit: (id: string) => void;
-  formatDate: (date: Date) => string;
-  showOnlySession?: boolean;
-  onReprocess?: (id: string) => Promise<void>;
-}
+import ImageErrorDisplay from "@/components/ImagePreview/ImageViewer/ImageErrorDisplay";
+import { toast as sonnerToast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useImageStats } from "@/hooks/useImageStats";
 
 // تحديد الحد الأقصى لعدد الصور التي سيتم عرضها في كل مجموعة
 const ITEMS_PER_PAGE = 10;
@@ -39,9 +31,11 @@ const ImagePreviewContainer = ({
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isReprocessing, setIsReprocessing] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { clearProcessedImagesCache, lastApiReset } = useImageStats();
   
   // للمعالجة المباشرة للصور
-  const { processWithGemini } = useGeminiProcessing();
+  const { processWithGemini, resetApiKeys } = useGeminiProcessing();
   
   // تعيين أول صورة كصورة نشطة تلقائيًا عند التحميل أو عند تغيير الصور
   useEffect(() => {
@@ -129,6 +123,28 @@ const ImagePreviewContainer = ({
     }
   };
   
+  // وظيفة لإعادة تعيين مفاتيح API
+  const handleResetApiKeys = () => {
+    // إعادة تعيين المفاتيح في مدير المفاتيح
+    resetApiKeys();
+    
+    // مسح ذاكرة التخزين المؤقت للصور المعالجة
+    clearProcessedImagesCache();
+    
+    // إظهار رسالة نجاح
+    sonnerToast.success(
+      "تم إعادة تعيين المفاتيح",
+      {
+        description: "تم إعادة تعيين جميع مفاتيح API بنجاح"
+      }
+    );
+    
+    // إذا كان هناك صورة نشطة وبها خطأ، حاول معالجتها مرة أخرى
+    if (activeImage && activeImage.status === "error") {
+      handleReprocess();
+    }
+  };
+  
   // وظيفة لإعادة معالجة الصورة باستخدام Gemini
   const handleReprocess = async () => {
     if (!activeImage) return;
@@ -138,17 +154,20 @@ const ImagePreviewContainer = ({
       try {
         setIsReprocessing(true);
         await onReprocess(activeImage.id);
-        toast({
-          title: "تمت إعادة المعالجة",
-          description: "تمت إعادة معالجة الصورة بنجاح"
-        });
+        sonnerToast.success(
+          "تمت إعادة المعالجة",
+          {
+            description: "تمت إعادة معالجة الصورة بنجاح"
+          }
+        );
       } catch (error) {
         console.error("خطأ في إعادة معالجة الصورة:", error);
-        toast({
-          title: "خطأ",
-          description: "حدث خطأ أثناء إعادة معالجة الصورة",
-          variant: "destructive"
-        });
+        sonnerToast.error(
+          "خطأ",
+          {
+            description: "حدث خطأ أثناء إعادة معالجة الصورة"
+          }
+        );
       } finally {
         setIsReprocessing(false);
       }
@@ -173,21 +192,24 @@ const ImagePreviewContainer = ({
         // تحديث حالة الصورة
         onTextChange(activeImage.id, "status", processedImage.status);
         
-        toast({
-          title: "تمت إعادة المعالجة",
-          description: "تمت إعادة معالجة الصورة بنجاح"
-        });
+        sonnerToast.success(
+          "تمت إعادة المعالجة",
+          {
+            description: "تمت إعادة معالجة الصورة بنجاح"
+          }
+        );
       } catch (error) {
         console.error("خطأ في إعادة معالجة الصورة:", error);
         
         // تحديث حالة الصورة إلى "خطأ"
         onTextChange(activeImage.id, "status", "error");
         
-        toast({
-          title: "خطأ",
-          description: "حدث خطأ أثناء إعادة معالجة الصورة",
-          variant: "destructive"
-        });
+        sonnerToast.error(
+          "خطأ",
+          {
+            description: "حدث خطأ أثناء إعادة معالجة الصورة"
+          }
+        );
       } finally {
         setIsReprocessing(false);
       }
@@ -243,6 +265,25 @@ const ImagePreviewContainer = ({
           </TabsList>
           
           <div className="flex items-center space-x-2 space-x-reverse">
+            {user?.is_admin && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleResetApiKeys}
+                title="إعادة تعيين مفاتيح API"
+                className="ml-2 text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
+              >
+                <Key className="w-4 h-4 ml-1.5" />
+                إعادة تعيين مفاتيح API
+              </Button>
+            )}
+            
+            {lastApiReset && (
+              <span className="text-xs text-muted-foreground hidden md:inline-block">
+                آخر إعادة تعيين: {new Date(lastApiReset).toLocaleString('ar-SA')}
+              </span>
+            )}
+            
             {selectedImages.length > 0 ? (
               <>
                 <Button
@@ -448,6 +489,18 @@ const ImagePreviewContainer = ({
                           <RotateCcw className={`w-4 h-4 ml-1 ${isReprocessing ? "animate-spin" : ""}`} />
                           إعادة معالجة
                         </Button>
+                        
+                        {activeImage.status === "error" && activeImage.apiKeyError && user?.is_admin && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={handleResetApiKeys}
+                            className="text-white"
+                          >
+                            <Key className="w-4 h-4 ml-1" />
+                            إعادة تعيين API
+                          </Button>
+                        )}
                         
                         {activeImage.status === "completed" && !activeImage.submitted && (
                           <Button
