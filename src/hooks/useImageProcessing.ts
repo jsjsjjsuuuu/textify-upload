@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useImageProcessingCore } from './useImageProcessingCore';
@@ -20,7 +19,7 @@ export const useImageProcessing = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     saveProcessedImage,
-    loadUserImages,
+    loadUserImages: coreLoadUserImages,
     clearSessionImages,
     validateRequiredFields,
     runCleanupNow,
@@ -95,6 +94,11 @@ export const useImageProcessing = () => {
     addToQueue(imageId, image, processFunc);
     return true;
   }, [images, processWithGemini, saveProcessedImage, addToQueue]);
+
+  // وظيفة تحميل الصور مع التأكد من عدم تمرير معاملات
+  const loadUserImages = () => {
+    coreLoadUserImages();
+  };
 
   // إرجاع واجهة API
   return useMemo(() => ({
