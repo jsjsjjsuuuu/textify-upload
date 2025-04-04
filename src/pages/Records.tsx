@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { motion } from "framer-motion";
@@ -451,7 +452,7 @@ const Records = () => {
                           {image.number || "-"}
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <span className="text-muted-foreground">{formatDate(image.date)}</span>
+                          <span className="text-muted-foreground">{formatImageDate(image.date)}</span>
                         </TableCell>
                         <TableCell className="px-6 py-4">
                           <div className="w-16 h-16 rounded-lg overflow-hidden bg-transparent relative flex items-center justify-center border border-border/40 dark:border-gray-700/40">

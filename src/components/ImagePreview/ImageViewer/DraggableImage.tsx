@@ -162,7 +162,7 @@ const DraggableImage = ({
       )}
       
       {(imgError || !src) && (
-        <ImageErrorDisplay onRetry={handleRetry} retryCount={retryCount} />
+        <ImageErrorDisplay onRetry={handleRetry} />
       )}
     </div>
   );

@@ -1,58 +1,17 @@
 
-/**
- * وظائف الاتصال بـ Gemini API
- */
-
 import { GeminiExtractParams, GeminiRequest, GeminiResponse } from "./types";
 import { ApiResult } from "../apiService";
 import { parseGeminiResponse } from "./parsers";
+import { getEnhancedExtractionPrompt, getBasicExtractionPrompt, getTextOnlyExtractionPrompt } from "./prompts";
 import { 
-  getEnhancedExtractionPrompt, 
-  getBasicExtractionPrompt, 
-  getTextOnlyExtractionPrompt, 
-  getHandwritingExtractionPrompt,
-  getSimplifiedExtractionPrompt,
-  getStructuredExtractionPrompt,
-  getAdvancedHandwritingPrompt,
-  getStepByStepPrompt
-} from "./prompts";
+  createFetchOptions, 
+  fetchWithRetry, 
+  getConnectionTimeout 
+} from "@/utils/automationServerUrl";
 import { reportApiKeyError } from "./apiKeyManager";
 
-// تتبع آخر استدعاء API
+// تتبع آخر استدعاء API لكل مفتاح
 const lastApiCallTime = new Map<string, number>();
-
-// قائمة بالنماذج المتاحة وترتيب استخدامها
-const AVAILABLE_MODELS = [
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
-  'gemini-pro-vision'
-];
-
-// وظيفة اختيار المطالبة المناسبة
-function getPromptByType(promptType: string | undefined): string {
-  if (!promptType) return getEnhancedExtractionPrompt();
-  
-  switch (promptType) {
-    case "enhancedExtraction":
-      return getEnhancedExtractionPrompt();
-    case "basicExtraction":
-      return getBasicExtractionPrompt();
-    case "textOnlyExtraction":
-      return getTextOnlyExtractionPrompt();
-    case "handwritingExtraction":
-      return getHandwritingExtractionPrompt();
-    case "simplifiedExtraction":
-      return getSimplifiedExtractionPrompt();
-    case "structuredExtraction":
-      return getStructuredExtractionPrompt();
-    case "advancedHandwriting":
-      return getAdvancedHandwritingPrompt();
-    case "stepByStepPrompt":
-      return getStepByStepPrompt();
-    default:
-      return getEnhancedExtractionPrompt();
-  }
-}
 
 /**
  * استخراج البيانات من الصور باستخدام Gemini API
@@ -61,12 +20,11 @@ export async function extractDataWithGemini({
   apiKey,
   imageBase64,
   extractionPrompt,
-  extractionPromptType,
-  temperature = 0.2,
-  modelVersion = 'gemini-1.5-flash',
+  temperature = 0.1,
+  modelVersion = 'gemini-1.5-flash', // استخدام النموذج الأسرع افتراضياً
   enhancedExtraction = true,
-  maxRetries = 2,
-  retryDelayMs = 2000
+  maxRetries = 2, // تقليل عدد المحاولات
+  retryDelayMs = 3000 // تقليل مدة الانتظار
 }: GeminiExtractParams): Promise<ApiResult> {
   if (!apiKey) {
     console.error("Gemini API Key مفقود");
@@ -76,36 +34,28 @@ export async function extractDataWithGemini({
     };
   }
 
-  // تحقق من صحة النموذج المطلوب
-  const model = AVAILABLE_MODELS.includes(modelVersion) ? modelVersion : AVAILABLE_MODELS[0];
-  console.log(`استخدام نموذج Gemini: ${model}`);
-
-  // استراتيجية اختيار المطالبة المناسبة
+  // تحديد المطالبة المناسبة بناءً على الإعدادات
   let prompt = extractionPrompt;
   
   if (!prompt) {
-    // استخدام نوع المطالبة إذا تم توفيره
-    if (extractionPromptType) {
-      prompt = getPromptByType(extractionPromptType);
-      console.log(`استخدام نوع المطالبة: ${extractionPromptType}`);
-    } else if (enhancedExtraction) {
+    if (enhancedExtraction) {
       prompt = getEnhancedExtractionPrompt();
     } else {
       prompt = getBasicExtractionPrompt();
     }
   }
 
-  // إنشاء تأخير بين الطلبات 
+  // إنشاء تأخير بين الطلبات لنفس المفتاح
   const lastCallTime = lastApiCallTime.get(apiKey) || 0;
   const currentTime = Date.now();
   const timeSinceLastCall = currentTime - lastCallTime;
   
-  // التأكد من أن هناك على الأقل ثانية واحدة بين الطلبات
-  const minDelayBetweenCalls = 1500; // 1.5 ثانية
+  // التأكد من أن هناك على الأقل 2 ثوانٍ بين الطلبات لنفس المفتاح
+  const minDelayBetweenCalls = 2000; // 2 ثانية (زيادة من 1.5 ثانية)
   
   if (timeSinceLastCall < minDelayBetweenCalls) {
     const delayNeeded = minDelayBetweenCalls - timeSinceLastCall;
-    console.log(`تأخير ${delayNeeded}ms قبل استدعاء API...`);
+    console.log(`تأخير ${delayNeeded}ms قبل استدعاء API للمفتاح: ${apiKey.substring(0, 5)}...`);
     await new Promise(resolve => setTimeout(resolve, delayNeeded));
   }
   
@@ -114,20 +64,22 @@ export async function extractDataWithGemini({
 
   try {
     console.log("إرسال طلب إلى Gemini API...");
+    console.log("طول مفتاح API:", apiKey.length);
     console.log("أول 5 أحرف من مفتاح API:", apiKey.substring(0, 5));
     console.log("طول صورة Base64:", imageBase64.length);
-    console.log("استخدام إصدار النموذج:", model);
-    console.log("درجة الحرارة:", temperature);
+    console.log("استخدام إصدار النموذج:", modelVersion);
     
-    // التحقق من حجم صورة Base64
-    if (imageBase64.length > 1000000) {
-      console.log("حجم الصورة كبير، سيتم محاولة ضغطها في المستقبل");
+    // التحقق من حجم صورة Base64 وتقليلها إذا كانت كبيرة جدًا
+    if (imageBase64.length > 1000000) { // أكثر من ~1MB
+      console.log("حجم الصورة كبير جدًا، محاولة تقليل جودة Base64...");
+      // هنا يمكننا إما تقليل جودة الصورة أو استخدام ضغط إضافي
+      // لكن في هذه الحالة، سنستمر ونلاحظ إذا كان الطلب سينجح
     }
     
     // تنظيف معرف صورة Base64
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
     
-    // إنشاء محتوى الطلب مع تحسينات لزيادة الدقة
+    // إنشاء محتوى الطلب
     const requestBody: GeminiRequest = {
       contents: [
         {
@@ -144,17 +96,17 @@ export async function extractDataWithGemini({
       ],
       generationConfig: {
         temperature: temperature,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 800, // تقليل حد الإخراج لتسريع الاستجابة
         topK: 40,
         topP: 0.95
       }
     };
     
     // إنشاء عنوان URL للطلب
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent`;
     console.log("إرسال طلب إلى نقطة نهاية Gemini API:", endpoint);
     
-    // إنشاء خيارات الطلب
+    // إنشاء خيارات الطلب مع مهلة زمنية أقصر
     const fetchOptions = {
       method: "POST",
       headers: {
@@ -162,24 +114,23 @@ export async function extractDataWithGemini({
         "x-goog-api-key": apiKey
       },
       body: JSON.stringify(requestBody),
-      signal: AbortSignal.timeout(60000) // 60 ثانية
+      // إضافة مهلة أطول للطلبات
+      signal: AbortSignal.timeout(25000) // 25 ثانية (زيادة من 15 ثانية)
     };
     
     // تنفيذ الطلب مع قياس الوقت
     console.log("بدء طلب API...");
     const timeBeforeRequest = Date.now();
     
-    // محاولة طلب API مع إعادة المحاولة
+    // إضافة محاولة إعادة الطلب في حالة الفشل
     let response;
     let attemptCount = 0;
-    const maxAttempts = maxRetries + 1;
+    const maxAttempts = 2;
     
     while (attemptCount < maxAttempts) {
       try {
         attemptCount++;
-        console.log(`محاولة طلب API رقم ${attemptCount}...`);
         response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
-        console.log(`استجابة محاولة ${attemptCount}:`, response.status);
         break; // الخروج من الحلقة إذا نجح الطلب
       } catch (fetchError) {
         console.error(`محاولة الطلب ${attemptCount} فشلت:`, fetchError);
@@ -189,7 +140,7 @@ export async function extractDataWithGemini({
         }
         
         // انتظار قبل إعادة المحاولة
-        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
     
@@ -213,30 +164,6 @@ export async function extractDataWithGemini({
       // الإبلاغ عن الخطأ لمدير المفاتيح
       reportApiKeyError(apiKey, `${response.status}: ${errorText}`);
       
-      // إذا كان الخطأ بسبب وصول الحد الأقصى للاستخدام، يمكن تجربة نموذج آخر
-      if (response.status === 429 || errorText.includes('quota') || errorText.includes('rate limit')) {
-        console.log("تم الوصول إلى حد الاستخدام، محاولة استخدام نموذج آخر...");
-        
-        // العثور على النموذج التالي في القائمة
-        const currentModelIndex = AVAILABLE_MODELS.indexOf(model);
-        if (currentModelIndex >= 0 && currentModelIndex < AVAILABLE_MODELS.length - 1) {
-          const nextModel = AVAILABLE_MODELS[currentModelIndex + 1];
-          console.log(`محاولة استخدام النموذج البديل: ${nextModel}`);
-          
-          return await extractDataWithGemini({
-            apiKey,
-            imageBase64,
-            extractionPrompt: prompt,
-            extractionPromptType,
-            temperature,
-            modelVersion: nextModel,
-            enhancedExtraction,
-            maxRetries,
-            retryDelayMs
-          });
-        }
-      }
-      
       return {
         success: false,
         message: `خطأ من Gemini API: ${response.status} - ${errorText}`
@@ -256,141 +183,260 @@ export async function extractDataWithGemini({
       };
     }
     
-    // تحليل استجابة Gemini لاستخراج البيانات المنظمة
-    const parsedResult = parseGeminiResponse(data);
+    console.log("استلام بيانات استجابة Gemini API");
     
-    if (parsedResult.success && parsedResult.data) {
-      console.log("تم استخراج البيانات بنجاح من استجابة Gemini:", parsedResult.data);
-      return {
-        success: true,
-        data: parsedResult.data,
-        message: "تم استخراج البيانات بنجاح"
-      };
-    } else {
-      console.warn("فشل استخراج البيانات المنظمة من استجابة Gemini:", parsedResult.message);
+    if (data.promptFeedback?.blockReason) {
+      console.error("Gemini حظر الطلب:", data.promptFeedback.blockReason);
       
-      // محاولة إعادة المحاولة مع مطالبة مختلفة
-      if (enhancedExtraction && !extractionPromptType) {
-        // استراتيجية التراجع - استخدام مطالبات مختلفة بالترتيب
-        const fallbackPrompts = [
-          "handwritingExtraction",
-          "simplifiedExtraction",
-          "structuredExtraction",
-          "advancedHandwriting"
-        ];
+      // الإبلاغ عن الخطأ لمدير المفاتيح
+      reportApiKeyError(apiKey, `حظر الاستعلام: ${data.promptFeedback.blockReason}`);
+      
+      return {
+        success: false,
+        message: `تم حظر الاستعلام: ${data.promptFeedback.blockReason}`
+      };
+    }
+
+    if (!data.candidates || data.candidates.length === 0) {
+      console.error("لا توجد مرشحات في استجابة Gemini");
+      
+      // الإبلاغ عن الخطأ لمدير المفاتيح
+      reportApiKeyError(apiKey, "لم يتم إنشاء أي استجابة من Gemini");
+      
+      return {
+        success: false,
+        message: "لم يتم إنشاء أي استجابة من Gemini"
+      };
+    }
+
+    if (!data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
+      console.error("أجزاء المحتوى مفقودة في استجابة Gemini");
+      
+      // الإبلاغ عن الخطأ لمدير المفاتيح
+      reportApiKeyError(apiKey, "استجابة Gemini غير مكتملة");
+      
+      return {
+        success: false,
+        message: "استجابة Gemini غير مكتملة"
+      };
+    }
+
+    const extractedText = data.candidates[0].content.parts[0].text || '';
+    console.log("تم استلام النص المستخرج من Gemini بطول:", extractedText.length);
+    
+    // التحقق من وجود نص مستخرج
+    if (!extractedText) {
+      console.error("Gemini أرجع نصًا فارغًا");
+      
+      // محاولة استخدام مطالبة أبسط للنص فقط
+      console.log("محاولة استخدام مطالبة نص فقط بسيطة...");
+      
+      try {
+        const textOnlyRequestBody = {
+          ...requestBody,
+          contents: [
+            {
+              parts: [
+                { text: getTextOnlyExtractionPrompt() },
+                {
+                  inline_data: {
+                    mime_type: "image/jpeg",
+                    data: cleanBase64
+                  }
+                }
+              ]
+            }
+          ]
+        };
         
-        // اختيار المطالبة التالية
-        const nextPromptType = fallbackPrompts[0];
-        console.log("محاولة استخدام مطالبة بديلة:", nextPromptType);
+        // تأخير قبل طلب آخر
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        return await extractDataWithGemini({
-          apiKey,
-          imageBase64,
-          extractionPromptType: nextPromptType,
-          temperature,
-          modelVersion: 'gemini-1.5-pro', // استخدام نموذج أقوى
-          enhancedExtraction: false,
-          maxRetries,
-          retryDelayMs
+        // استخدام الطلب البسيط
+        const textOnlyResponse = await fetch(`${endpoint}?key=${apiKey}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey
+          },
+          body: JSON.stringify(textOnlyRequestBody),
+          signal: AbortSignal.timeout(15000) // 15 ثواني (زيادة من 10 ثواني)
         });
+        
+        if (textOnlyResponse.ok) {
+          const textOnlyData: GeminiResponse = await textOnlyResponse.json();
+          
+          if (textOnlyData.candidates?.[0]?.content?.parts?.[0]?.text) {
+            const rawExtractedText = textOnlyData.candidates[0].content.parts[0].text;
+            console.log("تم استخراج النص الخام بنجاح، الطول:", rawExtractedText.length);
+            
+            return {
+              success: true,
+              message: "تم استخراج النص الخام فقط، لم يتم التعرف على البيانات المنظمة",
+              data: {
+                extractedText: rawExtractedText,
+                rawText: rawExtractedText,
+                parsedData: {}
+              }
+            };
+          }
+        } else {
+          // الإبلاغ عن الخطأ لمدير المفاتيح
+          reportApiKeyError(apiKey, "فشل طلب النص فقط");
+        }
+      } catch (textOnlyError) {
+        console.error("فشلت محاولة النص فقط:", textOnlyError);
       }
       
       return {
-        success: parsedResult.success,
-        message: parsedResult.message,
-        data: parsedResult.data
+        success: false,
+        message: "لم يتم استخراج أي نص من الصورة"
       };
     }
     
+    // تحليل الاستجابة واستخراج البيانات المنظمة
+    try {
+      const { parsedData, confidenceScore } = parseGeminiResponse(extractedText);
+      console.log("تم تحليل البيانات من Gemini بنجاح");
+      
+      return {
+        success: true,
+        message: "تم استخراج البيانات بنجاح",
+        data: {
+          extractedText,
+          parsedData,
+          confidence: confidenceScore
+        }
+      };
+    } catch (parseError) {
+      console.error("خطأ في تحليل البيانات المستخرجة:", parseError);
+      return {
+        success: true,
+        message: "تم استخراج النص ولكن فشل تحليل البيانات المنظمة",
+        data: {
+          extractedText,
+          rawText: extractedText,
+          parsedData: {}
+        }
+      };
+    }
   } catch (error) {
-    console.error("خطأ أثناء استدعاء Gemini API:", error);
+    console.error("خطأ عند استخدام Gemini API:", error);
+    const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
     
     // الإبلاغ عن الخطأ لمدير المفاتيح
-    reportApiKeyError(apiKey, error instanceof Error ? error.message : String(error));
+    reportApiKeyError(apiKey, errorMessage);
+    
+    // تحسين رسائل الخطأ
+    let userFriendlyMessage = `حدث خطأ أثناء معالجة الطلب: ${errorMessage}`;
+    
+    if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError') || errorMessage.includes('AbortError')) {
+      userFriendlyMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى إعادة المحاولة مرة أخرى لاحقًا أو تحميل صورة بحجم أصغر.';
+    } else if (errorMessage.includes('Failed to fetch')) {
+      userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN إذا كنت تواجه قيود جغرافية.';
+    } else if (errorMessage.includes('CORS')) {
+      userFriendlyMessage = 'تم منع الطلب بسبب قيود CORS. حاول استخدام الموقع الرئيسي بدلاً من بيئة المعاينة.';
+    } else if (errorMessage.includes('quota') || errorMessage.includes('limit')) {
+      userFriendlyMessage = 'تم تجاوز حد الاستخدام. جاري تبديل المفتاح تلقائياً.';
+    }
     
     return {
       success: false,
-      message: `خطأ أثناء استدعاء Gemini API: ${error instanceof Error ? error.message : String(error)}`
+      message: userFriendlyMessage
     };
   }
 }
 
 /**
- * اختبار اتصال Gemini API
+ * إضافة دالة لاختبار الاتصال بـ Gemini API
  */
 export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
+  if (!apiKey) {
+    return {
+      success: false,
+      message: "يرجى توفير مفتاح API صالح"
+    };
+  }
+
   try {
-    console.log("اختبار اتصال Gemini API...");
+    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
     
-    // استخدام طلب بسيط جدًا للاختبار
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        signal: AbortSignal.timeout(10000) // 10 ثواني
-      }
-    );
+    const fetchOptions = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: "مرحبا" }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 128
+        }
+      }),
+      signal: AbortSignal.timeout(15000) // 15 ثواني
+    };
+    
+    console.log("إرسال طلب اختبار إلى Gemini API...");
+    
+    let response;
+    try {
+      response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
+    } catch (fetchError) {
+      console.error("خطأ في طلب اختبار Gemini:", fetchError);
+      throw fetchError;
+    }
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("فشل اختبار اتصال Gemini API:", response.status, errorText);
+      let errorText;
+      try {
+        errorText = await response.text();
+      } catch (err) {
+        errorText = `لا يمكن قراءة نص الخطأ: ${err.message}`;
+      }
+      
+      console.error("فشل اختبار Gemini API:", response.status, errorText);
       
       // الإبلاغ عن الخطأ لمدير المفاتيح
-      reportApiKeyError(apiKey, `${response.status}: ${errorText}`);
+      reportApiKeyError(apiKey, `فشل الاختبار: ${response.status} - ${errorText}`);
       
       return {
         success: false,
-        message: `فشل الاتصال باختبار Gemini API: ${response.status} - ${errorText}`
+        message: `خطأ من Gemini API: ${response.status} - ${errorText}`
       };
     }
     
-    const data = await response.json();
+    // تحديث وقت آخر استدعاء
+    lastApiCallTime.set(apiKey, Date.now());
     
-    if (data && Array.isArray(data.models)) {
-      console.log("نجح اختبار اتصال Gemini API:", data.models.length, "نماذج متاحة");
-      
-      // التحقق من توفر النماذج المطلوبة
-      const availableModels = data.models.map((model: any) => model.name);
-      const ourModels = AVAILABLE_MODELS.filter(model => 
-        availableModels.some((availableModel: string) => availableModel.includes(model))
-      );
-      
-      console.log("النماذج المتاحة للاستخدام:", ourModels);
-      
-      return {
-        success: true,
-        message: `نجح الاتصال: ${data.models.length} نماذج متاحة`
-      };
-    } else {
-      console.warn("استجابة اختبار Gemini API غير متوقعة:", data);
-      
-      return {
-        success: false,
-        message: "استجابة اختبار غير متوقعة من Gemini API"
-      };
-    }
+    return {
+      success: true,
+      message: "تم الاتصال بـ Gemini API بنجاح"
+    };
   } catch (error) {
-    console.error("خطأ أثناء اختبار اتصال Gemini API:", error);
+    console.error("خطأ عند اختبار اتصال Gemini API:", error);
+    const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
     
     // الإبلاغ عن الخطأ لمدير المفاتيح
-    reportApiKeyError(apiKey, error instanceof Error ? error.message : String(error));
+    reportApiKeyError(apiKey, `خطأ الاختبار: ${errorMessage}`);
+    
+    let userFriendlyMessage = `حدث خطأ أثناء اختبار اتصال Gemini API: ${errorMessage}`;
+    
+    if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
+      userFriendlyMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى المحاولة مرة أخرى لاحقًا.';
+    } else if (errorMessage.includes('Failed to fetch')) {
+      userFriendlyMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك أو حاول استخدام VPN.';
+    }
     
     return {
       success: false,
-      message: `خطأ أثناء اختبار اتصال Gemini API: ${error instanceof Error ? error.message : String(error)}`
+      message: userFriendlyMessage
     };
   }
-}
-
-// وظيفة تحويل ملف إلى Base64
-export async function fileToBase64(file: File): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-  });
 }

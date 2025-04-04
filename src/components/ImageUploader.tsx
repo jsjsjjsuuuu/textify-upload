@@ -10,62 +10,52 @@ interface ImageUploaderProps {
   processingProgress: number;
   onFileChange: (files: File[]) => void;
   onCancelUpload?: () => void;
-  maxFiles?: number;
-  acceptedFileTypes?: string[];
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({
-  isProcessing,
-  processingProgress,
+const ImageUploader: React.FC<ImageUploaderProps> = ({ 
+  isProcessing, 
+  processingProgress, 
   onFileChange,
-  onCancelUpload,
-  maxFiles = 20,
-  acceptedFileTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif']
+  onCancelUpload
 }) => {
   const [dragOver, setDragOver] = useState(false);
   
   const onDrop = useCallback((acceptedFiles: File[]) => {
     // التحقق من أن الملفات هي صور
-    const imageFiles = acceptedFiles.filter(file => 
-      acceptedFileTypes.includes(file.type)
-    );
+    const imageFiles = acceptedFiles.filter(file => file.type.startsWith('image/'));
     
     if (imageFiles.length === 0) {
       console.error("لا توجد ملفات صور صالحة");
       return;
     }
-
+    
     // تقليص حجم الملفات إذا كان كبيرًا جدًا
-    if (imageFiles.length > maxFiles) {
-      console.log(`تم اختيار ${imageFiles.length} صورة، سيتم معالجة أول ${maxFiles} صورة فقط`);
-      onFileChange(imageFiles.slice(0, maxFiles));
+    if (imageFiles.length > 20) {
+      console.log(`تم اختيار ${imageFiles.length} صورة، سيتم معالجة أول 20 صورة فقط`);
+      onFileChange(imageFiles.slice(0, 20));
     } else {
       onFileChange(imageFiles);
     }
-
+    
     // إعادة تعيين حالة التأثير
     setDragOver(false);
-  }, [onFileChange, maxFiles, acceptedFileTypes]);
-  
-  const {
-    getRootProps,
-    getInputProps,
-    isDragActive
-  } = useDropzone({
+  }, [onFileChange]);
+
+  const {getRootProps, getInputProps, isDragActive} = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.jpeg', '.png', '.jpg', '.webp', '.gif']
+      'image/*': ['.jpeg', '.png', '.jpg', '.webp', '.gif'],
     },
     multiple: true,
     disabled: isProcessing,
     onDragEnter: () => setDragOver(true),
-    onDragLeave: () => setDragOver(false)
+    onDragLeave: () => setDragOver(false),
   });
-  
+
   return (
     <div className="relative">
-      <div 
-        {...getRootProps()} 
+      <div
+        {...getRootProps()}
         className={cn(
           "relative border border-dashed rounded-xl p-6 cursor-pointer transition-all duration-300",
           "bg-gradient-to-b from-background to-muted/20",
@@ -76,7 +66,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         )}
       >
         <input {...getInputProps()} disabled={isProcessing} />
-        
         <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
           {isProcessing ? (
             <>
@@ -97,17 +86,31 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
                 <Image className="h-6 w-6 text-primary/80" />
               </div>
               <p className="text-base text-foreground/90 font-medium">
-                {isDragActive || dragOver ? (
-                  <span className="text-primary">أسقط الصور هنا ...</span>
-                ) : (
-                  <span>
-                    اسحب وأسقط الصور <span className="hidden sm:inline">أو انقر للاختيار</span>
-                  </span>
-                )}
+                {isDragActive || dragOver ? 
+                  <span className="text-primary">أسقط الصور هنا ...</span> : 
+                  <span>اسحب وأسقط الصور <span className="hidden sm:inline">أو انقر للاختيار</span></span>
+                }
               </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                الصيغ المدعومة: JPG, PNG, WEBP, GIF (بحد أقصى {maxFiles} صورة)
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                يمكنك تحميل صور بصيغة JPEG، PNG، أو WebP.
               </p>
+              <Button 
+                className="mt-4 rounded-full shadow-sm" 
+                size="sm" 
+                variant="outline"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // محاكاة النقر على input الخفي
+                  const input = document.querySelector('input[type="file"]');
+                  if (input) {
+                    (input as HTMLInputElement).click();
+                  }
+                }}
+              >
+                <FilePlus className="h-4 w-4 ml-2" />
+                اختر صور
+              </Button>
             </>
           )}
         </div>
@@ -117,8 +120,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         <Button 
           variant="outline" 
           size="sm" 
-          className="absolute top-2 right-2 h-7 w-7 p-0 rounded-full bg-background/80 backdrop-blur-sm shadow-sm border-muted-foreground/20" 
-          onClick={onCancelUpload} 
+          className="absolute top-2 right-2 h-7 w-7 p-0 rounded-full bg-background/80 backdrop-blur-sm shadow-sm border-muted-foreground/20"
+          onClick={onCancelUpload}
           title="إلغاء التحميل"
         >
           <X className="h-3.5 w-3.5 text-muted-foreground" />

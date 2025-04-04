@@ -16,23 +16,23 @@ import PasswordResetPopover from './PasswordResetPopover';
 
 interface UserEditFormProps {
   userData: UserProfile;
-  isProcessing?: boolean;
-  selectedDate?: Date | undefined;
-  onCancel?: () => void;
-  onSave?: () => void;
-  onUserDataChange?: (field: string, value: any) => void;
-  onDateSelect?: (date: Date | undefined) => void;
-  onEmailChange?: (newEmail: string) => void;
+  isProcessing: boolean;
+  selectedDate: Date | undefined;
+  onCancel: () => void;
+  onSave: () => void;
+  onUserDataChange: (field: string, value: any) => void;
+  onDateSelect: (date: Date | undefined) => void;
+  onEmailChange?: (userId: string, newEmail: string) => void;
 }
 
 const UserEditForm: React.FC<UserEditFormProps> = ({
   userData,
-  isProcessing = false,
+  isProcessing,
   selectedDate,
-  onCancel = () => {},
-  onSave = () => {},
-  onUserDataChange = () => {},
-  onDateSelect = () => {},
+  onCancel,
+  onSave,
+  onUserDataChange,
+  onDateSelect,
   onEmailChange
 }) => {
   const [newEmail, setNewEmail] = useState('');
@@ -40,7 +40,7 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
 
   const handleEmailChangeSubmit = () => {
     if (newEmail && onEmailChange) {
-      onEmailChange(newEmail);
+      onEmailChange(userData.id, newEmail);
       setIsEditingEmail(false);
       setNewEmail('');
     }

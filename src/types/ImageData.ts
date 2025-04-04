@@ -1,15 +1,9 @@
 
-/**
- * نوع بيانات الصورة
- */
 export interface ImageData {
   id: string;
   file: File;
-  fileName?: string; // إضافة حقل fileName كخاصية اختيارية
-  previewUrl?: string;
-  status: "pending" | "processing" | "completed" | "error";
-  date: Date; // تغيير من string إلى Date
-  extractedText?: string;
+  previewUrl: string;
+  extractedText: string;
   confidence?: number;
   code?: string;
   senderName?: string;
@@ -17,37 +11,73 @@ export interface ImageData {
   province?: string;
   price?: string;
   companyName?: string;
+  date: Date;
+  status: "processing" | "pending" | "completed" | "error";
   submitted?: boolean;
-  user_id?: string;
   number?: number;
-  imageHash?: string;
-  processingAttempts?: number;
-  createdAt?: string;
-  updatedAt?: string;
-  extractionMethod?: "ocr" | "gemini" | "none"; // إضافة "none" كقيمة مقبولة
-  extractionSuccess?: boolean;
-  
-  // إضافة خاصية النص الخام المفقودة
-  rawText?: string;
-  
-  // الخصائص الإضافية المطلوبة
-  storage_path?: string;
+  extractionMethod?: "ocr" | "gemini";
+  // حقول جديدة لدعم التكامل مع المستخدمين
+  user_id?: string;
+  // حقل جديد لتتبع مجموعة الصور المرفوعة معًا
   batch_id?: string;
+  // حقل جديد لمسار التخزين في Supabase Storage
+  storage_path?: string;
+  // حقل جديد لعدد محاولات إعادة المعالجة
+  retryCount?: number;
+  // حقول لدعم عملية Bookmarklet
   bookmarkletStatus?: "ready" | "pending" | "success" | "error";
   bookmarkletMessage?: string;
+  bookmarkletDate?: Date;
+  // حقول إضافية لوصف البيانات
+  category?: string;
+  priority?: "low" | "medium" | "high";
+  // حقول إضافية مخصصة للموقع المستهدف
+  productType?: string;
+  orderNumber?: string;
+  delegateName?: string; // اسم المندوب
+  region?: string;      // المنطقة
+  packageCount?: string; // عدد القطع
+  customerCode?: string; // كود العميل
+  recipientName?: string; // اسم المستلم
+  reference?: string;   // المرجع
+  destination?: string; // الوجهة
+  shippingType?: string; // نوع الشحن
+  paymentType?: string; // نوع الدفع
+  shipmentStatus?: string; // حالة الشحنة
+  deliveryTime?: string; // وقت التسليم
+  deliveryDate?: string; // تاريخ التسليم
+  // حقول جديدة مطابقة للموقع المستهدف
+  customerName?: string; // اسم العميل/الزبون
+  customerPhone?: string; // هاتف الزبون
+  totalAmount?: string; // المبلغ الكلي
+  receiverName?: string; // اسم المستلم
+  area?: string; // المنطقة
+  packageType?: string; // نوع البضاعة
+  pieceCount?: string; // عدد القطع
+  customerFee?: string; // زيادة أجرة العميل
+  deliveryAgentFee?: string; // زيادة أجرة المندوب
+  notes1?: string; // ملاحظات
+  notes2?: string; // ملاحظات خاصة
+  status1?: string; // الحالة
+  exchangeStatus?: string; // استبدال
+  orderStatus?: string; // حالة الطلب
+  paymentStatus?: string; // حالة الدفع
   
-  // خصائص إضافية اختيارية لدعم الوظائف الجديدة
-  notes?: string;
-  recipientName?: string;
-  delegateName?: string;
-  packageType?: string;
-  pieceCount?: string;
-  uploadedDate?: Date;
+  // حقول جديدة لمنع تكرار المعالجة
+  imageHash?: string;     // قيمة هاش فريدة للصورة
+  added_at?: number;      // وقت إضافة الصورة (timestamp)
+  processed?: boolean;    // هل تمت معالجة الصورة بالفعل
+  processingAttempts?: number; // عدد محاولات المعالجة
 }
 
-/**
- * واجهة لعنصر البوكماركلت 
- */
+// واجهة لتصدير البيانات إلى Bookmarklet
+export interface BookmarkletExportData {
+  version: string;
+  exportDate: string;
+  items: BookmarkletItem[];
+}
+
+// بيانات وصل للاستخدام في Bookmarklet
 export interface BookmarkletItem {
   id: string;
   code: string;
@@ -57,29 +87,47 @@ export interface BookmarkletItem {
   price: string;
   companyName: string;
   exportDate: string;
-  status: 'ready' | 'success' | 'error';
-  address?: string;
+  status: "ready" | "pending" | "success" | "error";
+  message?: string;
+  // حقول إضافية اختيارية للاستخدامات المستقبلية
   notes?: string;
-  recipientName?: string;
+  category?: string;
+  priority?: string;
+  // حقول إضافية مخصصة للموقع المستهدف
+  address?: string;
+  productType?: string;
+  orderNumber?: string;
   delegateName?: string;
-  packageType?: string;
-  pieceCount?: string;
-  // بيانات إضافية يمكن استخدامها في ملء النماذج
-  [key: string]: any;
+  region?: string;
+  packageCount?: string;
+  customerCode?: string;
+  recipientName?: string;
+  reference?: string;
+  destination?: string;
+  shippingType?: string;
+  paymentType?: string;
+  shipmentStatus?: string;
+  deliveryTime?: string;
+  deliveryDate?: string;
+  // حقول جديدة مطابقة للموقع المستهدف
+  customerName?: string; // اسم العميل/الزبون
+  customerPhone?: string; // هاتف الزبون
+  totalAmount?: string; // المبلغ الكلي
+  receiverName?: string; // اسم المستلم
+  area?: string; // المنطقة
+  packageType?: string; // نوع البضاعة
+  pieceCount?: string; // عدد القطع
+  customerFee?: string; // زيادة أجرة العميل
+  deliveryAgentFee?: string; // زيادة أجرة المندوب
+  notes1?: string; // ملاحظات
+  notes2?: string; // ملاحظات خاصة
+  status1?: string; // الحالة
+  exchangeStatus?: string; // استبدال
+  paymentStatus?: string; // حالة الدفع
+  orderStatus?: string; // حالة الطلب
 }
 
-/**
- * بيانات التصدير للبوكماركلت
- */
-export interface BookmarkletExportData {
-  version: string;
-  exportDate: string;
-  items: BookmarkletItem[];
-}
-
-/**
- * إحصائيات التخزين
- */
+// إحصائيات البيانات المخزنة
 export interface StorageStats {
   total: number;
   ready: number;

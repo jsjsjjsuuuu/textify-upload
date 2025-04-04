@@ -1,89 +1,188 @@
 
 /**
- * وظائف مساعدة للعمل مع Gemini
+ * مجموعة الوظائف المساعدة لـ Gemini API
  */
 
 /**
- * تحويل ملف إلى تنسيق Base64
+ * تحويل ملف إلى قاعدة Base64
  */
-export async function fileToBase64(file: File): Promise<string> {
+export const fileToBase64 = (file: File): Promise<string> => {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
+    reader.onerror = (error) => reject(error);
   });
-}
+};
 
 /**
- * تنسيق السعر لإزالة النص غير الضروري وتوحيد التنسيق
+ * إنشاء عنوان URL موثوق للكائن
+ * هذا لحل مشكلات الذاكرة المحتملة مع عناوين URL للكائنات
  */
-export function formatPrice(price: string | number): string {
-  if (!price) return '';
+export const createReliableBlobUrl = (file: File): string => {
+  try {
+    return URL.createObjectURL(file);
+  } catch (error) {
+    console.error('خطأ في إنشاء عنوان URL للكائن:', error);
+    return '';
+  }
+};
+
+/**
+ * تنسيق سعر وفقًا لقواعد العمل
+ */
+export const formatPrice = (price: string | number): string => {
+  if (!price && price !== 0) return '';
   
-  let priceStr = String(price);
+  // تحويل إلى نص (إذا كان رقمًا)
+  const priceText = String(price);
   
-  // إزالة أي نص غير رقمي ماعدا النقطة والفواصل
-  priceStr = priceStr.replace(/[^\d.,]/g, '');
+  // إذا كان النص فارغاً، إرجاع نص فارغ
+  if (!priceText.trim()) return '';
   
-  // استبدال الفاصلة بنقطة للعشرية
-  priceStr = priceStr.replace(/,/g, '.');
+  // إزالة أي أحرف غير الأرقام والنقطة (للكسور العشرية)
+  const digitsOnly = priceText.replace(/[^\d.]/g, '');
   
-  // التأكد من وجود نقطة عشرية واحدة فقط
-  const parts = priceStr.split('.');
-  if (parts.length > 2) {
-    priceStr = parts[0] + '.' + parts.slice(1).join('');
+  // التعامل مع حالات خاصة: مجاني أو توصيل أو واصل
+  if (
+    priceText.includes('مجان') || 
+    priceText.includes('free') || 
+    priceText.includes('توصيل') || 
+    priceText.includes('deliver') ||
+    priceText.includes('واصل')
+  ) {
+    return '0';
   }
   
-  // محاولة تحويل السعر إلى رقم وتقريبه إلى رقمين عشريين إذا أمكن
-  try {
-    const parsedPrice = parseFloat(priceStr);
-    if (!isNaN(parsedPrice)) {
-      // التحقق من وجود أرقام عشرية
-      if (parsedPrice % 1 === 0) {
-        // عدد صحيح
-        return parsedPrice.toString();
-      } else {
-        // عدد عشري
-        return parsedPrice.toFixed(2);
+  // إذا لم يبقى أي أرقام بعد التنظيف، إرجاع صفر
+  if (!digitsOnly) return '0';
+  
+  // تحويل النص إلى رقم عشري
+  let numValue = parseFloat(digitsOnly);
+  
+  // إذا كان الرقم أقل من 1000 وأكبر من 0، ضربه في 1000
+  if (numValue > 0 && numValue < 1000) {
+    numValue *= 1000;
+  }
+  
+  // تقريب الرقم إلى صفر منازل عشرية وتحويله إلى نص
+  return Math.round(numValue).toString();
+};
+
+/**
+ * تعزيز البيانات المستخرجة
+ */
+export const enhanceExtractedData = (
+  extractedData: Record<string, string>, 
+  rawText: string
+): Record<string, string> => {
+  const enhancedData = { ...extractedData };
+  
+  // تحسين استخراج أرقام الهاتف
+  if (enhancedData.phoneNumber) {
+    // تنظيف رقم الهاتف من الرموز غير الرقمية
+    let phoneDigits = enhancedData.phoneNumber.replace(/\D/g, '');
+    
+    // إذا بدأ الرقم بـ 00964، أزل هذا الجزء واستبدله بـ 0
+    if (phoneDigits.startsWith('00964')) {
+      phoneDigits = '0' + phoneDigits.substring(5);
+    }
+    
+    // إذا بدأ الرقم بـ 964، أزل هذا الجزء واستبدله بـ 0
+    if (phoneDigits.startsWith('964')) {
+      phoneDigits = '0' + phoneDigits.substring(3);
+    }
+    
+    // التأكد من أن الرقم لا يبدأ بصفرين
+    if (phoneDigits.startsWith('00')) {
+      phoneDigits = '0' + phoneDigits.substring(2);
+    }
+    
+    enhancedData.phoneNumber = phoneDigits;
+  } else {
+    // البحث عن نمط رقم الهاتف في النص الخام إذا لم يكن موجودًا
+    const phonePattern = /\b0?7\d{2}[- ]?\d{3}[- ]?\d{4}\b/g;
+    const phoneMatches = rawText.match(phonePattern);
+    
+    if (phoneMatches && phoneMatches.length > 0) {
+      enhancedData.phoneNumber = phoneMatches[0].replace(/\D/g, '');
+    }
+  }
+  
+  // البحث عن أنماط الأكواد (الأرقام) إذا لم يتم استخراج الكود
+  if (!enhancedData.code) {
+    const codePatterns = [
+      /\b(\d{5,10})\b/g,  // أي رقم من 5 إلى 10 أرقام
+      /\bرقم[\s:]+(\d+)/i,
+      /\bcode[\s:]+(\d+)/i,
+      /\bكود[\s:]+(\d+)/i
+    ];
+    
+    for (const pattern of codePatterns) {
+      const matches = [...rawText.matchAll(pattern)];
+      if (matches.length > 0) {
+        enhancedData.code = matches[0][1];
+        break;
       }
     }
-  } catch (e) {
-    // إذا فشل التحويل، استخدم النص الأصلي بعد التنظيف
   }
   
-  return priceStr;
-}
+  return enhancedData;
+};
 
 /**
- * تحليل المبلغ وتحويله إلى قيمة رقمية
+ * حساب درجة ثقة للبيانات المستخرجة
  */
-export function parseAmount(amount: string): number | null {
-  if (!amount) return null;
+export const calculateConfidenceScore = (data: Record<string, string>): number => {
+  const requiredFields = ['code', 'senderName', 'phoneNumber', 'province', 'price', 'companyName'];
+  const fieldWeights = {
+    code: 15,
+    senderName: 20,
+    phoneNumber: 25,
+    province: 15,
+    price: 15,
+    companyName: 10
+  };
   
-  // إزالة أي نص غير رقمي ماعدا النقطة والفواصل
-  const cleanedAmount = amount.replace(/[^\d.,]/g, '');
+  let totalScore = 0;
+  const totalWeight = Object.values(fieldWeights).reduce((sum, weight) => sum + weight, 0);
   
-  // استبدال الفاصلة بنقطة للعشرية
-  const normalizedAmount = cleanedAmount.replace(/,/g, '.');
+  // حساب النقاط لكل حقل
+  for (const field of requiredFields) {
+    const weight = fieldWeights[field as keyof typeof fieldWeights] || 0;
+    
+    if (data[field]) {
+      const value = data[field].trim();
+      
+      if (field === 'phoneNumber') {
+        // التحقق من رقم الهاتف
+        const phoneDigits = value.replace(/\D/g, '');
+        if (phoneDigits.length === 11) {
+          totalScore += weight;
+        } else if (phoneDigits.length >= 9) {
+          totalScore += weight * 0.7;
+        } else {
+          totalScore += weight * 0.3;
+        }
+      } else if (field === 'code') {
+        // التحقق من الكود
+        if (/^\d+$/.test(value)) {
+          totalScore += weight;
+        } else {
+          totalScore += weight * 0.5;
+        }
+      } else {
+        // التحقق من الحقول النصية الأخرى
+        if (value.length > 3) {
+          totalScore += weight;
+        } else if (value.length > 0) {
+          totalScore += weight * 0.5;
+        }
+      }
+    }
+  }
   
-  // التأكد من وجود نقطة عشرية واحدة فقط
-  const parts = normalizedAmount.split('.');
-  const finalAmount = parts.length > 2 
-    ? parts[0] + '.' + parts.slice(1).join('') 
-    : normalizedAmount;
-  
-  // محاولة تحويل المبلغ إلى رقم
-  const parsedAmount = parseFloat(finalAmount);
-  
-  return isNaN(parsedAmount) ? null : parsedAmount;
-}
-
-/**
- * إنشاء إشارة مهلة مع وقت محدد
- */
-export function createTimeoutSignal(timeoutMs: number): AbortSignal {
-  const controller = new AbortController();
-  setTimeout(() => controller.abort(), timeoutMs);
-  return controller.signal;
-}
+  // حساب النسبة المئوية للثقة
+  const confidencePercentage = Math.round((totalScore / totalWeight) * 100);
+  return Math.min(confidencePercentage, 100);
+};

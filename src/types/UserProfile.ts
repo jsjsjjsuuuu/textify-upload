@@ -16,5 +16,4 @@ export interface UserProfile {
   address?: string;
   notes?: string;
   updated_at?: string;
-  daily_image_limit?: number;
 }

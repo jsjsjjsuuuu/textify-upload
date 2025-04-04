@@ -6,18 +6,17 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { AlertCircle, Copy, Download, FileText, Save, Table, Upload } from "lucide-react";
-import { convertImagesToBookmarkletItems } from "@/utils/bookmarklet/converter";
-import { convertToCSV, convertToJSON, convertToExcel } from "@/utils/bookmarklet/converter";
+import { convertImagesToBookmarkletItems, convertToCSV, convertToJSON, convertToExcel } from "@/utils/bookmarklet/converter";
 import { saveToLocalStorage, getStorageStats } from "@/utils/bookmarkletService";
-
 interface DirectExportToolsProps {
   images: ImageData[];
 }
-
 const DirectExportTools: React.FC<DirectExportToolsProps> = ({
   images
 }) => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [activeTab, setActiveTab] = useState("csv");
   const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
 
@@ -156,78 +155,12 @@ const DirectExportTools: React.FC<DirectExportToolsProps> = ({
   const getValidItemsCount = () => {
     return images.filter(img => img.status === "completed" && img.code && img.senderName && img.phoneNumber).length;
   };
-  
-  return (
-    <div className="space-y-4">
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>تصدير مباشر للبيانات</AlertTitle>
-        <AlertDescription>
-          يمكنك تصدير البيانات مباشرة إلى ملفات CSV أو JSON أو Excel.
-        </AlertDescription>
-      </Alert>
-      <Separator />
-      <Tabs defaultValue="csv" className="w-full">
-        <TabsList>
-          <TabsTrigger value="csv">
-            <Table className="h-4 w-4 mr-1" />
-            CSV
-          </TabsTrigger>
-          <TabsTrigger value="json">
-            <FileText className="h-4 w-4 mr-1" />
-            JSON
-          </TabsTrigger>
-          <TabsTrigger value="excel">
-            <Upload className="h-4 w-4 mr-1" />
-            Excel
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="csv" className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={() => handleCopyToClipboard("csv")} disabled={copiedFormat === "csv"}>
-              <Copy className="h-4 w-4 mr-1" />
-              نسخ CSV
-            </Button>
-            <Button variant="outline" onClick={() => handleDownloadFile("csv")}>
-              <Download className="h-4 w-4 mr-1" />
-              تنزيل CSV
-            </Button>
-          </div>
-        </TabsContent>
-        <TabsContent value="json" className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={() => handleCopyToClipboard("json")} disabled={copiedFormat === "json"}>
-              <Copy className="h-4 w-4 mr-1" />
-              نسخ JSON
-            </Button>
-            <Button variant="outline" onClick={() => handleDownloadFile("json")}>
-              <Download className="h-4 w-4 mr-1" />
-              تنزيل JSON
-            </Button>
-          </div>
-        </TabsContent>
-        <TabsContent value="excel" className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={() => handleCopyToClipboard("excel")} disabled={copiedFormat === "excel"}>
-              <Copy className="h-4 w-4 mr-1" />
-              نسخ Excel
-            </Button>
-            <Button variant="outline" onClick={() => handleDownloadFile("excel")}>
-              <Download className="h-4 w-4 mr-1" />
-              تنزيل Excel
-            </Button>
-          </div>
-        </TabsContent>
-      </Tabs>
-      <Separator />
-      <Button variant="secondary" onClick={handleExportToStorage}>
-        <Save className="h-4 w-4 mr-2" />
-        تصدير البيانات إلى ذاكرة المتصفح
-      </Button>
-    </div>
-  );
+  return <div className="space-y-4">
+      
+      
+      
+    </div>;
 };
-
 const Code = ({
   className,
   ...props
@@ -237,5 +170,4 @@ const Code = ({
       <polyline points="8 6 2 12 8 18"></polyline>
     </svg>;
 };
-
 export default DirectExportTools;

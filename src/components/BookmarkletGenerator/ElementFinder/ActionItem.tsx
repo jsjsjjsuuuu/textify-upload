@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Trash, Info } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ActionItemProps {
   action: { name: string; finder: string; value: string; delay: string };
@@ -102,23 +102,25 @@ const ActionItem: React.FC<ActionItemProps> = ({
               محدد العنصر (CSS Selector)
             </Label>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                  <Info className="h-4 w-4 text-slate-500" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent align="end" className="w-80">
-                <div className="space-y-2 text-xs">
-                  <p className="font-medium">أمثلة على المحددات:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    {getExamplesForAction().map((example, i) => (
-                      <li key={i} className="font-mono">{example}</li>
-                    ))}
-                  </ul>
-                </div>
-              </TooltipContent>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                    <Info className="h-4 w-4 text-slate-500" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent align="end" className="w-80">
+                  <div className="space-y-2 text-xs">
+                    <p className="font-medium">أمثلة على المحددات:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      {getExamplesForAction().map((example, i) => (
+                        <li key={i} className="font-mono">{example}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
           <Textarea

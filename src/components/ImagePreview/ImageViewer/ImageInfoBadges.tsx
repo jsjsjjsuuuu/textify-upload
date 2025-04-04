@@ -5,7 +5,7 @@ interface ImageInfoBadgesProps {
   number?: number;
   date: Date;
   confidence?: number;
-  extractionMethod?: "ocr" | "gemini" | "none"; // تعديل النوع ليتضمن "none"
+  extractionMethod?: "ocr" | "gemini";
   formatDate: (date: Date) => string;
 }
 
@@ -24,17 +24,6 @@ const ImageInfoBadges = ({
     return "bg-red-500";
   };
 
-  // معالجة عرض شارة طريقة الاستخراج
-  const renderExtractionMethodBadge = () => {
-    if (!extractionMethod || extractionMethod === "none") return null;
-    
-    return (
-      <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700">
-        {extractionMethod === "gemini" ? "Gemini AI" : "OCR"}
-      </Badge>
-    );
-  };
-
   return (
     <>
       {number !== undefined && (
@@ -49,7 +38,11 @@ const ImageInfoBadges = ({
         </p>
         
         <div className="flex items-center gap-2">
-          {renderExtractionMethodBadge()}
+          {extractionMethod && (
+            <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700">
+              {extractionMethod === "gemini" ? "Gemini AI" : "OCR"}
+            </Badge>
+          )}
           
           {confidence !== undefined && (
             <Badge className={`text-xs ${getAccuracyColor(confidence)} text-white`}>

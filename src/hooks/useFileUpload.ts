@@ -1,327 +1,574 @@
 
 import { useState, useCallback, useRef } from "react";
-import { v4 as uuidv4 } from 'uuid';
-import { useToast } from "@/hooks/use-toast";
-import { useImageStore } from "@/store/imageStore";
+import { v4 as uuidv4 } from "uuid";
+import { compressImage } from "@/utils/imageCompression";
 import { ImageData } from "@/types/ImageData";
-import { useGeminiProcessing } from "./useGeminiProcessing";
-import { useSupabaseStorage } from "./useSupabaseStorage";
-import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { useOcrProcessing } from "@/hooks/useOcrProcessing";
+import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
+import { useImageQueue } from "@/hooks/useImageQueue"; 
+import { getApiKeyStats, resetAllApiKeys } from "@/lib/gemini";
+import { supabase } from "@/integrations/supabase/client";
 
-/**
- * هوك مخصص لإدارة رفع الصور ومعالجتها
- */
-export const useFileUpload = () => {
+interface FileUploadProps {
+  images: ImageData[];
+  addImage: (image: ImageData) => void;
+  updateImage: (id: string, data: Partial<ImageData>) => void;
+  setProcessingProgress: (progress: number) => void;
+  saveProcessedImage: (image: ImageData) => Promise<void>;
+  isDuplicateImage: (image: ImageData, images: ImageData[]) => boolean;
+  removeDuplicates: () => void;
+}
+
+export const useFileUpload = ({
+  images,
+  addImage,
+  updateImage,
+  setProcessingProgress,
+  saveProcessedImage,
+  isDuplicateImage,
+  removeDuplicates
+}: FileUploadProps) => {
+  const [geminiEnabled, setGeminiEnabled] = useState(true);
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { images, addImage, updateImage, removeImage, clearImages } = useImageStore();
-  const [isUploading, setIsUploading] = useState(false);
-  const [processingImage, setProcessingImage] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [processingProgress, setProcessingProgress] = useState(0);
-  const [geminiProcessingError, setGeminiProcessingError] = useState<string | null>(null);
-  const geminiProcessing = useGeminiProcessing();
-  const supabaseStorage = useSupabaseStorage();
-  const geminiProcessingRef = useRef(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { processWithOcr } = useOcrProcessing();
+  const { processWithGemini, resetApiKeys } = useGeminiProcessing();
   
-  // تعريف دالة processImages لإصلاح خطأ الاستخدام قبل التعريف
-  const processImages = useCallback(async () => {
-    if (geminiProcessingRef.current) {
-      console.log("Gemini processing is already running, skipping...");
-      return;
-    }
+  // استخدام نظام قائمة الانتظار
+  const { 
+    addToQueue, 
+    isProcessing, 
+    queueLength, 
+    activeUploads,
+    manuallyTriggerProcessingQueue,
+    pauseProcessing,
+    clearQueue,
+    getProcessingState
+  } = useImageQueue();
+  
+  // كاش لهاشات الصور التي تمت معالجتها لمنع المعالجة المتكررة
+  const processedHashes = useRef<Set<string>>(new Set());
+  // سجل لتتبع نجاح/فشل المعالجة
+  const processingStats = useRef<{
+    totalAttempted: number;
+    successful: number;
+    failed: number;
+    lastResetTime: number;
+  }>({
+    totalAttempted: 0,
+    successful: 0,
+    failed: 0,
+    lastResetTime: Date.now()
+  });
+  
+  // تتبع المحاولات المتكررة لكل صورة
+  const retryAttemptsMap = useRef<Map<string, number>>(new Map());
+  
+  // مسح كاش الهاشات
+  const clearProcessedHashesCache = useCallback(() => {
+    processedHashes.current.clear();
+    // إعادة تعيين الإحصائيات
+    processingStats.current = {
+      totalAttempted: 0,
+      successful: 0,
+      failed: 0,
+      lastResetTime: Date.now()
+    };
+    // إعادة تعيين خريطة المحاولات
+    retryAttemptsMap.current.clear();
+    // إعادة تعيين مفاتيح API
+    resetApiKeys();
+    
+    toast({
+      title: "تم المسح",
+      description: "تم مسح ذاكرة التخزين المؤقت للصور المجهزة وإعادة تعيين مفاتيح API",
+    });
+  }, [toast, resetApiKeys]);
 
-    const pendingOrErrorImages = images.filter(img => img.status === "pending" || img.status === "error");
-
-    if (pendingOrErrorImages.length === 0) {
-      console.log("No pending or error images to process.");
-      return;
+  // وظيفة لحساب التأخير المثالي بين معالجات الصور
+  const calculateIdealDelay = useCallback(() => {
+    // الحصول على إحصائيات مفاتيح API
+    const apiStats = getApiKeyStats();
+    const apiKeysRatio = apiStats.active / apiStats.total;
+    
+    // حساب نسبة نجاح المعالجة
+    const { successful, failed, totalAttempted } = processingStats.current;
+    const successRatio = totalAttempted > 0 ? successful / totalAttempted : 1;
+    
+    // التأخير الأساسي - تم زيادته للتأكد من عدم تجاوز حدود API
+    let baseDelay = 3000; // 3 ثوانٍ كحد أدنى
+    
+    // زيادة التأخير إذا كان هناك الكثير من المفاتيح المحظورة
+    if (apiKeysRatio < 0.5) {
+      baseDelay = 7000; // 7 ثوانٍ إذا كان أكثر من نصف المفاتيح محظورة
+    } else if (apiKeysRatio < 0.75) {
+      baseDelay = 5000; // 5 ثوانٍ إذا كان أكثر من ربع المفاتيح محظورة
     }
     
-    // تعيين معالجة Gemini كنشطة
-    geminiProcessingRef.current = true;
+    // زيادة التأخير إذا كانت نسبة النجاح منخفضة
+    if (totalAttempted > 5 && successRatio < 0.6) {
+      baseDelay += 3000; // إضافة 3 ثوانٍ إذا كانت نسبة النجاح أقل من 60%
+    }
+    
+    // زيادة التأخير بشكل عشوائي قليلاً لتجنب أنماط طلب متوقعة
+    const randomVariation = Math.floor(Math.random() * 2000); // 0-2000 مللي ثانية
+    
+    return baseDelay + randomVariation;
+  }, []);
+
+  // وظيفة لرفع الصورة إلى Supabase Storage
+  const uploadToStorage = useCallback(async (
+    file: File, 
+    userId: string, 
+    imageId: string
+  ): Promise<string | null> => {
+    try {
+      if (!file || !userId) {
+        console.error("ملف غير صالح أو معرف مستخدم غير موجود");
+        return null;
+      }
+
+      const timestamp = Date.now();
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${userId}/${imageId}_${timestamp}.${fileExt}`;
+      
+      console.log(`جاري رفع الصورة إلى التخزين: ${filePath}`);
+      
+      const { data, error } = await supabase.storage
+        .from('receipt_images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (error) {
+        console.error("خطأ في رفع الصورة إلى التخزين:", error);
+        return null;
+      }
+      
+      console.log("تم رفع الصورة بنجاح:", data.path);
+      return data.path;
+    } catch (error) {
+      console.error("خطأ غير متوقع أثناء رفع الصورة:", error);
+      return null;
+    }
+  }, []);
+
+  // وظيفة معالجة صورة واحدة (OCR أو Gemini)
+  const processImage = useCallback(async (image: ImageData) => {
+    console.log(`بدء معالجة الصورة: ${image.id}`);
     
     try {
-      let processedCount = 0;
-      const totalImages = pendingOrErrorImages.length;
+      // زيادة عداد المحاولات الكلية
+      processingStats.current.totalAttempted++;
       
-      // معالجة الصور واحدة تلو الأخرى
-      for (const image of pendingOrErrorImages) {
-        if (!geminiProcessingRef.current) break; // التحقق مما إذا تم إيقاف المعالجة
+      // تحديث حالة الصورة إلى "جاري المعالجة"
+      updateImage(image.id, {
+        status: "processing",
+        extractedText: "جاري استخراج النص من الصورة...",
+        processingAttempts: (image.processingAttempts || 0) + 1
+      });
+      
+      // تسجيل محاولة المعالجة
+      const currentAttempt = retryAttemptsMap.current.get(image.id) || 0;
+      retryAttemptsMap.current.set(image.id, currentAttempt + 1);
+      
+      // التحقق من عدد المحاولات - إذا تجاوز الحد، أعد تعيين مفاتيح API
+      if (currentAttempt >= 3 && currentAttempt % 3 === 0) {
+        console.log(`عدد كبير من المحاولات للصورة ${image.id}, إعادة تعيين مفاتيح API...`);
+        resetApiKeys();
+        // تأخير قصير بعد إعادة التعيين
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      
+      // التحقق من وجود الملف
+      if (!image.file) {
+        throw new Error("ملف الصورة غير متاح");
+      }
+      
+      // رفع الصورة إلى Supabase Storage إذا كان المستخدم مسجل الدخول
+      const user = supabase.auth.getUser();
+      let storagePath = null;
+      
+      if ((await user).data.user) {
+        storagePath = await uploadToStorage(
+          image.file, 
+          (await user).data.user.id, 
+          image.id
+        );
         
-        try {
-          setIsProcessing(true);
-          setProcessingImage(image.id);
-          
-          // تحديث حالة الصورة إلى "processing"
-          updateImage(image.id, { status: "processing" });
-          
-          // رفع الصورة إلى Supabase إذا لم تكن مرفوعة بالفعل
-          if (user && !image.storage_path && image.file) {
-            const uploadResult = await supabaseStorage.uploadImageToStorage(
-              image.file,
-              user.id,
-              image.batch_id || 'default'
-            );
-            
-            if (uploadResult.success && uploadResult.path) {
-              // تحديث الصورة بمسار التخزين
-              updateImage(image.id, { storage_path: uploadResult.path });
-              
-              // تحديث الصورة التي سيتم معالجتها بمسار التخزين
-              image.storage_path = uploadResult.path;
-            }
-          }
-          
-          // معالجة الصورة باستخدام Gemini
-          await geminiProcessing.processImage(image);
-          
-          // تحديث نسبة التقدم
-          processedCount++;
-          const progress = Math.round((processedCount / totalImages) * 100);
-          setProcessingProgress(progress);
-          
-        } catch (error) {
-          console.error(`خطأ في معالجة الصورة ${image.id}:`, error);
-          updateImage(image.id, { 
-            status: "error", 
-            bookmarkletMessage: `فشل المعالجة: ${error.message || "خطأ غير معروف"}`
+        if (storagePath) {
+          console.log(`تم رفع الصورة إلى التخزين: ${storagePath}`);
+          // تحديث مسار التخزين في الصورة
+          updateImage(image.id, {
+            storage_path: storagePath
           });
         }
       }
       
-      // إعادة تعيين الحالة بعد الانتهاء
-      setIsProcessing(false);
-      setProcessingImage(null);
-      setProcessingProgress(100);
+      // معالجة الصورة بناءً على الطريقة المختارة
+      let processedImage: ImageData;
       
-      // تأخير صغير قبل إعادة تعيين التقدم
-      setTimeout(() => {
-        setProcessingProgress(0);
-      }, 1000);
+      // التحقق من حجم الملف وطباعة معلومات تشخيصية
+      const fileSizeMB = image.file.size / (1024 * 1024);
+      console.log(`حجم ملف الصورة: ${fileSizeMB.toFixed(2)} ميجابايت`);
       
-    } catch (error: any) {
-      console.error("Error processing images:", error);
-      setGeminiProcessingError(`حدث خطأ أثناء معالجة الصور: ${error.message}`);
-      toast({
-        title: "خطأ في معالجة الصور",
-        description: `حدث خطأ أثناء معالجة الصور: ${error.message}`,
-        variant: "destructive",
+      // استخدام Gemini إذا كان مفعلاً
+      if (geminiEnabled) {
+        console.log(`معالجة الصورة ${image.id} باستخدام Gemini (المحاولة رقم ${currentAttempt + 1})`);
+        
+        // إذا كان حجم الصورة كبيرًا جدًا، حاول ضغطها أكثر قبل الإرسال إلى Gemini
+        if (fileSizeMB > 3) {
+          try {
+            console.log(`ضغط الصورة ${image.id} قبل المعالجة (الحجم الأصلي: ${fileSizeMB.toFixed(2)} MB)`);
+            const compressedFile = await compressImage(image.file, { 
+              maxSizeMB: 1, 
+              maxWidthOrHeight: 1200,
+              useWebWorker: true,
+              initialQuality: 0.7
+            });
+            const newSizeMB = compressedFile.size / (1024 * 1024);
+            console.log(`تم ضغط الصورة إلى ${newSizeMB.toFixed(2)} MB`);
+            
+            // تحديث الملف المضغوط
+            image = { ...image, file: compressedFile };
+          } catch (compressionError) {
+            console.error(`خطأ في ضغط الصورة ${image.id}:`, compressionError);
+            // استمر بالملف الأصلي إذا فشل الضغط
+          }
+        }
+        
+        // محاولة معالجة الصورة مع إعادة التشغيل التلقائي في حالة الفشل
+        const maxGeminiAttempts = 2;
+        let geminiAttempt = 0;
+        let lastError = null;
+        
+        while (geminiAttempt < maxGeminiAttempts) {
+          try {
+            geminiAttempt++;
+            processedImage = await processWithGemini(image.file, image);
+            lastError = null;
+            break; // الخروج من الحلقة إذا نجحت المعالجة
+          } catch (geminiError) {
+            console.error(`فشلت محاولة Gemini ${geminiAttempt}/${maxGeminiAttempts}:`, geminiError);
+            lastError = geminiError;
+            
+            if (geminiAttempt < maxGeminiAttempts) {
+              // تأخير قبل المحاولة التالية
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              
+              // تحديث حالة الصورة لتعكس إعادة المحاولة
+              updateImage(image.id, {
+                status: "processing",
+                extractedText: `جاري إعادة محاولة المعالجة (${geminiAttempt + 1}/${maxGeminiAttempts})...`
+              });
+            }
+          }
+        }
+        
+        // إذا فشلت جميع محاولات Gemini، جرب OCR كبديل
+        if (lastError !== null) {
+          console.log(`فشلت جميع محاولات Gemini، جاري تجربة OCR كبديل للصورة ${image.id}`);
+          updateImage(image.id, {
+            status: "processing",
+            extractedText: "فشلت معالجة Gemini. جاري تجربة OCR كبديل..."
+          });
+          
+          try {
+            processedImage = await processWithOcr(image.file, image);
+          } catch (ocrError) {
+            console.error(`فشلت كل من Gemini و OCR للصورة ${image.id}:`, ocrError);
+            throw new Error(`فشلت جميع طرق المعالجة: ${lastError.message}`);
+          }
+        }
+      } else {
+        console.log(`معالجة الصورة ${image.id} باستخدام OCR`);
+        processedImage = await processWithOcr(image.file, image);
+      }
+      
+      // إضافة مسار التخزين إلى البيانات المعالجة
+      if (storagePath) {
+        processedImage.storage_path = storagePath;
+      }
+      
+      // التحقق من نجاح المعالجة من خلال وجود البيانات المستخرجة
+      const hasExtractedData = processedImage.code || 
+        processedImage.senderName || 
+        processedImage.phoneNumber || 
+        processedImage.province || 
+        processedImage.price;
+      
+      if (hasExtractedData) {
+        processingStats.current.successful++;
+      } else {
+        // لم يتم استخراج بيانات، لكن لم يحدث خطأ تقني
+        console.log(`لم يتم استخراج بيانات من الصورة ${image.id}`);
+        // لا نعتبرها فاشلة تقنياً، لكن نجعل المستخدم يعرف أنه لم يتم استخراج بيانات
+      }
+      
+      console.log("البيانات المستخرجة من الصورة:", {
+        code: processedImage.code,
+        senderName: processedImage.senderName,
+        phoneNumber: processedImage.phoneNumber,
+        province: processedImage.province,
+        price: processedImage.price,
+        companyName: processedImage.companyName
       });
-    } finally {
-      // إعادة تعيين حالة المعالجة
-      geminiProcessingRef.current = false;
-      setIsProcessing(false);
-      setProcessingImage(null);
+      
+      // تحديث الواجهة بالبيانات المستخرجة قبل الحفظ في قاعدة البيانات
+      updateImage(image.id, {
+        status: hasExtractedData ? "completed" : "pending",
+        code: processedImage.code,
+        senderName: processedImage.senderName,
+        phoneNumber: processedImage.phoneNumber,
+        province: processedImage.province,
+        price: processedImage.price,
+        companyName: processedImage.companyName,
+        extractedText: processedImage.extractedText,
+        confidence: processedImage.confidence,
+        storage_path: storagePath // تحديث مسار التخزين
+      });
+      
+      // إضافة تأخير قبل حفظ البيانات للسماح بعرض البيانات في الواجهة
+      const delayBeforeSave = calculateIdealDelay();
+      console.log(`تأخير ${delayBeforeSave}ms قبل حفظ الصورة ${image.id}...`);
+      await new Promise(resolve => setTimeout(resolve, delayBeforeSave));
+      
+      // حفظ البيانات المستخرجة والصورة المعالجة - فقط إذا كان هناك بيانات مستخرجة
+      if (hasExtractedData) {
+        try {
+          await saveProcessedImage(processedImage);
+          console.log(`تم حفظ الصورة ${image.id} في قاعدة البيانات بنجاح`);
+        } catch (saveError) {
+          console.error(`خطأ في حفظ الصورة ${image.id} في قاعدة البيانات:`, saveError);
+          // لا نريد إفشال العملية بأكملها إذا فشل الحفظ فقط
+        }
+      } else {
+        console.log(`تخطي حفظ الصورة ${image.id} لأنه لم يتم استخراج بيانات`);
+      }
+      
+      // إضافة هاش الصورة إلى الكاش إذا كان متاحاً
+      if (processedImage.imageHash) {
+        processedHashes.current.add(processedImage.imageHash);
+      }
+      
+      console.log(`تمت معالجة الصورة بنجاح: ${image.id}`);
+      return processedImage;
+    } catch (error) {
+      console.error(`خطأ في معالجة الصورة ${image.id}:`, error);
+      
+      // زيادة عداد الفشل
+      processingStats.current.failed++;
+      
+      // تحديث حالة الصورة إلى "خطأ" مع رسالة الخطأ
+      updateImage(image.id, {
+        status: "error",
+        extractedText: `فشل في معالجة الصورة: ${error.message || "خطأ غير معروف"}`
+      });
+      
+      // إعادة رمي الخطأ للتعامل معه في وظيفة القائمة
+      throw error;
     }
-  }, [geminiProcessing, images, updateImage, toast, user, supabaseStorage.uploadImageToStorage]);
+  }, [
+    geminiEnabled, 
+    processWithGemini, 
+    processWithOcr, 
+    saveProcessedImage, 
+    updateImage, 
+    calculateIdealDelay, 
+    resetApiKeys,
+    uploadToStorage
+  ]);
 
-  /**
-   * دالة لمعالجة الصور المرفوعة
-   */
-  const handleImageUpload = useCallback(async (files: FileList) => {
-    setIsUploading(true);
-    setUploadError(null);
+  // معالج تغيير الملفات - عند رفع الصور
+  const handleFileChange = useCallback(async (files: File[]) => {
+    if (!files.length) return;
+    
+    const batchId = uuidv4(); // إنشاء معرف مجموعة للملفات المرفوعة معاً
+    console.log(`تم استلام ${files.length} ملفات، معرف المجموعة: ${batchId}`);
 
-    try {
-      const batchId = uuidv4(); // إنشاء معرف دفعة للصور المرفوعة معًا
-      const newImages: ImageData[] = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const id = uuidv4();
-        const previewUrl = URL.createObjectURL(file);
-
+    // التحقق من التكرار قبل المعالجة
+    removeDuplicates();
+    
+    // تأخير قبل بدء المعالجة
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // تنظيف قائمة المعالجة قبل إضافة صور جديدة إذا كان هناك الكثير من الصور
+    if (files.length > 10) {
+      clearQueue();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    // التحقق من إحصائيات المفاتيح وإعادة تعيينها إذا لزم الأمر
+    const apiStats = getApiKeyStats();
+    console.log("إحصائيات مفاتيح API:", apiStats);
+    
+    // إذا كان هناك الكثير من المفاتيح المحظورة، قم بإعادة تعيينها
+    if (apiStats.rateLimited > apiStats.active && processingStats.current.lastResetTime < Date.now() - 300000) {
+      resetAllApiKeys();
+      processingStats.current.lastResetTime = Date.now();
+      toast({
+        title: "إعادة تعيين",
+        description: "تم إعادة تعيين مفاتيح API المحظورة",
+      });
+    }
+    
+    // إضافة تأخير بين إضافة كل صورة لضمان ترتيبها الصحيح
+    const addDelay = 300; // زيادة التأخير بين الصور
+    
+    // تحديد عدد الصور المراد معالجتها دفعة واحدة (في حالة رفع الكثير من الصور)
+    const maxBatchSize = 20; // لا نريد أكثر من 20 صورة في المرة الواحدة
+    const filesToProcess = files.slice(0, maxBatchSize);
+    
+    if (files.length > maxBatchSize) {
+      toast({
+        title: "تنبيه",
+        description: `سيتم معالجة أول ${maxBatchSize} صورة فقط. يرجى رفع الباقي في دفعة لاحقة.`,
+        variant: "default"
+      });
+    }
+    
+    // تفكيك العملية إلى مراحل لتحسين تجربة المستخدم
+    
+    // المرحلة 1: إضافة جميع الصور إلى حالة التطبيق (مع ضغط وتهيئة)
+    console.log("المرحلة 1: إضافة الصور إلى حالة التطبيق");
+    const addedImageIds: string[] = [];
+    
+    for (let i = 0; i < filesToProcess.length; i++) {
+      const file = filesToProcess[i];
+      const fileNumber = i + 1;
+      
+      // تأخير أكبر بين إضافة كل صورة
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, addDelay));
+      }
+      
+      try {
+        // ضغط الصورة أولاً
+        const compressedFile = await compressImage(file);
+        console.log(`تم ضغط الصورة ${fileNumber}/${filesToProcess.length}، الحجم الجديد: ${compressedFile.size}`);
+        
+        // إنشاء عنوان URL مؤقت للعرض
+        const previewUrl = URL.createObjectURL(compressedFile);
+        
+        // إنشاء كائن الصورة الجديد
         const newImage: ImageData = {
-          id: id,
-          file: file,
-          fileName: file.name, // حفظ اسم الملف
-          previewUrl: previewUrl,
-          status: "pending",
-          uploadedDate: new Date(),
+          id: uuidv4(),
+          file: compressedFile,
+          previewUrl,
+          extractedText: "في انتظار المعالجة...",
           date: new Date(),
-          extractedText: "",
-          extractionMethod: "none",
+          status: "pending",
           batch_id: batchId,
-          bookmarkletMessage: "",
-          extractionSuccess: false,
-          confidence: 0,
-          code: "",
-          senderName: "",
-          phoneNumber: "",
-          province: "",
-          companyName: "",
-          price: "",
-          recipientName: "",
-          notes: "",
-          delegateName: "",
-          packageType: "",
-          pieceCount: ""
+          number: fileNumber,
+          processingAttempts: 0
         };
-
-        newImages.push(newImage);
+        
+        // التحقق من التكرار
+        if (isDuplicateImage(newImage, images)) {
+          console.log(`الصورة ${fileNumber} مكررة، تخطيها`);
+          URL.revokeObjectURL(previewUrl);
+          continue;
+        }
+        
+        // إضافة الصورة إلى الحالة
         addImage(newImage);
+        addedImageIds.push(newImage.id);
+        
+        // تحديث التقدم
+        setProcessingProgress((fileNumber / filesToProcess.length) * 50); // الوصول إلى 50% فقط للمرحلة 1
+      } catch (error) {
+        console.error(`خطأ في تهيئة الملف ${fileNumber}:`, error);
       }
-
-      toast({
-        title: "تم رفع الصور بنجاح",
-        description: `تم رفع ${files.length} صورة بنجاح، وسيتم معالجتها تلقائيًا`,
-      });
-
-      // بدء معالجة الصور تلقائيًا بعد الرفع
-      setTimeout(() => {
-        processImages();
-      }, 500);
+    }
+    
+    // تأخير بين المرحلتين
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // المرحلة 2: إضافة الصور إلى قائمة المعالجة بالتسلسل
+    console.log("المرحلة 2: إضافة الصور إلى قائمة المعالجة");
+    
+    // إيقاف المعالجة الحالية قبل إضافة صور جديدة
+    if (isProcessing) {
+      pauseProcessing();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    for (let i = 0; i < addedImageIds.length; i++) {
+      const imageId = addedImageIds[i];
+      const imageToProcess = images.find(img => img.id === imageId);
       
-    } catch (error: any) {
-      console.error("Error uploading images:", error);
-      setUploadError(`حدث خطأ أثناء رفع الصور: ${error.message}`);
+      if (!imageToProcess) {
+        console.error(`لم يتم العثور على الصورة ${imageId}`);
+        continue;
+      }
+      
+      // تأخير كبير بين إضافة كل صورة إلى قائمة المعالجة
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      // إنشاء وظيفة معالجة الصورة
+      const processThisImage = async () => {
+        try {
+          await processImage(imageToProcess);
+        } catch (error) {
+          console.error(`خطأ في معالجة الصورة ${imageId}:`, error);
+        }
+      };
+      
+      // إضافة الصورة إلى قائمة المعالجة
+      addToQueue(imageId, imageToProcess, processThisImage);
+      console.log(`تمت إضافة الصورة ${imageId} إلى قائمة المعالجة (${i + 1}/${addedImageIds.length})`);
+      
+      // تحديث التقدم
+      setProcessingProgress(50 + (i + 1) / addedImageIds.length * 50); // من 50% إلى 100%
+    }
+    
+    // إذا كان هناك صور تمت إضافتها، أظهر إشعارًا
+    if (addedImageIds.length > 0) {
       toast({
-        title: "خطأ في رفع الصور",
-        description: `حدث خطأ أثناء رفع الصور: ${error.message}`,
-        variant: "destructive",
+        title: "تم إضافة الصور",
+        description: `تمت إضافة ${addedImageIds.length} صور إلى قائمة المعالجة`,
       });
-    } finally {
-      setIsUploading(false);
-    }
-  }, [addImage, processImages, toast]);
-
-  /**
-   * دالة لحذف صورة
-   */
-  const handleImageDelete = useCallback(async (id: string) => {
-    // الحصول على الصورة قبل حذفها
-    const imageToDelete = images.find(img => img.id === id);
-    
-    if (imageToDelete && imageToDelete.storage_path) {
-      // محاولة حذف الملف من التخزين أولاً إذا كان موجودًا
-      await supabaseStorage.deleteImageFromStorage(imageToDelete.storage_path);
+      
+      // تأكد من بدء المعالجة
+      setTimeout(() => {
+        manuallyTriggerProcessingQueue();
+      }, 2000);
     }
     
-    // حذف الصورة من الحالة المحلية
-    removeImage(id);
+    setProcessingProgress(100);
     
-    // حذف أي مصادر للكائنات URL
-    if (imageToDelete && imageToDelete.previewUrl) {
-      URL.revokeObjectURL(imageToDelete.previewUrl);
-    }
-    
-    toast({
-      title: "تم حذف الصورة",
-      description: "تم حذف الصورة بنجاح",
-    });
-  }, [removeImage, toast, images, supabaseStorage]);
-
-  /**
-   * دالة لمسح جميع الصور
-   */
-  const handleClearImages = useCallback(() => {
-    // حذف جميع مصادر URL للكائنات قبل المسح
-    images.forEach(img => {
-      if (img.previewUrl) {
-        URL.revokeObjectURL(img.previewUrl);
-      }
-    });
-    
-    clearImages();
-    toast({
-      title: "تم مسح جميع الصور",
-      description: "تم مسح جميع الصور بنجاح",
-    });
-  }, [clearImages, toast, images]);
-
-  /**
-   * دالة لتحديث بيانات الصورة
-   */
-  const handleImageUpdate = useCallback((id: string, data: Partial<ImageData>) => {
-    updateImage(id, data);
-  }, [updateImage]);
-
-  // إضافة الدوال التي يتم استخدامها في useImageProcessingCore
-  const manuallyTriggerProcessingQueue = useCallback(() => {
-    return processImages();
-  }, [processImages]);
-
-  const clearProcessedHashesCache = useCallback(() => {
-    console.log("مسح ذاكرة التخزين المؤقت لهاشات الصور المعالجة");
-    // يمكن إضافة منطق مسح الذاكرة هنا إذا لزم الأمر
-  }, []);
-
-  const pauseProcessing = useCallback(() => {
-    geminiProcessingRef.current = false;
-    console.log("تم إيقاف معالجة الصور مؤقتًا");
-    setIsProcessing(false);
-    return true;
-  }, []);
-
-  const clearQueue = useCallback(() => {
-    geminiProcessingRef.current = false;
-    console.log("تم مسح قائمة انتظار معالجة الصور");
-    // إعادة تعيين الصور المعلقة إلى "pending"
-    images.forEach(img => {
-      if (img.status === "processing") {
-        updateImage(img.id, { status: "pending" });
-      }
-    });
-    
-    // إعادة تعيين بعد فترة قصيرة
+    // إعادة التقدم إلى 0 بعد فترة
     setTimeout(() => {
-      geminiProcessingRef.current = false;
-    }, 1000);
-    return true;
-  }, [images, updateImage]);
+      setProcessingProgress(0);
+    }, 2000);
+  }, [
+    addImage, 
+    images, 
+    isDuplicateImage, 
+    removeDuplicates, 
+    setProcessingProgress, 
+    addToQueue, 
+    isProcessing, 
+    pauseProcessing, 
+    clearQueue, 
+    manuallyTriggerProcessingQueue, 
+    processImage,
+    toast
+  ]);
 
-  // معلومات حدود التحميل
-  const uploadLimitInfo = user?.subscription_plan ? {
-    subscription: user.subscription_plan,
-    dailyLimit: user.subscription_plan === 'pro' ? 3500 : 
-                user.subscription_plan === 'vip' ? 1600 : 3,
-    currentCount: 0, // يمكن تحديثها من قاعدة البيانات
-    remainingUploads: user.subscription_plan === 'pro' ? 3500 : 
-                      user.subscription_plan === 'vip' ? 1600 : 3
-  } : {
-    subscription: 'standard',
-    dailyLimit: 3,
-    currentCount: 0,
-    remainingUploads: 3
-  };
-
-  // إضافة دالة handleFileChange كواجهة بديلة لـ handleImageUpload
-  const handleFileChange = useCallback((files: FileList) => {
-    return handleImageUpload(files);
-  }, [handleImageUpload]);
-
-  // تحديد عدد الصور النشطة في المعالجة
-  const activeUploads = isProcessing ? 1 : 0;
-  
-  // تحديد طول قائمة الانتظار
-  const queueLength = images.filter(img => img.status === "pending").length;
-
-  // إعداد استخدام Gemini
-  const useGemini = true;
-
-  return {
-    images,
-    isUploading,
-    processingImage,
-    processingProgress,
-    uploadError,
-    geminiProcessingError,
-    handleImageUpload,
+  return { 
+    isProcessing, 
     handleFileChange,
-    handleImageDelete,
-    handleClearImages,
-    handleImageUpdate,
-    processImages,
-    isProcessing,
-    manuallyTriggerProcessingQueue,
-    clearProcessedHashesCache,
-    pauseProcessing,
-    clearQueue,
-    uploadLimitInfo,
     activeUploads,
     queueLength,
-    useGemini
+    useGemini: geminiEnabled,
+    pauseProcessing,
+    clearQueue,
+    manuallyTriggerProcessingQueue,
+    getProcessingState,
+    clearProcessedHashesCache
   };
 };

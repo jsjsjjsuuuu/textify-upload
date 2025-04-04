@@ -5,7 +5,6 @@ import ZoomControls from "./ZoomControls";
 import ImageInfoBadges from "./ImageInfoBadges";
 import ImageErrorDisplay from "./ImageErrorDisplay";
 import DraggableImage from "./DraggableImage";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ImageViewerProps {
   selectedImage: ImageData;
@@ -27,111 +26,54 @@ const ImageViewer = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
   
-  // تحسين طريقة جلب الصور وتحديد مصدرها
+  // Reset image loaded state when selected image changes
   useEffect(() => {
     setImageLoaded(false);
     setImgError(false);
     setRetryCount(0);
-    
-    const getImageSource = async () => {
-      try {
-        // محاولة استخدام storage_path أولاً إذا كان موجودًا
-        if (selectedImage.storage_path) {
-          console.log(`محاولة استخدام storage_path للصورة ${selectedImage.id}: ${selectedImage.storage_path}`);
-          
-          const { data } = await supabase.storage
-            .from('receipt_images')
-            .getPublicUrl(selectedImage.storage_path);
-          
-          if (data?.publicUrl) {
-            console.log(`تم جلب عنوان Supabase للصورة ${selectedImage.id}: ${data.publicUrl}`);
-            setImageSrc(`${data.publicUrl}?t=${Date.now()}`);
-            return;
-          }
-        }
-        
-        // استخدام previewUrl كبديل إذا كان متوفرًا
-        if (selectedImage.previewUrl) {
-          console.log(`استخدام previewUrl للصورة ${selectedImage.id}: ${selectedImage.previewUrl}`);
-          setImageSrc(selectedImage.previewUrl);
-          return;
-        }
-        
-        // محاولة إنشاء URL من كائن الملف إذا كان متوفرًا
-        if (selectedImage.file) {
-          console.log(`إنشاء objectURL من كائن الملف للصورة ${selectedImage.id}`);
-          const objectUrl = URL.createObjectURL(selectedImage.file);
-          setImageSrc(objectUrl);
-          return;
-        }
-        
-        // لا توجد مصادر للصورة
-        console.log(`لا توجد مصادر صور متاحة للصورة ${selectedImage.id}`);
-        setImageSrc(null);
-        setImgError(true);
-      } catch (error) {
-        console.error('خطأ في جلب مصدر الصورة:', error);
-        setImgError(true);
-      }
-    };
-    
-    getImageSource();
-    
-    // تنظيف عناوين URL الموضوعية عند تفكيك المكون
-    return () => {
-      if (imageSrc && !selectedImage.previewUrl && !selectedImage.storage_path) {
-        URL.revokeObjectURL(imageSrc);
-      }
-    };
-  }, [selectedImage.id, selectedImage.previewUrl, selectedImage.storage_path, selectedImage.file]);
+  }, [selectedImage.id, selectedImage.previewUrl]);
+  
+  // Get safe image URL or fallback
+  const getImageUrl = () => {
+    if (!selectedImage.previewUrl || imgError) {
+      return null;
+    }
+    return selectedImage.previewUrl;
+  };
 
-  const handleImageLoad = useCallback(() => {
-    console.log(`تم تحميل الصورة ${selectedImage.id} بنجاح`);
+  const handleImageLoad = () => {
     setImageLoaded(true);
-    setImgError(false);
-  }, [selectedImage.id]);
+  };
 
-  const handleImageError = useCallback(() => {
-    console.error(`فشل تحميل الصورة ${selectedImage.id}`);
+  const handleImageError = () => {
     setImageLoaded(false);
     setImgError(true);
-  }, [selectedImage.id]);
+  };
 
-  // تحسين وظيفة إعادة المحاولة
+  // إضافة وظيفة إعادة المحاولة
   const handleRetry = useCallback(() => {
-    console.log(`إعادة محاولة تحميل الصورة ${selectedImage.id} (المحاولة رقم ${retryCount + 1})`);
     setImgError(false);
     setRetryCount(prev => prev + 1);
     
-    // إعادة جلب الصورة مع تجنب التخزين المؤقت
-    if (selectedImage.storage_path) {
-      try {
-        const { data } = supabase.storage
-          .from('receipt_images')
-          .getPublicUrl(selectedImage.storage_path);
-        
-        if (data?.publicUrl) {
-          setImageSrc(`${data.publicUrl}?retry=${Date.now()}`);
-        }
-      } catch (error) {
-        console.error('خطأ في جلب رابط Supabase أثناء إعادة المحاولة:', error);
-      }
-    } else if (selectedImage.previewUrl) {
-      // تحديث الصورة بإضافة معلمة عشوائية لتجنب التخزين المؤقت
-      const baseUrl = selectedImage.previewUrl.split('?')[0];
-      setImageSrc(`${baseUrl}?retry=${Date.now()}`);
-    } else if (selectedImage.file) {
-      // إعادة إنشاء URL الموضوع من الملف
-      try {
-        const objectUrl = URL.createObjectURL(selectedImage.file);
-        setImageSrc(objectUrl);
-      } catch (error) {
-        console.error('خطأ في إعادة إنشاء objectURL:', error);
-      }
-    }
-  }, [selectedImage.previewUrl, selectedImage.storage_path, selectedImage.file, selectedImage.id, retryCount]);
+    // إضافة تأخير قبل إعادة تحميل الصورة لمنع إعادة التحميل الفوري
+    setTimeout(() => {
+      // إجبار المتصفح على إعادة تحميل الصورة عن طريق إضافة رقم عشوائي إلى URL
+      const newUrl = `${selectedImage.previewUrl}?t=${Date.now()}`;
+      
+      // إنشاء صورة جديدة لتجربة التحميل
+      const img = new Image();
+      img.onload = () => {
+        setImageLoaded(true);
+        setImgError(false);
+      };
+      img.onerror = () => {
+        setImageLoaded(false);
+        setImgError(true);
+      };
+      img.src = newUrl;
+    }, 500);
+  }, [selectedImage.previewUrl]);
 
   // تحديد حالة البوكماركلت للعرض
   const getBookmarkletStatusBadge = () => {
@@ -170,7 +112,7 @@ const ImageViewer = ({
         <ImageErrorDisplay 
           onRetry={handleRetry} 
           retryCount={retryCount}
-          errorMessage={selectedImage.status === "error" ? "حدث خطأ أثناء معالجة الصورة. يمكنك إعادة المحاولة." : "تعذر تحميل الصورة. يمكنك إعادة المحاولة."}
+          errorMessage={selectedImage.status === "error" ? "حدث خطأ أثناء معالجة الصورة. يمكنك إعادة المحاولة." : undefined}
         />
       </div>
     );
@@ -178,9 +120,9 @@ const ImageViewer = ({
 
   return (
     <div className="col-span-1 bg-transparent rounded-lg p-4 flex flex-col items-center justify-center relative">
-      {!imgError && imageSrc ? (
+      {!imgError ? (
         <DraggableImage 
-          src={imageSrc} 
+          src={getImageUrl()} 
           zoomLevel={zoomLevel}
           onImageLoad={handleImageLoad}
           onImageError={handleImageError}
@@ -202,7 +144,7 @@ const ImageViewer = ({
         number={selectedImage.number}
         date={selectedImage.date}
         confidence={selectedImage.confidence}
-        extractionMethod={selectedImage.extractionMethod || "none"}
+        extractionMethod={selectedImage.extractionMethod}
         formatDate={formatDate}
       />
     </div>
