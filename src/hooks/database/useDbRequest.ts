@@ -6,12 +6,12 @@ export const useDbRequest = () => {
   const lastDbRequests = useRef<{[key: string]: {time: number, promise: Promise<any>}}>({});
 
   // وظيفة مساعدة لتخزين مؤقت لطلبات قاعدة البيانات المتكررة
-  const cacheDbRequest = useCallback((key: string, requestFn: () => Promise<any>, ttlMs = 5000): Promise<any> => {
+  const cacheDbRequest = useCallback(<T>(key: string, requestFn: () => Promise<T>, ttlMs = 5000): Promise<T> => {
     const now = Date.now();
     const cachedRequest = lastDbRequests.current[key];
     
     if (cachedRequest && (now - cachedRequest.time < ttlMs)) {
-      return cachedRequest.promise;
+      return cachedRequest.promise as Promise<T>;
     }
     
     const promise = requestFn();
@@ -19,7 +19,13 @@ export const useDbRequest = () => {
     return promise;
   }, []);
 
+  // إضافة وظيفة لمسح ذاكرة التخزين المؤقت
+  const clearRequestCache = useCallback(() => {
+    lastDbRequests.current = {};
+  }, []);
+
   return {
-    cacheDbRequest
+    cacheDbRequest,
+    clearRequestCache
   };
 };

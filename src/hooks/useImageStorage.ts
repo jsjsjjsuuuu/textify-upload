@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -152,10 +151,10 @@ export const useImageStorage = () => {
     }
   }, [ensureStorageBucketExists, toast]);
 
-  // حذف الملف من التخزين
-  const deleteImageFromStorage = useCallback(async (path: string | null): Promise<boolean> => {
+  // حذف الملف من التخزين - تم تعديل نوع الإرجاع ليكون Promise<void>
+  const deleteImageFromStorage = useCallback(async (path: string): Promise<void> => {
     if (!path) {
-      return true; // لا يوجد ملف للحذف
+      return; // لا يوجد ملف للحذف
     }
 
     try {
@@ -165,14 +164,13 @@ export const useImageStorage = () => {
 
       if (error) {
         console.error(`خطأ في حذف الملف ${path}:`, error);
-        return false;
+        throw error;
       }
 
       console.log(`تم حذف الملف ${path} بنجاح`);
-      return true;
     } catch (error) {
       console.error(`خطأ غير متوقع في حذف الملف ${path}:`, error);
-      return false;
+      throw error;
     }
   }, []);
 

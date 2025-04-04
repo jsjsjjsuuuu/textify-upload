@@ -1,8 +1,24 @@
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { ImageData } from "@/types/ImageData";
 
 export const useDuplicateCheck = (isImageProcessed: (id: string) => boolean) => {
+  const [processedHashes, setProcessedHashes] = useState<Set<string>>(new Set());
+  
+  // إضافة وظيفة لمسح ذاكرة التخزين المؤقت للهاش
+  const clearHashCache = useCallback(() => {
+    setProcessedHashes(new Set());
+  }, []);
+  
+  // إضافة هاش إلى الذاكرة المؤقتة
+  const addHashToCache = useCallback((hash: string) => {
+    setProcessedHashes(prev => {
+      const newSet = new Set(prev);
+      newSet.add(hash);
+      return newSet;
+    });
+  }, []);
+  
   // التحقق مما إذا كانت الصورة مكررة بناءً على خصائص متعددة
   const isDuplicateImage = useCallback((newImage: ImageData, allImages: ImageData[]): boolean => {
     // التحقق من التكرار باستخدام المعرف
@@ -25,15 +41,23 @@ export const useDuplicateCheck = (isImageProcessed: (id: string) => boolean) => 
       return true;
     }
     
+    // التحقق من الهاش في الذاكرة المؤقتة
+    if (newImage.imageHash && processedHashes.has(newImage.imageHash)) {
+      return true;
+    }
+    
     // إذا كان هناك هاش للصورة، استخدمه للمقارنة
     if (newImage.imageHash && allImages.some(img => img.imageHash === newImage.imageHash)) {
       return true;
     }
 
     return false;
-  }, [isImageProcessed]);
+  }, [isImageProcessed, processedHashes]);
 
   return {
-    isDuplicateImage
+    isDuplicateImage,
+    clearHashCache,
+    addHashToCache,
+    processedHashesCount: processedHashes.size
   };
 };

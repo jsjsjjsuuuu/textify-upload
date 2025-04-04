@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { ImageData } from '@/types/ImageData';
 import ImageViewer from '@/components/ImageViewer';
@@ -37,12 +37,12 @@ const Index = () => {
     reprocessImage
   } = useImageProcessing();
   
-  // تحميل الصور عند تسجيل الدخول - استدعاء بدون معاملات
+  // تحميل الصور عند تسجيل الدخول - تصحيح الاستدعاء ليكون بدون معاملات
   useEffect(() => {
     if (user) {
       // إضافة تأخير قصير لتجنب تعارضات التحميل المتتالية
       const timeoutId = setTimeout(() => {
-        // استدعاء بدون وسائط
+        // استدعاء بدون معاملات
         loadUserImages();
       }, 200);
       
@@ -77,16 +77,16 @@ const Index = () => {
   };
 
   // وظيفة فتح المعاينة
-  const openImageViewer = useCallback((image: ImageData) => {
+  const openImageViewer = (image: ImageData) => {
     setSelectedImage(image);
     setIsViewerOpen(true);
-  }, []);
+  };
 
   // وظيفة إغلاق المعاينة
-  const closeImageViewer = useCallback(() => {
+  const closeImageViewer = () => {
     setIsViewerOpen(false);
     setSelectedImage(null);
-  }, []);
+  };
 
   // فرز الصور تنازليًا حسب وقت الإنشاء
   const sortedImages = [...sessionImages].sort((a, b) => {

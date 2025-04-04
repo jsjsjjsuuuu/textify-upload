@@ -19,12 +19,22 @@ export const useImageHandlers = (
       const image = images.find(img => img.id === id);
       
       if (image?.storage_path) {
-        // حذف الملف من التخزين أولاً
-        await deleteImageFromStorage(image.storage_path);
+        try {
+          // حذف الملف من التخزين أولاً
+          await deleteImageFromStorage(image.storage_path);
+        } catch (storageError) {
+          console.error("خطأ في حذف الملف من التخزين:", storageError);
+          // متابعة العملية على الرغم من الخطأ في التخزين
+        }
       }
       
-      // محاولة حذف السجل من قاعدة البيانات أولاً
-      await deleteImageFromDatabase(id);
+      try {
+        // محاولة حذف السجل من قاعدة البيانات
+        await deleteImageFromDatabase(id);
+      } catch (dbError) {
+        console.error("خطأ في حذف السجل من قاعدة البيانات:", dbError);
+        // متابعة العملية على الرغم من الخطأ في قاعدة البيانات
+      }
       
       // ثم حذفه من الحالة المحلية
       deleteImage(id);

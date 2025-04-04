@@ -27,7 +27,7 @@ const Records = () => {
     reprocessImage
   } = useImageProcessing();
 
-  // تحميل الصور عند تسجيل الدخول - تم إصلاح الخطأ هنا
+  // تصحيح استدعاء loadUserImages ليكون بدون معاملات
   useEffect(() => {
     if (user) {
       // استدعاء loadUserImages بدون معلمات
