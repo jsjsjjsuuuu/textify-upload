@@ -9,19 +9,29 @@ export const useImageStats = () => {
   const [bookmarkletStats, setBookmarkletStats] = useState({ total: 0, ready: 0, success: 0, error: 0 });
   
   // استخدام مرجع للاحتفاظ بقائمة معرفات الصور المعالجة بالفعل
-  const processedImagesRef = useRef<Set<string>>(
-    typeof localStorage !== 'undefined' && localStorage.getItem(PROCESSED_IMAGES_KEY)
-      ? new Set(JSON.parse(localStorage.getItem(PROCESSED_IMAGES_KEY) || '[]'))
-      : new Set<string>()
-  );
+  const processedImagesRef = useRef<Set<string>>(new Set<string>());
+
+  // تهيئة البيانات من التخزين المحلي عند بدء التشغيل
+  useEffect(() => {
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem(PROCESSED_IMAGES_KEY)) {
+        const savedImages = JSON.parse(localStorage.getItem(PROCESSED_IMAGES_KEY) || '[]');
+        processedImagesRef.current = new Set(savedImages);
+      }
+    } catch (e) {
+      console.error("خطأ في استرداد قائمة الصور المعالجة:", e);
+    }
+  }, []);
 
   // حفظ قائمة الصور المعالجة في التخزين المحلي
   const saveProcessedImages = () => {
     try {
-      localStorage.setItem(
-        PROCESSED_IMAGES_KEY, 
-        JSON.stringify(Array.from(processedImagesRef.current))
-      );
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(
+          PROCESSED_IMAGES_KEY, 
+          JSON.stringify(Array.from(processedImagesRef.current))
+        );
+      }
     } catch (e) {
       console.error("خطأ في حفظ قائمة الصور المعالجة:", e);
     }

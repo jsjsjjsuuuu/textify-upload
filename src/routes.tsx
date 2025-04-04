@@ -107,7 +107,23 @@ export const router = createBrowserRouter([
 
 // مكون AppRoutes
 export const AppRoutes = () => {
-  return <RouterProvider router={router} />;
+  try {
+    return <RouterProvider router={router} />;
+  } catch (error) {
+    console.error("خطأ في توجيه التطبيق:", error);
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <h1 className="text-2xl font-bold text-red-500 mb-4">خطأ في تحميل التطبيق</h1>
+        <p className="text-gray-600">يرجى تحديث الصفحة والمحاولة مرة أخرى</p>
+        <button 
+          className="mt-4 px-4 py-2 bg-primary text-white rounded-md"
+          onClick={() => window.location.reload()}
+        >
+          تحديث الصفحة
+        </button>
+      </div>
+    );
+  }
 };
 
 export default router;

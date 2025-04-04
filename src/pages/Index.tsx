@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -49,16 +50,36 @@ const Index = () => {
     formatProvinceName
   } = useDataFormatting();
 
+  // تحميل صور المستخدم عند تحميل الصفحة
+  useEffect(() => {
+    if (user) {
+      try {
+        loadUserImages();
+      } catch (error) {
+        console.error("خطأ في تحميل صور المستخدم:", error);
+      }
+    }
+  }, [user, loadUserImages]);
+
   // وظيفة تنفيذ التنظيف يدوياً
   const handleManualCleanup = async () => {
     if (user) {
-      await runCleanupNow(user.id);
-      // إعادة تحميل الصور بعد التنظيف
-      loadUserImages();
-      toast({
-        title: "تم التنظيف",
-        description: "تم تنظيف السجلات القديمة بنجاح",
-      });
+      try {
+        await runCleanupNow();
+        // إعادة تحميل الصور بعد التنظيف
+        loadUserImages();
+        toast({
+          title: "تم التنظيف",
+          description: "تم تنظيف السجلات القديمة بنجاح",
+        });
+      } catch (error) {
+        console.error("خطأ في تنفيذ التنظيف:", error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ أثناء تنظيف السجلات",
+          variant: "destructive"
+        });
+      }
     }
   };
   
