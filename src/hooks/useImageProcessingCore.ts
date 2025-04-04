@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -196,11 +195,11 @@ export const useImageProcessingCore = () => {
     }
   }, [user, runDbCleanupNow]);
 
-  // تعديل وظيفة تحميل صور المستخدم لتجنب الاستدعاءات المتكررة
+  // تعديل وظيفة تحميل صور المستخدم ليتم استدعاؤها بدون معاملات
   const loadUserImages = useCallback(() => {
     if (user) {
       console.log("تحميل صور المستخدم...");
-      // استعمال المعاملات المطلوبة
+      // استعمال المعاملات المطلوبة داخليًا
       loadUserImagesFromDb(user.id, setAllImages);
       
       // تشغيل التنظيف مرة واحدة فقط عند التحميل الأولي
