@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useImageProcessingCore } from './useImageProcessingCore';
@@ -98,7 +97,6 @@ export const useImageProcessing = () => {
 
   // تصحيح استدعاء وظيفة تحميل الصور بدون معاملات
   const loadUserImages = useCallback(() => {
-    // استدعاء coreLoadUserImages بدون معاملات
     coreLoadUserImages();
   }, [coreLoadUserImages]);
 

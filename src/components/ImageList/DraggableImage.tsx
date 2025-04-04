@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ImageData } from '@/types/ImageData';
+import { Button } from '@/components/ui/button';
 
 export interface DraggableImageProps {
   image: ImageData;
