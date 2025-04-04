@@ -84,12 +84,11 @@ export const useImageProcessing = () => {
             status: "completed",
             retryCount: (image.retryCount || 0) + 1
           });
-          return true;
+          return;
         }
       } catch (error) {
         console.error(`فشل إعادة معالجة الصورة ${imageId}:`, error);
       }
-      return false;
     };
 
     // إضافة إلى قائمة المعالجة
