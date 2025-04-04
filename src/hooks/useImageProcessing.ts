@@ -1,7 +1,9 @@
+
 import { useCallback, useMemo } from "react";
 import { useImageProcessingCore } from './useImageProcessingCore';
 import { useGeminiProcessing } from './useGeminiProcessing';
 import { useImageQueue } from './useImageQueue';
+import { ImageData } from "@/types/ImageData";
 
 export const useImageProcessing = () => {
   const { 
@@ -40,12 +42,15 @@ export const useImageProcessing = () => {
 
   // استخدام نظام قائمة الانتظار
   const {
-    enqueueForProcessing,
-    reprocessImage: reprocessImageInQueue
-  } = useImageQueue({
-    processWithGemini,
-    saveProcessedImage
-  });
+    addToQueue,
+    isProcessing: isQueueProcessing,
+    queueLength: queueSize,
+    activeUploads: activeQueueUploads,
+    manuallyTriggerProcessingQueue,
+    pauseProcessing: pauseQueueProcessing,
+    clearQueue: clearQueueProcessing,
+    getProcessingState
+  } = useImageQueue();
 
   // تعديل معالجة الملفات لتكون دائمًا مع Gemini
   const handleFileChange = useCallback(async (files: File[] | FileList) => {
@@ -59,8 +64,38 @@ export const useImageProcessing = () => {
 
   // وظيفة إعادة المعالجة
   const reprocessImage = useCallback(async (imageId: string) => {
-    return await reprocessImageInQueue(imageId);
-  }, [reprocessImageInQueue]);
+    // العثور على الصورة بناءً على المعرف
+    const image = images.find(img => img.id === imageId);
+    if (!image) {
+      console.error(`لم يتم العثور على الصورة: ${imageId}`);
+      return false;
+    }
+    
+    // إنشاء عملية معالجة جديدة
+    const processFunc = async () => {
+      try {
+        // استخدام Gemini لمعالجة الصورة
+        const processedData = await processWithGemini(image);
+        if (processedData) {
+          // حفظ النتائج المعالجة
+          await saveProcessedImage({
+            ...image,
+            ...processedData,
+            status: "completed",
+            retryCount: (image.retryCount || 0) + 1
+          });
+          return true;
+        }
+      } catch (error) {
+        console.error(`فشل إعادة معالجة الصورة ${imageId}:`, error);
+      }
+      return false;
+    };
+
+    // إضافة إلى قائمة المعالجة
+    addToQueue(imageId, image, processFunc);
+    return true;
+  }, [images, processWithGemini, saveProcessedImage, addToQueue]);
 
   // إرجاع واجهة API
   return useMemo(() => ({
