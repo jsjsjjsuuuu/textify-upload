@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -164,6 +163,7 @@ export const useFileUpload = (params: FileUploadParams) => {
       }
       
       // وضع علامة على الصورة كمعالجة
+      const { markImageAsProcessed } = useImageStats();
       markImageAsProcessed(resultImage.id);
       
       return resultImage;
@@ -305,14 +305,11 @@ export const useFileUpload = (params: FileUploadParams) => {
   }, [fileQueue, isProcessing, processingPaused, processFile, updateImage, setProcessingError]);
 
   // وظيفة لتغيير الملف
-  const handleFileChange = useCallback(async (files: FileList | null) => {
+  const handleFileChange = useCallback(async (files: File[] | null) => {
     if (!files) return;
     
-    // تحويل FileList إلى Array
-    const fileArray = Array.from(files);
-    
     // إضافة الملفات إلى قائمة الانتظار
-    for (const file of fileArray) {
+    for (const file of files) {
       await enqueueFile(file);
     }
   }, [enqueueFile]);

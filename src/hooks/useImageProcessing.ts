@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -65,6 +66,7 @@ export const useImageProcessing = () => {
   // وظيفة لحذف صورة
   const deleteImage = useCallback((id: string) => {
     setSessionImages(prevImages => prevImages.filter(img => img.id !== id));
+    return true; // إرجاع قيمة لحل المشكلة في Records.tsx
   }, []);
   
   // وظيفة لمسح جميع الصور
@@ -73,8 +75,7 @@ export const useImageProcessing = () => {
   }, []);
   
   // تنسيق التاريخ
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
+  const formatDate = (date: Date): string => {
     return date.toLocaleDateString('ar-AE', {
       year: 'numeric',
       month: 'long',
@@ -169,13 +170,13 @@ export const useImageProcessing = () => {
       }
       
       // تحديث حالة الصورة إلى "جاري الإرسال"
-      updateImage(imageId, { status: "submitting" });
+      updateImage(imageId, { status: "processing" }); // تغيير من "submitting" إلى "processing"
       
       // حفظ الصورة في قاعدة البيانات
       await saveImageToDatabase(image);
       
       // تحديث حالة الصورة إلى "تم الإرسال"
-      updateImage(imageId, { status: "submitted" });
+      updateImage(imageId, { status: "completed" }); // تغيير من "submitted" إلى "completed"
       
       toast({
         title: "تم الإرسال",
@@ -233,7 +234,7 @@ export const useImageProcessing = () => {
   };
 
   const {
-    handleFileChange,
+    handleFileChange: processFiles,
     isProcessing,
     activeUploads,
     queueLength,
@@ -254,6 +255,17 @@ export const useImageProcessing = () => {
     isDuplicateImage,
     removeDuplicates
   });
+  
+  // تعديل وظيفة handleFileChange لتقبل File[] بدلاً من FileList
+  const handleFileChange = useCallback((files: File[] | FileList | null) => {
+    if (!files) return;
+    
+    // إذا كان من نوع FileList، حوله إلى مصفوفة
+    const fileArray = Array.isArray(files) ? files : Array.from(files);
+    
+    // ثم استدعاء الدالة من useFileUpload
+    processFiles(fileArray);
+  }, [processFiles]);
   
   return {
     sessionImages,

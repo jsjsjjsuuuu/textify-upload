@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { motion } from "framer-motion";
@@ -36,7 +35,7 @@ const Records = () => {
   
   // استخدام hook معالجة الصور للحصول على بيانات الصور
   const {
-    images,
+    sessionImages: images, // تعديل هنا لاستخدام sessionImages كـ images
     isSubmitting,
     handleDelete,
     handleSubmitToApi,
@@ -53,9 +52,9 @@ const Records = () => {
     try {
       if (confirm("هل أنت متأكد من حذف هذا السجل؟")) {
         // استدعاء وظيفة الحذف التي تم تعديلها لتشمل الحذف من قاعدة البيانات
-        const success = await handleDelete(id);
+        const deleted = await handleDelete(id);
         
-        if (success) {
+        if (deleted) {
           toast({
             title: "تم الحذف بنجاح",
             description: "تم حذف السجل بنجاح من قاعدة البيانات والتطبيق"
@@ -303,6 +302,7 @@ const Records = () => {
   };
 
   return (
+    
     <div className="min-h-screen bg-background">
       <AppHeader />
       <main className="container mx-auto p-6 max-w-7xl">

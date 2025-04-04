@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -251,6 +252,7 @@ const Index = () => {
                     isProcessing={isProcessing} 
                     processingProgress={processingProgress}
                     onFileChange={handleFileUpload} 
+                    onCancelUpload={handlePauseProcessing}
                   />
                 </div>
               </div>

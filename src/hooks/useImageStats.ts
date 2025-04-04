@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 const PROCESSED_IMAGES_KEY = "processed_images_v1";
 
 export const useImageStats = () => {
-  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingProgress, setProcessingProgress] = useState<{ total: number; current: number; errors: number; }>({ total: 0, current: 0, errors: 0 });
   const [bookmarkletStats, setBookmarkletStats] = useState({ total: 0, ready: 0, success: 0, error: 0 });
   
   // استخدام مرجع للاحتفاظ بقائمة معرفات الصور المعالجة بالفعل
@@ -43,6 +43,23 @@ export const useImageStats = () => {
     processedImagesRef.current.clear();
     saveProcessedImages();
   };
+  
+  // إضافة وظائف مفقودة للإحصائيات
+  const incrementImageStats = () => {
+    setBookmarkletStats(prev => ({
+      ...prev,
+      success: prev.success + 1
+    }));
+  };
+  
+  const clearImageStats = () => {
+    setBookmarkletStats({
+      total: 0,
+      ready: 0,
+      success: 0,
+      error: 0
+    });
+  };
 
   // حفظ حالة الصور المعالجة عند تفريغ المكون
   useEffect(() => {
@@ -58,6 +75,8 @@ export const useImageStats = () => {
     setBookmarkletStats,
     isImageProcessed,
     markImageAsProcessed,
-    clearProcessedImagesCache
+    clearProcessedImagesCache,
+    incrementImageStats,
+    clearImageStats
   };
 };
