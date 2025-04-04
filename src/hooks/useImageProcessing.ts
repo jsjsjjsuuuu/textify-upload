@@ -109,8 +109,7 @@ export const useImageProcessing = () => {
     handleTextChange,
     handleDelete,
     handleSubmitToApi,
-    // تصحيح الخطأ هنا - إزالة المعامل
-    loadUserImages,
+    loadUserImages, // تصحيح هنا - إزالة المعامل وتركه كما هو
     clearSessionImages,
     saveImageToDatabase,
     validateRequiredFields,
