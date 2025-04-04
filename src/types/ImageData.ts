@@ -1,4 +1,3 @@
-
 export interface ImageData {
   id: string;
   file: File;
@@ -68,6 +67,9 @@ export interface ImageData {
   added_at?: number;      // وقت إضافة الصورة (timestamp)
   processed?: boolean;    // هل تمت معالجة الصورة بالفعل
   processingAttempts?: number; // عدد محاولات المعالجة
+  
+  // حقل جديد للتحقق من أخطاء مفتاح API
+  apiKeyError?: boolean;  // علامة للإشارة إلى أن الخطأ متعلق بمفتاح API
 }
 
 // واجهة لتصدير البيانات إلى Bookmarklet
