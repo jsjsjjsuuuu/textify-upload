@@ -99,7 +99,7 @@ export const useImageProcessing = () => {
     return true;
   }, [images, processWithGemini, saveProcessedImage, addToQueue]);
 
-  // تعديل دالة loadUserImages لتكون متوافقة مع توقيع الدالة في useImageProcessingCore
+  // جعل دالة loadUserImages متوافقة مع واجهة الاستخدام المتوقعة
   const loadUserImages = useCallback(() => {
     coreLoadUserImages();
   }, [coreLoadUserImages]);
