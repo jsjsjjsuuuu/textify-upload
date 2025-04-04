@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { ImageData } from "@/types/ImageData";
 import { 
@@ -21,13 +22,9 @@ export const useGeminiProcessing = () => {
   useEffect(() => {
     // فحص الاتصال مع مجموعة المفاتيح
     const testConnection = async () => {
-      try {
-        if (!connectionTested) {
-          const apiKey = getNextApiKey();
-          await testGeminiApiConnection(apiKey);
-        }
-      } catch (error) {
-        console.error("خطأ في اختبار اتصال Gemini API:", error);
+      if (!connectionTested) {
+        const apiKey = getNextApiKey();
+        await testGeminiApiConnection(apiKey);
       }
     };
     
@@ -39,11 +36,11 @@ export const useGeminiProcessing = () => {
     try {
       console.log("اختبار اتصال Gemini API...");
       const result = await testGeminiConnection(apiKey);
-      if (result && result.success) {
+      if (result.success) {
         console.log("اتصال Gemini API ناجح");
         setConnectionTested(true);
         setUseGemini(true);
-      } else if (result) {
+      } else {
         console.warn("فشل اختبار اتصال Gemini API:", result.message);
         // محاولة مفتاح آخر
         const newKey = getNextApiKey();
@@ -52,7 +49,7 @@ export const useGeminiProcessing = () => {
         } else {
           toast({
             title: "تحذير",
-            description: `فشل اختبار اتصال Gemini API: ${result.message || "خطأ غير معروف"}`,
+            description: `فشل اختبار اتصال Gemini API: ${result.message}`,
             variant: "default"
           });
         }
@@ -293,38 +290,8 @@ export const useGeminiProcessing = () => {
 
   return { 
     useGemini, 
-    processWithGemini: async (file: File, image: ImageData): Promise<ImageData> => {
-      try {
-        // تنفيذ عملية المعالجة بشكل آمن لمنع الأخطاء
-        // تنفيذ آمن للعمليات
-        console.log("بدء معالجة الصورة باستخدام Gemini");
-        
-        // إرجاع بيانات الصورة كما هي إذا فشلت المعالجة
-        return {
-          ...image,
-          extractedText: "تم تعطيل معالجة الصور مؤقتاً. يرجى المحاولة لاحقاً.",
-          status: "pending"
-        };
-      } catch (error) {
-        console.error("خطأ في معالجة Gemini:", error);
-        return {
-          ...image,
-          status: "error",
-          extractedText: "خطأ في المعالجة: " + (error instanceof Error ? error.message : "خطأ غير معروف")
-        };
-      }
-    },
-    resetApiKeys: useCallback(() => {
-      try {
-        resetAllApiKeys();
-        toast({
-          title: "تم إعادة تعيين المفاتيح",
-          description: "تم إعادة تعيين جميع مفاتيح API",
-        });
-      } catch (error) {
-        console.error("خطأ في إعادة تعيين مفاتيح API:", error);
-      }
-    }, [toast]),
+    processWithGemini,
+    resetApiKeys,
     getApiStats: getApiKeyStats
   };
 };

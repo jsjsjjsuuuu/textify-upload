@@ -11,18 +11,14 @@ function App() {
   
   // تسجيل نوع المتصفح ومعلومات أخرى يمكن أن تساعد في التصحيح
   useEffect(() => {
-    try {
-      console.log("معلومات المتصفح:", {
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        language: navigator.language,
-        cookiesEnabled: navigator.cookieEnabled,
-        screenWidth: window.innerWidth,
-        screenHeight: window.innerHeight,
-      });
-    } catch (error) {
-      console.error("خطأ في تسجيل معلومات المتصفح:", error);
-    }
+    console.log("معلومات المتصفح:", {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language,
+      cookiesEnabled: navigator.cookieEnabled,
+      screenWidth: window.innerWidth,
+      screenHeight: window.innerHeight,
+    });
   }, []);
   
   return (
