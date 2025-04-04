@@ -1,19 +1,15 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { ImageData } from '@/types/ImageData';
-import FileUploader from '@/components/FileUploader';
 import ImageViewer from '@/components/ImageViewer';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import Header from '@/components/Header';
-import { EmptyContent } from '@/components/EmptyContent';
-import ImageList from '@/components/ImageList';
-import ProcessingInfo from '@/components/ProcessingInfo';
-import { Button } from '@/components/ui/button';
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import UploadTab from '@/components/ImageTabs/UploadTab';
+import ImagesTab from '@/components/ImageTabs/ImagesTab';
 
 const Index = () => {
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
@@ -46,7 +42,8 @@ const Index = () => {
     if (user) {
       // إضافة تأخير قصير لتجنب تعارضات التحميل المتتالية
       const timeoutId = setTimeout(() => {
-        loadUserImages(); // استدعاء بدون وسائط
+        // استدعاء بدون وسائط
+        loadUserImages();
       }, 200);
       
       return () => clearTimeout(timeoutId);
@@ -91,17 +88,6 @@ const Index = () => {
     setSelectedImage(null);
   }, []);
 
-  // تهيئة منطقة السحب والإفلات
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.bmp', '.tiff']
-    },
-    onDrop: async (acceptedFiles: File[]) => {
-      console.log(`تم استلام ${acceptedFiles.length} ملف`);
-      await handleFileChange(acceptedFiles);
-    }
-  });
-
   // فرز الصور تنازليًا حسب وقت الإنشاء
   const sortedImages = [...sessionImages].sort((a, b) => {
     // استخدام created_at إذا كان متاحًا
@@ -127,90 +113,28 @@ const Index = () => {
         </TabsList>
         
         <TabsContent value="upload" className="focus-visible:outline-none">
-          {/* قسم رفع الملفات */}
-          <div className="space-y-6">
-            {/* الإعدادات العامة - Gemini مفعل دائمًا */}
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center">
-                  <span className="text-sm ml-2">استخدام Gemini AI:</span>
-                  <input
-                    type="checkbox"
-                    checked={true} // دائمًا مفعل
-                    disabled={true} // غير قابل للتعديل
-                    className="ml-1 w-4 h-4"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                {isProcessing ? (
-                  <Button size="sm" variant="outline" onClick={pauseProcessing}>
-                    إيقاف مؤقت
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={retryProcessing} disabled={!sessionImages.length}>
-                    استئناف
-                  </Button>
-                )}
-                <Button size="sm" variant="outline" onClick={clearQueue} disabled={!isProcessing}>
-                  مسح القائمة
-                  </Button>
-              </div>
-            </div>
-            
-            {/* معلومات المعالجة */}
-            <ProcessingInfo 
-              isProcessing={isProcessing} 
-              progress={processingProgress} 
-            />
-            
-            {/* منطقة السحب والإفلات */}
-            <FileUploader
-              getRootProps={getRootProps}
-              getInputProps={getInputProps}
-              isDragActive={isDragActive}
-            />
-          </div>
+          <UploadTab
+            isProcessing={isProcessing}
+            processingProgress={processingProgress}
+            pauseProcessing={pauseProcessing}
+            retryProcessing={retryProcessing}
+            clearQueue={clearQueue}
+            sessionImagesLength={sessionImages.length}
+            handleFileChange={handleFileChange}
+          />
         </TabsContent>
         
         <TabsContent value="list" className="focus-visible:outline-none">
-          {/* عرض الصور */}
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">الصور المستخرجة</h2>
-              <div className="flex gap-2">
-                {sortedImages.length > 0 && (
-                  <Button size="sm" variant="outline" onClick={() => {
-                    if (window.confirm('هل أنت متأكد من رغبتك في مسح جميع الصور؟')) {
-                      clearSessionImages();
-                    }
-                  }}>
-                    مسح الكل
-                  </Button>
-                )}
-              </div>
-            </div>
-            
-            {sortedImages.length > 0 ? (
-              <ImageList
-                images={sortedImages}
-                onImageClick={openImageViewer}
-                onTextChange={handleTextChange}
-                onDelete={handleDelete}
-                onSubmit={handleSubmitToApi}
-                isSubmitting={isSubmitting}
-                formatDate={(date: Date) => date.toLocaleDateString('ar-AE')}
-                onReprocess={handleReprocessImage}
-              />
-            ) : (
-              <EmptyContent
-                title="لا توجد صور"
-                description="لم يتم رفع أي صور بعد. يرجى استخدام قسم الرفع أعلاه."
-                icon="image"
-              />
-            )}
-          </div>
+          <ImagesTab
+            images={sortedImages}
+            onImageClick={openImageViewer}
+            onTextChange={handleTextChange}
+            onDelete={handleDelete}
+            onSubmit={handleSubmitToApi}
+            isSubmitting={isSubmitting}
+            onReprocess={handleReprocessImage}
+            clearSessionImages={clearSessionImages}
+          />
         </TabsContent>
       </Tabs>
       

@@ -1,26 +1,37 @@
 
+import { useState, useCallback } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useState, useRef, useCallback } from "react";
-import { useDbSave } from "./database/useDbSave";
-import { useDbDelete } from "./database/useDbDelete";
-import { useDbLoad } from "./database/useDbLoad";
-import { useDbCleanup } from "./database/useDbCleanup";
-import { useSubmitSystem } from "./processing/useSubmitSystem";
 
-export const useImageDatabase = (updateImage: (id: string, fields: Partial<ImageData>) => void) => {
+export const useSubmitSystem = (
+  images: ImageData[],
+  updateImage: (id: string, fields: Partial<ImageData>) => void,
+  saveImageToDatabase: (image: ImageData, userId: string | undefined) => Promise<any>,
+  validateRequiredFields: (image: ImageData) => boolean
+) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  
-  const { saveImageToDatabase } = useDbSave(updateImage);
-  const { deleteImageFromDatabase } = useDbDelete();
-  const { loadUserImages, isLoadingUserImages } = useDbLoad();
-  const { cleanupOldRecords, runCleanupNow } = useDbCleanup();
 
   // وظيفة إرسال البيانات إلى API وحفظها في قاعدة البيانات
-  const handleSubmitToApi = async (id: string, image: ImageData, userId: string | undefined) => {
-    let isSubmitting = true;
+  const handleSubmitToApi = async (id: string, user?: any) => {
+    // العثور على الصورة حسب المعرف
+    const image = images.find(img => img.id === id);
     
+    if (!image) {
+      toast({
+        title: "خطأ",
+        description: "لم يتم العثور على الصورة المحددة",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // التحقق من اكتمال البيانات قبل الإرسال
+    if (!validateRequiredFields(image)) {
+      return;
+    }
+    
+    setIsSubmitting(true);
     try {
       // إعداد البيانات للإرسال
       const extractedData = {
@@ -50,20 +61,22 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
         console.log("تم إرسال البيانات بنجاح:", data);
 
         // حفظ البيانات في قاعدة البيانات Supabase
-        const savedData = await saveImageToDatabase(image, userId);
+        const savedData = await saveImageToDatabase(image, user?.id);
         
         toast({
           title: "نجاح",
           description: `تم إرسال البيانات بنجاح!`,
         });
         
+        // تحديث الصورة محلياً
+        updateImage(id, { submitted: true, status: "completed" });
         return true;
       } catch (apiError: any) {
         console.error("خطأ في اتصال API:", apiError);
         
         // نحاول حفظ البيانات في قاعدة البيانات على أي حال
         console.log("محاولة حفظ البيانات في قاعدة البيانات على الرغم من فشل API...");
-        const savedData = await saveImageToDatabase(image, userId);
+        const savedData = await saveImageToDatabase(image, user?.id);
         
         if (savedData) {
           toast({
@@ -72,6 +85,8 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
             variant: "default"
           });
           
+          // تحديث الصورة محلياً
+          updateImage(id, { submitted: true, status: "completed" });
           return true;
         } else {
           throw new Error(`فشل إرسال البيانات إلى API والحفظ في قاعدة البيانات: ${apiError.message}`);
@@ -88,17 +103,12 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
       
       return false;
     } finally {
-      isSubmitting = false;
+      setIsSubmitting(false);
     }
   };
 
   return {
-    isLoadingUserImages,
-    saveImageToDatabase,
-    loadUserImages,
-    handleSubmitToApi,
-    deleteImageFromDatabase,
-    cleanupOldRecords,
-    runCleanupNow
+    isSubmitting,
+    handleSubmitToApi
   };
 };
