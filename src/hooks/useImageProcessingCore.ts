@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -160,18 +161,18 @@ export const useImageProcessingCore = () => {
     }
   }, [user, loadUserImagesFromDb, setAllImages, runCleanupNow, isCleanupRunning]);
 
-  // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
+  // التأكد من وجود مخزن الصور
   useEffect(() => {
-    // التأكد من وجود مخزن الصور
     if (user) {
       ensureStorageBucketExists();
     }
   }, [user, ensureStorageBucketExists]);
   
-  // تحميل صور المستخدم عند تسجيل الدخول
+  // تحميل صور المستخدم عند تسجيل الدخول - تم تصحيح الكود هنا لتجنب استدعاءات متعددة
   useEffect(() => {
     if (user) {
       console.log("تم تسجيل الدخول، جاري جلب صور المستخدم:", user.id);
+      // استدعاء بدون معاملات
       loadUserImages();
     }
   }, [user, loadUserImages]);

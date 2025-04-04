@@ -1,13 +1,11 @@
 
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useDbSave } from "./database/useDbSave";
 import { useDbDelete } from "./database/useDbDelete";
 import { useDbLoad } from "./database/useDbLoad";
 import { useDbCleanup } from "./database/useDbCleanup";
-import { useSubmitSystem } from "./processing/useSubmitSystem";
 
 export const useImageDatabase = (updateImage: (id: string, fields: Partial<ImageData>) => void) => {
   const { toast } = useToast();
