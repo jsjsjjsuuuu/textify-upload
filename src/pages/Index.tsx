@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -146,15 +145,8 @@ const Index = () => {
   
   // معالج تحميل الملفات للتوافق مع واجهة المكون
   const handleFileUpload = (files: File[]) => {
-    // تحويل مصفوفة الملفات إلى FileList وهمية للتوافق مع handleFileChange
-    // حيث أن FileList لا يمكن إنشاؤه مباشرة
-    const dataTransfer = new DataTransfer();
-    files.forEach(file => {
-      dataTransfer.items.add(file);
-    });
-    
-    // استدعاء وظيفة معالجة الملفات الأصلية
-    handleFileChange(dataTransfer.files);
+    // استدعاء وظيفة معالجة الملفات الأصلية مباشرة مع ملفات من نوع File[]
+    handleFileChange(files);
   };
   
   return (
