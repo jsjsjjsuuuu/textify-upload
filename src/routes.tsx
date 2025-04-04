@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from 'react';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotFound from './pages/NotFound';
 import Login from './pages/Login';
@@ -21,23 +22,37 @@ import AdminApproval from './pages/AdminApproval';
 import AutomationPage from './pages/AutomationPage';
 import HomePage from './pages/HomePage';
 
-// مكون الصفحة الرئيسية مع التحقق من حالة تسجيل الدخول
-const HomePageWithAuth = () => {
+// مكون إعادة التوجيه بناءً على حالة تسجيل الدخول
+// سنقوم بوضعه داخل التطبيق كمكون مستقل
+const AuthRedirectWrapper = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   
-  // إذا كان المستخدم قد سجل الدخول، يتم توجيهه إلى صفحة التطبيق
-  if (user) {
-    return <Navigate to="/app" replace />;
-  }
+  useEffect(() => {
+    // إذا كان المستخدم قد سجل الدخول وكان على الصفحة الرئيسية، يتم توجيهه إلى صفحة التطبيق
+    if (user && location.pathname === '/') {
+      navigate('/app');
+    }
+  }, [user, location.pathname, navigate]);
   
-  // إذا لم يكن المستخدم مسجلاً، يتم عرض الصفحة الرئيسية
-  return <HomePage />;
+  return null;
+};
+
+// إنشاء مكون للصفحة الرئيسية مع إعادة التوجيه
+const HomePageWithRedirect = () => {
+  return (
+    <>
+      <HomePage />
+      <AuthRedirectWrapper />
+    </>
+  );
 };
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <HomePageWithAuth />,
+    element: <HomePageWithRedirect />,
   },
   {
     path: "/app",

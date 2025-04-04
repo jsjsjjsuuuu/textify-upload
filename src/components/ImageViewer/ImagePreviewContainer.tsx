@@ -18,7 +18,6 @@ interface ImagePreviewContainerProps {
   formatDate: (date: Date) => string;
   showOnlySession?: boolean;
   onReprocess?: (id: string) => Promise<void>;
-  onImageClick?: (image: ImageData) => void; // إضافة خاصية onImageClick الاختيارية
 }
 
 // تحديد الحد الأقصى لعدد الصور التي سيتم عرضها في كل مجموعة
@@ -32,8 +31,7 @@ const ImagePreviewContainer = ({
   onSubmit,
   formatDate,
   showOnlySession = false,
-  onReprocess,
-  onImageClick
+  onReprocess
 }: ImagePreviewContainerProps) => {
   const [activeImage, setActiveImage] = useState<ImageData | null>(null);
   const [activeTab, setActiveTab] = useState("all");
@@ -102,10 +100,6 @@ const ImagePreviewContainer = ({
   // وظيفة معالجة النقر على الصورة
   const handleImageClick = (image: ImageData) => {
     setActiveImage(image);
-    // إذا تم توفير وظيفة onImageClick، استدعها
-    if (onImageClick) {
-      onImageClick(image);
-    }
   };
 
   // وظيفة معالجة حذف الصورة
