@@ -13,13 +13,21 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ image, onClose }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [imgError, setImgError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   
-  // إعادة تعيين حالة الخطأ عند تغيير الصورة
+  // إعادة تعيين حالة الخطأ وتحديث URL الصورة عند تغيير الصورة
   useEffect(() => {
     setImgError(false);
     setZoomLevel(1);
     setRetryCount(0);
-  }, [image.id]);
+    
+    if (image.previewUrl) {
+      // إضافة معلمة التوقيت لتجنب التخزين المؤقت
+      setImageUrl(`${image.previewUrl}?t=${Date.now()}`);
+    } else {
+      setImageUrl(null);
+    }
+  }, [image.id, image.previewUrl]);
   
   // زيادة مستوى التكبير
   const handleZoomIn = () => {
@@ -40,11 +48,33 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ image, onClose }) => {
   const handleRetryLoading = () => {
     setImgError(false);
     setRetryCount(prev => prev + 1);
+    
+    // إعادة تحميل الصورة بمعلمة توقيت جديدة لتجنب التخزين المؤقت
+    if (image.previewUrl) {
+      setImageUrl(`${image.previewUrl}?t=${Date.now()}&retry=${retryCount + 1}`);
+    }
   };
   
   // معالجة أخطاء تحميل الصورة
   const handleImgError = () => {
+    console.error("فشل تحميل الصورة:", imageUrl);
     setImgError(true);
+  };
+  
+  // التحقق من URL الصورة قبل إظهارها
+  const getDisplayUrl = () => {
+    if (!imageUrl) {
+      return null;
+    }
+    
+    // التحقق من صحة URL الصورة
+    try {
+      new URL(imageUrl);
+      return imageUrl;
+    } catch (e) {
+      console.error("عنوان URL غير صالح:", imageUrl);
+      return null;
+    }
   };
   
   // تنسيق الوقت والتاريخ
@@ -77,13 +107,14 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ image, onClose }) => {
           {/* جزء الصورة */}
           <div className="w-full md:w-1/2 p-4 flex items-center justify-center relative overflow-hidden">
             <div className="overflow-auto w-full h-full flex items-center justify-center">
-              {!imgError ? (
+              {!imgError && getDisplayUrl() ? (
                 <img
-                  src={`${image.previewUrl}?t=${retryCount}`}
+                  src={getDisplayUrl() || ''}
                   alt={image.file?.name || "صورة"}
                   className="object-contain transition-transform duration-200"
                   style={{ transform: `scale(${zoomLevel})` }}
                   onError={handleImgError}
+                  onLoad={() => console.log("تم تحميل الصورة بنجاح:", getDisplayUrl())}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -103,7 +134,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ image, onClose }) => {
             </div>
             
             {/* أزرار التكبير */}
-            {!imgError && (
+            {!imgError && getDisplayUrl() && (
               <div className="absolute bottom-4 right-4 flex bg-white dark:bg-gray-700 rounded-md shadow p-1">
                 <Button variant="ghost" size="icon" onClick={handleZoomOut} disabled={zoomLevel <= 0.5}>
                   <ZoomOut className="h-4 w-4" />

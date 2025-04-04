@@ -31,18 +31,32 @@ export const useImageStorage = () => {
       }
       
       console.log("مخزن التخزين غير موجود، سيتم إنشاؤه...");
-      return true; // نفترض أننا قمنا بإنشاء المخزن من خلال SQL
+      
+      // محاولة إنشاء المخزن إذا لم يكن موجودًا
+      const { data: newBucket, error: createError } = await supabase.storage.createBucket('receipt_images', {
+        public: true,
+        fileSizeLimit: 10485760 // 10MB
+      });
+      
+      if (createError) {
+        console.error("خطأ في إنشاء مخزن التخزين:", createError);
+        return false;
+      }
+      
+      console.log("تم إنشاء مخزن التخزين بنجاح");
+      return true;
     } catch (error) {
       console.error("خطأ غير متوقع عند التحقق من مخزن التخزين:", error);
       return false;
     }
   }, []);
 
-  // رفع ملف الصورة إلى التخزين
+  // رفع ملف الصورة إلى التخزين مع محاولات إعادة المحاولة
   const uploadImageToStorage = useCallback(async (
     file: File,
     userId: string,
-    imageId: string
+    imageId: string,
+    maxRetries: number = 2
   ): Promise<{ path: string | null; url: string | null; }> => {
     if (!file || !userId) {
       console.log("لم يتم توفير الملف أو معرف المستخدم");
@@ -66,16 +80,37 @@ export const useImageStorage = () => {
 
       console.log(`جاري رفع الملف إلى المسار: ${filePath}`);
 
-      // رفع الملف
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('receipt_images')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
+      // محاولة الرفع مع إعادة المحاولة
+      let uploadData = null;
+      let uploadError = null;
+      let attempt = 0;
+      
+      while (attempt <= maxRetries) {
+        attempt++;
+        console.log(`محاولة رفع الملف #${attempt}`);
+        
+        const uploadResult = await supabase.storage
+          .from('receipt_images')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+        
+        if (!uploadResult.error) {
+          uploadData = uploadResult.data;
+          break;
+        } else {
+          uploadError = uploadResult.error;
+          console.error(`فشل في رفع الملف (محاولة ${attempt}/${maxRetries + 1}):`, uploadError);
+          
+          // انتظار قبل إعادة المحاولة
+          if (attempt <= maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
 
-      if (uploadError) {
-        console.error("خطأ في رفع الملف:", uploadError);
+      if (uploadError && !uploadData) {
         toast({
           title: "خطأ في الرفع",
           description: `فشل رفع الصورة: ${uploadError.message}`,
@@ -87,15 +122,27 @@ export const useImageStorage = () => {
       console.log("تم رفع الملف بنجاح:", uploadData?.path);
 
       // الحصول على URL العام للملف
-      const { data: urlData } = supabase.storage
+      const { data: publicUrlData } = supabase.storage
         .from('receipt_images')
         .getPublicUrl(filePath);
-
-      console.log("تم الحصول على عنوان URL العام:", urlData?.publicUrl);
+      
+      // جلب URL منتهي الصلاحية كبديل إذا كان URL العام غير متاح
+      let signedUrlData = null;
+      
+      if (!publicUrlData?.publicUrl) {
+        const { data: signedUrl } = await supabase.storage
+          .from('receipt_images')
+          .createSignedUrl(filePath, PUBLIC_URL_EXPIRY);
+        
+        signedUrlData = signedUrl;
+      }
+      
+      const finalUrl = publicUrlData?.publicUrl || signedUrlData?.signedUrl;
+      console.log("تم الحصول على عنوان URL للصورة:", finalUrl);
 
       return {
         path: uploadData?.path || null,
-        url: urlData?.publicUrl || null
+        url: finalUrl || null
       };
     } catch (error) {
       console.error("خطأ غير متوقع في رفع الملف:", error);

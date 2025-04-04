@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,17 @@ const CardItem = ({
 }: CardItemProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(image.previewUrl || null);
+  
+  // تحديث URL الصورة عند تغيير الصورة
+  useEffect(() => {
+    if (image.previewUrl) {
+      setImageUrl(`${image.previewUrl}?t=${Date.now()}`);
+      setImageError(false);
+    } else {
+      setImageUrl(null);
+    }
+  }, [image.id, image.previewUrl]);
 
   const handleReprocess = async () => {
     if (!onReprocess) return;
@@ -45,6 +56,15 @@ const CardItem = ({
       await onReprocess(image.id);
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  // إعادة تحميل الصورة عند حدوث خطأ
+  const handleRetryLoadImage = () => {
+    setImageError(false);
+    if (image.previewUrl) {
+      // إضافة معلمة وقت لمنع التخزين المؤقت
+      setImageUrl(`${image.previewUrl}?t=${Date.now()}`);
     }
   };
 
@@ -136,17 +156,20 @@ const CardItem = ({
           className="relative h-48 bg-muted rounded-md overflow-hidden cursor-pointer flex items-center justify-center"
           onClick={() => onImageClick(image)}
         >
-          {!imageError && image.previewUrl ? (
+          {!imageError && imageUrl ? (
             <img 
-              src={image.previewUrl} 
+              src={imageUrl} 
               alt={image.file?.name || "صورة"} 
               className="h-full w-full object-contain"
               onError={() => setImageError(true)} 
+              onLoad={() => console.log("تم تحميل الصورة", image.id)}
             />
           ) : (
             <div className="flex flex-col items-center justify-center p-4">
               <ImageIcon className="h-12 w-12 text-muted-foreground opacity-50" />
-              <div className="text-xs text-muted-foreground mt-2">الصورة غير متاحة</div>
+              <div className="text-xs text-muted-foreground mt-2">
+                {imageError ? "فشل تحميل الصورة" : "الصورة غير متاحة"}
+              </div>
               {imageError && (
                 <Button 
                   variant="outline" 
@@ -154,14 +177,7 @@ const CardItem = ({
                   className="mt-2" 
                   onClick={(e) => {
                     e.stopPropagation();
-                    setImageError(false);
-                    // محاولة إعادة تحميل الصورة بإضافة معلمة عشوائية
-                    if (image.previewUrl) {
-                      const img = new Image();
-                      img.onload = () => setImageError(false);
-                      img.onerror = () => setImageError(true);
-                      img.src = `${image.previewUrl}?t=${Date.now()}`;
-                    }
+                    handleRetryLoadImage();
                   }}
                 >
                   إعادة تحميل
@@ -171,7 +187,7 @@ const CardItem = ({
           )}
           
           {/* شارة الثقة */}
-          {image.confidence && (
+          {image.confidence && !imageError && imageUrl && (
             <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs">
               الدقة: {image.confidence}%
             </div>

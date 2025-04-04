@@ -44,8 +44,12 @@ const Index = () => {
   // تحميل الصور عند تسجيل الدخول - استدعاء بدون معاملات
   useEffect(() => {
     if (user) {
-      // استدعاء loadUserImages بدون معاملات
-      loadUserImages();
+      // إضافة تأخير قصير لتجنب تعارضات التحميل المتتالية
+      const timeoutId = setTimeout(() => {
+        loadUserImages();
+      }, 200);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [user, loadUserImages]);
   

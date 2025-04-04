@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ImageData } from '@/types/ImageData';
 
 export interface DraggableImageProps {
@@ -11,6 +11,20 @@ export interface DraggableImageProps {
 const DraggableImage: React.FC<DraggableImageProps> = ({ image, onImageClick, formatDate }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  
+  // تحديث URL الصورة عند تغيير الصورة وإضافة معلمة زمنية
+  useEffect(() => {
+    if (image.previewUrl) {
+      setImageUrl(`${image.previewUrl}?t=${Date.now()}`);
+      setHasError(false);
+      setIsLoading(true);
+    } else {
+      setImageUrl(null);
+      setHasError(true);
+      setIsLoading(false);
+    }
+  }, [image.id, image.previewUrl]);
 
   // محاولة تحديد حالة الصورة
   const getStatusLabel = () => {
@@ -26,21 +40,32 @@ const DraggableImage: React.FC<DraggableImageProps> = ({ image, onImageClick, fo
 
   // الحصول على صورة آمنة أو صورة بديلة
   const getSafeImageUrl = () => {
-    if (!image.previewUrl || hasError) {
+    if (!imageUrl || hasError) {
       return '/placeholder-image.jpg';
     }
-    return image.previewUrl;
+    return imageUrl;
   };
   
   // تعامل مع نجاح تحميل الصورة
   const handleLoad = () => {
+    console.log("تم تحميل الصورة بنجاح:", image.id);
     setIsLoading(false);
   };
 
   // تعامل مع خطأ تحميل الصورة
   const handleError = () => {
+    console.error("فشل تحميل الصورة:", image.id, imageUrl);
     setIsLoading(false);
     setHasError(true);
+  };
+
+  // إعادة محاولة تحميل الصورة
+  const retryLoading = () => {
+    if (image.previewUrl) {
+      setIsLoading(true);
+      setHasError(false);
+      setImageUrl(`${image.previewUrl}?t=${Date.now()}&retry=true`);
+    }
   };
 
   // معالج النقر على الصورة
@@ -85,6 +110,23 @@ const DraggableImage: React.FC<DraggableImageProps> = ({ image, onImageClick, fo
       {isLoading && (
         <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse flex items-center justify-center">
           <span className="text-gray-400">جاري التحميل...</span>
+        </div>
+      )}
+      
+      {/* زر إعادة المحاولة عند الخطأ */}
+      {hasError && (
+        <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 bg-opacity-75 flex items-center justify-center">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => {
+              e.stopPropagation();
+              retryLoading();
+            }}
+            className="bg-white dark:bg-gray-700"
+          >
+            إعادة تحميل
+          </Button>
         </div>
       )}
     </div>
