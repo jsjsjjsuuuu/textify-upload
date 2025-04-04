@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from "@/hooks/use-toast";
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronUp, Download, PlusSquare, RefreshCcw, Search, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Database, Download, PlusSquare, RefreshCcw, Search, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageData } from '@/types/ImageData';
 import { EmptyContent } from '@/components/EmptyContent';
@@ -25,8 +25,12 @@ const Records = () => {
   useEffect(() => {
     if (user) {
       const load = async () => {
-        const result = await loadUserImages();
-        console.log("تم تحميل السجلات:", result ? "نجاح" : "فشل");
+        try {
+          await loadUserImages();
+          console.log("تم تحميل السجلات بنجاح");
+        } catch (error) {
+          console.log("فشل في تحميل السجلات", error);
+        }
       };
       load();
     }
@@ -301,7 +305,7 @@ const Records = () => {
                 ? "لا توجد نتائج تطابق بحثك. يرجى تجربة مصطلحات بحث مختلفة."
                 : "لم يتم العثور على أي سجلات. قم برفع بعض الصور لبدء العمل."
             }
-            icon="database"
+            icon="inbox"
           />
         )}
       </div>
