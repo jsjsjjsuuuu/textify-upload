@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
@@ -43,6 +44,7 @@ const Index = () => {
   // تحميل الصور عند تسجيل الدخول
   useEffect(() => {
     if (user) {
+      // تصحيح الخطأ هنا - إزالة المعامل
       loadUserImages();
     }
   }, [user, loadUserImages]);
