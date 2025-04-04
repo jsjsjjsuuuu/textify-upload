@@ -54,10 +54,10 @@ const AppHeader = () => {
             {user && (
               <>
                 <Link
-                  to="/upload"
-                  className={`transition-colors hover:text-foreground/80 ${pathname === "/upload" ? "text-foreground font-bold" : "text-foreground/60"}`}
+                  to="/app"
+                  className={`transition-colors hover:text-foreground/80 ${pathname === "/app" ? "text-foreground font-bold" : "text-foreground/60"}`}
                 >
-                  تحميل الصور
+                  الرئيسية
                 </Link>
                 <Link
                   to="/records"
