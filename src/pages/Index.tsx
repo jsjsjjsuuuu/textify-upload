@@ -257,7 +257,7 @@ const Index = () => {
                   <p className="text-muted-foreground text-center mb-6">قم بتحميل صور الإيصالات أو الفواتير وسنقوم باستخراج البيانات منها تلقائياً</p>
                   <ImageUploader 
                     isProcessing={isProcessing} 
-                    processingProgress={processingProgress} 
+                    processingProgress={processingProgress}
                     onFileChange={handleFileUpload} 
                   />
                 </div>
