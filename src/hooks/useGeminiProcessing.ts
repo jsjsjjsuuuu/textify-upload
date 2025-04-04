@@ -56,6 +56,7 @@ export const useGeminiProcessing = () => {
       }
     } catch (error) {
       console.error("خطأ في اختبار اتصال Gemini API:", error);
+      setUseGemini(false);
     }
   };
 
@@ -78,6 +79,22 @@ export const useGeminiProcessing = () => {
   };
 
   const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
+    // التحقق من وجود الملف قبل المعالجة
+    if (!file || !(file instanceof File)) {
+      console.error("خطأ: ملف الصورة غير موجود أو غير صالح", file);
+      toast({
+        title: "خطأ في معالجة الصورة",
+        description: "ملف الصورة غير موجود أو غير صالح. يرجى المحاولة مرة أخرى.",
+        variant: "destructive"
+      });
+      
+      return {
+        ...image,
+        status: "error" as const,
+        extractedText: "خطأ: ملف الصورة غير موجود أو غير صالح"
+      };
+    }
+    
     // الحصول على المفتاح التالي من نظام الدوران
     const geminiApiKey = getNextApiKey();
     console.log("استخدام مفتاح Gemini API بطول:", geminiApiKey.length);
@@ -129,122 +146,137 @@ export const useGeminiProcessing = () => {
         retryDelayMs: 3000 // تقليل وقت الانتظار بين المحاولات
       });
       
-      const extractionResult = await extractDataWithGemini({
-        apiKey: geminiApiKey,
-        imageBase64,
-        enhancedExtraction: true,
-        maxRetries: 2,
-        retryDelayMs: 3000,
-        modelVersion: 'gemini-1.5-flash'  // استخدام نموذج أسرع
-      });
-      
-      console.log("نتيجة استخراج Gemini:", extractionResult);
-      
-      if (extractionResult.success && extractionResult.data) {
-        const { parsedData, extractedText } = extractionResult.data;
-        
-        // تحقق من وجود بيانات تم استخراجها
-        if (parsedData && Object.keys(parsedData).length > 0) {
-          console.log("Gemini نجح في استخراج البيانات:", parsedData);
-          
-          // التحقق من البيانات المستخرجة
-          console.log("البيانات المستخرجة المفصلة:", {
-            code: parsedData.code,
-            senderName: parsedData.senderName,
-            phoneNumber: parsedData.phoneNumber,
-            province: parsedData.province,
-            price: parsedData.price,
-            companyName: parsedData.companyName
-          });
-          
-          toast({
-            title: "تم الاستخراج بنجاح",
-            description: "تم استخراج البيانات باستخدام Gemini AI",
-          });
-
-          // تحديث الصورة بالبيانات المستخرجة
-          const processedImage = updateImageWithExtractedData(
-            image,
-            extractedText || "",
-            parsedData || {},
-            parsedData.confidence ? parseInt(String(parsedData.confidence)) : 95,
-            "gemini"
-          );
-          
-          // تحقق من تحديث الصورة بشكل صحيح
-          console.log("الصورة المحدثة بعد الاستخراج:", {
-            code: processedImage.code,
-            senderName: processedImage.senderName,
-            phoneNumber: processedImage.phoneNumber,
-            province: processedImage.province,
-            price: processedImage.price,
-            companyName: processedImage.companyName
-          });
-          
-          // تعيين الحالة استنادًا إلى وجود البيانات الرئيسية
-          let finalImage: ImageData = processedImage;
-          
-          if (finalImage.code || finalImage.senderName || finalImage.phoneNumber) {
-            finalImage = {
-              ...finalImage,
-              status: "completed" as const
-            };
-          } else {
-            finalImage = {
-              ...finalImage,
-              status: "pending" as const
-            };
-          }
-          
-          return finalImage;
-        } else {
-          console.log("Gemini أرجع بيانات فارغة");
-          
-          // إذا كان هناك نص مستخرج ولكن لا يوجد بيانات منظمة
-          if (extractedText && extractedText.length > 10) {
-            toast({
-              title: "تم استخراج النص",
-              description: "تم استخراج النص ولكن لم يتم التعرف على البيانات المنظمة",
-              variant: "default"
-            });
-            
-            return {
-              ...image,
-              status: "pending" as const,
-              extractedText: extractedText
-            };
-          } else {
-            toast({
-              title: "تنبيه",
-              description: "لم يتمكن Gemini من استخراج بيانات من الصورة، يرجى محاولة تحميل صورة أوضح",
-              variant: "default"
-            });
-            
-            return {
-              ...image,
-              status: "pending" as const,
-              extractedText: "لم يتم استخراج نص. حاول مرة أخرى بصورة أوضح."
-            };
-          }
-        }
-      } else {
-        console.log("فشل استخراج Gemini:", extractionResult.message);
-        
-        // الإبلاغ عن الخطأ لمدير المفاتيح
-        reportApiKeyError(geminiApiKey, extractionResult.message || "خطأ غير معروف");
-        
-        toast({
-          title: "فشل الاستخراج",
-          description: "فشل استخراج البيانات: " + extractionResult.message,
-          variant: "destructive"
+      try {
+        const extractionResult = await extractDataWithGemini({
+          apiKey: geminiApiKey,
+          imageBase64,
+          enhancedExtraction: true,
+          maxRetries: 2,
+          retryDelayMs: 3000,
+          modelVersion: 'gemini-1.5-flash'  // استخدام نموذج أسرع
         });
         
-        // إعادة الصورة مع حالة خطأ
-        return {
-          ...image,
-          status: "error" as const,
-          extractedText: "فشل استخراج النص: " + extractionResult.message
-        };
+        console.log("نتيجة استخراج Gemini:", extractionResult);
+        
+        if (extractionResult.success && extractionResult.data) {
+          const { parsedData, extractedText } = extractionResult.data;
+          
+          // تحقق من وجود بيانات تم استخراجها
+          if (parsedData && Object.keys(parsedData).length > 0) {
+            console.log("Gemini نجح في استخراج البيانات:", parsedData);
+            
+            // التحقق من البيانات المستخرجة
+            console.log("البيانات المستخرجة المفصلة:", {
+              code: parsedData.code || "",
+              senderName: parsedData.senderName || "",
+              phoneNumber: parsedData.phoneNumber || "",
+              province: parsedData.province || "",
+              price: parsedData.price || "",
+              companyName: parsedData.companyName || ""
+            });
+            
+            toast({
+              title: "تم الاستخراج بنجاح",
+              description: "تم استخراج البيانات باستخدام Gemini AI",
+            });
+
+            // تحديث الصورة بالبيانات المستخرجة
+            const processedImage = updateImageWithExtractedData(
+              image,
+              extractedText || "",
+              parsedData || {},
+              parsedData.confidence ? parseInt(String(parsedData.confidence)) : 95,
+              "gemini"
+            );
+            
+            // تحقق من تحديث الصورة بشكل صحيح
+            console.log("الصورة المحدثة بعد الاستخراج:", {
+              id: processedImage.id,
+              code: processedImage.code || "",
+              senderName: processedImage.senderName || "",
+              phoneNumber: processedImage.phoneNumber || "",
+              province: processedImage.province || "",
+              price: processedImage.price || "",
+              companyName: processedImage.companyName || ""
+            });
+            
+            // تعيين الحالة استنادًا إلى وجود البيانات الرئيسية
+            let finalImage: ImageData = {
+              ...processedImage,
+              status: "completed" as const
+            };
+            
+            return finalImage;
+          } else {
+            console.log("Gemini أرجع بيانات فارغة");
+            
+            // إذا كان هناك نص مستخرج ولكن لا يوجد بيانات منظمة
+            if (extractedText && extractedText.length > 10) {
+              toast({
+                title: "تم استخراج النص",
+                description: "تم استخراج النص ولكن لم يتم التعرف على البيانات المنظمة",
+                variant: "default"
+              });
+              
+              // إنشاء بيانات افتراضية للصورة لتسهيل الملء اليدوي
+              const defaultData = {
+                code: "",
+                senderName: "",
+                phoneNumber: "",
+                province: "",
+                price: "",
+                companyName: ""
+              };
+              
+              const processedImageWithText = updateImageWithExtractedData(
+                image,
+                extractedText,
+                defaultData,
+                50, // ثقة منخفضة لعدم وجود بيانات هيكلية
+                "gemini"
+              );
+              
+              return {
+                ...processedImageWithText,
+                status: "pending" as const,
+                extractedText: extractedText
+              };
+            } else {
+              toast({
+                title: "تنبيه",
+                description: "لم يتمكن Gemini من استخراج بيانات من الصورة، يرجى محاولة تحميل صورة أوضح",
+                variant: "default"
+              });
+              
+              return {
+                ...image,
+                status: "pending" as const,
+                extractedText: "لم يتم استخراج نص. حاول مرة أخرى بصورة أوضح."
+              };
+            }
+          }
+        } else {
+          console.log("فشل استخراج Gemini:", extractionResult.message);
+          
+          // الإبلاغ عن الخطأ لمدير المفاتيح
+          reportApiKeyError(geminiApiKey, extractionResult.message || "خطأ غير معروف");
+          
+          toast({
+            title: "فشل الاستخراج",
+            description: "فشل استخراج البيانات: " + extractionResult.message,
+            variant: "destructive"
+          });
+          
+          // محاولة استخدام معالجة OCR كبديل
+          return {
+            ...image,
+            status: "pending" as const, // استخدام "pending" بدلاً من "error" للسماح بمعالجة يدوية
+            extractedText: "فشل استخراج النص باستخدام Gemini. يمكنك إدخال البيانات يدويًا."
+          };
+        }
+      } catch (innerError: any) {
+        console.error("خطأ أثناء استدعاء extractDataWithGemini:", innerError);
+        throw innerError; // إعادة رمي الخطأ للتعامل معه في الكتلة الخارجية
       }
     } catch (geminiError: any) {
       console.error("خطأ في معالجة Gemini:", geminiError);
@@ -270,11 +302,11 @@ export const useGeminiProcessing = () => {
         variant: "destructive"
       });
       
-      // إعادة الصورة مع حالة خطأ
+      // العودة بحالة "pending" بدلاً من "error" للسماح بالمعالجة اليدوية
       return {
         ...image,
-        status: "error" as const,
-        extractedText: "خطأ في المعالجة: " + errorMessage
+        status: "pending" as const,
+        extractedText: "خطأ في المعالجة: " + errorMessage + ". يمكنك إدخال البيانات يدويًا."
       };
     }
   };

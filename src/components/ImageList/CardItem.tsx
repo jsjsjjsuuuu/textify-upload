@@ -7,7 +7,9 @@ import ImageDataForm from "./ImageDataForm";
 import ActionButtons from "./ActionButtons";
 import { AutomationButton } from "@/components/ExtractedData";
 import BatchArrow from "./BatchArrow";
-import { useEffect, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 interface CardItemProps {
   image: ImageData;
@@ -20,6 +22,7 @@ interface CardItemProps {
   showBatchArrow?: boolean;
   isFirstInBatch?: boolean;
   isLastInBatch?: boolean;
+  onReprocess?: (id: string) => Promise<void>;
 }
 
 const CardItem = ({ 
@@ -32,8 +35,11 @@ const CardItem = ({
   formatDate,
   showBatchArrow = false,
   isFirstInBatch = false,
-  isLastInBatch = false
+  isLastInBatch = false,
+  onReprocess
 }: CardItemProps) => {
+  const [isReprocessing, setIsReprocessing] = useState(false);
+  
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
   
@@ -48,6 +54,20 @@ const CardItem = ({
       isPhoneNumberValid
     );
   }, [image.code, image.senderName, image.phoneNumber, image.province, image.price, isPhoneNumberValid]);
+  
+  // معالج إعادة المعالجة
+  const handleReprocess = async () => {
+    if (onReprocess) {
+      try {
+        setIsReprocessing(true);
+        await onReprocess(image.id);
+      } catch (error) {
+        console.error("خطأ في إعادة معالجة الصورة:", error);
+      } finally {
+        setIsReprocessing(false);
+      }
+    }
+  };
   
   // مراقبة البيانات والتأكد من عنوان URL للصورة
   useEffect(() => {
@@ -67,40 +87,70 @@ const CardItem = ({
       
       <Card className="overflow-hidden bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow border-border/60 dark:border-gray-700/60 rounded-xl">
         <CardContent className="p-0">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-0">
-            {/* صورة العنصر (55% العرض) */}
-            <div className="md:col-span-7 border-b md:border-b-0 md:border-l border-border/30 dark:border-gray-700/30">
+          <div className="flex flex-col md:flex-row">
+            {/* صورة الوصل */}
+            <div className="md:w-72 lg:w-80 xl:w-96 shrink-0 relative">
               <DraggableImage 
                 image={image} 
-                onImageClick={onImageClick} 
-                formatDate={formatDate} 
+                onImageClick={() => onImageClick(image)}
               />
+              
+              {/* زر إعادة المعالجة */}
+              {onReprocess && (
+                <div className="absolute top-2 left-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-xs h-7 px-2"
+                    onClick={handleReprocess}
+                    disabled={isReprocessing}
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isReprocessing ? 'animate-spin' : ''} ml-1`} />
+                    {isReprocessing ? 'جاري المعالجة...' : 'إعادة معالجة'}
+                  </Button>
+                </div>
+              )}
+              
+              {/* تصنيف نوع الاستخراج */}
+              <div className="absolute top-2 right-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded px-1.5 py-0.5 text-[10px]">
+                {image.extractionMethod === "gemini" ? "Gemini AI" : image.extractionMethod === "ocr" ? "OCR" : "غير معروف"}
+              </div>
             </div>
             
-            {/* بيانات العنصر (45% العرض) */}
-            <div className="md:col-span-5">
+            {/* نموذج البيانات المستخرجة */}
+            <div className="flex-1 overflow-hidden">
               <ImageDataForm 
-                image={image} 
-                onTextChange={onTextChange} 
+                image={image}
+                onTextChange={onTextChange}
               />
-            </div>
-          </div>
-          
-          <div className="px-4 pb-4 border-t border-border/30 dark:border-gray-700/30 mt-2">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="w-full sm:w-auto">
-                <AutomationButton image={image} />
+              
+              {/* أزرار الإجراءات (حذف، إرسال) */}
+              <div className="px-4 pb-4">
+                <ActionButtons
+                  imageId={image.id}
+                  isSubmitting={isSubmitting}
+                  isCompleted={image.status === "completed"}
+                  isSubmitted={!!image.submitted}
+                  isPhoneNumberValid={isPhoneNumberValid}
+                  isAllFieldsFilled={isAllFieldsFilled}
+                  onDelete={onDelete}
+                  onSubmit={onSubmit}
+                />
+                
+                {/* أزرار الأتمتة والوصول السريع */}
+                {image.code && (
+                  <div className="mt-2">
+                    <AutomationButton 
+                      imageId={image.id}
+                      code={image.code}
+                      senderName={image.senderName || ""}
+                      phoneNumber={image.phoneNumber || ""}
+                      province={image.province || ""}
+                      price={image.price || ""}
+                    />
+                  </div>
+                )}
               </div>
-              <ActionButtons 
-                imageId={image.id}
-                isSubmitting={isSubmitting}
-                isCompleted={image.status === "completed"}
-                isSubmitted={!!image.submitted}
-                isPhoneNumberValid={isPhoneNumberValid}
-                isAllFieldsFilled={isAllFieldsFilled} // تمرير حالة اكتمال الحقول
-                onDelete={onDelete}
-                onSubmit={onSubmit}
-              />
             </div>
           </div>
         </CardContent>
