@@ -96,7 +96,7 @@ export const useImageProcessing = () => {
     return true;
   }, [images, processWithGemini, saveProcessedImage, addToQueue]);
 
-  // وظيفة تحميل الصور - تصحيح الاستدعاء بدون معاملات
+  // تصحيح وظيفة تحميل الصور - بدون معاملات
   const loadUserImages = useCallback(() => {
     // استدعاء coreLoadUserImages بدون معاملات
     coreLoadUserImages();
