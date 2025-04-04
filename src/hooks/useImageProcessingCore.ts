@@ -200,7 +200,7 @@ export const useImageProcessingCore = () => {
   const loadUserImages = useCallback(() => {
     if (user) {
       console.log("تحميل صور المستخدم...");
-      // تعديل: استدعاء مباشر مع user.id
+      // استعمال المعاملات المطلوبة
       loadUserImagesFromDb(user.id, setAllImages);
       
       // تشغيل التنظيف مرة واحدة فقط عند التحميل الأولي

@@ -41,10 +41,10 @@ const Index = () => {
     reprocessImage
   } = useImageProcessing();
   
-  // تحميل الصور عند تسجيل الدخول - تصحيح الاستدعاء بدون معاملات
+  // تحميل الصور عند تسجيل الدخول - استدعاء بدون معاملات
   useEffect(() => {
     if (user) {
-      // استدعاء loadUserImages بدون معلمات
+      // استدعاء loadUserImages بدون معاملات
       loadUserImages();
     }
   }, [user, loadUserImages]);

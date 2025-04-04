@@ -1,4 +1,3 @@
-
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -247,7 +246,7 @@ export const useImageDatabase = (updateImage: (id: string, fields: Partial<Image
     }
   };
 
-  // وظيفة لتحميل صور المستخدم من قاعدة البيانات - تحسين الأداء باستخدام التخزين المؤقت
+  // تعديل توقيع الوظيفة loadUserImages لتقبل المعاملات
   const loadUserImages = useCallback(async (userId: string | undefined, setAllImages: (images: ImageData[]) => void) => {
     if (!userId) {
       console.log("لا يوجد مستخدم مسجل، لا يمكن تحميل الصور");
