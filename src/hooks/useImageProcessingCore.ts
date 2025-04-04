@@ -8,6 +8,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useImageStats } from "@/hooks/useImageStats";
 import { useImageDatabase } from "@/hooks/useImageDatabase";
 import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
+import { useImageStorage } from "@/hooks/useImageStorage";
+
+// متغير لتتبع ما إذا كانت عملية التنظيف جارية
+let isCleanupRunning = false;
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,14 +47,22 @@ export const useImageProcessingCore = () => {
   
   const { saveProcessedImage } = useSavedImageProcessing(updateImage, setAllImages);
   
+  const {
+    isUploading,
+    uploadImageToStorage,
+    deleteImageFromStorage,
+    prepareNewImage,
+    ensureStorageBucketExists
+  } = useImageStorage();
+  
   const { 
     isLoadingUserImages,
-    loadUserImages,
+    loadUserImages: loadUserImagesFromDb,
     saveImageToDatabase,
     handleSubmitToApi: submitToApi,
     deleteImageFromDatabase,
     cleanupOldRecords,
-    runCleanupNow
+    runCleanupNow: runDbCleanupNow
   } = useImageDatabase(updateImage);
   
   // التحقق مما إذا كانت الصورة مكررة بناءً على خصائص متعددة
@@ -168,6 +180,36 @@ export const useImageProcessingCore = () => {
     clearQueue,
   } = fileUploadData;
 
+  // تنفيذ عملية التنظيف مرة واحدة فقط
+  const runCleanupNow = useCallback(async () => {
+    if (!user || isCleanupRunning) return false;
+    
+    isCleanupRunning = true;
+    try {
+      await runDbCleanupNow(user.id);
+      return true;
+    } finally {
+      // السماح بتشغيل التنظيف مرة أخرى بعد الانتهاء
+      setTimeout(() => {
+        isCleanupRunning = false;
+      }, 5000);
+    }
+  }, [user, runDbCleanupNow]);
+
+  // تعديل وظيفة تحميل صور المستخدم لتجنب الاستدعاءات المتكررة
+  const loadUserImages = useCallback(() => {
+    if (user) {
+      console.log("تحميل صور المستخدم...");
+      loadUserImagesFromDb(user.id, setAllImages);
+      
+      // تشغيل التنظيف مرة واحدة فقط عند التحميل الأولي
+      if (!isCleanupRunning) {
+        console.log("تشغيل التنظيف التلقائي عند تحميل الصور...");
+        runCleanupNow();
+      }
+    }
+  }, [user, loadUserImagesFromDb, setAllImages, runCleanupNow]);
+
   // إعادة هيكلة وظيفة handleSubmitToApi لتستخدم وظيفة saveProcessedImage
   const handleSubmitToApi = async (id: string) => {
     // العثور على الصورة حسب المعرف
@@ -200,11 +242,6 @@ export const useImageProcessingCore = () => {
         
         // تحديث الصورة محلياً
         updateImage(id, { submitted: true, status: "completed" });
-        
-        // إعادة تحميل الصور من قاعدة البيانات للتأكد من التزامن
-        if (user) {
-          loadUserImages(user.id, setAllImages);
-        }
       }
     } catch (error) {
       console.error("خطأ في إرسال البيانات:", error);
@@ -221,6 +258,14 @@ export const useImageProcessingCore = () => {
   // تعديل وظيفة حذف الصورة لتشمل الحذف من قاعدة البيانات
   const handleDelete = async (id: string) => {
     try {
+      // العثور على الصورة لمعرفة مسار التخزين
+      const image = images.find(img => img.id === id);
+      
+      if (image?.storage_path) {
+        // حذف الملف من التخزين أولاً
+        await deleteImageFromStorage(image.storage_path);
+      }
+      
       // محاولة حذف السجل من قاعدة البيانات أولاً
       if (user) {
         await deleteImageFromDatabase(id);
@@ -244,14 +289,19 @@ export const useImageProcessingCore = () => {
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
   useEffect(() => {
+    // التأكد من وجود مخزن الصور
+    if (user) {
+      ensureStorageBucketExists();
+    }
+  }, [user, ensureStorageBucketExists]);
+  
+  // تحميل صور المستخدم عند تسجيل الدخول
+  useEffect(() => {
     if (user) {
       console.log("تم تسجيل الدخول، جاري جلب صور المستخدم:", user.id);
-      loadUserImages(user.id, setAllImages);
-      
-      // تنظيف السجلات القديمة عند بدء التطبيق
-      cleanupOldRecords(user.id);
+      loadUserImages();
     }
-  }, [user]);
+  }, [user, loadUserImages]);
 
   return {
     images,
@@ -268,13 +318,7 @@ export const useImageProcessingCore = () => {
     saveImageToDatabase,
     saveProcessedImage,
     useGemini,
-    loadUserImages: () => {
-      if (user) {
-        loadUserImages(user.id, setAllImages);
-        // تنظيف السجلات القديمة أيضًا عند إعادة تحميل الصور يدويًا
-        cleanupOldRecords(user.id);
-      }
-    },
+    loadUserImages,
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,

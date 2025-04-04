@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
@@ -40,10 +41,10 @@ const Index = () => {
     reprocessImage
   } = useImageProcessing();
   
-  // تحميل الصور عند تسجيل الدخول
+  // تحميل الصور عند تسجيل الدخول - تم إصلاح الخطأ هنا
   useEffect(() => {
     if (user) {
-      // استدعاء loadUserImages بدون معاملات
+      // استدعاء loadUserImages بدون معلمات
       loadUserImages();
     }
   }, [user, loadUserImages]);
