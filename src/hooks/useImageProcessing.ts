@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useImageProcessingCore } from './useImageProcessingCore';
@@ -96,7 +95,7 @@ export const useImageProcessing = () => {
     return true;
   }, [images, processWithGemini, saveProcessedImage, addToQueue]);
 
-  // تصحيح استدعاء وظيفة تحميل الصور بدون معاملات
+  // Modify loadUserImages to remove argument
   const loadUserImages = useCallback(() => {
     coreLoadUserImages();
   }, [coreLoadUserImages]);
