@@ -21,7 +21,7 @@ const StatusFilter: React.FC<StatusFilterProps> = ({
   const statuses = [
     { id: 'all', label: 'الكل', icon: <Inbox className="h-3 w-3 mr-1" /> },
     { id: 'pending', label: 'قيد الانتظار', icon: <Clock className="h-3 w-3 mr-1" /> },
-    { id: 'processing', label: 'قيد المعالجة', icon: <Clock className="h-3 w-3 mr-1" className="animate-spin" /> },
+    { id: 'processing', label: 'قيد المعالجة', icon: <Clock className="h-3 w-3 mr-1 animate-spin" /> },
     { id: 'completed', label: 'مكتمل', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
     { id: 'error', label: 'خطأ', icon: <AlertCircle className="h-3 w-3 mr-1" /> },
     { id: 'submitted', label: 'تم الإرسال', icon: <Upload className="h-3 w-3 mr-1" /> },

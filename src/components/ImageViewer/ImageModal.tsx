@@ -1,13 +1,12 @@
 
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import React from 'react';
 import { ImageData } from '@/types/ImageData';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Save, Trash2 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import ExtractedDataEditor from '@/components/ExtractedData/ExtractedDataEditor';
-import RawTextViewer from '@/components/ExtractedData/RawTextViewer';
-import ImageViewer from '@/components/ImagePreview/ImageViewer/ImageViewer';
+import { X, Download, Send, Trash } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import ImageDataForm from '../ImageList/ImageDataForm';
+import ActionButtons from '../ImageList/ActionButtons';
 
 interface ImageModalProps {
   image: ImageData;
@@ -15,7 +14,7 @@ interface ImageModalProps {
   onClose: () => void;
   onTextChange: (id: string, field: string, value: string) => void;
   onDelete: (id: string) => void;
-  onSubmit?: (id: string) => void;
+  onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
 }
 
@@ -28,112 +27,128 @@ const ImageModal: React.FC<ImageModalProps> = ({
   onSubmit,
   formatDate
 }) => {
-  const [selectedTab, setSelectedTab] = useState<string>('preview');
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
-
-  // التعامل مع زيادة التكبير
-  const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.25, 3));
-  };
-
-  // التعامل مع تقليل التكبير
-  const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
-  };
-
-  // إعادة ضبط مستوى التكبير
-  const handleResetZoom = () => {
-    setZoomLevel(1);
-  };
-
-  // التعامل مع الإغلاق
-  const handleClose = () => {
-    onClose();
-  };
-
-  // التعامل مع الحذف
-  const handleDelete = () => {
-    onDelete(image.id);
-    onClose();
-  };
-
-  // التعامل مع الإرسال
-  const handleSubmit = () => {
-    if (onSubmit) {
-      onSubmit(image.id);
+  // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
+  const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+  
+  // التحقق من اكتمال جميع الحقول المطلوبة
+  const isAllFieldsFilled = !!(
+    image.code && 
+    image.senderName && 
+    image.phoneNumber && 
+    image.province && 
+    image.price && 
+    isPhoneNumberValid
+  );
+  
+  // تنزيل الصورة
+  const handleDownload = () => {
+    if (image.previewUrl) {
+      const a = document.createElement('a');
+      a.href = image.previewUrl;
+      a.download = `receipt-image-${image.id}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   };
 
   return (
-    <Dialog open={true} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl h-[90vh] flex flex-col overflow-hidden p-0">
-        <DialogHeader className="p-4 border-b">
+    <Dialog open={true} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-4xl p-0 h-[90vh] max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="p-4 border-b flex-shrink-0">
           <div className="flex justify-between items-center">
-            <DialogTitle className="text-xl">
-              {image.code ? `معاينة الوصل #${image.code}` : 'معاينة الصورة'}
-            </DialogTitle>
-            <Button variant="ghost" size="icon" onClick={handleClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <DialogTitle className="font-medium">عرض صورة الوصل</DialogTitle>
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogClose>
           </div>
-          
-          <Tabs defaultValue="preview" value={selectedTab} onValueChange={setSelectedTab} className="mt-2">
-            <TabsList>
-              <TabsTrigger value="preview">معاينة الصورة</TabsTrigger>
-              <TabsTrigger value="data">البيانات المستخرجة</TabsTrigger>
-              <TabsTrigger value="text">النص المستخرج</TabsTrigger>
-            </TabsList>
-          </Tabs>
         </DialogHeader>
         
-        <div className="flex-1 overflow-auto p-0">
-          <TabsContent value="preview" className="h-full m-0 p-0 flex-1">
-            <div className="h-full flex justify-center items-center p-4">
-              <ImageViewer
-                selectedImage={image}
-                zoomLevel={zoomLevel}
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onResetZoom={handleResetZoom}
-                formatDate={formatDate}
-              />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="data" className="h-full m-0 p-4 flex-1">
-            <ExtractedDataEditor
-              image={image}
-              onTextChange={onTextChange}
+        <div className="grid grid-cols-1 md:grid-cols-2 flex-grow overflow-hidden">
+          {/* عرض الصورة */}
+          <div className="bg-black relative overflow-hidden flex items-center justify-center">
+            <img 
+              src={image.previewUrl} 
+              alt="صورة الوصل" 
+              className="max-w-full max-h-full object-contain"
             />
-          </TabsContent>
-          
-          <TabsContent value="text" className="h-full m-0 p-4 flex-1">
-            <RawTextViewer text={image.extractedText} />
-          </TabsContent>
-        </div>
-        
-        <DialogFooter className="p-4 border-t">
-          <div className="flex justify-between w-full">
+            
+            {/* الزر العائم لتنزيل الصورة */}
             <Button 
-              variant="destructive" 
-              onClick={handleDelete} 
-              disabled={isSubmitting}
+              variant="secondary" 
+              size="sm" 
+              className="absolute bottom-4 left-4 bg-white/80 hover:bg-white text-gray-800"
+              onClick={handleDownload}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
-              حذف
+              <Download className="h-4 w-4 ml-2" />
+              تنزيل الصورة
             </Button>
             
-            {onSubmit && (
-              <Button 
-                onClick={handleSubmit} 
-                disabled={isSubmitting || image.submitted}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {image.submitted ? 'تم الإرسال' : 'إرسال البيانات'}
-              </Button>
-            )}
+            {/* شارة نوع الاستخراج */}
+            <Badge 
+              variant="secondary" 
+              className="absolute top-4 left-4 bg-white/80 text-xs"
+            >
+              {image.extractionMethod === "gemini" ? "Gemini AI" : image.extractionMethod === "ocr" ? "OCR" : "غير معروف"}
+            </Badge>
           </div>
-        </DialogFooter>
+          
+          {/* نموذج البيانات */}
+          <div className="bg-background p-4 overflow-y-auto">
+            <div className="space-y-4">
+              <div className="pb-2 border-b flex justify-between items-center">
+                <h3 className="font-medium">البيانات المستخرجة</h3>
+                <Badge variant={image.status === "completed" ? "success" : image.status === "error" ? "destructive" : "outline"}>
+                  {image.status === "completed" ? "تمت المعالجة" : 
+                   image.status === "error" ? "فشل" : 
+                   image.status === "processing" ? "قيد المعالجة" : "في الانتظار"}
+                </Badge>
+              </div>
+              
+              {/* نموذج البيانات */}
+              <ImageDataForm 
+                image={image}
+                onTextChange={onTextChange}
+              />
+              
+              {/* أزرار الإجراءات */}
+              <div className="flex flex-wrap justify-between items-center gap-3 pt-4 border-t">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    onDelete(image.id);
+                    onClose();
+                  }}
+                  className="flex-shrink-0"
+                >
+                  <Trash className="h-4 w-4 ml-2" />
+                  حذف
+                </Button>
+                
+                <Button
+                  disabled={isSubmitting || !isAllFieldsFilled || !isPhoneNumberValid}
+                  onClick={() => onSubmit(image.id)}
+                  className="ml-auto flex-shrink-0"
+                >
+                  {isSubmitting ? "جاري الإرسال..." : "إرسال"}
+                  <Send className="h-4 w-4 mr-2" />
+                </Button>
+              </div>
+              
+              {/* معلومات إضافية */}
+              {image.date && (
+                <div className="text-xs text-muted-foreground p-2 mt-4 border rounded bg-muted/20">
+                  <p>معرف الصورة: {image.id}</p>
+                  <p>تاريخ الإضافة: {formatDate(image.date)}</p>
+                  {image.confidence && <p>مستوى الثقة: {image.confidence}%</p>}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

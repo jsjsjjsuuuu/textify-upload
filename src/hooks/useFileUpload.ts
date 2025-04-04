@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -55,124 +56,6 @@ export const useFileUpload = (params: FileUploadParams) => {
   
   // وظيفة مساعدة لتأخير التنفيذ
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  // وظيفة لتهيئة الصورة وإضافتها إلى قائمة الانتظار
-  const enqueueFile = useCallback(async (file: File) => {
-    const id = uuidv4();
-    const previewUrl = URL.createObjectURL(file);
-    
-    // حساب الهاش للصورة
-    const imageHash = await getImageHash(file);
-    
-    const newImage: ImageData = {
-      id,
-      file,
-      previewUrl,
-      status: "pending",
-      extractedText: null,
-      code: null,
-      senderName: null,
-      phoneNumber: null,
-      province: null,
-      price: null,
-      companyName: null,
-      submitted: false,
-      created_at: new Date().toISOString(),
-      imageHash: imageHash,
-      extractionMethod: "ocr"
-    };
-    
-    // التحقق من الصورة المكررة
-    if (isDuplicateImage(newImage, images)) {
-      URL.revokeObjectURL(previewUrl);
-      toast({
-        title: "تكرار",
-        description: "تم بالفعل رفع هذه الصورة",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // إضافة الصورة إلى قائمة الانتظار
-    setFileQueue(prevQueue => [...prevQueue, { file, image: newImage }]);
-    addImage(newImage);
-    
-    // بدء المعالجة إذا لم تكن قيد التشغيل بالفعل
-    if (!isProcessing && !processingPaused) {
-      processQueue();
-    }
-  }, [addImage, images, isDuplicateImage, isProcessing, processingPaused, toast, setFileQueue]);
-
-  // وظيفة لمعالجة قائمة الانتظار
-  const processQueue = useCallback(async () => {
-    if (isProcessing || processingPaused) {
-      console.log("المعالجة قيد التشغيل بالفعل أو متوقفة مؤقتًا");
-      return;
-    }
-    
-    if (fileQueue.length === 0) {
-      console.log("قائمة الانتظار فارغة");
-      setIsProcessing(false);
-      return;
-    }
-    
-    setIsProcessing(true);
-    setActiveUploads(prev => prev + 1);
-    
-    let currentQueue = fileQueue;
-    
-    while (currentQueue.length > 0 && !processingPaused) {
-      const [nextItem, ...remainingQueue] = currentQueue;
-      setFileQueue(remainingQueue);
-      
-      try {
-        // معالجة الملف الحالي
-        const updatedImage = await processFile(nextItem);
-        
-        // تحديث الصورة في الحالة
-        updateImage(updatedImage.id, updatedImage);
-        
-        // تحديث قائمة الانتظار
-        currentQueue = remainingQueue;
-      } catch (error) {
-        console.error("خطأ أثناء معالجة قائمة الانتظار:", error);
-        setProcessingError(`فشل في معالجة قائمة الانتظار: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
-        break;
-      } finally {
-        setActiveUploads(prev => Math.max(0, prev - 1));
-      }
-    }
-    
-    setIsProcessing(false);
-    
-    if (processingPaused) {
-      console.log("تم إيقاف المعالجة مؤقتًا");
-    } else {
-      console.log("اكتملت معالجة قائمة الانتظار");
-    }
-  }, [fileQueue, isProcessing, processingPaused, processFile, updateImage, setProcessingError]);
-
-  // وظيفة لمعالجة ملف واحد
-  const processFile = async (queueItem: QueueItem) => {
-    const { file, image } = queueItem;
-    
-    // حفظ الملف في صورته الأصلية بشكل نهائي
-    try {
-      const updatedImage = await processFileDirectly(file, image);
-      setActiveUploads(prev => Math.max(0, prev - 1));
-      return updatedImage;
-    } catch (error) {
-      console.error(`فشل في معالجة الملف ${file.name}:`, error);
-      setActiveUploads(prev => Math.max(0, prev - 1));
-      
-      // إعادة الصورة مع حالة الخطأ
-      return {
-        ...image,
-        status: "error" as const,
-        extractedText: `فشل في معالجة الصورة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`
-      };
-    }
-  };
 
   // معالجة الملف بشكل فردي
   const processFileDirectly = async (file: File, image: ImageData): Promise<ImageData> => {
@@ -301,6 +184,125 @@ export const useFileUpload = (params: FileUploadParams) => {
       };
     }
   };
+
+  // وظيفة لمعالجة ملف واحد
+  const processFile = async (queueItem: QueueItem) => {
+    const { file, image } = queueItem;
+    
+    // حفظ الملف في صورته الأصلية بشكل نهائي
+    try {
+      const updatedImage = await processFileDirectly(file, image);
+      setActiveUploads(prev => Math.max(0, prev - 1));
+      return updatedImage;
+    } catch (error) {
+      console.error(`فشل في معالجة الملف ${file.name}:`, error);
+      setActiveUploads(prev => Math.max(0, prev - 1));
+      
+      // إعادة الصورة مع حالة الخطأ
+      return {
+        ...image,
+        status: "error" as const,
+        extractedText: `فشل في معالجة الصورة: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`
+      };
+    }
+  };
+
+  // وظيفة لتهيئة الصورة وإضافتها إلى قائمة الانتظار
+  const enqueueFile = useCallback(async (file: File) => {
+    const id = uuidv4();
+    const previewUrl = URL.createObjectURL(file);
+    
+    // حساب الهاش للصورة
+    const imageHash = await getImageHash(file);
+    
+    const newImage: ImageData = {
+      id,
+      file,
+      previewUrl,
+      status: "pending",
+      extractedText: null,
+      code: null,
+      senderName: null,
+      phoneNumber: null,
+      province: null,
+      price: null,
+      companyName: null,
+      submitted: false,
+      created_at: new Date().toISOString(),
+      imageHash: imageHash,
+      extractionMethod: "ocr",
+      date: new Date()
+    };
+    
+    // التحقق من الصورة المكررة
+    if (isDuplicateImage(newImage, images)) {
+      URL.revokeObjectURL(previewUrl);
+      toast({
+        title: "تكرار",
+        description: "تم بالفعل رفع هذه الصورة",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // إضافة الصورة إلى قائمة الانتظار
+    setFileQueue(prevQueue => [...prevQueue, { file, image: newImage }]);
+    addImage(newImage);
+    
+    // بدء المعالجة إذا لم تكن قيد التشغيل بالفعل
+    if (!isProcessing && !processingPaused) {
+      processQueue();
+    }
+  }, [addImage, images, isDuplicateImage, isProcessing, processingPaused, toast, setFileQueue]);
+
+  // وظيفة لمعالجة قائمة الانتظار
+  const processQueue = useCallback(async () => {
+    if (isProcessing || processingPaused) {
+      console.log("المعالجة قيد التشغيل بالفعل أو متوقفة مؤقتًا");
+      return;
+    }
+    
+    if (fileQueue.length === 0) {
+      console.log("قائمة الانتظار فارغة");
+      setIsProcessing(false);
+      return;
+    }
+    
+    setIsProcessing(true);
+    setActiveUploads(prev => prev + 1);
+    
+    let currentQueue = fileQueue;
+    
+    while (currentQueue.length > 0 && !processingPaused) {
+      const [nextItem, ...remainingQueue] = currentQueue;
+      setFileQueue(remainingQueue);
+      
+      try {
+        // معالجة الملف الحالي
+        const updatedImage = await processFile(nextItem);
+        
+        // تحديث الصورة في الحالة
+        updateImage(updatedImage.id, updatedImage);
+        
+        // تحديث قائمة الانتظار
+        currentQueue = remainingQueue;
+      } catch (error) {
+        console.error("خطأ أثناء معالجة قائمة الانتظار:", error);
+        setProcessingError(`فشل في معالجة قائمة الانتظار: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+        break;
+      } finally {
+        setActiveUploads(prev => Math.max(0, prev - 1));
+      }
+    }
+    
+    setIsProcessing(false);
+    
+    if (processingPaused) {
+      console.log("تم إيقاف المعالجة مؤقتًا");
+    } else {
+      console.log("اكتملت معالجة قائمة الانتظار");
+    }
+  }, [fileQueue, isProcessing, processingPaused, processFile, updateImage, setProcessingError]);
 
   // وظيفة لتغيير الملف
   const handleFileChange = useCallback(async (files: FileList | null) => {

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -63,7 +64,7 @@ const Index = () => {
     }
   };
   
-  // وظيفة إعادة المعالجة للصورة - دمج النسختين
+  // وظيفة إعادة المعالجة للصورة
   const handleReprocessImage = async (imageId: string) => {
     const imageToReprocess = sessionImages.find(img => img.id === imageId);
     if (!imageToReprocess) {
@@ -141,6 +142,19 @@ const Index = () => {
       title: "تم المسح",
       description: "تم مسح قائمة انتظار المعالجة",
     });
+  };
+  
+  // معالج تحميل الملفات للتوافق مع واجهة المكون
+  const handleFileUpload = (files: File[]) => {
+    // تحويل مصفوفة الملفات إلى FileList وهمية للتوافق مع handleFileChange
+    // حيث أن FileList لا يمكن إنشاؤه مباشرة
+    const dataTransfer = new DataTransfer();
+    files.forEach(file => {
+      dataTransfer.items.add(file);
+    });
+    
+    // استدعاء وظيفة معالجة الملفات الأصلية
+    handleFileChange(dataTransfer.files);
   };
   
   return (
@@ -244,7 +258,7 @@ const Index = () => {
                   <ImageUploader 
                     isProcessing={isProcessing} 
                     processingProgress={processingProgress} 
-                    onFileChange={handleFileChange} 
+                    onFileChange={handleFileUpload} 
                   />
                 </div>
               </div>

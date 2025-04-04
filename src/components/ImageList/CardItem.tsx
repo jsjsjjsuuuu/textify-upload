@@ -141,12 +141,7 @@ const CardItem = ({
                 {image.code && (
                   <div className="mt-2">
                     <AutomationButton 
-                      imageId={image.id}
-                      code={image.code}
-                      senderName={image.senderName || ""}
-                      phoneNumber={image.phoneNumber || ""}
-                      province={image.province || ""}
-                      price={image.price || ""}
+                      image={image}
                     />
                   </div>
                 )}

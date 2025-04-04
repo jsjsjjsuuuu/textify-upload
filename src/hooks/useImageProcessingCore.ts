@@ -11,6 +11,11 @@ import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState<{ total: number; current: number; errors: number; }>({
+    total: 0,
+    current: 0,
+    errors: 0
+  });
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -29,8 +34,6 @@ export const useImageProcessingCore = () => {
   } = useImageState();
   
   const {
-    processingProgress,
-    setProcessingProgress,
     bookmarkletStats,
     setBookmarkletStats,
     isImageProcessed,

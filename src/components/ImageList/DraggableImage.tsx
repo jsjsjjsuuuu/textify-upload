@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { ImageData } from '@/types/ImageData';
-import Image from 'next/image';
 
 export interface DraggableImageProps {
   image: ImageData;
