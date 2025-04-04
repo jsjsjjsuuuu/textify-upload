@@ -63,46 +63,7 @@ const Index = () => {
     }
   };
   
-  // وظيفة إعادة المعالجة للصورة
-  const handleReprocessImage = async (imageId: string) => {
-    const imageToReprocess = sessionImages.find(img => img.id === imageId);
-    if (!imageToReprocess) {
-      console.error("الصورة غير موجودة:", imageId);
-      return;
-    }
-    
-    try {
-      // تحديث حالة الصورة إلى "جاري المعالجة"
-      handleTextChange(imageId, "status", "processing");
-      
-      // التحقق من وجود ملف الصورة
-      if (!imageToReprocess.file) {
-        throw new Error("ملف الصورة غير موجود، لا يمكن إعادة المعالجة");
-      }
-      
-      // إعادة معالجة الصورة
-      await saveProcessedImage(imageToReprocess);
-      
-      toast({
-        title: "تمت إعادة المعالجة",
-        description: "تمت إعادة معالجة الصورة بنجاح",
-      });
-    } catch (error) {
-      console.error("خطأ في إعادة معالجة الصورة:", error);
-      handleTextChange(imageId, "status", "error");
-      handleTextChange(imageId, "extractedText", `فشل في إعادة المعالجة: ${error.message || "خطأ غير معروف"}`);
-      
-      toast({
-        title: "خطأ في إعادة المعالجة",
-        description: "حدث خطأ أثناء إعادة معالجة الصورة",
-        variant: "destructive"
-      });
-      
-      throw error; // إعادة رمي الخطأ للتعامل معه في المكون الأصلي
-    }
-  };
-
-  // وظيفة إعادة المعالجة للصورة
+  // وظيفة إعادة المعالجة للصورة - دمج النسختين
   const handleReprocessImage = async (imageId: string) => {
     const imageToReprocess = sessionImages.find(img => img.id === imageId);
     if (!imageToReprocess) {
