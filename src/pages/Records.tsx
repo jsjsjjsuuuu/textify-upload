@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
@@ -26,9 +27,10 @@ const Records = () => {
     reprocessImage
   } = useImageProcessing();
 
-  // تحميل الصور عند تسجيل الدخول
+  // تحميل الصور عند تسجيل الدخول - تم إصلاح الخطأ هنا
   useEffect(() => {
     if (user) {
+      // استدعاء loadUserImages بدون معلمات
       loadUserImages();
     }
   }, [user, loadUserImages]);

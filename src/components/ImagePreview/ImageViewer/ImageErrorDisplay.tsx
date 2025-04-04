@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button';
 interface ImageErrorDisplayProps {
   onRetry: () => void;
   errorMessage?: string;
-  retryCount?: number; // إضافة خاصية retryCount اختيارية
+  retryCount?: number;
 }
 
 const ImageErrorDisplay: React.FC<ImageErrorDisplayProps> = ({ 
   onRetry,
   errorMessage = "تعذر تحميل الصورة",
-  retryCount = 0 // إعطاء قيمة افتراضية
+  retryCount = 0
 }) => {
   return (
     <div className="flex flex-col items-center justify-center h-full w-full p-6 bg-gray-50 dark:bg-gray-800/50 rounded-md">

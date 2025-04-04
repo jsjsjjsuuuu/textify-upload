@@ -1,57 +1,49 @@
 
-import { Badge } from "@/components/ui/badge";
+import React from 'react';
 
 interface ImageInfoBadgesProps {
   number?: number;
   date: Date;
   confidence?: number;
-  extractionMethod?: "ocr" | "gemini";
+  extractionMethod?: string;
   formatDate: (date: Date) => string;
 }
 
-const ImageInfoBadges = ({
+const ImageInfoBadges: React.FC<ImageInfoBadgesProps> = ({
   number,
   date,
   confidence,
   extractionMethod,
   formatDate
-}: ImageInfoBadgesProps) => {
-  // تقييم دقة الاستخراج
-  const getAccuracyColor = (confidence: number = 0) => {
-    if (confidence >= 90) return "bg-green-500";
-    if (confidence >= 70) return "bg-emerald-500";
-    if (confidence >= 50) return "bg-amber-500";
-    return "bg-red-500";
-  };
-
+}) => {
+  if (!date && !number && !confidence && !extractionMethod) return null;
+  
   return (
-    <>
-      {number !== undefined && (
-        <div className="absolute top-2 right-2 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
-          صورة {number}
+    <div className="absolute top-4 left-4 flex flex-wrap gap-2 max-w-[70%]">
+      {number && (
+        <div className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 shadow-sm border border-slate-200 dark:border-slate-700">
+          رقم: {number}
         </div>
       )}
       
-      <div className="flex items-center justify-between w-full mt-4">
-        <p className="text-xs text-muted-foreground">
+      {date && (
+        <div className="px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 shadow-sm border border-blue-200 dark:border-blue-800">
           {formatDate(date)}
-        </p>
-        
-        <div className="flex items-center gap-2">
-          {extractionMethod && (
-            <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700">
-              {extractionMethod === "gemini" ? "Gemini AI" : "OCR"}
-            </Badge>
-          )}
-          
-          {confidence !== undefined && (
-            <Badge className={`text-xs ${getAccuracyColor(confidence)} text-white`}>
-              دقة الاستخراج: {Math.round(confidence)}%
-            </Badge>
-          )}
         </div>
-      </div>
-    </>
+      )}
+      
+      {confidence && (
+        <div className="px-2.5 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300 shadow-sm border border-purple-200 dark:border-purple-800">
+          الدقة: {confidence}%
+        </div>
+      )}
+      
+      {extractionMethod && (
+        <div className="px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300 shadow-sm border border-emerald-200 dark:border-emerald-800">
+          {extractionMethod === 'gemini' ? 'Gemini AI' : 'OCR'}
+        </div>
+      )}
+    </div>
   );
 };
 
