@@ -170,13 +170,13 @@ export const useImageProcessing = () => {
       }
       
       // تحديث حالة الصورة إلى "جاري الإرسال"
-      updateImage(imageId, { status: "processing" }); // تصحيح من "submitting" إلى "processing"
+      updateImage(imageId, { status: "processing" }); 
       
       // حفظ الصورة في قاعدة البيانات
       await saveImageToDatabase(image);
       
       // تحديث حالة الصورة إلى "تم الإرسال"
-      updateImage(imageId, { status: "completed" }); // تصحيح من "submitted" إلى "completed"
+      updateImage(imageId, { status: "completed" }); 
       
       toast({
         title: "تم الإرسال",
@@ -293,7 +293,7 @@ export const useImageProcessing = () => {
   });
   
   // تعديل وظيفة handleFileChange لتقبل File[] أو FileList
-  const handleFileChange = useCallback((files: File[] | FileList | null) => {
+  const handleFileChange = useCallback((files: File[] | FileList) => {
     if (!files) return;
     
     // إذا كان من نوع FileList، حوله إلى مصفوفة
@@ -324,9 +324,11 @@ export const useImageProcessing = () => {
     queueLength,
     retryProcessing,
     pauseProcessing,
+    resumeProcessing,
     clearQueue,
     clearImageCache,
     useGemini: useGeminiOption,
+    setUseGemini: setUseGeminiOption,
     processingError,
     reprocessImage
   };

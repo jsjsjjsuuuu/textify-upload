@@ -5,7 +5,6 @@ import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { ImageData } from '@/types/ImageData';
 import FileUploader from '@/components/FileUploader';
 import ImageViewer from '@/components/ImageViewer';
-import NoImagesPlaceholder from '@/components/NoImagesPlaceholder';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import Header from '@/components/Header';
@@ -20,7 +19,7 @@ const Index = () => {
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("upload");
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const {
@@ -35,20 +34,19 @@ const Index = () => {
     clearSessionImages,
     loadUserImages,
     pauseProcessing,
-    resumeProcessing,
     retryProcessing,
     clearQueue,
     useGemini,
-    setUseGemini: setUseGeminiOption,
+    setUseGemini,
     reprocessImage
   } = useImageProcessing();
 
   // تحميل الصور عند تسجيل الدخول
   useEffect(() => {
-    if (user && !authLoading) {
+    if (user) {
       loadUserImages();
     }
-  }, [user, authLoading, loadUserImages]);
+  }, [user, loadUserImages]);
 
   // وظيفة إعادة المعالجة
   const handleReprocessImage = async (imageId: string) => {
@@ -85,22 +83,11 @@ const Index = () => {
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.bmp', '.tiff']
     },
-    onDrop: async (acceptedFiles) => {
+    onDrop: async (acceptedFiles: File[]) => {
       console.log(`تم استلام ${acceptedFiles.length} ملف`);
       await handleFileChange(acceptedFiles);
     }
   });
-
-  // عرض شاشة التحميل
-  if (authLoading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      </Layout>
-    );
-  }
 
   // فرز الصور تنازليًا حسب وقت الإنشاء
   const sortedImages = [...sessionImages].sort((a, b) => {
@@ -137,7 +124,7 @@ const Index = () => {
                   <input
                     type="checkbox"
                     checked={useGemini}
-                    onChange={(e) => setUseGeminiOption(e.target.checked)}
+                    onChange={(e) => setUseGemini(e.target.checked)}
                     className="ml-1 w-4 h-4"
                   />
                 </div>
