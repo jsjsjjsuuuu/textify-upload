@@ -25,11 +25,11 @@ const ImageErrorDisplay: React.FC<ImageErrorDisplayProps> = ({
   
   // التحقق مما إذا كان الخطأ متعلقًا بمفتاح API
   const isApiError = isApiKeyError || 
-    errorMessage.includes('API key') || 
-    errorMessage.includes('مفتاح API') ||
-    errorMessage.includes('API_KEY_INVALID') ||
-    errorMessage.includes('quota') ||
-    errorMessage.includes('حصة');
+    errorMessage?.includes('API key') || 
+    errorMessage?.includes('مفتاح API') ||
+    errorMessage?.includes('API_KEY_INVALID') ||
+    errorMessage?.includes('quota') ||
+    errorMessage?.includes('حصة');
   
   return (
     <div className="flex flex-col items-center justify-center h-full w-full p-6 bg-gray-50 dark:bg-gray-800/50 rounded-md">

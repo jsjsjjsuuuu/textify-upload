@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause, Key } from 'lucide-react';
+import { ArrowRight, Info, Trash2, RefreshCw, Clock } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import ImageUploader from '@/components/ImageUploader';
@@ -12,16 +13,14 @@ import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContaine
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
-import { useGeminiProcessing } from '@/hooks/useGeminiProcessing';
 import GeminiApiManager from '@/components/GeminiApiManager';
 import WelcomeScreen from '@/components/WelcomeScreen';
+import ProcessingStateDisplay from '@/components/ProcessingStateDisplay';
 
 const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { resetApiKeys, getApiStats } = useGeminiProcessing();
   const [showWelcomeScreen, setShowWelcomeScreen] = useState(false);
   const [apiKeyError, setApiKeyError] = useState(false);
   
@@ -58,24 +57,21 @@ const Index = () => {
   // التحقق من حالة مفتاح API عند تحميل الصفحة
   useEffect(() => {
     const checkApiKeyStatus = () => {
-      const stats = getApiStats();
-      if (stats.blocked > 0 || stats.rateLimited > 0) {
+      // تحقق من وجود رسائل خطأ مفتاح API في الصور
+      const hasApiKeyErrors = sessionImages.some(img => img.apiKeyError === true);
+      
+      if (hasApiKeyErrors) {
+        setApiKeyError(true);
         if (!localStorage.getItem('api_key_warning_dismissed')) {
-          setApiKeyError(true);
           setShowWelcomeScreen(true);
         }
+      } else {
+        setApiKeyError(false);
       }
     };
     
     checkApiKeyStatus();
-    
-    // تحقق من وجود رسائل خطأ مفتاح API في الصور
-    const hasApiKeyErrors = sessionImages.some(img => img.apiKeyError === true);
-    if (hasApiKeyErrors && !localStorage.getItem('api_key_warning_dismissed')) {
-      setApiKeyError(true);
-      setShowWelcomeScreen(true);
-    }
-  }, [getApiStats, sessionImages]);
+  }, [sessionImages]);
   
   // وظيفة لإغلاق شاشة الترحيب وتذكر عدم عرضها مرة أخرى
   const handleCloseWelcomeScreen = () => {
@@ -96,15 +92,6 @@ const Index = () => {
     }
   };
   
-  // وظيفة إعادة تعيين مفاتيح API
-  const handleResetApiKeys = () => {
-    resetApiKeys();
-    toast({
-      title: "تم إعادة تعيين المفاتيح",
-      description: "تم إعادة تعيين مفاتيح API بنجاح",
-    });
-  };
-  
   // وظيفة إعادة المحاولة للمعالجة
   const handleRetryProcessing = () => {
     if (retryProcessing()) {
@@ -115,7 +102,7 @@ const Index = () => {
     } else {
       toast({
         title: "تنبيه",
-        description: "لا توجد صور في قائمة الانتظار حالياً",
+        description: "لا توجد صور في قائمة الانتظار حالياً أو مفتاح API غير صالح",
         variant: "default"
       });
     }
@@ -180,44 +167,18 @@ const Index = () => {
                 </Button>
               </div>
               
-              {/* معلومات حول حالة المعالجة */}
-              {(isProcessing || queueLength > 0) && (
-                <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                  <Clock className="h-4 w-4 text-blue-500 animate-spin" />
-                  <AlertDescription className="text-sm text-blue-600 dark:text-blue-300 flex items-center justify-between">
-                    <div>
-                      جاري معالجة الصور... 
-                      <div className="mt-1 space-x-2 rtl:space-x-reverse">
-                        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
-                          الصور النشطة: {activeUploads}
-                        </Badge>
-                        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
-                          في قائمة الانتظار: {queueLength}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handlePauseProcessing} 
-                        className="text-yellow-600 border-yellow-300 bg-yellow-50 hover:bg-yellow-100"
-                      >
-                        <Pause className="h-3 w-3 ml-1" />
-                        إيقاف مؤقت
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handleRetryProcessing} 
-                        className="text-blue-600 border-blue-300 bg-blue-50 hover:bg-blue-100"
-                      >
-                        <RefreshCw className="h-3 w-3 ml-1" />
-                        إعادة تشغيل
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
+              {/* عرض حالة المعالجة */}
+              {(isProcessing || activeUploads > 0 || queueLength > 0) && (
+                <div className="mt-6">
+                  <ProcessingStateDisplay
+                    activeUploads={activeUploads}
+                    queueLength={queueLength}
+                    onRetry={handleRetryProcessing}
+                    onPause={handlePauseProcessing}
+                    onClear={handleClearQueue}
+                    isProcessing={isProcessing}
+                  />
+                </div>
               )}
               
               {/* إضافة مكون إدارة مفاتيح Gemini API */}
@@ -271,17 +232,6 @@ const Index = () => {
               <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">الصور التي تم رفعها</h2>
-                  
-                  {(isProcessing || queueLength > 0) && (
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
-                        الصور النشطة: {activeUploads}
-                      </Badge>
-                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
-                        في قائمة الانتظار: {queueLength}
-                      </Badge>
-                    </div>
-                  )}
                 </div>
                 <p className="text-muted-foreground mb-8">
                   هذه الصور التي تم رفعها في الجلسة الحالية. ستتم معالجتها وحفظها في السجلات.

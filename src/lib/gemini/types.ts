@@ -1,8 +1,7 @@
 
-/**
- * أنواع البيانات المستخدمة في وظائف Gemini
- */
+// أنواع خاصة بـ Gemini API
 
+// معلمات استخراج البيانات
 export interface GeminiExtractParams {
   apiKey: string;
   imageBase64: string;
@@ -14,15 +13,16 @@ export interface GeminiExtractParams {
   retryDelayMs?: number;
 }
 
+// نوع طلب Gemini
 export interface GeminiRequest {
   contents: {
-    parts: {
+    parts: Array<{
       text?: string;
       inline_data?: {
         mime_type: string;
         data: string;
       };
-    }[];
+    }>;
   }[];
   generationConfig: {
     temperature: number;
@@ -32,39 +32,34 @@ export interface GeminiRequest {
   };
 }
 
+// نوع استجابة Gemini
 export interface GeminiResponse {
-  candidates?: {
+  candidates: Array<{
     content: {
-      parts: {
-        text?: string;
-      }[];
+      parts: Array<{
+        text: string;
+      }>;
     };
     finishReason?: string;
-  }[];
+    safetyRatings?: any[];
+  }>;
   promptFeedback?: {
     blockReason?: string;
-    safetyRatings?: {
-      category: string;
-      probability: string;
-    }[];
+    safetyRatings?: any[];
   };
 }
 
-// أنواع البيانات المستخرجة
-export interface ExtractedData {
-  code?: string;
-  senderName?: string;
-  phoneNumber?: string;
-  province?: string;
-  price?: string;
-  companyName?: string;
-  [key: string]: string | undefined;
+// نوع استخراج البيانات
+export interface GeminiExtractedData {
+  extractedText: string;
+  parsedData: any;
+  confidence?: number;
 }
 
-// إعدادات نماذج Gemini
-export interface GeminiModelSettings {
-  maxTokens: number;
-  temperature: number;
-  topK: number;
-  topP: number;
+// نوع نتيجة الاستخراج لإضافة معلومات حول أخطاء المفتاح
+export interface ApiResult {
+  success: boolean;
+  message: string;
+  data?: GeminiExtractedData | Record<string, any>;
+  apiKeyError?: boolean; // إضافة حقل لتحديد ما إذا كان الخطأ متعلقًا بمفتاح API
 }

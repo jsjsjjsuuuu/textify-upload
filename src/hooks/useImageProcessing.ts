@@ -2,8 +2,9 @@
 import { formatDate } from "@/utils/dateFormatter";
 import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
 import { useState, useEffect, useCallback } from "react";
-import { DEFAULT_GEMINI_API_KEY, resetAllApiKeys } from "@/lib/gemini/apiKeyManager";
+import { DEFAULT_GEMINI_API_KEY, resetAllApiKeys, getNextApiKey } from "@/lib/gemini/apiKeyManager";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export const useImageProcessing = () => {
   const coreProcessing = useImageProcessingCore();
@@ -20,13 +21,20 @@ export const useImageProcessing = () => {
   
   // التأكد من تعيين مفتاح Gemini عند بدء التشغيل وإعادة تعيين جميع المفاتيح
   useEffect(() => {
-    // تعيين المفتاح الجديد دائمًا
-    localStorage.setItem('geminiApiKey', DEFAULT_GEMINI_API_KEY);
-    console.log("تم تعيين مفتاح Gemini API الرئيسي عند بدء التطبيق");
-    
     // إعادة تعيين جميع المفاتيح عند بدء التطبيق
     resetAllApiKeys();
     console.log("تم إعادة تعيين جميع مفاتيح API عند بدء التطبيق");
+    
+    // أولوية استخدام المفتاح المخصص إذا كان متاحاً
+    const useCustomKey = localStorage.getItem('use_custom_gemini_api_key') === 'true';
+    const customKey = localStorage.getItem('custom_gemini_api_key');
+    
+    if (useCustomKey && customKey && customKey.length > 20) {
+      console.log("استخدام مفتاح API مخصص من المستخدم");
+    } else {
+      // تعيين المفتاح الافتراضي إذا لم يكن هناك مفتاح مخصص
+      console.log("تم تعيين مفتاح Gemini API الافتراضي عند بدء التطبيق");
+    }
     
     // محاولة معالجة الصور العالقة في حالة "قيد الانتظار"
     if (coreProcessing.images && coreProcessing.images.length > 0) {
@@ -73,6 +81,17 @@ export const useImageProcessing = () => {
   
   // يمكن إعادة تشغيل عملية المعالجة عندما تتوقف
   const retryProcessing = useCallback(() => {
+    // التأكد من استخدام مفتاح صالح
+    const apiKey = getNextApiKey();
+    if (!apiKey || apiKey.length < 10) {
+      toast({
+        title: "خطأ في المفتاح",
+        description: "لم يتم العثور على مفتاح API صالح. يرجى التحقق من إعدادات المفتاح.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
     // إعادة تعيين جميع مفاتيح API قبل إعادة التشغيل
     resetAllApiKeys();
     console.log("تم إعادة تعيين جميع مفاتيح API قبل إعادة المحاولة");

@@ -158,7 +158,8 @@ export async function extractDataWithGemini({
       
       return {
         success: false,
-        message: `خطأ من Gemini API: ${response.status} - ${errorText}`
+        message: `خطأ من Gemini API: ${response.status} - ${errorText}`,
+        apiKeyError: true
       };
     }
     
@@ -185,7 +186,8 @@ export async function extractDataWithGemini({
       
       return {
         success: false,
-        message: `تم حظر الاستعلام: ${data.promptFeedback.blockReason}`
+        message: `تم حظر الاستعلام: ${data.promptFeedback.blockReason}`,
+        apiKeyError: true
       };
     }
 
@@ -330,6 +332,11 @@ export async function extractDataWithGemini({
       userFriendlyMessage = 'تم منع الطلب بسبب قيود CORS. حاول استخدام الموقع الرئيسي بدلاً من بيئة المعاينة.';
     } else if (errorMessage.includes('quota') || errorMessage.includes('limit')) {
       userFriendlyMessage = 'تم تجاوز حد الاستخدام. جاري تبديل المفتاح تلقائياً.';
+      return {
+        success: false,
+        message: userFriendlyMessage,
+        apiKeyError: true
+      };
     }
     
     return {
