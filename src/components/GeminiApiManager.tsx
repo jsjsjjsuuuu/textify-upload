@@ -9,7 +9,8 @@ import { useGeminiProcessing } from '@/hooks/useGeminiProcessing';
 import { Info } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { getCurrentApiKey, getApiKeyStats } from '@/lib/gemini';
+import { getCurrentApiKey, getApiKeyStats, isCustomKeyActive } from '@/lib/gemini';
+import GeminiModelSelector from './GeminiModelSelector';
 
 const GeminiApiManager = () => {
   const [apiKey, setApiKey] = useState('');
@@ -104,7 +105,7 @@ const GeminiApiManager = () => {
   
   // الحصول على معلومات المفتاح الحالي
   const currentApiKey = getCurrentApiKey();
-  const isUsingDefault = currentApiKey.includes('AIzaSy');
+  const isUsingDefault = !isCustomKeyActive();
 
   return (
     <Card className="shadow-sm">
@@ -160,6 +161,9 @@ const GeminiApiManager = () => {
               </a>
             </p>
           </div>
+          
+          {/* إضافة محدد النموذج */}
+          <GeminiModelSelector className="mt-4" />
           
           <Separator className="my-4" />
           

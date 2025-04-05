@@ -21,10 +21,10 @@ export async function extractDataWithGemini({
   imageBase64,
   extractionPrompt,
   temperature = 0.1,
-  modelVersion = 'gemini-1.5-flash', // استخدام النموذج الأسرع افتراضياً
+  modelVersion = 'gemini-2.0-flash', // تحديث للنموذج الجديد
   enhancedExtraction = true,
-  maxRetries = 2, // تقليل عدد المحاولات
-  retryDelayMs = 3000 // تقليل مدة الانتظار
+  maxRetries = 2,
+  retryDelayMs = 3000
 }: GeminiExtractParams): Promise<ApiResult> {
   if (!apiKey) {
     console.error("Gemini API Key مفقود");
@@ -51,7 +51,7 @@ export async function extractDataWithGemini({
   const timeSinceLastCall = currentTime - lastCallTime;
   
   // التأكد من أن هناك على الأقل 2 ثوانٍ بين الطلبات لنفس المفتاح
-  const minDelayBetweenCalls = 2000; // 2 ثانية (زيادة من 1.5 ثانية)
+  const minDelayBetweenCalls = 2000; // 2 ثانية
   
   if (timeSinceLastCall < minDelayBetweenCalls) {
     const delayNeeded = minDelayBetweenCalls - timeSinceLastCall;
@@ -68,13 +68,6 @@ export async function extractDataWithGemini({
     console.log("أول 5 أحرف من مفتاح API:", apiKey.substring(0, 5));
     console.log("طول صورة Base64:", imageBase64.length);
     console.log("استخدام إصدار النموذج:", modelVersion);
-    
-    // التحقق من حجم صورة Base64 وتقليلها إذا كانت كبيرة جدًا
-    if (imageBase64.length > 1000000) { // أكثر من ~1MB
-      console.log("حجم الصورة كبير جدًا، محاولة تقليل جودة Base64...");
-      // هنا يمكننا إما تقليل جودة الصورة أو استخدام ضغط إضافي
-      // لكن في هذه الحالة، سنستمر ونلاحظ إذا كان الطلب سينجح
-    }
     
     // تنظيف معرف صورة Base64
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
@@ -96,7 +89,7 @@ export async function extractDataWithGemini({
       ],
       generationConfig: {
         temperature: temperature,
-        maxOutputTokens: 800, // تقليل حد الإخراج لتسريع الاستجابة
+        maxOutputTokens: 800,
         topK: 40,
         topP: 0.95
       }
@@ -114,8 +107,7 @@ export async function extractDataWithGemini({
         "x-goog-api-key": apiKey
       },
       body: JSON.stringify(requestBody),
-      // إضافة مهلة أطول للطلبات
-      signal: AbortSignal.timeout(25000) // 25 ثانية (زيادة من 15 ثانية)
+      signal: AbortSignal.timeout(25000) // 25 ثانية
     };
     
     // تنفيذ الطلب مع قياس الوقت
@@ -260,7 +252,7 @@ export async function extractDataWithGemini({
             "x-goog-api-key": apiKey
           },
           body: JSON.stringify(textOnlyRequestBody),
-          signal: AbortSignal.timeout(15000) // 15 ثواني (زيادة من 10 ثواني)
+          signal: AbortSignal.timeout(15000)
         });
         
         if (textOnlyResponse.ok) {
@@ -359,7 +351,8 @@ export async function testGeminiConnection(apiKey: string): Promise<ApiResult> {
   }
 
   try {
-    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    // استخدام النموذج الجديد للاختبار
+    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
     
     const fetchOptions = {
       method: "POST",

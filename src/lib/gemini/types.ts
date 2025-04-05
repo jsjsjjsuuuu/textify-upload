@@ -1,40 +1,7 @@
 
-import { ApiResult } from "../apiService";
-
-export interface GeminiRequest {
-  contents: {
-    parts: {
-      text?: string;
-      inline_data?: {
-        mime_type: string;
-        data: string;
-      }
-    }[];
-    role?: string;
-  }[];
-  generationConfig?: {
-    temperature?: number;
-    topP?: number;
-    topK?: number;
-    maxOutputTokens?: number;
-  };
-}
-
-export interface GeminiResponse {
-  candidates: {
-    content: {
-      parts: {
-        text: string;
-      }[];
-      role: string;
-    };
-    finishReason: string;
-    index: number;
-  }[];
-  promptFeedback: {
-    blockReason?: string;
-  };
-}
+/**
+ * أنواع البيانات المستخدمة في وظائف Gemini
+ */
 
 export interface GeminiExtractParams {
   apiKey: string;
@@ -45,4 +12,59 @@ export interface GeminiExtractParams {
   enhancedExtraction?: boolean;
   maxRetries?: number;
   retryDelayMs?: number;
+}
+
+export interface GeminiRequest {
+  contents: {
+    parts: {
+      text?: string;
+      inline_data?: {
+        mime_type: string;
+        data: string;
+      };
+    }[];
+  }[];
+  generationConfig: {
+    temperature: number;
+    maxOutputTokens: number;
+    topK: number;
+    topP: number;
+  };
+}
+
+export interface GeminiResponse {
+  candidates?: {
+    content: {
+      parts: {
+        text?: string;
+      }[];
+    };
+    finishReason?: string;
+  }[];
+  promptFeedback?: {
+    blockReason?: string;
+    safetyRatings?: {
+      category: string;
+      probability: string;
+    }[];
+  };
+}
+
+// أنواع البيانات المستخرجة
+export interface ExtractedData {
+  code?: string;
+  senderName?: string;
+  phoneNumber?: string;
+  province?: string;
+  price?: string;
+  companyName?: string;
+  [key: string]: string | undefined;
+}
+
+// إعدادات نماذج Gemini
+export interface GeminiModelSettings {
+  maxTokens: number;
+  temperature: number;
+  topK: number;
+  topP: number;
 }

@@ -17,6 +17,7 @@ import { updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { isPreviewEnvironment } from "@/utils/automationServerUrl";
 import { toast as sonnerToast } from "sonner";
 import { autoCompressBeforeProcessing, enhanceImageForOCR } from "@/utils/imageCompression";
+import { GeminiModelType, selectOptimalModel } from "@/lib/gemini/models";
 
 export const useGeminiProcessing = () => {
   const [useGemini, setUseGemini] = useState(true);
@@ -145,6 +146,10 @@ export const useGeminiProcessing = () => {
         // تأخير قبل الاستخراج 
         await sleepBetweenRequests(2000);
         
+        // اختيار النموذج المناسب بناءً على حجم الصورة وتعقيدها
+        const selectedModel = selectOptimalModel(processedFile.size);
+        console.log("النموذج المختار للاستخراج:", selectedModel);
+        
         // إضافة معلومات تشخيصية
         console.log("بدء استدعاء extractDataWithGemini");
         console.log("إعدادات الاستخراج:", {
@@ -155,7 +160,8 @@ export const useGeminiProcessing = () => {
           retryDelayMs: 3000,
           fileSizeOriginalMB: fileSizeMB.toFixed(2),
           fileSizeProcessedMB: (processedFile.size / (1024 * 1024)).toFixed(2),
-          isCustomKey: isCustomKeyActive()
+          isCustomKey: isCustomKeyActive(),
+          modelVersion: selectedModel
         });
         
         // محاولة استخراج البيانات
@@ -163,9 +169,9 @@ export const useGeminiProcessing = () => {
           apiKey: geminiApiKey,
           imageBase64,
           enhancedExtraction: true,
-          maxRetries: 2, // تقليل عدد المحاولات
+          maxRetries: 2, 
           retryDelayMs: 3000,
-          modelVersion: fileSizeMB > 5 ? 'gemini-1.5-flash' : 'gemini-1.5-pro'  // استخدام نموذج أسرع للصور الأكبر
+          modelVersion: selectedModel
         });
         
         console.log("نتيجة استخراج Gemini:", extractionResult);

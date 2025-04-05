@@ -2,7 +2,7 @@
 // نظام لإدارة مفتاح Gemini API
 
 // المفتاح الرئيسي الافتراضي
-export const DEFAULT_GEMINI_API_KEY: string = "AIzaSyAW9EbEuvXYdg6FmLjlhl_jXv-SGtFHCC4";
+export const DEFAULT_GEMINI_API_KEY: string = "AIzaSyArEWo-MTKKmM_xYHrjHmNYnIcw2H6irJ4";
 
 // قائمة المفاتيح (الآن تحتفظ فقط بمفتاح واحد نشط)
 let ACTIVE_API_KEY: string = DEFAULT_GEMINI_API_KEY;
@@ -156,3 +156,4 @@ export const addApiKey = (newKey: string): boolean => {
 export const isCustomKeyActive = (): boolean => {
   return IS_CUSTOM_KEY;
 };
+
