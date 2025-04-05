@@ -7,7 +7,8 @@ export {
   getNextApiKey, 
   reportApiKeyError,
   resetAllApiKeys,
-  getApiKeyStats
+  getApiKeyStats,
+  addApiKey  // تصدير وظيفة إضافة مفتاح API الجديدة
 } from "./apiKeyManager";
 
 // تصدير وظائف API الرئيسية
