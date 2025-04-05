@@ -1,60 +1,37 @@
 
-// نظام لإدارة وتبديل مفاتيح Gemini API
+// نظام لإدارة مفتاح Gemini API
 
 // المفتاح الرئيسي الافتراضي
 export const DEFAULT_GEMINI_API_KEY: string = "AIzaSyAW9EbEuvXYdg6FmLjlhl_jXv-SGtFHCC4";
 
-// قائمة المفاتيح الإضافية (يمكن للمستخدمين إضافة المزيد)
-const API_KEYS: string[] = [
-  DEFAULT_GEMINI_API_KEY, 
-  "AIzaSyAHm38lmQWCN5S6rxIM_J7zrbFkFdPUdW4",
-  "AIzaSyAPiPCTjtxn1Ay9nWKGYiDPF09BitbKaXg",
-  // إضافة مفاتيح جديدة
-  "AIzaSyDowfngYll7iUELScTYX2ECGbZ1hfJrjUU",
-  "AIzaSyCcPiXVhMu8LrYcp_cFXU4BJXvKnBKUVX8"
-];
+// قائمة المفاتيح (الآن تحتوي فقط على المفتاح الافتراضي والمفاتيح المضافة من قبل المستخدم)
+const API_KEYS: string[] = [DEFAULT_GEMINI_API_KEY];
 
-// مؤشر يشير إلى المفتاح الحالي
+// مؤشر للمفتاح الحالي
 let currentKeyIndex = 0;
 
 // حالة المفاتيح
 const keyStatus = new Map<string, { errors: number, lastError: string, blocked: boolean }>();
 
-// تهيئة حالة المفاتيح
-API_KEYS.forEach(key => {
-  keyStatus.set(key, { errors: 0, lastError: "", blocked: false });
-});
+// تهيئة حالة المفتاح الافتراضي
+keyStatus.set(DEFAULT_GEMINI_API_KEY, { errors: 0, lastError: "", blocked: false });
 
 // تاريخ آخر إعادة تعيين
 let lastResetTime = Date.now();
 
-// الحصول على المفتاح التالي للدوران
+// الحصول على المفتاح الحالي (نستخدم المفتاح الأحدث إذا كان موجوداً، وإلا نستخدم المفتاح الافتراضي)
 export const getNextApiKey = (): string => {
-  // التحقق من وجود مفاتيح غير محظورة
-  const activeKeys = API_KEYS.filter(key => !keyStatus.get(key)?.blocked);
-  
-  if (activeKeys.length === 0) {
-    console.warn("جميع مفاتيح API محظورة! إعادة تعيين المفتاح الرئيسي...");
-    keyStatus.set(DEFAULT_GEMINI_API_KEY, { errors: 0, lastError: "", blocked: false });
-    currentKeyIndex = API_KEYS.indexOf(DEFAULT_GEMINI_API_KEY);
-    return DEFAULT_GEMINI_API_KEY;
-  }
-  
-  // البحث عن المفتاح التالي غير المحظور
-  let attempts = 0;
-  while (attempts < API_KEYS.length) {
-    currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
-    const key = API_KEYS[currentKeyIndex];
+  // إذا كان هناك مفتاح مستخدم مضاف، نستخدمه أولاً
+  if (API_KEYS.length > 1) {
+    const userKey = API_KEYS[API_KEYS.length - 1]; // آخر مفتاح تم إضافته
     
-    if (!keyStatus.get(key)?.blocked) {
-      return key;
+    // التحقق أن المفتاح ليس محظوراً
+    if (!keyStatus.get(userKey)?.blocked) {
+      return userKey;
     }
-    
-    attempts++;
   }
   
-  // إذا لم يتم العثور على مفتاح غير محظور، استخدم المفتاح الرئيسي
-  currentKeyIndex = API_KEYS.indexOf(DEFAULT_GEMINI_API_KEY);
+  // استخدام المفتاح الافتراضي كخطة بديلة
   return DEFAULT_GEMINI_API_KEY;
 };
 
@@ -68,7 +45,7 @@ export const reportApiKeyError = (key: string, error: string): void => {
   
   console.warn(`خطأ لمفتاح API ${key.substring(0, 10)}...: ${error} (${status.errors} أخطاء)`);
   
-  // تحسين تحليل نوع الأخطاء
+  // تحليل نوع الخطأ
   if (
     error.includes('quota') || 
     error.includes('rate limit') || 
@@ -89,7 +66,7 @@ export const reportApiKeyError = (key: string, error: string): void => {
 
 // الحصول على مفتاح API الحالي
 export const getCurrentApiKey = (): string => {
-  return API_KEYS[currentKeyIndex];
+  return getNextApiKey(); // نستخدم نفس المنطق
 };
 
 // إعادة تعيين حالة مفتاح API محدد
@@ -105,7 +82,6 @@ export const resetAllApiKeys = (): void => {
   API_KEYS.forEach(key => {
     keyStatus.set(key, { errors: 0, lastError: "", blocked: false });
   });
-  currentKeyIndex = 0;
   lastResetTime = Date.now();
   console.log("تم إعادة تعيين جميع مفاتيح API");
 };
@@ -134,19 +110,22 @@ export const getApiKeyStats = (): { total: number, active: number, blocked: numb
   };
 };
 
-// إضافة وظيفة لإضافة مفتاح API جديد
+// إضافة مفتاح API جديد (الآن يحل محل أي مفاتيح مضافة سابقًا)
 export const addApiKey = (newKey: string): boolean => {
   // التحقق من صحة المفتاح (يجب أن يكون بطول معين)
   if (newKey.length < 20) {
     return false;
   }
   
-  // التحقق من عدم وجود المفتاح بالفعل
-  if (API_KEYS.includes(newKey)) {
-    return false;
+  // إزالة أي مفاتيح مضافة سابقًا (غير المفتاح الافتراضي)
+  while (API_KEYS.length > 1) {
+    const keyToRemove = API_KEYS.pop();
+    if (keyToRemove) {
+      keyStatus.delete(keyToRemove);
+    }
   }
   
-  // إضافة المفتاح إلى القائمة
+  // إضافة المفتاح الجديد
   API_KEYS.push(newKey);
   keyStatus.set(newKey, { errors: 0, lastError: "", blocked: false });
   console.log(`تمت إضافة مفتاح API جديد: ${newKey.substring(0, 10)}...`);

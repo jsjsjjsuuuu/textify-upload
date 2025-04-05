@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { motion } from "framer-motion";
@@ -11,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays, Trash, RefreshCw } from "lucide-react";
+import { Search, ChevronDown, ArrowUp, ArrowDown, File, Receipt, CalendarDays, Trash } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,7 @@ import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ImageErrorDisplay from "@/components/ImagePreview/ImageViewer/ImageErrorDisplay";
+import GeminiApiManager from "@/components/GeminiApiManager";
 
 // صورة تعبئة افتراضية للصور التي لا يمكن تحميلها
 const PLACEHOLDER_IMAGE_URL = '/placeholder-image.jpg';
@@ -40,7 +40,6 @@ const Records = () => {
     isSubmitting,
     handleDelete,
     handleSubmitToApi,
-    formatDate: formatImageDate,
     loadUserImages,
     saveProcessedImage
   } = useImageProcessing();
@@ -72,43 +71,6 @@ const Records = () => {
       toast({
         title: "خطأ في الحذف",
         description: "حدث خطأ أثناء محاولة حذف السجل",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  // وظيفة لإعادة معالجة صورة
-  const handleReprocessImage = async (imageId: string) => {
-    try {
-      const imageToReprocess = images.find(img => img.id === imageId);
-      if (!imageToReprocess) {
-        toast({
-          title: "خطأ",
-          description: "لم يتم العثور على الصورة",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      toast({
-        title: "جاري المعالجة",
-        description: "جاري إعادة معالجة الصورة..."
-      });
-      
-      await saveProcessedImage(imageToReprocess);
-      
-      toast({
-        title: "تم بنجاح",
-        description: "تم إعادة معالجة الصورة بنجاح"
-      });
-      
-      // إعادة تحميل البيانات بعد المعالجة
-      loadUserImages();
-    } catch (error) {
-      console.error("خطأ في إعادة معالجة الصورة:", error);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء إعادة معالجة الصورة",
         variant: "destructive"
       });
     }
@@ -166,7 +128,7 @@ const Records = () => {
       toast({
         title: "إعادة تحميل",
         description: "جاري إعادة تحميل الصورة من URL المعاينة..."
-      });
+        });
     }
   };
 
@@ -328,6 +290,9 @@ const Records = () => {
             </Button>
           </div>
 
+          {/* إضافة مكون إدارة مفتاح API */}
+          <GeminiApiManager />
+
           {/* فلتر البحث */}
           <div className="relative">
             <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -452,7 +417,7 @@ const Records = () => {
                           {image.number || "-"}
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <span className="text-muted-foreground">{formatImageDate(image.date)}</span>
+                          <span className="text-muted-foreground">{formatDate(image.date)}</span>
                         </TableCell>
                         <TableCell className="px-6 py-4">
                           <div className="w-16 h-16 rounded-lg overflow-hidden bg-transparent relative flex items-center justify-center border border-border/40 dark:border-gray-700/40">
@@ -509,17 +474,7 @@ const Records = () => {
                             >
                               <Trash className="h-4 w-4" />
                             </Button>
-                            
-                            {/* زر إعادة معالجة الصورة */}
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 rounded-full bg-muted/30 text-blue-600 hover:bg-blue-50" 
-                              onClick={() => handleReprocessImage(image.id)}
-                              title="إعادة معالجة"
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                            </Button>
+                            {/* تمت إزالة زر إعادة المعالجة */}
                           </div>
                         </TableCell>
                       </TableRow>
