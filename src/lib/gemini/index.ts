@@ -8,7 +8,9 @@ export {
   reportApiKeyError,
   resetAllApiKeys,
   getApiKeyStats,
-  addApiKey  // تصدير وظيفة إضافة مفتاح API الجديدة
+  addApiKey,
+  getCurrentApiKey,
+  isCustomKeyActive  // تصدير وظيفة معرفة إذا كان المفتاح المخصص نشطًا
 } from "./apiKeyManager";
 
 // تصدير وظائف API الرئيسية

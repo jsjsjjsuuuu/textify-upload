@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useGeminiProcessing } from '@/hooks/useGeminiProcessing';
-import { InfoCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { getCurrentApiKey, getApiKeyStats } from '@/lib/gemini';
