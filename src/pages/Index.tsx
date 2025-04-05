@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause, Key } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -16,12 +15,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useGeminiProcessing } from '@/hooks/useGeminiProcessing';
 import GeminiApiManager from '@/components/GeminiApiManager';
+import WelcomeScreen from '@/components/WelcomeScreen';
 
 const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { resetApiKeys } = useGeminiProcessing();
+  const { resetApiKeys, getApiStats } = useGeminiProcessing();
+  const [showWelcomeScreen, setShowWelcomeScreen] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState(false);
   
   // استدعاء hook بشكل ثابت في كل تحميل للمكون
   const {
@@ -52,6 +54,34 @@ const Index = () => {
     formatPrice,
     formatProvinceName
   } = useDataFormatting();
+  
+  // التحقق من حالة مفتاح API عند تحميل الصفحة
+  useEffect(() => {
+    const checkApiKeyStatus = () => {
+      const stats = getApiStats();
+      if (stats.blocked > 0 || stats.rateLimited > 0) {
+        if (!localStorage.getItem('api_key_warning_dismissed')) {
+          setApiKeyError(true);
+          setShowWelcomeScreen(true);
+        }
+      }
+    };
+    
+    checkApiKeyStatus();
+    
+    // تحقق من وجود رسائل خطأ مفتاح API في الصور
+    const hasApiKeyErrors = sessionImages.some(img => img.apiKeyError === true);
+    if (hasApiKeyErrors && !localStorage.getItem('api_key_warning_dismissed')) {
+      setApiKeyError(true);
+      setShowWelcomeScreen(true);
+    }
+  }, [getApiStats, sessionImages]);
+  
+  // وظيفة لإغلاق شاشة الترحيب وتذكر عدم عرضها مرة أخرى
+  const handleCloseWelcomeScreen = () => {
+    setShowWelcomeScreen(false);
+    localStorage.setItem('api_key_warning_dismissed', 'true');
+  };
 
   // وظيفة تنفيذ التنظيف يدوياً
   const handleManualCleanup = async () => {
@@ -119,6 +149,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
+      
+      {/* إضافة شاشة الترحيب إذا كان هناك خطأ في مفتاح API */}
+      {showWelcomeScreen && (
+        <WelcomeScreen onClose={handleCloseWelcomeScreen} />
+      )}
       
       <main className="pt-10 pb-20">
         <section className="py-16 px-6">

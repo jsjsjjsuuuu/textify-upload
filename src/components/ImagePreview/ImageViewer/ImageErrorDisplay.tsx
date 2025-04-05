@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AlertCircle, RefreshCw, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useImageStats } from "@/hooks/useImageStats";
+import WelcomeScreen from '@/components/WelcomeScreen';
 
 interface ImageErrorDisplayProps {
   onRetry: () => void;
@@ -20,6 +21,7 @@ const ImageErrorDisplay: React.FC<ImageErrorDisplayProps> = ({
 }) => {
   const { user } = useAuth();
   const { clearProcessedImagesCache } = useImageStats();
+  const [showApiKeyManager, setShowApiKeyManager] = useState(false);
   
   // التحقق مما إذا كان الخطأ متعلقًا بمفتاح API
   const isApiError = isApiKeyError || 
@@ -52,18 +54,22 @@ const ImageErrorDisplay: React.FC<ImageErrorDisplayProps> = ({
           إعادة المحاولة
         </Button>
         
-        {isApiError && user?.is_admin && (
+        {isApiError && (
           <Button 
             variant="destructive" 
             size="sm" 
             className="flex items-center gap-1"
-            onClick={() => window.location.href = '/app#gemini-api-manager'}
+            onClick={() => setShowApiKeyManager(true)}
           >
             <Key className="h-4 w-4" />
             إدارة مفتاح API
           </Button>
         )}
       </div>
+      
+      {showApiKeyManager && (
+        <WelcomeScreen onClose={() => setShowApiKeyManager(false)} />
+      )}
     </div>
   );
 };

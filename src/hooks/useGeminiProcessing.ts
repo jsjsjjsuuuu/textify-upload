@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { ImageData } from "@/types/ImageData";
 import { 
@@ -45,8 +44,8 @@ export const useGeminiProcessing = () => {
     testConnection();
   }, [connectionTested]);
 
-  // اختبار اتصال Gemini API
-  const testGeminiApiConnection = async (apiKey: string) => {
+  // اختبار اتصال Gemini API - نجعلها متاحة للتصدير
+  const testGeminiApiConnection = async (apiKey: string): Promise<boolean> => {
     try {
       console.log("اختبار اتصال Gemini API...");
       const result = await testGeminiConnection(apiKey);
@@ -54,6 +53,7 @@ export const useGeminiProcessing = () => {
         console.log("اتصال Gemini API ناجح");
         setConnectionTested(true);
         setUseGemini(true);
+        return true;
       } else {
         console.warn("فشل اختبار اتصال Gemini API:", result.message);
         toast({
@@ -66,6 +66,7 @@ export const useGeminiProcessing = () => {
         setTimeout(() => {
           setConnectionTested(false);
         }, 30000); // 30 ثانية
+        return false;
       }
     } catch (error) {
       console.error("خطأ في اختبار اتصال Gemini API:", error);
@@ -81,6 +82,7 @@ export const useGeminiProcessing = () => {
       setTimeout(() => {
         setConnectionTested(false);
       }, 30000); // 30 ثانية
+      return false;
     }
   };
 
@@ -398,6 +400,7 @@ export const useGeminiProcessing = () => {
     resetApiKeys,
     addNewApiKey,
     getApiStats: getApiKeyStats,
-    processingCount
+    processingCount,
+    testGeminiApiConnection
   };
 };
