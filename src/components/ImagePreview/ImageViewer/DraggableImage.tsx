@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Loader } from "lucide-react";
 
@@ -20,17 +20,32 @@ const DraggableImage = ({
 }: DraggableImageProps) => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragEnabled, setDragEnabled] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
 
-  // Reset position when src changes or on zoom reset
+  // إعادة تعيين الموضع عند تغيير المصدر أو إعادة تعيين التكبير
   useEffect(() => {
     setPosition({ x: 0, y: 0 });
+    setImageError(false);
   }, [src, zoomLevel === 1]);
 
-  // Enable drag only when zoom level is greater than 1
+  // تمكين السحب فقط عندما يكون مستوى التكبير أكبر من 1
   useEffect(() => {
     setDragEnabled(zoomLevel > 1);
   }, [zoomLevel]);
+
+  // معالجة الأخطاء المتكررة
+  const handleImageError = useCallback(() => {
+    setImageError(true);
+    onImageError();
+  }, [onImageError]);
+
+  // معالجة تحميل الصورة
+  const handleImageLoad = useCallback(() => {
+    setImageError(false);
+    onImageLoad();
+  }, [onImageLoad]);
 
   if (!src) {
     return (
@@ -47,11 +62,25 @@ const DraggableImage = ({
       ref={imageContainerRef}
       className="overflow-hidden relative h-[550px] w-full flex items-center justify-center bg-transparent rounded-md"
     >
-      {!imageLoaded && (
+      {!imageLoaded && !imageError && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
           <Loader className="w-12 h-12 text-gray-400 animate-spin" />
         </div>
       )}
+      
+      {imageError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+          <div className="text-center text-red-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+            <p className="mt-2">تعذر تحميل الصورة</p>
+          </div>
+        </div>
+      )}
+      
       <motion.div
         drag={dragEnabled}
         dragConstraints={imageContainerRef}
@@ -68,16 +97,17 @@ const DraggableImage = ({
         style={{ touchAction: "none" }}
       >
         <img
+          ref={imageRef}
           src={src}
           alt="معاينة الصورة"
           className={`max-h-[550px] max-w-full object-contain transition-transform cursor-${dragEnabled ? 'grab active:cursor-grabbing' : 'default'}`}
           style={{ 
             transform: `scale(${zoomLevel})`,
-            opacity: imageLoaded ? 1 : 0,
+            opacity: imageLoaded && !imageError ? 1 : 0,
             transition: "opacity 300ms ease-in-out, transform 200ms ease-out"
           }}
-          onLoad={onImageLoad}
-          onError={onImageError}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
           draggable={false}
         />
       </motion.div>

@@ -8,7 +8,10 @@ export const DEFAULT_GEMINI_API_KEY: string = "AIzaSyAW9EbEuvXYdg6FmLjlhl_jXv-SG
 const API_KEYS: string[] = [
   DEFAULT_GEMINI_API_KEY, 
   "AIzaSyAHm38lmQWCN5S6rxIM_J7zrbFkFdPUdW4",
-  "AIzaSyAPiPCTjtxn1Ay9nWKGYiDPF09BitbKaXg"
+  "AIzaSyAPiPCTjtxn1Ay9nWKGYiDPF09BitbKaXg",
+  // إضافة مفاتيح جديدة
+  "AIzaSyDowfngYll7iUELScTYX2ECGbZ1hfJrjUU",
+  "AIzaSyCcPiXVhMu8LrYcp_cFXU4BJXvKnBKUVX8"
 ];
 
 // مؤشر يشير إلى المفتاح الحالي
@@ -21,6 +24,9 @@ const keyStatus = new Map<string, { errors: number, lastError: string, blocked: 
 API_KEYS.forEach(key => {
   keyStatus.set(key, { errors: 0, lastError: "", blocked: false });
 });
+
+// تاريخ آخر إعادة تعيين
+let lastResetTime = Date.now();
 
 // الحصول على المفتاح التالي للدوران
 export const getNextApiKey = (): string => {
@@ -62,8 +68,18 @@ export const reportApiKeyError = (key: string, error: string): void => {
   
   console.warn(`خطأ لمفتاح API ${key.substring(0, 10)}...: ${error} (${status.errors} أخطاء)`);
   
-  // حظر المفتاح إذا تجاوز حد الأخطاء
-  if (status.errors >= 5) {
+  // تحسين تحليل نوع الأخطاء
+  if (
+    error.includes('quota') || 
+    error.includes('rate limit') || 
+    error.includes('Resource exhausted') ||
+    error.includes('Too many requests')
+  ) {
+    // حظر المفتاح فورًا عند تجاوز حدود الاستخدام
+    status.blocked = true;
+    console.error(`تم حظر مفتاح API ${key.substring(0, 10)}... بسبب تجاوز حدود الاستخدام`);
+  } else if (status.errors >= 5) {
+    // حظر المفتاح إذا تجاوز حد الأخطاء
     status.blocked = true;
     console.error(`تم حظر مفتاح API ${key.substring(0, 10)}... بسبب كثرة الأخطاء`);
   }
@@ -90,11 +106,12 @@ export const resetAllApiKeys = (): void => {
     keyStatus.set(key, { errors: 0, lastError: "", blocked: false });
   });
   currentKeyIndex = 0;
+  lastResetTime = Date.now();
   console.log("تم إعادة تعيين جميع مفاتيح API");
 };
 
 // الحصول على إحصائيات المفاتيح
-export const getApiKeyStats = (): { total: number, active: number, blocked: number, rateLimited: number } => {
+export const getApiKeyStats = (): { total: number, active: number, blocked: number, rateLimited: number, lastReset: number } => {
   let blocked = 0;
   let rateLimited = 0;
   
@@ -102,15 +119,36 @@ export const getApiKeyStats = (): { total: number, active: number, blocked: numb
     const status = keyStatus.get(key);
     if (status?.blocked) {
       blocked++;
-    } else if (status?.lastError?.includes("quota") || status?.lastError?.includes("rate limit")) {
-      rateLimited++;
+      if (status?.lastError?.includes("quota") || status?.lastError?.includes("rate limit")) {
+        rateLimited++;
+      }
     }
   });
   
   return {
     total: API_KEYS.length,
-    active: API_KEYS.length - blocked - rateLimited,
+    active: API_KEYS.length - blocked,
     blocked,
-    rateLimited
+    rateLimited,
+    lastReset: lastResetTime
   };
+};
+
+// إضافة وظيفة لإضافة مفتاح API جديد
+export const addApiKey = (newKey: string): boolean => {
+  // التحقق من صحة المفتاح (يجب أن يكون بطول معين)
+  if (newKey.length < 20) {
+    return false;
+  }
+  
+  // التحقق من عدم وجود المفتاح بالفعل
+  if (API_KEYS.includes(newKey)) {
+    return false;
+  }
+  
+  // إضافة المفتاح إلى القائمة
+  API_KEYS.push(newKey);
+  keyStatus.set(newKey, { errors: 0, lastError: "", blocked: false });
+  console.log(`تمت إضافة مفتاح API جديد: ${newKey.substring(0, 10)}...`);
+  return true;
 };
