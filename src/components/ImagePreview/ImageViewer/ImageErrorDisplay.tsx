@@ -29,12 +29,6 @@ const ImageErrorDisplay: React.FC<ImageErrorDisplayProps> = ({
     errorMessage.includes('quota') ||
     errorMessage.includes('حصة');
   
-  // وظيفة إعادة التعيين الكاملة للذاكرة المؤقتة
-  const handleResetCache = () => {
-    clearProcessedImagesCache();
-    onRetry();
-  };
-  
   return (
     <div className="flex flex-col items-center justify-center h-full w-full p-6 bg-gray-50 dark:bg-gray-800/50 rounded-md">
       <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
@@ -63,10 +57,10 @@ const ImageErrorDisplay: React.FC<ImageErrorDisplayProps> = ({
             variant="destructive" 
             size="sm" 
             className="flex items-center gap-1"
-            onClick={handleResetCache}
+            onClick={() => window.location.href = '/app#gemini-api-manager'}
           >
             <Key className="h-4 w-4" />
-            إعادة تعيين مفاتيح API
+            إدارة مفتاح API
           </Button>
         )}
       </div>

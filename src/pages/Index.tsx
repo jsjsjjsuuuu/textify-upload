@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Info, Trash2, RefreshCw, Clock, Pause, Key } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
@@ -14,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useGeminiProcessing } from '@/hooks/useGeminiProcessing';
+import GeminiApiManager from '@/components/GeminiApiManager';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -73,41 +75,7 @@ const Index = () => {
     });
   };
   
-  // وظيفة إعادة المعالجة للصورة
-  const handleReprocessImage = async (imageId: string) => {
-    const imageToReprocess = sessionImages.find(img => img.id === imageId);
-    if (!imageToReprocess) {
-      console.error("الصورة غير موجودة:", imageId);
-      return;
-    }
-    
-    try {
-      // تحديث حالة الصورة إلى "جاري المعالجة"
-      handleTextChange(imageId, "status", "processing");
-      
-      // إعادة معالجة الصورة
-      await saveProcessedImage(imageToReprocess);
-      
-      toast({
-        title: "تمت إعادة المعالجة",
-        description: "تمت إعادة معالجة الصورة بنجاح",
-      });
-    } catch (error) {
-      console.error("خطأ في إعادة معالجة الصورة:", error);
-      handleTextChange(imageId, "status", "error");
-      handleTextChange(imageId, "extractedText", `فشل في إعادة المعالجة: ${error.message || "خطأ غير معروف"}`);
-      
-      toast({
-        title: "خطأ في إعادة المعالجة",
-        description: "حدث خطأ أثناء إعادة معالجة الصورة",
-        variant: "destructive"
-      });
-      
-      throw error; // إعادة رمي الخطأ للتعامل معه في المكون الأصلي
-    }
-  };
-
-  // إعادة تشغيل المعالجة إذا توقفت عن العمل
+  // وظيفة إعادة المحاولة للمعالجة
   const handleRetryProcessing = () => {
     if (retryProcessing()) {
       toast({
@@ -217,26 +185,10 @@ const Index = () => {
                 </Alert>
               )}
               
-              {/* إضافة زر لإعادة تعيين مفاتيح API */}
-              {user?.is_admin && (
-                <Alert className="mt-6 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-                  <Info className="h-4 w-4 text-amber-500" />
-                  <AlertDescription className="text-sm text-amber-600 dark:text-amber-300">
-                    في حالة واجهت مشاكل مع استخراج البيانات بسبب أخطاء في مفاتيح API، يمكنك إعادة تعيينها.
-                    <div className="mt-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handleResetApiKeys} 
-                        className="text-amber-600 border-amber-300 bg-amber-50 hover:bg-amber-100"
-                      >
-                        <Key className="h-3 w-3 ml-1" />
-                        إعادة تعيين مفاتيح API
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
+              {/* إضافة مكون إدارة مفاتيح Gemini API */}
+              <div className="mt-6">
+                <GeminiApiManager />
+              </div>
               
               {/* معلومات عن ميزة تنظيف البيانات */}
               <Alert className="mt-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
@@ -307,7 +259,6 @@ const Index = () => {
                   onSubmit={id => handleSubmitToApi(id)} 
                   formatDate={formatImageDate} 
                   showOnlySession={true}
-                  onReprocess={handleReprocessImage}
                 />
               </div>
             </div>

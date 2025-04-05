@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { ImageData } from "@/types/ImageData";
 import { 
@@ -8,7 +9,8 @@ import {
   reportApiKeyError,
   getApiKeyStats,
   resetAllApiKeys,
-  addApiKey
+  addApiKey,
+  isCustomKeyActive
 } from "@/lib/gemini";
 import { useToast } from "@/hooks/use-toast";
 import { updateImageWithExtractedData } from "@/utils/imageDataParser";
@@ -17,7 +19,7 @@ import { toast as sonnerToast } from "sonner";
 import { autoCompressBeforeProcessing, enhanceImageForOCR } from "@/utils/imageCompression";
 
 export const useGeminiProcessing = () => {
-  const [useGemini, setUseGemini] = useState(false);
+  const [useGemini, setUseGemini] = useState(true);
   const [connectionTested, setConnectionTested] = useState(false);
   const [processingCount, setProcessingCount] = useState(0);
   const { toast } = useToast();
@@ -92,9 +94,10 @@ export const useGeminiProcessing = () => {
     setProcessingCount(prev => prev + 1);
     
     try {
-      // الحصول على المفتاح الحالي (الآن يستخدم مفتاح المستخدم أو الافتراضي)
+      // الحصول على المفتاح الحالي
       const geminiApiKey = getNextApiKey();
       console.log("استخدام مفتاح Gemini API بطول:", geminiApiKey.length);
+      console.log("استخدام مفتاح مخصص:", isCustomKeyActive());
 
       // في بيئة المعاينة، نحاول استخدام Gemini مع تحذير المستخدم
       if (isPreviewEnvironment()) {
@@ -151,7 +154,8 @@ export const useGeminiProcessing = () => {
           maxRetries: 3,
           retryDelayMs: 3000,
           fileSizeOriginalMB: fileSizeMB.toFixed(2),
-          fileSizeProcessedMB: (processedFile.size / (1024 * 1024)).toFixed(2)
+          fileSizeProcessedMB: (processedFile.size / (1024 * 1024)).toFixed(2),
+          isCustomKey: isCustomKeyActive()
         });
         
         // محاولة استخراج البيانات
@@ -159,7 +163,7 @@ export const useGeminiProcessing = () => {
           apiKey: geminiApiKey,
           imageBase64,
           enhancedExtraction: true,
-          maxRetries: 3,
+          maxRetries: 2, // تقليل عدد المحاولات
           retryDelayMs: 3000,
           modelVersion: fileSizeMB > 5 ? 'gemini-1.5-flash' : 'gemini-1.5-pro'  // استخدام نموذج أسرع للصور الأكبر
         });
@@ -347,11 +351,18 @@ export const useGeminiProcessing = () => {
   const addNewApiKey = useCallback((key: string): boolean => {
     try {
       const result = addApiKey(key);
-      if (result) {
+      if (result && key !== 'default') {
         sonnerToast.success(
           "تمت الإضافة",
           {
-            description: "تمت إضافة مفتاح API جديد"
+            description: "تم حفظ وتفعيل مفتاح API الخاص بك"
+          }
+        );
+      } else if (result && key === 'default') {
+        sonnerToast.success(
+          "تم التغيير",
+          {
+            description: "تم العودة إلى استخدام مفتاح API الافتراضي"
           }
         );
       } else {

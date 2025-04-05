@@ -4,13 +4,11 @@
 // المفتاح الرئيسي الافتراضي
 export const DEFAULT_GEMINI_API_KEY: string = "AIzaSyAW9EbEuvXYdg6FmLjlhl_jXv-SGtFHCC4";
 
-// قائمة المفاتيح (الآن تحتوي فقط على المفتاح الافتراضي والمفاتيح المضافة من قبل المستخدم)
-const API_KEYS: string[] = [DEFAULT_GEMINI_API_KEY];
+// قائمة المفاتيح (الآن تحتفظ فقط بمفتاح واحد نشط)
+let ACTIVE_API_KEY: string = DEFAULT_GEMINI_API_KEY;
+let IS_CUSTOM_KEY: boolean = false;
 
-// مؤشر للمفتاح الحالي
-let currentKeyIndex = 0;
-
-// حالة المفاتيح
+// حالة المفتاح
 const keyStatus = new Map<string, { errors: number, lastError: string, blocked: boolean }>();
 
 // تهيئة حالة المفتاح الافتراضي
@@ -19,25 +17,41 @@ keyStatus.set(DEFAULT_GEMINI_API_KEY, { errors: 0, lastError: "", blocked: false
 // تاريخ آخر إعادة تعيين
 let lastResetTime = Date.now();
 
-// الحصول على المفتاح الحالي (نستخدم المفتاح الأحدث إذا كان موجوداً، وإلا نستخدم المفتاح الافتراضي)
+// الحصول على المفتاح الحالي
 export const getNextApiKey = (): string => {
-  // إذا كان هناك مفتاح مستخدم مضاف، نستخدمه أولاً
-  if (API_KEYS.length > 1) {
-    const userKey = API_KEYS[API_KEYS.length - 1]; // آخر مفتاح تم إضافته
+  // التحقق من تفضيل المستخدم أولاً
+  const useCustomKey = localStorage.getItem('use_custom_gemini_api_key') === 'true';
+  
+  // إذا كان المستخدم يريد استخدام المفتاح المخصص
+  if (useCustomKey) {
+    const customKey = localStorage.getItem('custom_gemini_api_key');
     
-    // التحقق أن المفتاح ليس محظوراً
-    if (!keyStatus.get(userKey)?.blocked) {
-      return userKey;
+    // إذا كان هناك مفتاح مخصص، استخدمه
+    if (customKey && customKey.length > 20) {
+      // تأكد من إضافته إلى حالة المفاتيح إذا لم يكن موجودًا
+      if (!keyStatus.has(customKey)) {
+        keyStatus.set(customKey, { errors: 0, lastError: "", blocked: false });
+      }
+      
+      // التحقق أن المفتاح ليس محظورًا
+      if (!keyStatus.get(customKey)?.blocked) {
+        return customKey;
+      }
     }
   }
   
-  // استخدام المفتاح الافتراضي كخطة بديلة
+  // استخدام المفتاح النشط (إما المخصص أو الافتراضي)
+  if (!keyStatus.get(ACTIVE_API_KEY)?.blocked) {
+    return ACTIVE_API_KEY;
+  }
+  
+  // العودة إلى المفتاح الافتراضي كخطة بديلة
   return DEFAULT_GEMINI_API_KEY;
 };
 
 // الإبلاغ عن خطأ لمفتاح API
 export const reportApiKeyError = (key: string, error: string): void => {
-  if (!API_KEYS.includes(key)) return;
+  if (!keyStatus.has(key)) return;
   
   const status = keyStatus.get(key) || { errors: 0, lastError: "", blocked: false };
   status.errors += 1;
@@ -66,12 +80,12 @@ export const reportApiKeyError = (key: string, error: string): void => {
 
 // الحصول على مفتاح API الحالي
 export const getCurrentApiKey = (): string => {
-  return getNextApiKey(); // نستخدم نفس المنطق
+  return ACTIVE_API_KEY;
 };
 
 // إعادة تعيين حالة مفتاح API محدد
 export const resetApiKey = (key: string): void => {
-  if (API_KEYS.includes(key)) {
+  if (keyStatus.has(key)) {
     keyStatus.set(key, { errors: 0, lastError: "", blocked: false });
     console.log(`تم إعادة تعيين حالة مفتاح API ${key.substring(0, 10)}...`);
   }
@@ -79,7 +93,7 @@ export const resetApiKey = (key: string): void => {
 
 // إعادة تعيين جميع مفاتيح API
 export const resetAllApiKeys = (): void => {
-  API_KEYS.forEach(key => {
+  keyStatus.forEach((_, key) => {
     keyStatus.set(key, { errors: 0, lastError: "", blocked: false });
   });
   lastResetTime = Date.now();
@@ -88,46 +102,57 @@ export const resetAllApiKeys = (): void => {
 
 // الحصول على إحصائيات المفاتيح
 export const getApiKeyStats = (): { total: number, active: number, blocked: number, rateLimited: number, lastReset: number } => {
+  let total = keyStatus.size;
   let blocked = 0;
   let rateLimited = 0;
   
-  API_KEYS.forEach(key => {
-    const status = keyStatus.get(key);
-    if (status?.blocked) {
+  keyStatus.forEach((status, _) => {
+    if (status.blocked) {
       blocked++;
-      if (status?.lastError?.includes("quota") || status?.lastError?.includes("rate limit")) {
+      if (status.lastError?.includes("quota") || status.lastError?.includes("rate limit")) {
         rateLimited++;
       }
     }
   });
   
   return {
-    total: API_KEYS.length,
-    active: API_KEYS.length - blocked,
+    total,
+    active: total - blocked,
     blocked,
     rateLimited,
     lastReset: lastResetTime
   };
 };
 
-// إضافة مفتاح API جديد (الآن يحل محل أي مفاتيح مضافة سابقًا)
+// إضافة مفتاح API جديد
 export const addApiKey = (newKey: string): boolean => {
-  // التحقق من صحة المفتاح (يجب أن يكون بطول معين)
+  // إذا كان المفتاح هو "default"، استخدم المفتاح الافتراضي
+  if (newKey === 'default') {
+    ACTIVE_API_KEY = DEFAULT_GEMINI_API_KEY;
+    IS_CUSTOM_KEY = false;
+    console.log(`تم تعيين المفتاح النشط إلى المفتاح الافتراضي`);
+    return true;
+  }
+  
+  // التحقق من صحة المفتاح
   if (newKey.length < 20) {
     return false;
   }
   
-  // إزالة أي مفاتيح مضافة سابقًا (غير المفتاح الافتراضي)
-  while (API_KEYS.length > 1) {
-    const keyToRemove = API_KEYS.pop();
-    if (keyToRemove) {
-      keyStatus.delete(keyToRemove);
-    }
+  // تعيين المفتاح الجديد كمفتاح نشط
+  ACTIVE_API_KEY = newKey;
+  IS_CUSTOM_KEY = true;
+  
+  // إضافة المفتاح إلى حالة المفاتيح إذا لم يكن موجودًا
+  if (!keyStatus.has(newKey)) {
+    keyStatus.set(newKey, { errors: 0, lastError: "", blocked: false });
   }
   
-  // إضافة المفتاح الجديد
-  API_KEYS.push(newKey);
-  keyStatus.set(newKey, { errors: 0, lastError: "", blocked: false });
-  console.log(`تمت إضافة مفتاح API جديد: ${newKey.substring(0, 10)}...`);
+  console.log(`تم تعيين مفتاح API جديد: ${newKey.substring(0, 10)}...`);
   return true;
+};
+
+// التحقق مما إذا كان المفتاح الحالي مخصصًا
+export const isCustomKeyActive = (): boolean => {
+  return IS_CUSTOM_KEY;
 };
