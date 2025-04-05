@@ -18,7 +18,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onClose }) => {
   const handleTestConnection = async () => {
     try {
       toast.loading("جاري اختبار الاتصال...");
-      const result = await testGeminiApiConnection();
+      const geminiApiKey = localStorage.getItem('custom_gemini_api_key') || '';
+      const result = await testGeminiApiConnection(geminiApiKey);
       if (result) {
         toast.success("تم الاتصال بنجاح مع Gemini API");
         onClose();
