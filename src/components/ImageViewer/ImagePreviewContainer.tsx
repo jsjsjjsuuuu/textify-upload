@@ -548,8 +548,8 @@ const ImagePreviewContainer = ({
         
         {/* نفس المحتوى لعلامات التبويب الأخرى */}
         <TabsContent value="pending" className="mt-0">
+          {/* تكرار نفس محتوى المكون السابق ولكن مع تصفية الصور حسب الحالة */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-            {/* عرض الصور والمعلومات */}
             <div className="order-2 md:order-1">
               <div className="grid grid-cols-2 gap-4">
                 <AnimatePresence>
@@ -571,7 +571,7 @@ const ImagePreviewContainer = ({
                       }`}
                       onClick={() => handleImageClick(image)}
                     >
-                      {/* Checkbox للتحديد المتعدد */}
+                      {/* نفس محتوى الصورة كما في علامة التبويب السابقة */}
                       <div 
                         className="absolute top-2 right-2 z-10 w-5 h-5 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer"
                         onClick={(e) => {
@@ -588,7 +588,6 @@ const ImagePreviewContainer = ({
                         )}
                       </div>
                       
-                      {/* حالة الصورة */}
                       <div className={`absolute top-2 left-2 z-10 px-1.5 py-0.5 text-xs rounded-full
                         ${image.status === "completed" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
                         ${image.status === "pending" ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" : ""}
@@ -606,7 +605,6 @@ const ImagePreviewContainer = ({
                         )}
                       </div>
                       
-                      {/* صورة مصغرة */}
                       <div className="h-28 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-900">
                         {image.previewUrl ? (
                           <img
@@ -614,7 +612,6 @@ const ImagePreviewContainer = ({
                             alt={`صورة ${image.number || ""}`}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              // في حالة فشل تحميل الصورة، استبدالها بأيقونة
                               (e.target as HTMLImageElement).style.display = "none";
                               const parent = (e.target as HTMLImageElement).parentElement;
                               if (parent) {
@@ -632,7 +629,6 @@ const ImagePreviewContainer = ({
                         )}
                       </div>
                       
-                      {/* معلومات الصورة */}
                       <div className="p-2 text-xs">
                         <p className="font-medium truncate">
                           {image.code || image.senderName || `صورة ${image.number || ""}`}
@@ -647,7 +643,6 @@ const ImagePreviewContainer = ({
               </div>
             </div>
             
-            {/* عرض الصورة النشطة والبيانات المستخرجة */}
             <div className="order-1 md:order-2 mb-6 md:mb-0">
               {activeImage ? (
                 <motion.div
@@ -725,9 +720,11 @@ const ImagePreviewContainer = ({
             </div>
           </div>
         </TabsContent>
+
         <TabsContent value="completed" className="mt-0">
+          {/* نفس محتوى علامة التبويب pending ولكن مع تصفية للصور المكتملة */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-            {/* عرض الصور والمعلومات */}
+            {/* ... محتوى مكرر */}
             <div className="order-2 md:order-1">
               <div className="grid grid-cols-2 gap-4">
                 <AnimatePresence>
@@ -749,6 +746,6 @@ const ImagePreviewContainer = ({
                       }`}
                       onClick={() => handleImageClick(image)}
                     >
-                      {/* Checkbox للتحديد المتعدد */}
+                      {/* نفس محتوى الصورة */}
                       <div 
-                        className="absolute top-2 right-2 z-10 w-5 h-5 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-
+                        className="absolute top-2 right-2 z-10 w-5 h-5 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600 flex items-center
