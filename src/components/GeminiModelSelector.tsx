@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { AVAILABLE_MODELS, GeminiModelType } from '@/lib/gemini/models';
-import { InfoCircle } from 'lucide-react';
+import { Info } from 'lucide-react';  // Changed from InfoCircle to Info
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface GeminiModelSelectorProps {
@@ -55,7 +54,8 @@ const GeminiModelSelector: React.FC<GeminiModelSelectorProps> = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <InfoCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                {/* Replace InfoCircle with Info in the JSX */}
+                <Info className="h-3.5 w-3.5 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent side="right" className="max-w-80">
                 <p className="text-sm">
