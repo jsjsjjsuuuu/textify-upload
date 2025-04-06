@@ -17,7 +17,9 @@ export interface ImageData {
   apiKeyError?: boolean; // إضافة حقل للأخطاء المتعلقة بمفتاح API
   storage_path: string | null;
   userId: string | null;
+  user_id?: string | null; // إضافة حقل user_id للتوافق
   number: number;
-  sessionImage: boolean;
+  sessionImage: boolean; // إضافة حقل sessionImage
   submitted: boolean;
+  retryCount?: number;
 }

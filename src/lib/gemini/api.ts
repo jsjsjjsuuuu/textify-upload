@@ -1,6 +1,5 @@
 
-import { GeminiExtractParams, GeminiRequest, GeminiResponse } from "./types";
-import { ApiResult } from "../apiService";
+import { GeminiExtractParams, GeminiRequest, GeminiResponse, ApiResult } from "./types";
 import { parseGeminiResponse } from "./parsers";
 import { getEnhancedExtractionPrompt, getBasicExtractionPrompt, getTextOnlyExtractionPrompt } from "./prompts";
 import { 

@@ -8,10 +8,11 @@ import {
   addApiKey,
   testGeminiConnection
 } from "@/lib/geminiService";
-import { ApiResult } from "@/lib/apiService";
+import { ApiResult } from "@/lib/gemini/types";
 import { fileToBase64 } from "@/lib/gemini/utils";
 import { readImageFile } from "@/utils/fileReader";
 import { toast } from "sonner";
+import { ImageData } from "@/types/ImageData";
 
 export interface GeminiStats {
   processed: number;
@@ -30,6 +31,89 @@ const geminiStats: GeminiStats = {
 
 export const useGeminiProcessing = () => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  
+  // معالجة الصور باستخدام Gemini API - وظيفة جديدة توافق مع اسم الاستدعاء المتوقع
+  const processWithGemini = useCallback(async (file: File | Blob, imageData?: ImageData): Promise<ImageData> => {
+    try {
+      setIsProcessing(true);
+      
+      // إعداد البيانات الأساسية للصورة إذا لم تكن موجودة
+      const baseImageData: ImageData = imageData || {
+        id: crypto.randomUUID(),
+        file: null,
+        previewUrl: null,
+        date: new Date(),
+        extractedText: "",
+        confidence: 0,
+        companyName: "",
+        code: "",
+        senderName: "",
+        phoneNumber: "",
+        province: "",
+        price: "",
+        status: "pending",
+        error: null,
+        storage_path: null,
+        userId: null,
+        number: 0,
+        sessionImage: false,
+        submitted: false
+      };
+      
+      // تحويل الملف إلى كائن File إذا كان من نوع Blob
+      let fileToProcess: File;
+      if (file instanceof File) {
+        fileToProcess = file;
+      } else {
+        // تحويل Blob إلى File (إضافة خصائص File المفقودة)
+        const blobAsFile = new File([file], "image.jpg", { type: file.type || "image/jpeg", lastModified: Date.now() });
+        fileToProcess = blobAsFile;
+      }
+      
+      // استدعاء وظيفة معالجة الصورة مع Gemini
+      const apiResult = await processImageWithGemini(fileToProcess);
+      
+      // عند نجاح المعالجة، تحديث بيانات الصورة
+      if (apiResult.success && apiResult.data) {
+        baseImageData.extractedText = apiResult.data.extractedText || "";
+        baseImageData.confidence = apiResult.data.confidence || 0;
+        
+        if (apiResult.data.parsedData) {
+          // استخراج البيانات المهيكلة
+          const parsedData = apiResult.data.parsedData;
+          baseImageData.code = parsedData.code || baseImageData.code;
+          baseImageData.senderName = parsedData.senderName || parsedData.sender_name || baseImageData.senderName;
+          baseImageData.phoneNumber = parsedData.phoneNumber || parsedData.phone_number || baseImageData.phoneNumber;
+          baseImageData.province = parsedData.province || baseImageData.province;
+          baseImageData.price = parsedData.price || baseImageData.price;
+          baseImageData.companyName = parsedData.companyName || parsedData.company_name || baseImageData.companyName;
+        }
+        
+        baseImageData.status = "completed";
+      } else {
+        // في حالة فشل المعالجة
+        baseImageData.status = "error";
+        baseImageData.error = apiResult.message;
+        baseImageData.apiKeyError = apiResult.apiKeyError;
+      }
+      
+      return baseImageData;
+      
+    } catch (error) {
+      console.error("خطأ في معالجة الصورة مع Gemini:", error);
+      
+      // إرجاع بيانات الصورة مع حالة الخطأ
+      return {
+        ...imageData,
+        status: "error",
+        error: error.message || "حدث خطأ غير معروف أثناء معالجة الصورة",
+        apiKeyError: false
+      } as ImageData;
+      
+    } finally {
+      setIsProcessing(false);
+    }
+  }, []);
   
   // معالجة الصور باستخدام Gemini API
   const processImageWithGemini = useCallback(async (imageFile: File | Blob | string): Promise<ApiResult> => {
@@ -58,7 +142,8 @@ export const useGeminiProcessing = () => {
       if (base64Data.length > 4000000) {
         console.log("الصورة كبيرة جدًا، محاولة ضغطها...");
         try {
-          base64Data = await readImageFile(imageFile, 0.7); // ضغط بجودة 70%
+          const blob = imageFile instanceof Blob ? imageFile : new Blob([imageFile as any], { type: 'image/jpeg' });
+          base64Data = await readImageFile(blob, 0.7); // ضغط بجودة 70%
         } catch (compressionError) {
           console.error("فشل ضغط الصورة:", compressionError);
         }
@@ -200,6 +285,7 @@ export const useGeminiProcessing = () => {
   
   return {
     processImageWithGemini,
+    processWithGemini, // تصدير الوظيفة الجديدة
     resetApiKeys,
     getApiStats,
     setGeminiModel,
