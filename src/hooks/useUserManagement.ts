@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -198,13 +199,15 @@ export const useUserManagement = () => {
         passwordLength: newPassword.length
       });
 
-      // استخدام الدالة الموجودة بالفعل: admin_reset_password_by_string_id
-      const { data, error } = await supabase.rpc('admin_reset_password_by_string_id', {
-        user_id_str: userId,
-        new_password: newPassword
+      // استدعاء وظيفة إعادة تعيين كلمة المرور مباشرة
+      const { data, error } = await supabase.functions.invoke('admin_reset_password', {
+        body: {
+          user_id: userId,
+          new_password: newPassword
+        }
       });
       
-      console.log('نتيجة استدعاء admin_reset_password_by_string_id:', { 
+      console.log('نتيجة استدعاء admin_reset_password:', { 
         data, 
         error: error ? { message: error.message, code: error.code } : null 
       });
@@ -215,14 +218,16 @@ export const useUserManagement = () => {
         
         // محاولة استخدام طريقة بديلة إذا كان معرف المستخدم صالحًا
         if (isValidUuid) {
-          console.log('المحاولة باستخدام الطريقة البديلة admin_update_user_password');
+          console.log('المحاولة باستخدام الطريقة البديلة admin_update_password');
           
-          const { data: traditionalData, error: traditionalError } = await supabase.rpc('admin_update_user_password', {
-            user_id: userId,
-            new_password: newPassword
+          const { data: traditionalData, error: traditionalError } = await supabase.functions.invoke('admin_update_password', {
+            body: {
+              user_id: userId,
+              password: newPassword
+            }
           });
           
-          console.log('نتيجة استدعاء admin_update_user_password:', { 
+          console.log('نتيجة استدعاء admin_update_password:', { 
             data: traditionalData, 
             error: traditionalError ? { message: traditionalError.message, code: traditionalError.code } : null 
           });

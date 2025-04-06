@@ -78,9 +78,6 @@ export const useImageProcessing = () => {
     return isDuplicateImage(image, images);
   };
 
-  // استخراج isDuplicateImage و clearProcessedHashesCache من useDuplicateDetection
-  const { isDuplicateImage, clearProcessedHashesCache } = useDuplicateDetection();
-
   return {
     ...coreProcessing,
     formatDate,

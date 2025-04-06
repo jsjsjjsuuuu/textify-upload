@@ -29,7 +29,6 @@ export interface ImageData {
   bookmarkletMessage?: string;
   notes1?: string;
   recipientName?: string;
-  // إضافة الحقول المفقودة
   error?: string;
   sessionImage?: boolean;
   apiKeyError?: boolean;
