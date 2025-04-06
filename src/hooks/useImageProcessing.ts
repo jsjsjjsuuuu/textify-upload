@@ -78,32 +78,35 @@ export const useImageProcessing = () => {
       }
       
       try {
-        // معالجة الصورة واستخدام الإرجاع بشكل مباشر
+        // معالجة الصورة - لاحظ أن saveProcessedImage لا ترجع قيمة (void)
         await coreProcessing.saveProcessedImage(image);
         
-        // نحن نعرف أن saveProcessedImage لا ترجع قيمة، لذلك نستخدم الصورة المحدثة
-        // من الحالة لتتبع ما إذا كانت المعالجة ناجحة
+        // بعد المعالجة، نحاول العثور على الصورة المحدثة في القائمة
         const updatedImage = coreProcessing.images.find(img => img.id === image.id);
         
-        // إذا تمت المعالجة بنجاح، نسجل الصورة
-        if (updatedImage && updatedImage.status === "completed") {
-          trackProcessedImage(updatedImage);
+        if (updatedImage) {
+          // تسجيل الصورة كمعالجة إذا كانت مكتملة أو بها خطأ
+          if (updatedImage.status === "completed" || updatedImage.status === "error") {
+            trackProcessedImage(updatedImage);
+          }
           return updatedImage;
         }
         
-        // إذا لم نتمكن من العثور على الصورة المحدثة أو كان هناك خطأ
-        return {
-          ...image,
-          status: "error" as const,
-          error: "فشل في معالجة الصورة"
-        };
+        // إرجاع الصورة الأصلية إذا لم نتمكن من العثور على نسخة محدثة
+        return image;
       } catch (processingError) {
         console.error("خطأ أثناء معالجة الصورة:", processingError);
-        return { 
+        
+        // تحديث الصورة بحالة الخطأ وتسجيلها كمعالجة لتجنب إعادة المحاولة
+        const errorImage = { 
           ...image, 
           status: "error" as const, 
           error: "فشل في حفظ الصورة المعالجة" 
         };
+        
+        trackProcessedImage(errorImage);
+        
+        return errorImage;
       }
     } catch (error) {
       console.error("خطأ في معالجة الصورة:", error);
@@ -128,7 +131,7 @@ export const useImageProcessing = () => {
     }
   };
   
-  // إضافة وظيفة محسنة لاكتشاف التكرار - تأكد من أن الوظيفة ترجع قيمة boolean
+  // إضافة وظيفة محسنة لاكتشاف التكرار
   const checkForDuplicate = (image: ImageData, images: ImageData[]): boolean => {
     return isDuplicateImage(image, images);
   };

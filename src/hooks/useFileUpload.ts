@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -50,11 +51,48 @@ export const useFileUpload = ({
   const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
   const [currentProcessingIndex, setCurrentProcessingIndex] = useState<number>(-1);
   const [lastProcessedImageTime, setLastProcessedImageTime] = useState<number>(0); // تتبع وقت آخر معالجة
+  const [processedImageIds, setProcessedImageIds] = useState<Set<string>>(new Set()); // تتبع معرفات الصور المعالجة
   const { toast } = useToast();
   const { user } = useAuth();
   
   const { processWithGemini } = useGeminiProcessing();
   const { formatPhoneNumber, formatPrice } = useDataFormatting();
+
+  // استعادة الصور المعالجة من التخزين المحلي عند بدء التشغيل
+  useEffect(() => {
+    try {
+      const storedProcessedIds = localStorage.getItem('processedSessionImageIds');
+      if (storedProcessedIds) {
+        const idsArray = JSON.parse(storedProcessedIds);
+        setProcessedImageIds(new Set(idsArray));
+        console.log(`تم تحميل ${idsArray.length} معرف صورة معالجة من الجلسة السابقة`);
+      }
+    } catch (error) {
+      console.error('خطأ في تحميل معرفات الصور المعالجة:', error);
+    }
+  }, []);
+
+  // حفظ معرفات الصور المعالجة في التخزين المحلي
+  useEffect(() => {
+    if (processedImageIds.size > 0) {
+      localStorage.setItem('processedSessionImageIds', JSON.stringify([...processedImageIds]));
+    }
+  }, [processedImageIds]);
+
+  // إضافة معرف الصورة إلى قائمة الصور المعالجة
+  const markImageAsProcessedLocally = useCallback((imageId: string) => {
+    setProcessedImageIds(prevIds => {
+      const newIds = new Set(prevIds);
+      newIds.add(imageId);
+      return newIds;
+    });
+  }, []);
+
+  // التحقق إذا كانت الصورة قد تمت معالجتها بالفعل
+  const isAlreadyProcessed = useCallback((imageId: string) => {
+    return processedImageIds.has(imageId) || 
+           images.some(img => img.id === imageId && (img.status === "completed" || img.status === "error"));
+  }, [processedImageIds, images]);
 
   // وظيفة رفع الصورة إلى Supabase Storage
   const uploadImageToStorage = async (file: File, userId: string): Promise<string | null> => {
@@ -97,6 +135,12 @@ export const useFileUpload = ({
     const imageId = crypto.randomUUID();
     let tempPreviewUrl: string | null = null;
     
+    // التحقق أولاً إذا كانت الصورة تمت معالجتها بالفعل (في حالة محاولة إعادة المعالجة يدويًا)
+    if (isAlreadyProcessed(imageId)) {
+      console.log(`الصورة ${imageId} تمت معالجتها بالفعل، تخطي المعالجة`);
+      return true;
+    }
+    
     try {
       console.log(`معالجة الملف [${index}]: ${file.name}, النوع: ${file.type}, المحاولة: ${retryCount + 1}`);
       setCurrentProcessingIndex(index);
@@ -136,23 +180,6 @@ export const useFileUpload = ({
           variant: "destructive"
         });
         return false;
-      }
-      
-      // **التحقق من وجود الملف بنفس الاسم والحجم في قائمة الصور الموجودة**
-      const existingImage = images.find(img => 
-        img.file.name === file.name && 
-        img.file.size === enhancedFile.size &&
-        img.status === "completed" && 
-        img.extractedText && 
-        img.extractedText.length > 10 &&
-        img.code && 
-        img.senderName && 
-        img.phoneNumber
-      );
-      
-      if (existingImage) {
-        console.log(`الصورة ${file.name} مكتملة ومعالجة بالفعل، تخطي المعالجة`);
-        return true;
       }
       
       // إضافة الصورة إلى القائمة أولاً مع حالة "processing" لعرض العملية للمستخدم
@@ -202,6 +229,10 @@ export const useFileUpload = ({
           description: `فشل في تخزين الصورة "${file.name}" على الخادم`,
           variant: "destructive"
         });
+        
+        // تسجيل الصورة كمعالجة (بحالة خطأ) لتجنب إعادة المحاولة
+        markImageAsProcessedLocally(imageId);
+        
         return false;
       }
       
@@ -273,6 +304,9 @@ export const useFileUpload = ({
         updateImage(imageId, processedData);
         console.log("تم تحديث الصورة بالبيانات المستخرجة:", imageId);
         
+        // تسجيل الصورة كمعالجة سواء نجحت أو فشلت
+        markImageAsProcessedLocally(imageId);
+        
         // **حفظ الصورة المعالجة** - التأكد من عدم محاولة اختبار القيمة المرجعة من saveProcessedImage
         if (saveProcessedImage && processedData.status === "completed") {
           try {
@@ -326,6 +360,9 @@ export const useFileUpload = ({
           extractedText: `فشل في المعالجة بعد ${MAX_RETRIES + 1} محاولات. ${friendlyErrorMessage}`
         });
         
+        // تسجيل الصورة كمعالجة (بحالة خطأ) لمنع إعادة المحاولة
+        markImageAsProcessedLocally(imageId);
+        
         toast({
           title: "فشل في استخراج النص",
           description: `فشل في معالجة الصورة "${file.name}" بعد ${MAX_RETRIES + 1} محاولات.`,
@@ -343,6 +380,9 @@ export const useFileUpload = ({
           status: "error",
           extractedText: `خطأ عام: ${error.message || "خطأ غير معروف"}`
         });
+        
+        // تسجيل الصورة كمعالجة (بحالة خطأ)
+        markImageAsProcessedLocally(imageId);
       }
       
       return false;
@@ -490,7 +530,7 @@ export const useFileUpload = ({
         variant: "destructive"
       });
     }
-  }, [processingQueue, queueProcessing, images, addImage, updateImage, setProcessingProgress, updateProgress, removeDuplicates]);
+  }, [processingQueue, queueProcessing, images, addImage, updateImage, setProcessingProgress, updateProgress, removeDuplicates, markImageAsProcessedLocally]);
 
   // وظيفة لإعادة تشغيل المعالجة يدويًا
   const manuallyTriggerProcessingQueue = useCallback(() => {
@@ -541,9 +581,14 @@ export const useFileUpload = ({
     const fileArray = Array.from(files);
     console.log("معالجة", fileArray.length, "ملفات");
     
-    // التحقق من الملفات المكررة
+    // تحسين فحص الصور المكررة عن طريق استخدام اسم الملف وحجمه معًا
     const uniqueFiles = fileArray.filter(file => {
-      const isDuplicate = images.some(img => img.file.name === file.name);
+      const isDuplicate = images.some(img => 
+        img.file.name === file.name && 
+        img.file.size === file.size &&
+        (img.status === "completed" || img.status === "error")
+      );
+      
       if (isDuplicate) {
         console.log("تم تخطي صورة مكررة:", file.name);
       }

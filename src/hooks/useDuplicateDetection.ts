@@ -31,30 +31,6 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
     return CryptoJS.MD5(uniqueIdentifiers).toString();
   }, []);
 
-  // إضافة صورة إلى الذاكرة المؤقتة للصور المعالجة
-  const addToProcessedCache = useCallback((image: ImageData) => {
-    try {
-      // إضافة المعرف إلى القائمة
-      setProcessedIds(prev => {
-        const newSet = new Set(prev);
-        newSet.add(image.id);
-        return newSet;
-      });
-
-      // إضافة التجزئة إلى القائمة
-      const imageHash = createUniqueImageHash(image);
-      setProcessedHashes(prev => {
-        const newSet = new Set(prev);
-        newSet.add(imageHash);
-        return newSet;
-      });
-      
-      console.log(`تمت إضافة الصورة ${image.id} إلى ذاكرة التخزين المؤقت للصور المعالجة`);
-    } catch (error) {
-      console.error('خطأ في إضافة الصورة إلى ذاكرة التخزين المؤقت:', error);
-    }
-  }, [createUniqueImageHash]);
-
   // استعادة معرفات الصور المعالجة من التخزين المحلي عند بدء التشغيل
   useEffect(() => {
     try {
@@ -89,6 +65,30 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
     }
   }, [processedIds, processedHashes]);
 
+  // إضافة صورة إلى الذاكرة المؤقتة للصور المعالجة
+  const addToProcessedCache = useCallback((image: ImageData) => {
+    try {
+      // إضافة المعرف إلى القائمة
+      setProcessedIds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(image.id);
+        return newSet;
+      });
+
+      // إضافة التجزئة إلى القائمة
+      const imageHash = createUniqueImageHash(image);
+      setProcessedHashes(prev => {
+        const newSet = new Set(prev);
+        newSet.add(imageHash);
+        return newSet;
+      });
+      
+      console.log(`تمت إضافة الصورة ${image.id} إلى ذاكرة التخزين المؤقت للصور المعالجة`);
+    } catch (error) {
+      console.error('خطأ في إضافة الصورة إلى ذاكرة التخزين المؤقت:', error);
+    }
+  }, [createUniqueImageHash]);
+
   // التحقق من تكرار الصورة - تحسين المنطق بإضافة فحوصات للحالة والنص المستخرج
   const isDuplicateImage = useCallback((image: ImageData, images: ImageData[] = []): boolean => {
     if (!enabled || !image) return false;
@@ -100,9 +100,9 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
         return true;
       }
 
-      // فحص إضافي للحالة: إذا كانت الصورة مكتملة أو تم معالجتها سابقًا
-      if (image.status === "completed" && image.extractedText && image.code && image.senderName && image.phoneNumber) {
-        console.log(`الصورة ${image.id} مكتملة بالفعل، إضافتها إلى الذاكرة المؤقتة وتجاهلها`);
+      // فحص إضافي للحالة: إذا كانت الصورة تمت معالجتها مسبقًا (ناجحة أو فاشلة)
+      if ((image.status === "completed" || image.status === "error") && image.extractedText) {
+        console.log(`الصورة ${image.id} تم معالجتها بالفعل (${image.status})، إضافتها إلى الذاكرة المؤقتة وتجاهلها`);
         // إضافة المعرف والتجزئة إلى الذاكرة المؤقتة
         addToProcessedCache(image);
         return true;
@@ -116,17 +116,6 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
         console.log(`تم العثور على تجزئة مطابقة في الذاكرة المؤقتة: ${imageHash} للصورة ${image.id}`);
         return true;
       }
-      
-      // فحص إضافي للنص المستخرج: تخطي الصور التي لديها نص مستخرج وجميع البيانات المطلوبة
-      if (image.extractedText && image.extractedText.length > 10 && 
-          image.code && image.senderName && image.phoneNumber) {
-        console.log(`الصورة ${image.id} لديها نص مستخرج وبيانات مطلوبة، إضافتها إلى الذاكرة المؤقتة`);
-        addToProcessedCache(image);
-        return true;
-      }
-      
-      // تحديد ما إذا كنا سنتجاهل الصور المؤقتة
-      const checkDuplicateOptions = { ignoreTemporary };
       
       // البحث عن تكرارات في قائمة الصور باستخدام الوظيفة المساعدة
       const isDuplicate = isImageDuplicate(image, images, ignoreTemporary);
@@ -146,18 +135,16 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
 
   // وظيفة لتحديد ما إذا كانت الصورة مكتملة المعالجة
   const isFullyProcessed = useCallback((image: ImageData): boolean => {
+    // اعتبار الصورة معالجة إذا كانت حالتها مكتملة أو خطأ وتحتوي على نص مستخرج
     return (
-      !!image.extractedText && 
-      image.extractedText.length > 10 && 
-      !!image.code && 
-      !!image.senderName && 
-      !!image.phoneNumber &&
-      (image.status === "completed" || image.status === "error")
+      (image.status === "completed" || image.status === "error") && 
+      !!image.extractedText &&
+      image.extractedText.length > 10
     );
   }, []);
 
   // تسجيل صورة كمعالجة بالكامل
-  const markImageAsProcessed = useCallback((image: ImageData) => {
+  const markImageAsProcessed = useCallback((image: ImageData): boolean => {
     if (isFullyProcessed(image)) {
       addToProcessedCache(image);
       return true;
