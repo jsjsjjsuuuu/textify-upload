@@ -1,220 +1,243 @@
-
-import React, { useState, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { ExternalLink, RefreshCw, Lock, CheckCircle2, XCircle } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Badge } from "./ui/badge";
+import { CheckIcon, KeyIcon, Shield } from "lucide-react";
+import { toast } from "./ui/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
+} from "./ui/dialog";
+import { testConnection } from "@/lib/gemini"; // تغيير من testGeminiConnection إلى testConnection
 import { 
   addApiKey, 
   getApiKeyStats, 
   resetAllApiKeys, 
-  isCustomKeyActive,
-  testGeminiConnection
-} from '@/lib/geminiService';
-import { toast } from 'sonner';
+  DEFAULT_GEMINI_API_KEY,
+  isCustomKeyActive
+} from "@/lib/gemini";
 
 const GeminiApiManager = () => {
-  const [customApiKey, setCustomApiKey] = useState<string>('');
-  const [useCustomKey, setUseCustomKey] = useState<boolean>(false);
-  const [keyStats, setKeyStats] = useState({ total: 0, active: 0, blocked: 0, rateLimited: 0 });
-  const [isTestingConnection, setIsTestingConnection] = useState<boolean>(false);
-  const [isValidKey, setIsValidKey] = useState<boolean | null>(null);
-  const [savedApiKey, setSavedApiKey] = useState<string>('');
+  const [customApiKey, setCustomApiKey] = useState<string>("");
+  const [apiKeyStats, setApiKeyStats] = useState<any>(null);
+  const [isTesting, setIsTesting] = useState<boolean>(false);
+  const [isCustomKeyDialogOpen, setIsCustomKeyDialogOpen] = useState<boolean>(false);
+  const [useCustomKey, setUseCustomKey] = useState<boolean>(localStorage.getItem('use_custom_gemini_api_key') === 'true');
+  const [isApiKeyValid, setIsApiKeyValid] = useState<boolean>(false);
   
-  // عند تحميل المكون، تحقق من حالة المفاتيح
   useEffect(() => {
-    // تحميل المفتاح المخصص من التخزين المحلي إذا كان موجوداً
-    const storedKey = localStorage.getItem('custom_gemini_api_key') || '';
+    const storedKey = localStorage.getItem('custom_gemini_api_key');
     if (storedKey) {
       setCustomApiKey(storedKey);
-      setSavedApiKey(storedKey);
     }
     
-    // التحقق من تفضيل المستخدم لاستخدام المفتاح المخصص
-    const useCustom = localStorage.getItem('use_custom_gemini_api_key') === 'true';
-    setUseCustomKey(useCustom);
+    // تحميل حالة استخدام المفتاح المخصص من الذاكرة المحلية
+    const storedUseCustomKey = localStorage.getItem('use_custom_gemini_api_key') === 'true';
+    setUseCustomKey(storedUseCustomKey);
     
-    // تحديث إحصائيات المفاتيح
-    updateStats();
+    fetchApiKeyStats();
   }, []);
-  
-  // تحديث إحصائيات المفاتيح
-  const updateStats = () => {
+
+  const fetchApiKeyStats = async () => {
     const stats = getApiKeyStats();
-    setKeyStats(stats);
+    setApiKeyStats(stats);
   };
-  
-  // حفظ المفتاح المخصص
-  const handleSaveKey = async () => {
-    if (!customApiKey || customApiKey.length < 10) {
-      toast.error('يرجى إدخال مفتاح API صالح');
-      return;
-    }
-    
-    // حفظ المفتاح في التخزين المحلي
-    localStorage.setItem('custom_gemini_api_key', customApiKey);
-    setSavedApiKey(customApiKey);
-    
-    // اختبار اتصال المفتاح
-    setIsTestingConnection(true);
+
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomApiKey(e.target.value);
+  };
+
+  const handleTestApiKey = async () => {
+    setIsTesting(true);
+    setIsApiKeyValid(false);
     
     try {
-      const result = await testGeminiConnection(customApiKey);
-      
+      const result = await testConnection(customApiKey);
       if (result.success) {
-        setIsValidKey(true);
-        toast.success('تم حفظ المفتاح واختباره بنجاح');
+        setIsApiKeyValid(true);
+        toast({
+          title: "تم التحقق من المفتاح",
+          description: "مفتاح Gemini API صالح",
+        });
       } else {
-        setIsValidKey(false);
-        toast.error(`فشل اختبار المفتاح: ${result.message}`);
+        setIsApiKeyValid(false);
+        toast({
+          title: "خطأ في التحقق",
+          description: `فشل التحقق من مفتاح Gemini API: ${result.message}`,
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      setIsValidKey(false);
-      toast.error('حدث خطأ أثناء اختبار المفتاح');
+    } catch (error: any) {
+      setIsApiKeyValid(false);
+      toast({
+        title: "خطأ",
+        description: `حدث خطأ أثناء اختبار المفتاح: ${error.message}`,
+        variant: "destructive",
+      });
     } finally {
-      setIsTestingConnection(false);
+      setIsTesting(false);
     }
   };
-  
-  // تغيير استخدام المفتاح المخصص
-  const handleUseCustomKeyToggle = (checked: boolean) => {
-    // التحقق من وجود مفتاح صالح قبل تمكين الخيار
-    if (checked && (!savedApiKey || savedApiKey.length < 10)) {
-      toast.error('يرجى إدخال مفتاح API صالح وحفظه أولاً قبل تفعيله');
-      return;
-    }
-    
-    // تحديث الحالة وحفظها في التخزين المحلي
-    setUseCustomKey(checked);
-    localStorage.setItem('use_custom_gemini_api_key', checked.toString());
-    
-    // تحديث حالة استخدام المفتاح في مدير المفاتيح
-    if (checked) {
-      addApiKey(savedApiKey);
-      toast.success('تم تفعيل استخدام المفتاح المخصص');
+
+  const handleSaveApiKey = () => {
+    if (isApiKeyValid) {
+      localStorage.setItem('custom_gemini_api_key', customApiKey);
+      addApiKey(customApiKey);
+      setUseCustomKey(true);
+      localStorage.setItem('use_custom_gemini_api_key', 'true');
+      toast({
+        title: "تم الحفظ",
+        description: "تم حفظ مفتاح Gemini API المخصص",
+      });
+      setIsCustomKeyDialogOpen(false);
+      fetchApiKeyStats();
     } else {
-      addApiKey('default');
-      toast.success('تم تفعيل استخدام المفتاح الافتراضي');
+      toast({
+        title: "خطأ",
+        description: "يرجى التأكد من أن المفتاح صالح قبل الحفظ",
+        variant: "destructive",
+      });
     }
-    
-    // تحديث الإحصائيات بعد التبديل
-    updateStats();
   };
-  
-  // إعادة تعيين المفاتيح
-  const handleResetKeys = () => {
+
+  const handleResetApiKeys = () => {
     resetAllApiKeys();
-    updateStats();
-    toast.success('تم إعادة تعيين جميع المفاتيح');
+    setUseCustomKey(false);
+    localStorage.removeItem('use_custom_gemini_api_key');
+    localStorage.removeItem('custom_gemini_api_key');
+    setCustomApiKey("");
+    setIsApiKeyValid(false);
+    fetchApiKeyStats();
+    toast({
+      title: "تم إعادة التعيين",
+      description: "تمت إعادة تعيين جميع مفاتيح Gemini API إلى الوضع الافتراضي",
+    });
   };
   
+  const handleToggleUseCustomKey = () => {
+    const newUseCustomKey = !useCustomKey;
+    setUseCustomKey(newUseCustomKey);
+    localStorage.setItem('use_custom_gemini_api_key', newUseCustomKey.toString());
+    
+    if (newUseCustomKey) {
+      if (!customApiKey) {
+        setIsCustomKeyDialogOpen(true);
+        toast({
+          title: "تنبيه",
+          description: "الرجاء إدخال مفتاح API مخصص",
+        });
+      } else {
+        toast({
+          title: "تم التفعيل",
+          description: "تم تفعيل استخدام مفتاح Gemini API المخصص",
+        });
+      }
+    } else {
+      toast({
+        title: "تم التعطيل",
+        description: "تم تعطيل استخدام مفتاح Gemini API المخصص",
+      });
+    }
+  };
+
   return (
-    <Card className="bg-white dark:bg-gray-800/50 mb-4">
-      <CardContent className="p-4">
-        <div className="flex flex-col space-y-4">
-          <h3 className="text-lg font-medium">إعدادات Gemini API</h3>
-          
-          <div className="space-y-2 mb-2">
-            <div className="flex justify-between items-center">
-              <div className="space-y-0.5">
-                <Label htmlFor="custom-api-key">مفتاح Gemini API الخاص بك</Label>
-                <p className="text-sm text-muted-foreground">
-                  أضف مفتاحك الخاص إذا وصلت لحد الاستخدام
-                </p>
-              </div>
-              <a 
-                href="https://aistudio.google.com/app/apikey" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-xs text-blue-500 hover:underline flex items-center"
-              >
-                الحصول على مفتاح <ExternalLink className="h-3 w-3 mr-1" />
-              </a>
-            </div>
-            
-            <div className="flex space-x-2 rtl:space-x-reverse">
-              <Input
-                id="custom-api-key"
-                value={customApiKey}
-                onChange={(e) => setCustomApiKey(e.target.value)}
-                placeholder="أضف مفتاح API الخاص بك"
-                type="password"
-                className="flex-grow"
-              />
-              <Button 
-                onClick={handleSaveKey} 
-                variant="outline"
-                disabled={isTestingConnection}
-              >
-                {isTestingConnection ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
-                    جاري الاختبار
-                  </>
-                ) : 'حفظ'}
+    <div>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">إدارة مفتاح Gemini API</h3>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              <Button variant="outline" size="sm" onClick={fetchApiKeyStats}>
+                تحديث الإحصائيات
               </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>تحديث إحصائيات مفاتيح API</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      <p className="text-sm text-muted-foreground mt-2">
+        يمكنك استخدام مفتاح API مخصص أو الاعتماد على المفتاح الافتراضي.
+      </p>
+      
+      <div className="mt-4 flex items-center justify-between">
+        <Label htmlFor="use-custom-key" className="mr-2">
+          استخدام مفتاح API مخصص:
+        </Label>
+        <Button 
+          variant="secondary" 
+          onClick={handleToggleUseCustomKey}
+        >
+          {useCustomKey ? "إيقاف" : "تفعيل"}
+        </Button>
+      </div>
+
+      {apiKeyStats && (
+        <div className="mt-4">
+          <h4 className="text-sm font-semibold">إحصائيات المفاتيح:</h4>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <div>
+              <Badge variant="secondary">
+                <KeyIcon className="h-4 w-4 mr-2" />
+                المجموع: {apiKeyStats.total}
+              </Badge>
             </div>
-            
-            {isValidKey !== null && (
-              <div className={`text-sm mt-1 flex items-center ${isValidKey ? 'text-green-500' : 'text-red-500'}`}>
-                {isValidKey ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                    المفتاح صالح وتم اختباره بنجاح
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-4 w-4 mr-1" />
-                    المفتاح غير صالح أو الاتصال فشل
-                  </>
-                )}
-              </div>
-            )}
-            
-            {savedApiKey && (
-              <div className="mt-3 flex items-center justify-between space-x-2 rtl:space-x-reverse">
-                <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                  <Switch
-                    id="use-custom-key"
-                    checked={useCustomKey}
-                    onCheckedChange={handleUseCustomKeyToggle}
-                  />
-                  <Label htmlFor="use-custom-key" className="cursor-pointer">استخدام مفتاحي الخاص</Label>
-                </div>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8"
-                  onClick={handleResetKeys}
-                >
-                  <RefreshCw className="h-3 w-3 ml-1" />
-                  إعادة تعيين
-                </Button>
-              </div>
-            )}
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="bg-muted/40 rounded p-2 text-center">
-              <div className="text-muted-foreground">المفاتيح النشطة</div>
-              <div className={`font-medium ${keyStats.active === 0 ? 'text-red-500' : 'text-green-500'}`}>
-                {keyStats.active}/{keyStats.total}
-              </div>
+            <div>
+              <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                <CheckIcon className="h-4 w-4 mr-2" />
+                نشط: {apiKeyStats.active}
+              </Badge>
             </div>
-            
-            <div className="bg-muted/40 rounded p-2 text-center">
-              <div className="text-muted-foreground">المفاتيح المحظورة</div>
-              <div className={`font-medium ${keyStats.blocked > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                {keyStats.blocked}/{keyStats.total}
-              </div>
+            <div>
+              <Badge className="bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                <Shield className="h-4 w-4 mr-2" />
+                محظور: {apiKeyStats.blocked}
+              </Badge>
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+
+      <Dialog open={isCustomKeyDialogOpen} onOpenChange={setIsCustomKeyDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>إعداد مفتاح API مخصص</DialogTitle>
+            <DialogDescription>
+              أدخل مفتاح Gemini API المخصص الخاص بك.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="api-key" className="text-right">
+                مفتاح API
+              </Label>
+              <Input 
+                id="api-key" 
+                value={customApiKey}
+                onChange={handleApiKeyChange}
+                className="col-span-3" 
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={handleTestApiKey} disabled={isTesting}>
+              {isTesting ? "جاري التحقق..." : "التحقق من المفتاح"}
+            </Button>
+            <Button type="button" onClick={handleSaveApiKey} disabled={!isApiKeyValid}>
+              حفظ المفتاح
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className="mt-4">
+        <Button variant="destructive" onClick={handleResetApiKeys}>
+          إعادة تعيين المفاتيح
+        </Button>
+      </div>
+    </div>
   );
 };
 

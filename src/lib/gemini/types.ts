@@ -13,7 +13,7 @@ export interface ApiResult {
   success: boolean;
   data?: any;
   message?: string;
-  apiKeyError?: boolean;
+  apiKeyError?: boolean; // إضافة هذا الحقل
 }
 
 export interface ExtractedTextResult {
@@ -52,4 +52,33 @@ export interface ApiKeyStatus {
   blocked: number;
   rateLimited: number;
   lastReset: number;
+}
+
+// إضافة الأنواع المفقودة
+export interface GeminiExtractParams {
+  apiKey: string;
+  imageBase64: string;
+  modelVersion?: string;
+  temperature?: number;
+}
+
+export interface GeminiRequest {
+  model: string;
+  contents: any[];
+}
+
+// إضافة الاسم المفقود
+export interface GeminiResponse {
+  candidates?: {
+    content?: {
+      parts?: {
+        text?: string;
+      }[];
+    };
+    finishReason?: string;
+  }[];
+  error?: {
+    message?: string;
+    code?: number;
+  };
 }

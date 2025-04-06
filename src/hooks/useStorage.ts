@@ -115,12 +115,30 @@ export const useStorage = () => {
       return false;
     }
   };
+  
+  // إضافة وظيفة uploadImageToStorage للتوافق مع الاستخدام في useImageProcessingCore
+  const uploadImageToStorage = async (file: File, userId: string, imageId: string): Promise<string | null> => {
+    if (!file || !userId) {
+      console.error("ملف غير صالح أو معرف مستخدم غير موجود");
+      return null;
+    }
+
+    const timestamp = Date.now();
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${userId}/${imageId}_${timestamp}.${fileExt}`;
+    
+    console.log(`جاري رفع الصورة إلى التخزين: ${filePath}`);
+    
+    // استخدام bucket الصحيح "images" بدلاً من "receipt_images"
+    return uploadFile(file, STORAGE_BUCKETS.IMAGES, filePath);
+  };
 
   return {
     uploadFile,
     deleteFile,
     getPublicUrl,
     createFolder,
+    uploadImageToStorage,  // إضافة الوظيفة للتصدير
     isUploading,
     uploadProgress,
     error

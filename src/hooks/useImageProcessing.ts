@@ -1,185 +1,175 @@
+import { useState, useCallback, useEffect } from 'react';
+import { ImageData } from '@/types/ImageData';
+import { useImageDatabase } from './useImageDatabase';
+import { useFileUpload } from './useFileUpload';
+import { useDuplicateDetection } from './useDuplicateDetection';
+import { useToast } from './use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { getApiKeyStats } from '@/lib/gemini';
+import { loadProcessedHashesFromStorage } from '@/utils/duplicateDetection';
 
-import { useState, useCallback, useEffect } from "react";
-import { ImageData } from "@/types/ImageData";
-import { useGeminiProcessing } from "./useGeminiProcessing";
-import { useStorage, STORAGE_BUCKETS } from "./useStorage";
-import { calculateImageHash, readImageFile } from "@/utils/fileReader";
-import { isDuplicateImage, markImageAsProcessed, loadProcessedHashesFromStorage } from "@/utils/duplicateDetection";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-
-interface UseImageProcessingProps {
-  updateImage: (id: string, data: Partial<ImageData>) => void;
-  saveImage: (image: ImageData) => Promise<void>;
-  allImages: ImageData[];
-}
-
-export const useImageProcessing = ({ updateImage, saveImage, allImages }: UseImageProcessingProps) => {
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+export const useImageProcessing = () => {
+  const [images, setImages] = useState<ImageData[]>([]);
+  const [processingProgress, setProcessingProgress] = useState<number>(0);
   const [currentlyProcessingId, setCurrentlyProcessingId] = useState<string | null>(null);
-  const { processWithGemini } = useGeminiProcessing();
-  const { uploadFile } = useStorage();
+  const { user } = useAuth();
+  const { toast } = useToast();
   
-  // تحميل هاشات الصور المعالجة عند التهيئة
+  // Load processed hashes from local storage on component mount
   useEffect(() => {
     loadProcessedHashesFromStorage();
   }, []);
-
-  // معالجة صورة واحدة
-  const processImage = useCallback(async (image: ImageData): Promise<ImageData> => {
-    try {
-      console.log(`بدء معالجة الصورة: ${image.id}`);
-      
-      // تحقق مما إذا كانت الصورة قد تمت معالجتها بالفعل
-      if (image.processed) {
-        console.log(`تم تخطي الصورة ${image.id} لأنها تمت معالجتها بالفعل`);
-        return image;
-      }
-      
-      // تحقق من التكرار قبل المعالجة
-      const isDuplicate = await isDuplicateImage(image, allImages);
-      if (isDuplicate) {
-        console.log(`تم تخطي الصورة ${image.id} لأنها مكررة`);
-        return {
-          ...image,
-          status: "completed" as "completed",
-          processed: true,
-          error: "تم تخطي المعالجة لأن الصورة مكررة"
-        };
-      }
-      
-      // تحديث حالة الصورة إلى "جاري المعالجة"
-      updateImage(image.id, {
-        status: "processing",
-        extractedText: "جاري استخراج النص من الصورة...",
-        processingAttempts: (image.processingAttempts || 0) + 1
-      });
-      
-      setIsProcessing(true);
-      setCurrentlyProcessingId(image.id);
-      
-      // التحقق من وجود الملف
-      if (!image.file) {
-        throw new Error("ملف الصورة غير متاح");
-      }
-      
-      // حساب هاش الصورة إذا لم يكن موجوداً
-      if (!image.imageHash) {
-        image.imageHash = await calculateImageHash(image.file);
-      }
-      
-      // رفع الصورة إلى التخزين إذا كان هناك مستخدم مسجل
-      let storageUrl = null;
-      const user = await supabase.auth.getUser();
-      
-      if (user.data.user) {
-        const userId = user.data.user.id;
-        const timestamp = Date.now();
-        const fileExt = image.file.name.split('.').pop();
-        const filePath = `${userId}/${image.id}_${timestamp}.${fileExt}`;
-        
-        storageUrl = await uploadFile(image.file, STORAGE_BUCKETS.IMAGES, filePath);
-        if (storageUrl) {
-          updateImage(image.id, {
-            storage_path: filePath
-          });
-        }
-      }
-      
-      // معالجة الصورة باستخدام Gemini
-      let processedImage = await processWithGemini(image.file, image);
-      
-      // تضمين معلومات التخزين في النتيجة
-      if (storageUrl) {
-        processedImage.storage_path = storageUrl;
-      }
-      
-      // وضع علامة على الصورة بأنها تمت معالجتها
-      processedImage.processed = true;
-      processedImage.processingAttempts = (image.processingAttempts || 0) + 1;
-      
-      // إضافة الهاش إلى كاش الصور المعالجة
-      if (processedImage.imageHash) {
-        markImageAsProcessed(processedImage.imageHash);
-      }
-      
-      // تحديث الواجهة بالبيانات المستخرجة
-      updateImage(image.id, {
-        status: processedImage.status,
-        code: processedImage.code,
-        senderName: processedImage.senderName,
-        phoneNumber: processedImage.phoneNumber,
-        province: processedImage.province,
-        price: processedImage.price,
-        companyName: processedImage.companyName,
-        extractedText: processedImage.extractedText,
-        confidence: processedImage.confidence,
-        processed: true,
-        storage_path: processedImage.storage_path
-      });
-      
-      // حفظ البيانات في قاعدة البيانات
-      try {
-        await saveImage(processedImage);
-      } catch (saveError) {
-        console.error(`خطأ في حفظ الصورة ${image.id}:`, saveError);
-      }
-      
-      console.log(`تمت معالجة الصورة ${image.id} بنجاح`);
-      return processedImage;
-      
-    } catch (error: any) {
-      console.error(`خطأ في معالجة الصورة ${image.id}:`, error);
-      
-      updateImage(image.id, {
-        status: "error",
-        error: error.message || "خطأ غير معروف",
-        extractedText: `فشل المعالجة: ${error.message || "خطأ غير معروف"}`
-      });
-      
-      return {
-        ...image,
-        status: "error" as "error",
-        error: error.message || "خطأ غير معروف"
-      };
-    } finally {
-      setIsProcessing(false);
-      setCurrentlyProcessingId(null);
-    }
-  }, [updateImage, saveImage, allImages, processWithGemini, uploadFile]);
-
-  // معالجة مجموعة من الصور
-  const processMultipleImages = useCallback(async (images: ImageData[]): Promise<void> => {
-    if (images.length === 0) return;
-    
-    const imagesToProcess = images.filter(img => !img.processed);
-    if (imagesToProcess.length === 0) {
-      console.log("لا توجد صور جديدة للمعالجة");
-      toast.info("لا توجد صور جديدة للمعالجة");
-      return;
-    }
-    
-    toast.info(`جاري معالجة ${imagesToProcess.length} صور...`, {
-      duration: 3000
-    });
-    
-    for (const image of imagesToProcess) {
-      try {
-        await processImage(image);
-        // إضافة تأخير بين المعالجات لتجنب تجاوز حدود API
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      } catch (error) {
-        console.error(`خطأ في معالجة الصورة ${image.id}:`, error);
-      }
-    }
-    
-    toast.success(`تمت معالجة ${imagesToProcess.length} صور`);
-  }, [processImage]);
-
-  return {
-    processImage,
-    processMultipleImages,
+  
+  // Initialize useImageDatabase with the updateImage function
+  const {
+    isLoadingUserImages,
+    saveImageToDatabase,
+    loadUserImages: loadImagesFromDatabase,
+    handleSubmitToApi,
+    deleteImageFromDatabase,
+    cleanupOldRecords,
+    runCleanupNow
+  } = useImageDatabase(updateImage);
+  
+  // Initialize useFileUpload
+  const {
     isProcessing,
-    currentlyProcessingId
+    handleFileChange,
+    activeUploads,
+    queueLength,
+    useGemini,
+    pauseProcessing,
+    clearQueue,
+    manuallyTriggerProcessingQueue,
+    getProcessingState,
+    clearProcessedHashesCache
+  } = useFileUpload({
+    images,
+    addImage,
+    updateImage,
+    setProcessingProgress,
+    saveProcessedImage,
+    isDuplicateImage,
+    removeDuplicates
+  });
+  
+  // Initialize useDuplicateDetection
+  const { isDuplicateImage, removeDuplicates } = useDuplicateDetection(images);
+  
+  // Function to add a single image
+  const addImage = useCallback((image: ImageData) => {
+    setImages(prevImages => [...prevImages, image]);
+  }, []);
+  
+  // Function to update a single image
+  const updateImage = useCallback((id: string, fields: Partial<ImageData>) => {
+    setImages(prevImages =>
+      prevImages.map(image => (image.id === id ? { ...image, ...fields } : image))
+    );
+  }, []);
+  
+  // Load user images from the database
+  const loadUserImages = useCallback(() => {
+    if (user) {
+      loadImagesFromDatabase(user.id, setImages);
+    }
+  }, [user, loadImagesFromDatabase]);
+  
+  useEffect(() => {
+    if (user) {
+      loadUserImages();
+    }
+  }, [user, loadUserImages]);
+  
+  // Function to delete a single image
+  const handleDelete = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      // First, delete the image from the database
+      await deleteImageFromDatabase(id);
+      
+      // Then, update the local state
+      setImages(prevImages => prevImages.filter(image => image.id !== id));
+      
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف الصورة بنجاح",
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error deleting image:", error);
+      toast({
+        title: "خطأ",
+        description: `فشل حذف الصورة: ${error.message}`,
+        variant: "destructive",
+      });
+      return false;
+    }
+  }, [deleteImageFromDatabase, toast]);
+  
+  // Clear all session images
+  const clearSessionImages = useCallback(() => {
+    setImages([]);
+  }, []);
+  
+  // Handle error with toast notification
+  const handleError = (id: string, errorMessage: string, isApiKeyError = false) => {
+    updateImage(id, {
+      status: "error",
+      error: errorMessage,
+      apiKeyError: isApiKeyError
+    });
+  };
+  
+  // Save processed image to database
+  const saveProcessedImage = useCallback(async (image: ImageData) => {
+    if (user) {
+      await saveImageToDatabase(image, user.id);
+    } else {
+      console.warn("User not logged in, cannot save image.");
+    }
+  }, [user, saveImageToDatabase]);
+  
+  // Handle text change in image data
+  const handleTextChange = useCallback((id: string, field: string, value: string) => {
+    updateImage(id, { [field]: value });
+  }, [updateImage]);
+  
+  // Format date
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('ar-SA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+  
+  return {
+    images,
+    isLoadingUserImages,
+    isProcessing,
+    processingProgress,
+    currentlyProcessingId,
+    isSubmitting: false, // This should be managed internally or passed as needed
+    activeUploads,
+    queueLength,
+    useGemini,
+    handleFileChange,
+    handleTextChange,
+    handleDelete,
+    handleSubmitToApi,
+    saveImageToDatabase,
+    formatDate,
+    clearSessionImages,
+    loadUserImages,
+    runCleanupNow,
+    saveProcessedImage,
+    isDuplicateImage,
+    removeDuplicates,
+    retryProcessing: manuallyTriggerProcessingQueue,
+    pauseProcessing,
+    clearQueue,
+    getProcessingState,
+    clearProcessedHashesCache
   };
 };

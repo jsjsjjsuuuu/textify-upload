@@ -1,11 +1,10 @@
-
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { 
   getNextApiKey, 
   resetAllApiKeys, 
   getApiKeyStats,
   addApiKey,
-  testGeminiConnection
+  testConnection
 } from "@/lib/gemini";
 import { ApiResult } from "@/lib/gemini/types";
 import { fileToBase64 } from "@/lib/gemini/utils";
@@ -136,12 +135,15 @@ export const useGeminiProcessing = () => {
         }
       } else {
         // تحويل ملف أو Blob إلى Base64
-        // الحل لمشكلة Blob/File
+        // تحسين الحل لمشكلة Blob/File
         if (imageFile instanceof File) {
           base64Data = await fileToBase64(imageFile);
         } else {
           // إذا كان Blob، نحوله إلى File أولاً
-          const blobAsFile = new File([imageFile], "image.jpg", { type: 'image/jpeg', lastModified: Date.now() });
+          const blobAsFile = new File([imageFile], "image.jpg", { 
+            type: imageFile.type || 'image/jpeg', 
+            lastModified: Date.now() 
+          });
           base64Data = await fileToBase64(blobAsFile);
         }
       }
@@ -285,8 +287,8 @@ export const useGeminiProcessing = () => {
       
       console.log(`اختبار الاتصال باستخدام مفتاح API (الأحرف الأولى): ${apiKey.substring(0, 5)}...`);
       
-      // اختبار الاتصال
-      const result = await testGeminiConnection(apiKey);
+      // اختبار الاتصال - استبدلناها بـ testConnection
+      const result = await testConnection(apiKey);
       
       if (result.success) {
         console.log("تم الاتصال بـ Gemini API بنجاح");
@@ -306,7 +308,7 @@ export const useGeminiProcessing = () => {
       return false;
     }
   }, []);
-  
+
   return {
     processImageWithGemini,
     processWithGemini,
@@ -322,7 +324,7 @@ export const useGeminiProcessing = () => {
         const apiKey = customApiKey || getNextApiKey();
         if (!apiKey) return false;
         
-        const result = await testGeminiConnection(apiKey);
+        const result = await testConnection(apiKey); // تغيير هنا لاستخدام الدالة الصحيحة
         
         if (result.success) {
           if (customApiKey) addApiKey(customApiKey);
