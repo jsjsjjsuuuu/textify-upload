@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -181,6 +180,7 @@ export const useFileUpload = ({
         }
       }
       
+      // إضافة الصورة إلى القائمة أولاً مع حالة "processing" لعرض العملية للمستخدم
       addImage(newImage);
       console.log("تمت إضافة صورة جديدة إلى الحالة بالمعرف:", newImage.id);
       
@@ -255,8 +255,8 @@ export const useFileUpload = ({
           processedData.status = "completed";
           
           // **تسجيل الصورة كمعالجة لتجنب إعادة المعالجة**
-          if (processedImage && processedImage.markImageAsProcessed) {
-            processedImage.markImageAsProcessed(processedData);
+          if (processedImage && processedImage.addToProcessedCache) {
+            processedImage.addToProcessedCache(processedData);
           }
         } else if (processedData.status !== "error") {
           processedData.status = "pending";
@@ -273,7 +273,7 @@ export const useFileUpload = ({
         updateImage(imageId, processedData);
         console.log("تم تحديث الصورة بالبيانات المستخرجة:", imageId);
         
-        // **حفظ الصورة المعالجة** - مع مراعاة أن saveProcessedImage الآن ترجع void بدلاً من ImageData
+        // **حفظ الصورة المعالجة** - التأكد من عدم محاولة اختبار القيمة المرجعة من saveProcessedImage
         if (saveProcessedImage && processedData.status === "completed") {
           try {
             await saveProcessedImage(processedData);
