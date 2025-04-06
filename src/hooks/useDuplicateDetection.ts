@@ -31,6 +31,30 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
     return CryptoJS.MD5(uniqueIdentifiers).toString();
   }, []);
 
+  // إضافة صورة إلى الذاكرة المؤقتة للصور المعالجة
+  const addToProcessedCache = useCallback((image: ImageData) => {
+    try {
+      // إضافة المعرف إلى القائمة
+      setProcessedIds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(image.id);
+        return newSet;
+      });
+
+      // إضافة التجزئة إلى القائمة
+      const imageHash = createUniqueImageHash(image);
+      setProcessedHashes(prev => {
+        const newSet = new Set(prev);
+        newSet.add(imageHash);
+        return newSet;
+      });
+      
+      console.log(`تمت إضافة الصورة ${image.id} إلى ذاكرة التخزين المؤقت للصور المعالجة`);
+    } catch (error) {
+      console.error('خطأ في إضافة الصورة إلى ذاكرة التخزين المؤقت:', error);
+    }
+  }, [createUniqueImageHash]);
+
   // استعادة معرفات الصور المعالجة من التخزين المحلي عند بدء التشغيل
   useEffect(() => {
     try {
@@ -119,30 +143,6 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
       return false;
     }
   }, [processedHashes, processedIds, createUniqueImageHash, enabled, ignoreTemporary, addToProcessedCache]);
-
-  // إضافة صورة إلى الذاكرة المؤقتة للصور المعالجة
-  const addToProcessedCache = useCallback((image: ImageData) => {
-    try {
-      // إضافة المعرف إلى القائمة
-      setProcessedIds(prev => {
-        const newSet = new Set(prev);
-        newSet.add(image.id);
-        return newSet;
-      });
-
-      // إضافة التجزئة إلى القائمة
-      const imageHash = createUniqueImageHash(image);
-      setProcessedHashes(prev => {
-        const newSet = new Set(prev);
-        newSet.add(imageHash);
-        return newSet;
-      });
-      
-      console.log(`تمت إضافة الصورة ${image.id} إلى ذاكرة التخزين المؤقت للصور المعالجة`);
-    } catch (error) {
-      console.error('خطأ في إضافة الصورة إلى ذاكرة التخزين المؤقت:', error);
-    }
-  }, [createUniqueImageHash]);
 
   // وظيفة لتحديد ما إذا كانت الصورة مكتملة المعالجة
   const isFullyProcessed = useCallback((image: ImageData): boolean => {

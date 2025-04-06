@@ -79,16 +79,19 @@ export const useImageProcessing = () => {
       
       try {
         // معالجة الصورة واستخدام الإرجاع بشكل مباشر
-        const processedImage = await coreProcessing.saveProcessedImage(image);
+        await coreProcessing.saveProcessedImage(image);
         
-        // تسجيل الصورة المعالجة
-        if (processedImage) {
-          trackProcessedImage(processedImage);
-          return processedImage;
+        // نحن نعرف أن saveProcessedImage لا ترجع قيمة، لذلك نستخدم الصورة المحدثة
+        // من الحالة لتتبع ما إذا كانت المعالجة ناجحة
+        const updatedImage = coreProcessing.images.find(img => img.id === image.id);
+        
+        // إذا تمت المعالجة بنجاح، نسجل الصورة
+        if (updatedImage && updatedImage.status === "completed") {
+          trackProcessedImage(updatedImage);
+          return updatedImage;
         }
         
-        // التعامل مع حالة عدم وجود قيمة عائدة من saveProcessedImage
-        // بما أن saveProcessedImage قد تعيد undefined، نرجع الصورة الأصلية مع رسالة خطأ
+        // إذا لم نتمكن من العثور على الصورة المحدثة أو كان هناك خطأ
         return {
           ...image,
           status: "error" as const,

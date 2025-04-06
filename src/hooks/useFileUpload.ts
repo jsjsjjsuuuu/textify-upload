@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -11,6 +12,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { compressImage, enhanceImageForOCR } from "@/utils/imageCompression";
 import { enhancePhoneNumber, formatIraqiPhoneNumber } from "@/utils/phoneNumberUtils";
 
+interface DuplicateDetector {
+  isDuplicateImage?: (image: ImageData, images: ImageData[]) => boolean;
+  markImageAsProcessed?: (image: ImageData) => boolean;
+  isFullyProcessed?: (image: ImageData) => boolean;
+  addToProcessedCache?: (image: ImageData) => void;
+}
+
 interface UseFileUploadProps {
   images: ImageData[];
   addImage: (image: ImageData) => void;
@@ -18,10 +26,7 @@ interface UseFileUploadProps {
   setProcessingProgress: (progress: number) => void;
   saveProcessedImage?: (image: ImageData) => Promise<void>;
   removeDuplicates?: () => void;
-  processedImage?: {
-    isDuplicateImage?: (image: ImageData, images: ImageData[]) => boolean;
-    markImageAsProcessed?: (image: ImageData) => boolean;
-  };
+  processedImage?: DuplicateDetector;
 }
 
 // تحسين معالجة الصور لتتم بشكل متسلسل وبتتبع أفضل
@@ -221,57 +226,57 @@ export const useFileUpload = ({
         // استخدام Gemini للمعالجة
         console.log(`استخدام Gemini API للاستخراج للصورة ${file.name}`);
         
-        const processedImage = await processWithGemini(enhancedFile, {
+        const processedData = await processWithGemini(enhancedFile, {
           ...newImage,
           previewUrl,
           storage_path: storagePath
         });
         
         // تنظيف وتحسين رقم الهاتف تلقائيًا بعد المعالجة
-        if (processedImage.phoneNumber) {
-          const originalPhone = processedImage.phoneNumber;
+        if (processedData.phoneNumber) {
+          const originalPhone = processedData.phoneNumber;
           
           // استخدام الدالة المحسنة لتنسيق رقم الهاتف
-          processedImage.phoneNumber = formatIraqiPhoneNumber(originalPhone);
+          processedData.phoneNumber = formatIraqiPhoneNumber(originalPhone);
           
           // تحسين رقم الهاتف باستخدام سياق النص المستخرج
-          processedImage.phoneNumber = enhancePhoneNumber(
-            processedImage.phoneNumber, 
-            processedImage.extractedText || ""
+          processedData.phoneNumber = enhancePhoneNumber(
+            processedData.phoneNumber, 
+            processedData.extractedText || ""
           );
           
-          if (originalPhone !== processedImage.phoneNumber) {
-            console.log(`تم تنظيف رقم الهاتف تلقائيًا بعد المعالجة: "${originalPhone}" -> "${processedImage.phoneNumber}"`);
+          if (originalPhone !== processedData.phoneNumber) {
+            console.log(`تم تنظيف رقم الهاتف تلقائيًا بعد المعالجة: "${originalPhone}" -> "${processedData.phoneNumber}"`);
           }
         }
         
         // تحديث حالة الصورة إلى "مكتملة" إذا كانت تحتوي على جميع البيانات الأساسية
-        if (processedImage.code && processedImage.senderName && processedImage.phoneNumber) {
-          processedImage.status = "completed";
+        if (processedData.code && processedData.senderName && processedData.phoneNumber) {
+          processedData.status = "completed";
           
-          // **تمييز الصورة كمعالجة لتجنب إعادة المعالجة**
+          // **تسجيل الصورة كمعالجة لتجنب إعادة المعالجة**
           if (processedImage && processedImage.markImageAsProcessed) {
-            processedImage.markImageAsProcessed(processedImage);
+            processedImage.markImageAsProcessed(processedData);
           }
-        } else if (processedImage.status !== "error") {
-          processedImage.status = "pending";
+        } else if (processedData.status !== "error") {
+          processedData.status = "pending";
         }
         
         // إضافة معلومات إضافية
-        processedImage.user_id = user?.id;
-        processedImage.storage_path = storagePath;
-        processedImage.retryCount = retryCount;
-        processedImage.added_at = Date.now();
-        processedImage.sessionImage = false; // تغيير إلى false بعد المعالجة الناجحة
+        processedData.user_id = user?.id;
+        processedData.storage_path = storagePath;
+        processedData.retryCount = retryCount;
+        processedData.added_at = Date.now();
+        processedData.sessionImage = false; // تغيير إلى false بعد المعالجة الناجحة
         
         // تحديث الصورة بالبيانات المستخرجة
-        updateImage(imageId, processedImage);
+        updateImage(imageId, processedData);
         console.log("تم تحديث الصورة بالبيانات المستخرجة:", imageId);
         
         // **حفظ الصورة المعالجة** - مع مراعاة أن saveProcessedImage الآن ترجع void بدلاً من ImageData
-        if (saveProcessedImage && processedImage.status === "completed") {
+        if (saveProcessedImage && processedData.status === "completed") {
           try {
-            await saveProcessedImage(processedImage);
+            await saveProcessedImage(processedData);
             console.log("تم حفظ الصورة المعالجة بنجاح:", imageId);
           } catch (saveError) {
             console.error("خطأ في حفظ الصورة المعالجة:", saveError);
