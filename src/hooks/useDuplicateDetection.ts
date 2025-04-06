@@ -31,18 +31,26 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
     return CryptoJS.MD5(uniqueIdentifiers).toString();
   }, []);
 
-  // حفظ معرفات الصور في التخزين المحلي للمتصفح للتذكر بين الجلسات
+  // استعادة معرفات الصور المعالجة من التخزين المحلي عند بدء التشغيل
   useEffect(() => {
-    // استرجاع معرفات الصور المعالجة من التخزين المحلي عند بدء التشغيل
-    const storedProcessedIds = localStorage.getItem('processedImageIds');
-    if (storedProcessedIds) {
-      try {
+    try {
+      // استرجاع معرفات الصور المعالجة
+      const storedProcessedIds = localStorage.getItem('processedImageIds');
+      if (storedProcessedIds) {
         const idsArray = JSON.parse(storedProcessedIds);
         setProcessedIds(new Set(idsArray));
         console.log(`تم تحميل ${idsArray.length} معرف صورة معالجة من التخزين المحلي`);
-      } catch (error) {
-        console.error('خطأ في تحميل معرفات الصور المعالجة:', error);
       }
+      
+      // استرجاع تجزئات الصور المعالجة
+      const storedProcessedHashes = localStorage.getItem('processedImageHashes');
+      if (storedProcessedHashes) {
+        const hashesArray = JSON.parse(storedProcessedHashes);
+        setProcessedHashes(new Set(hashesArray));
+        console.log(`تم تحميل ${hashesArray.length} تجزئة صورة معالجة من التخزين المحلي`);
+      }
+    } catch (error) {
+      console.error('خطأ في تحميل بيانات الصور المعالجة من التخزين المحلي:', error);
     }
   }, []);
 
@@ -51,33 +59,44 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
     if (processedIds.size > 0) {
       localStorage.setItem('processedImageIds', JSON.stringify([...processedIds]));
     }
-  }, [processedIds]);
+    
+    if (processedHashes.size > 0) {
+      localStorage.setItem('processedImageHashes', JSON.stringify([...processedHashes]));
+    }
+  }, [processedIds, processedHashes]);
 
   // التحقق من تكرار الصورة - تحسين المنطق بإضافة فحوصات للحالة والنص المستخرج
   const isDuplicateImage = useCallback((image: ImageData, images: ImageData[] = []): boolean => {
     if (!enabled || !image) return false;
 
     try {
-      // التحقق من وجود المعرف في قائمة المعرفات المعالجة
+      // فحص إضافي: إذا كانت الصورة موجودة في قائمة الصور المكررة بنفس المعرف
       if (processedIds.has(image.id)) {
         console.log(`تم العثور على معرف مطابق في الذاكرة المؤقتة: ${image.id}`);
+        return true;
+      }
+
+      // فحص إضافي للحالة: إذا كانت الصورة مكتملة أو تم معالجتها سابقًا
+      if (image.status === "completed" && image.extractedText && image.code && image.senderName && image.phoneNumber) {
+        console.log(`الصورة ${image.id} مكتملة بالفعل، إضافتها إلى الذاكرة المؤقتة وتجاهلها`);
+        // إضافة المعرف والتجزئة إلى الذاكرة المؤقتة
+        addToProcessedCache(image);
         return true;
       }
 
       // إنشاء تجزئة للصورة
       const imageHash = createUniqueImageHash(image);
       
-      // التحقق من وجود التجزئة في قائمة التجزئات المعالجة
+      // فحص إضافي: التحقق من وجود التجزئة في قائمة التجزئات المعالجة
       if (processedHashes.has(imageHash)) {
         console.log(`تم العثور على تجزئة مطابقة في الذاكرة المؤقتة: ${imageHash} للصورة ${image.id}`);
         return true;
       }
       
-      // التحقق من حالة الصورة - إذا كانت الصورة مكتملة أو تم معالجتها، اعتبرها مكررة
-      if (image.status === "completed") {
-        console.log(`الصورة ${image.id} مكتملة بالفعل، إضافتها كمكررة`);
-        
-        // إضافة المعرف والتجزئة إلى الذاكرة المؤقتة
+      // فحص إضافي للنص المستخرج: تخطي الصور التي لديها نص مستخرج وجميع البيانات المطلوبة
+      if (image.extractedText && image.extractedText.length > 10 && 
+          image.code && image.senderName && image.phoneNumber) {
+        console.log(`الصورة ${image.id} لديها نص مستخرج وبيانات مطلوبة، إضافتها إلى الذاكرة المؤقتة`);
         addToProcessedCache(image);
         return true;
       }
@@ -85,12 +104,12 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
       // تحديد ما إذا كنا سنتجاهل الصور المؤقتة
       const checkDuplicateOptions = { ignoreTemporary };
       
-      // استخدام الوظيفة المساعدة من utils/duplicateDetection
+      // البحث عن تكرارات في قائمة الصور باستخدام الوظيفة المساعدة
       const isDuplicate = isImageDuplicate(image, images, ignoreTemporary);
       
-      // إذا لم يكن هناك تكرار وليست صورة مؤقتة وتحتوي على نص مستخرج، إضافة التجزئة إلى القائمة
-      if (!isDuplicate && !image.sessionImage && image.extractedText && image.extractedText.length > 10) {
-        console.log(`إضافة صورة جديدة معالجة إلى الذاكرة المؤقتة: ${image.id}`);
+      // إذا تم اكتشاف أن الصورة مكررة، نضيفها إلى الذاكرة المؤقتة
+      if (isDuplicate) {
+        console.log(`تم اكتشاف صورة مكررة عبر المقارنة: ${image.id}`);
         addToProcessedCache(image);
       }
       
@@ -99,24 +118,30 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
       console.error('خطأ في اكتشاف تكرار الصورة:', error);
       return false;
     }
-  }, [processedHashes, processedIds, createUniqueImageHash, enabled, ignoreTemporary]);
+  }, [processedHashes, processedIds, createUniqueImageHash, enabled, ignoreTemporary, addToProcessedCache]);
 
   // إضافة صورة إلى الذاكرة المؤقتة للصور المعالجة
   const addToProcessedCache = useCallback((image: ImageData) => {
-    // إضافة المعرف إلى القائمة
-    setProcessedIds(prev => {
-      const newSet = new Set(prev);
-      newSet.add(image.id);
-      return newSet;
-    });
+    try {
+      // إضافة المعرف إلى القائمة
+      setProcessedIds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(image.id);
+        return newSet;
+      });
 
-    // إضافة التجزئة إلى القائمة
-    const imageHash = createUniqueImageHash(image);
-    setProcessedHashes(prev => {
-      const newSet = new Set(prev);
-      newSet.add(imageHash);
-      return newSet;
-    });
+      // إضافة التجزئة إلى القائمة
+      const imageHash = createUniqueImageHash(image);
+      setProcessedHashes(prev => {
+        const newSet = new Set(prev);
+        newSet.add(imageHash);
+        return newSet;
+      });
+      
+      console.log(`تمت إضافة الصورة ${image.id} إلى ذاكرة التخزين المؤقت للصور المعالجة`);
+    } catch (error) {
+      console.error('خطأ في إضافة الصورة إلى ذاكرة التخزين المؤقت:', error);
+    }
   }, [createUniqueImageHash]);
 
   // وظيفة لتحديد ما إذا كانت الصورة مكتملة المعالجة
@@ -146,6 +171,7 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
     setProcessedHashes(new Set());
     setProcessedIds(new Set());
     localStorage.removeItem('processedImageIds');
+    localStorage.removeItem('processedImageHashes');
     
     toast({
       title: "تم مسح الذاكرة المؤقتة",

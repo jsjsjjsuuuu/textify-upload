@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
 import { useImageState } from "@/hooks/useImageState";
@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useImageStats } from "@/hooks/useImageStats";
 import { useImageDatabase } from "@/hooks/useImageDatabase";
 import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
+import { useDuplicateDetection } from "@/hooks/useDuplicateDetection";
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +35,9 @@ export const useImageProcessingCore = () => {
     bookmarkletStats,
     setBookmarkletStats
   } = useImageStats();
+  
+  // استخدام اكتشاف التكرار
+  const duplicateDetection = useDuplicateDetection({ enabled: true });
   
   // تحسين استخدام useSavedImageProcessing مع توقيع الوظيفة الصحيح
   const {
@@ -109,6 +113,9 @@ export const useImageProcessingCore = () => {
         // تحديث الصورة محلياً
         updateImage(id, { submitted: true, status: "completed" });
         
+        // تسجيل الصورة كمعالجة لتجنب إعادة المعالجة
+        duplicateDetection.markImageAsProcessed(image);
+        
         // إعادة تحميل الصور من قاعدة البيانات للتأكد من التزامن
         if (user) {
           loadUserImages(user.id, setAllImages);
@@ -150,7 +157,7 @@ export const useImageProcessingCore = () => {
     }
   };
   
-  // استدعاء useFileUpload مع تحسين آلية التعامل مع الصور وتمرير وظيفة removeDuplicates
+  // استدعاء useFileUpload مع تحسين آلية التعامل مع الصور وتمرير وظائف اكتشاف التكرار
   const { 
     isProcessing, 
     handleFileChange,
@@ -164,7 +171,8 @@ export const useImageProcessingCore = () => {
     updateImage,
     setProcessingProgress,
     saveProcessedImage,
-    removeDuplicates  // تمرير وظيفة إزالة التكرارات
+    removeDuplicates,
+    processedImage: duplicateDetection // إضافة وظائف اكتشاف التكرار
   });
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
@@ -224,6 +232,8 @@ export const useImageProcessingCore = () => {
     // إضافة وظيفة إعادة تشغيل المعالجة يدويًا
     retryProcessing: manuallyTriggerProcessingQueue,
     // إضافة وظيفة تنظيف التكرارات
-    cleanupDuplicates
+    cleanupDuplicates,
+    // إضافة وظائف التعامل مع التكرار من useDuplicateDetection
+    ...duplicateDetection
   };
 };

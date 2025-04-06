@@ -45,6 +45,18 @@ export const imagesMatch = (image1: ImageData, image2: ImageData): boolean => {
   // التحقق من عدم وجود معرف مختلف (إذا كانت الصورتان مختلفتين)
   const differentIds = image1.id !== image2.id;
   
+  // **تحقق إضافي: فحص النص المستخرج إذا كان متوفرًا**
+  const textSimilar = !!image1.extractedText && !!image2.extractedText && 
+                      image1.extractedText.length > 10 && image2.extractedText.length > 10 && 
+                      (image1.extractedText.substring(0, 50) === image2.extractedText.substring(0, 50));
+  
+  // **تحقق إضافي: فحص تطابق الكود إذا كان متوفرًا**
+  const sameCode = !!image1.code && !!image2.code && image1.code === image2.code;
+  
+  // **تحقق إضافي: فحص تطابق رقم الهاتف إذا كان متوفرًا**
+  const samePhoneNumber = !!image1.phoneNumber && !!image2.phoneNumber && 
+                          image1.phoneNumber.replace(/[^\d]/g, '') === image2.phoneNumber.replace(/[^\d]/g, '');
+  
   // إذا كانت الصورة الأولى مكتملة أو بها خطأ، وكذلك الصورة الثانية، والملفان متطابقان، اعتبرهما متطابقتين
   const bothProcessed = 
     (image1.status === "completed" || image1.status === "error") &&
@@ -57,7 +69,9 @@ export const imagesMatch = (image1: ImageData, image2: ImageData): boolean => {
   }
   
   // اعتبار الصور متطابقة إذا كانت من نفس المستخدم ولنفس الملف أو كلاهما معالج
-  return (sameUser && sameFile) || bothProcessed;
+  // أو إذا كان النص المستخرج متشابهًا جدًا أو الكود ورقم الهاتف متطابقين
+  return (sameUser && sameFile) || bothProcessed || 
+         (sameUser && (textSimilar || (sameCode && samePhoneNumber)));
 };
 
 /**
@@ -81,7 +95,7 @@ export const isImageDuplicate = (
     return false;
   }
   
-  // التحقق من حالة الصورة - إذا كانت مكتملة أو بها خطأ وتم معالجتها من قبل
+  // **فحص إضافي: إذا كانت الصورة مكتملة المعالجة ولديها جميع البيانات الضرورية**
   const isAlreadyProcessed = image.status === "completed" || image.status === "error";
   const hasExtractedText = !!image.extractedText && image.extractedText.length > 10;
   const hasRequiredFields = !!image.code && !!image.senderName && !!image.phoneNumber;
@@ -101,6 +115,17 @@ export const isImageDuplicate = (
     // إذا كان ignoreTemporary مفعلاً، تجاهل الصور المؤقتة
     if (ignoreTemporary && existingImage.sessionImage === true) {
       return false;
+    }
+    
+    // **فحص إضافي: إذا كانت الحقول الأساسية متطابقة (الكود، رقم الهاتف)**
+    const sameKeyFields = 
+      !!image.code && !!existingImage.code && image.code === existingImage.code &&
+      !!image.phoneNumber && !!existingImage.phoneNumber && 
+      image.phoneNumber.replace(/[^\d]/g, '') === existingImage.phoneNumber.replace(/[^\d]/g, '');
+    
+    if (sameKeyFields) {
+      console.log(`تطابق في الحقول الأساسية (الكود ورقم الهاتف) بين ${image.id} و ${existingImage.id}`);
+      return true;
     }
     
     // التحقق من وجود نص مستخرج وحقول مطلوبة في الصورة الموجودة

@@ -17,7 +17,11 @@ interface UseFileUploadProps {
   updateImage: (id: string, fields: Partial<ImageData>) => void;
   setProcessingProgress: (progress: number) => void;
   saveProcessedImage?: (image: ImageData) => Promise<void>;
-  removeDuplicates?: () => void; // إضافة الوظيفة كخاصية اختيارية في الواجهة
+  removeDuplicates?: () => void;
+  processedImage?: {
+    isDuplicateImage?: (image: ImageData, images: ImageData[]) => boolean;
+    markImageAsProcessed?: (image: ImageData) => boolean;
+  };
 }
 
 // تحسين معالجة الصور لتتم بشكل متسلسل وبتتبع أفضل
@@ -32,7 +36,8 @@ export const useFileUpload = ({
   updateImage,
   setProcessingProgress,
   saveProcessedImage,
-  removeDuplicates
+  removeDuplicates,
+  processedImage
 }: UseFileUploadProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeUploads, setActiveUploads] = useState(0); 
@@ -129,6 +134,23 @@ export const useFileUpload = ({
         return false;
       }
       
+      // **التحقق من وجود الملف بنفس الاسم والحجم في قائمة الصور الموجودة**
+      const existingImage = images.find(img => 
+        img.file.name === file.name && 
+        img.file.size === enhancedFile.size &&
+        img.status === "completed" && 
+        img.extractedText && 
+        img.extractedText.length > 10 &&
+        img.code && 
+        img.senderName && 
+        img.phoneNumber
+      );
+      
+      if (existingImage) {
+        console.log(`الصورة ${file.name} مكتملة ومعالجة بالفعل، تخطي المعالجة`);
+        return true;
+      }
+      
       // إضافة الصورة إلى القائمة أولاً مع حالة "processing" لعرض العملية للمستخدم
       const newImage: ImageData = {
         id: imageId,
@@ -138,11 +160,21 @@ export const useFileUpload = ({
         date: new Date(),
         status: "processing",
         number: startingNumber + index,
-        user_id: user.id,
+        user_id: user?.id,
         batch_id: batchId,
         retryCount: retryCount,
-        added_at: Date.now() // تأكد من إضافة طابع زمني
+        added_at: Date.now(),
+        sessionImage: true // ميزة جديدة لتمييز الصور المؤقتة المضافة في هذه الجلسة
       };
+      
+      // **فحص إضافي في اكتشاف التكرار قبل المعالجة**
+      if (processedImage && processedImage.isDuplicateImage) { 
+        const isDuplicate = processedImage.isDuplicateImage(newImage, images);
+        if (isDuplicate) {
+          console.log(`الصورة ${file.name} تم اكتشافها كمكررة، تخطي المعالجة`);
+          return true;
+        }
+      }
       
       addImage(newImage);
       console.log("تمت إضافة صورة جديدة إلى الحالة بالمعرف:", newImage.id);
@@ -216,19 +248,35 @@ export const useFileUpload = ({
         // تحديث حالة الصورة إلى "مكتملة" إذا كانت تحتوي على جميع البيانات الأساسية
         if (processedImage.code && processedImage.senderName && processedImage.phoneNumber) {
           processedImage.status = "completed";
+          
+          // **تمييز الصورة كمعالجة لتجنب إعادة المعالجة**
+          if (processedImage && processedImage.markImageAsProcessed) {
+            processedImage.markImageAsProcessed(processedImage);
+          }
         } else if (processedImage.status !== "error") {
           processedImage.status = "pending";
         }
         
         // إضافة معلومات إضافية
-        processedImage.user_id = user.id;
+        processedImage.user_id = user?.id;
         processedImage.storage_path = storagePath;
         processedImage.retryCount = retryCount;
-        processedImage.added_at = Date.now(); // تأكد من تحديث الطابع الزمني
+        processedImage.added_at = Date.now();
+        processedImage.sessionImage = false; // تغيير إلى false بعد المعالجة الناجحة
         
         // تحديث الصورة بالبيانات المستخرجة
         updateImage(imageId, processedImage);
         console.log("تم تحديث الصورة بالبيانات المستخرجة:", imageId);
+        
+        // **حفظ الصورة المعالجة** - مع مراعاة أن saveProcessedImage الآن ترجع void بدلاً من ImageData
+        if (saveProcessedImage && processedImage.status === "completed") {
+          try {
+            await saveProcessedImage(processedImage);
+            console.log("تم حفظ الصورة المعالجة بنجاح:", imageId);
+          } catch (saveError) {
+            console.error("خطأ في حفظ الصورة المعالجة:", saveError);
+          }
+        }
         
         return true;
       } catch (processingError: any) {
