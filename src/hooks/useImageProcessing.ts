@@ -54,13 +54,22 @@ export const useImageProcessing = () => {
         };
       }
       
-      // التأكد من أن saveProcessedImage يعيد ImageData دائمًا
-      const processedImage = await coreProcessing.saveProcessedImage(image);
-      return processedImage || { 
-        ...image, 
-        status: "error" as const, 
-        error: "فشل في حفظ الصورة المعالجة" 
-      };
+      try {
+        // معالجة الصورة واستخدام الإرجاع بشكل مباشر، والتأكد من أن الوظيفة تعيد ImageData
+        const processedImage = await coreProcessing.saveProcessedImage(image);
+        // نتحقق إذا كانت processedImage غير محددة
+        if (!processedImage) {
+          throw new Error("فشل في معالجة الصورة");
+        }
+        return processedImage;
+      } catch (processingError) {
+        console.error("خطأ أثناء معالجة الصورة:", processingError);
+        return { 
+          ...image, 
+          status: "error" as const, 
+          error: "فشل في حفظ الصورة المعالجة" 
+        };
+      }
     } catch (error) {
       console.error("خطأ في معالجة الصورة:", error);
       return {
