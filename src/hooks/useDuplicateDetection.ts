@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { ImageData } from '@/types/ImageData';
 import { useToast } from '@/hooks/use-toast';
 import CryptoJS from 'crypto-js';
@@ -13,90 +13,46 @@ interface UseDuplicateDetectionOptions {
 export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}) => {
   const { enabled = true, ignoreTemporary = true } = options;
   const [processedHashes, setProcessedHashes] = useState<Set<string>>(new Set());
-  const processedHashesRef = useRef<Set<string>>(new Set());
   const { toast } = useToast();
-  
-  // تحديث مرجع processedHashes عندما تتغير قيمته للحفاظ على التزامن
-  useEffect(() => {
-    processedHashesRef.current = processedHashes;
-  }, [processedHashes]);
 
-  // تحسين وظيفة إنشاء تجزئة للصورة مع إضافة تحسينات استقرار
+  // تحسين وظيفة إنشاء تجزئة للصورة
   const createUniqueImageHash = useCallback((image: ImageData): string => {
-    if (!image || !image.file) {
-      console.warn('محاولة إنشاء تجزئة لصورة غير صالحة', image);
-      // إرجاع قيمة للصور غير الصالحة للتمييز
-      return 'invalid-image-hash';
-    }
-    
-    // إنشاء سلسلة فريدة لتعريف الصورة بشكل أكثر استقراراً
+    // إنشاء سلسلة فريدة تتضمن المزيد من المعلومات لتجنب التكرار الكاذب
     const uniqueIdentifiers = [
       image.file.name,
       image.file.size.toString(),
       image.file.lastModified.toString(),
       image.user_id || '',
-      image.batch_id || '',
-      image.id || ''  // إضافة معرف الصورة أيضاً للتمايز الإضافي
-    ].filter(Boolean).join('|');
+      image.batch_id || ''
+    ].join('|');
     
     // استخدام خوارزمية MD5 لإنشاء بصمة للصورة
     return CryptoJS.MD5(uniqueIdentifiers).toString();
   }, []);
 
-  // التحقق من تكرار الصورة مع تحسين الكاش
+  // التحقق من تكرار الصورة - تحسين المنطق
   const isDuplicateImage = useCallback((image: ImageData, images: ImageData[] = []): boolean => {
-    if (!enabled || !image || !image.file) return false;
-    
+    if (!enabled || !image) return false;
+
     try {
-      // تجنب معالجة الصور الخاطئة
-      if (image.status === "error") {
-        console.log(`تم تجاهل صورة بها خطأ من فحص التكرار: ${image.id}`);
-        return false;
-      }
-
-      // التحقق من الصور التي تمت معالجتها بالفعل
-      if (image.status === "completed") {
-        console.log(`الصورة ${image.id} مكتملة بالفعل، لا داعي للفحص المتكرر`);
-        return true;  // تعتبر مكررة لتجنب إعادة معالجتها
-      }
-
       // إنشاء تجزئة للصورة
       const imageHash = createUniqueImageHash(image);
       
-      // التحقق من وجود التجزئة في مجموعة التجزئات المعالجة
-      if (processedHashesRef.current.has(imageHash)) {
+      // التحقق من وجود التجزئة في قائمة التجزئات المعالجة
+      if (processedHashes.has(imageHash)) {
         console.log(`تم العثور على تجزئة مطابقة في الذاكرة المؤقتة: ${imageHash} للصورة ${image.id}`);
         return true;
       }
       
-      // التحقق إذا كانت الصورة لديها نص مستخرج بالفعل
-      const hasExtractedText = image.extractedText && image.extractedText.length > 10;
-      if (hasExtractedText && image.code && image.senderName && image.phoneNumber) {
-        console.log(`الصورة ${image.id} لديها بالفعل بيانات مستخرجة، تعتبر مكتملة`);
-        // إضافة التجزئة إلى الكاش
-        setProcessedHashes(prev => {
-          const newSet = new Set(prev);
-          newSet.add(imageHash);
-          return newSet;
-        });
-        return true;
-      }
+      // تحديد ما إذا كنا سنتجاهل الصور المؤقتة
+      const checkDuplicateOptions = { ignoreTemporary };
       
-      // تحديد ما إذا كانت الصورة موجودة بالفعل في المجموعة
+      // استخدام الوظيفة المساعدة من utils/duplicateDetection
       const isDuplicate = isImageDuplicate(image, images, ignoreTemporary);
       
-      // إذا تم اكتشاف أنها مكررة، أضف التجزئة إلى الذاكرة المؤقتة
-      if (isDuplicate) {
-        console.log(`إضافة تجزئة مكررة إلى الذاكرة المؤقتة: ${imageHash} للصورة ${image.id}`);
-        setProcessedHashes(prev => {
-          const newSet = new Set(prev);
-          newSet.add(imageHash);
-          return newSet;
-        });
-      }
-      // إذا لم يكن هناك تكرار وليست صورة مؤقتة، إضافة التجزئة إلى القائمة عند اكتمالها
-      else if (!image.sessionImage && image.status === "completed") {
-        console.log(`إضافة تجزئة جديدة للصورة المكتملة إلى الذاكرة المؤقتة: ${imageHash} للصورة ${image.id}`);
+      // إذا لم يكن هناك تكرار وليست صورة مؤقتة، إضافة التجزئة إلى القائمة
+      if (!isDuplicate && !image.sessionImage) {
+        console.log(`إضافة تجزئة جديدة إلى الذاكرة المؤقتة: ${imageHash} للصورة ${image.id}`);
         setProcessedHashes(prev => {
           const newSet = new Set(prev);
           newSet.add(imageHash);
@@ -109,7 +65,7 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
       console.error('خطأ في اكتشاف تكرار الصورة:', error);
       return false;
     }
-  }, [processedHashesRef, createUniqueImageHash, enabled, ignoreTemporary]);
+  }, [processedHashes, createUniqueImageHash, enabled, ignoreTemporary]);
 
   // مسح ذاكرة التخزين المؤقت للتجزئات
   const clearProcessedHashesCache = useCallback(() => {
