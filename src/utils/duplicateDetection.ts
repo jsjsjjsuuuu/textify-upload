@@ -33,29 +33,35 @@ export const imagesMatch = (image1: ImageData, image2: ImageData): boolean => {
     return false;
   }
   
-  // التحقق من المستخدم والمجموعة
+  // التحقق من المستخدم
   const sameUser = image1.user_id === image2.user_id;
   
   // التحقق من تطابق الخصائص الأساسية للملف
   const sameFile = 
     image1.file.name === image2.file.name &&
     image1.file.size === image2.file.size &&
-    image1.file.lastModified === image2.file.lastModified;
+    Math.abs(image1.file.lastModified - image2.file.lastModified) < 5000; // السماح بفارق 5 ثوانٍ
   
   // التحقق من عدم وجود معرف مختلف (إذا كانت الصورتان مختلفتين)
   const differentIds = image1.id !== image2.id;
+  
+  // إذا كانت الصورة الأولى مكتملة أو بها خطأ، وكذلك الصورة الثانية، والملفان متطابقان، اعتبرهما متطابقتين
+  const bothProcessed = 
+    (image1.status === "completed" || image1.status === "error") &&
+    (image2.status === "completed" || image2.status === "error") &&
+    sameFile;
   
   // لا نريد اعتبار الصورة نفسها تكرارًا
   if (!differentIds) {
     return false;
   }
   
-  // يجب أن تكون من نفس المستخدم ولنفس الملف
-  return sameUser && sameFile;
+  // اعتبار الصور متطابقة إذا كانت من نفس المستخدم ولنفس الملف أو كلاهما معالج
+  return (sameUser && sameFile) || bothProcessed;
 };
 
 /**
- * التحقق مما إذا كانت الصورة موجودة بالفعل في قائمة الصور
+ * التحقق مما إذا كانت الصورة موجودة بالفعل في قائمة الصور مع تحسين لفحص الحالة
  * @param image الصورة للتحقق منها
  * @param images قائمة الصور للمقارنة
  * @param ignoreTemporary تجاهل الصور المؤقتة
@@ -74,6 +80,16 @@ export const isImageDuplicate = (
   if (ignoreTemporary && image.sessionImage === true) {
     return false;
   }
+  
+  // التحقق من حالة الصورة - إذا كانت مكتملة أو بها خطأ وتم معالجتها من قبل
+  const isAlreadyProcessed = image.status === "completed" || image.status === "error";
+  const hasExtractedText = !!image.extractedText && image.extractedText.length > 10;
+  const hasRequiredFields = !!image.code && !!image.senderName && !!image.phoneNumber;
+  
+  if (isAlreadyProcessed && hasExtractedText && hasRequiredFields) {
+    console.log(`الصورة ${image.id} تمت معالجتها بالفعل ولديها النص المستخرج والحقول المطلوبة`);
+    return true;
+  }
 
   // استخدام معرف الصورة للتحقق من التكرار - أكثر دقة
   const duplicate = images.some((existingImage) => {
@@ -87,14 +103,21 @@ export const isImageDuplicate = (
       return false;
     }
     
-    // هل هي في نفس المجموعة (إذا كانت متوفرة)
-    const sameBatch = 
-      (image.batch_id && existingImage.batch_id) ? 
-      image.batch_id === existingImage.batch_id : 
-      true;
+    // التحقق من وجود نص مستخرج وحقول مطلوبة في الصورة الموجودة
+    const existingHasData = 
+      !!existingImage.extractedText && 
+      existingImage.extractedText.length > 10 && 
+      !!existingImage.code && 
+      !!existingImage.senderName && 
+      !!existingImage.phoneNumber;
     
-    // التحقق من التطابق مع معايير إضافية
-    return imagesMatch(image, existingImage) && sameBatch;
+    // إذا كانت الصورة الحالية والصورة الموجودة متطابقتين والصورة الموجودة لديها بيانات
+    if (imagesMatch(image, existingImage) && existingHasData) {
+      console.log(`تطابق صورة مع بيانات موجودة: ${image.id} و ${existingImage.id}`);
+      return true;
+    }
+    
+    return false;
   });
 
   return duplicate;
@@ -117,10 +140,18 @@ export const findDuplicateImages = (images: ImageData[]): ImageData[] => {
     const key = createImageHash(img);
     
     // إذا لم يكن هناك صورة بهذا المفتاح، أو إذا كانت الصورة الحالية أحدث
+    // أو إذا كانت الصورة الحالية مكتملة والصورة الموجودة غير مكتملة
     const existingImage = uniqueImagesMap.get(key);
-    const shouldReplace = !existingImage || 
-                        (img.added_at && existingImage.added_at && 
-                         img.added_at > existingImage.added_at);
+    const currentIsNewer = img.added_at && existingImage?.added_at && img.added_at > existingImage.added_at;
+    const currentIsComplete = img.status === "completed" && existingImage?.status !== "completed";
+    const currentHasMoreData = 
+      !!img.extractedText && 
+      !!img.code && 
+      !!img.senderName && 
+      !!img.phoneNumber && 
+      (!existingImage?.extractedText || !existingImage?.code || !existingImage?.senderName || !existingImage?.phoneNumber);
+    
+    const shouldReplace = !existingImage || currentIsNewer || currentIsComplete || currentHasMoreData;
     
     if (shouldReplace) {
       uniqueImagesMap.set(key, img);
@@ -129,4 +160,20 @@ export const findDuplicateImages = (images: ImageData[]): ImageData[] => {
   
   // تحويل الخريطة إلى مصفوفة
   return Array.from(uniqueImagesMap.values());
+};
+
+/**
+ * التحقق من اكتمال معالجة الصورة (لديها جميع البيانات المطلوبة)
+ * @param image الصورة للتحقق منها
+ * @returns هل الصورة مكتملة المعالجة
+ */
+export const isFullyProcessed = (image: ImageData): boolean => {
+  return (
+    !!image.extractedText && 
+    image.extractedText.length > 10 && 
+    !!image.code && 
+    !!image.senderName && 
+    !!image.phoneNumber &&
+    (image.status === "completed" || image.status === "error")
+  );
 };

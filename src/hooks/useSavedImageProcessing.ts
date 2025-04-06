@@ -16,10 +16,10 @@ export const useSavedImageProcessing = (
   const { saveImageToDatabase, loadUserImages } = useImageDatabase(updateImage);
   
   // وظيفة حفظ الصورة المعالجة عند النقر على زر الإرسال
-  const saveProcessedImage = async (image: ImageData) => {
+  const saveProcessedImage = async (image: ImageData): Promise<ImageData> => {
     if (!user) {
       console.log("المستخدم غير مسجل الدخول، لا يمكن حفظ الصورة");
-      return;
+      return image;
     }
 
     // التحقق من أن الصورة مكتملة المعالجة وتحتوي على البيانات الأساسية
@@ -33,6 +33,11 @@ export const useSavedImageProcessing = (
         
         if (savedData) {
           // تحديث الصورة بمعلومات أنها تم حفظها
+          const updatedImage = {
+            ...image,
+            submitted: true
+          };
+          
           updateImage(image.id, { submitted: true });
           console.log("تم حفظ الصورة بنجاح في قاعدة البيانات:", image.id);
           
@@ -43,7 +48,10 @@ export const useSavedImageProcessing = (
             title: "تم الحفظ",
             description: "تم حفظ البيانات في قاعدة البيانات بنجاح",
           });
+          
+          return updatedImage;
         }
+        return image;
       } catch (error) {
         console.error("خطأ أثناء حفظ الصورة:", error);
         toast({
@@ -51,6 +59,7 @@ export const useSavedImageProcessing = (
           description: "حدث خطأ أثناء محاولة حفظ البيانات",
           variant: "destructive"
         });
+        return image;
       } finally {
         setIsSubmitting(false);
       }
@@ -61,6 +70,7 @@ export const useSavedImageProcessing = (
         description: "يرجى ملء جميع الحقول المطلوبة أولاً",
         variant: "destructive"
       });
+      return image;
     }
   };
 

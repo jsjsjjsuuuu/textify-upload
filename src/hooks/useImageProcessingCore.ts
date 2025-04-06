@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -34,7 +35,12 @@ export const useImageProcessingCore = () => {
     setBookmarkletStats
   } = useImageStats();
   
-  const { saveProcessedImage } = useSavedImageProcessing(updateImage, setAllImages);
+  // تحسين استخدام useSavedImageProcessing مع توقيع الوظيفة الصحيح
+  const {
+    isSubmitting: isSavingToDatabase,
+    setIsSubmitting: setSavingToDatabase,
+    saveProcessedImage
+  } = useSavedImageProcessing(updateImage, setAllImages);
   
   const { 
     isLoadingUserImages,
@@ -150,7 +156,8 @@ export const useImageProcessingCore = () => {
     handleFileChange,
     activeUploads,
     queueLength,
-    manuallyTriggerProcessingQueue
+    manuallyTriggerProcessingQueue,
+    cleanupDuplicates
   } = useFileUpload({
     images,
     addImage,
@@ -215,6 +222,8 @@ export const useImageProcessingCore = () => {
     activeUploads,
     queueLength,
     // إضافة وظيفة إعادة تشغيل المعالجة يدويًا
-    retryProcessing: manuallyTriggerProcessingQueue
+    retryProcessing: manuallyTriggerProcessingQueue,
+    // إضافة وظيفة تنظيف التكرارات
+    cleanupDuplicates
   };
 };
