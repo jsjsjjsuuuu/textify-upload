@@ -1,11 +1,10 @@
-
 import { GeminiExtractParams, GeminiRequest, GeminiResponse } from "./types";
-import { ApiResult } from "../apiService";
+import type { ApiResult } from "../apiService";
 
 /**
  * استخراج البيانات من الصورة باستخدام Gemini API
  */
-export const extractDataWithGemini = async (params: GeminiExtractParams): Promise<ApiResult<any>> => {
+export const extractDataWithGemini = async (params: GeminiExtractParams): Promise<ApiResult> => {
   const { 
     apiKey, 
     imageBase64, 
@@ -226,7 +225,7 @@ export const extractDataWithGemini = async (params: GeminiExtractParams): Promis
 /**
  * اختبار الاتصال بـ Gemini API
  */
-export const testGeminiConnection = (apiKey: string): Promise<ApiResult<any>> => {
+export const testGeminiConnection = (apiKey: string): Promise<ApiResult> => {
   return extractDataWithGemini({
     apiKey,
     imageBase64: "",

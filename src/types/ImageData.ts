@@ -1,6 +1,7 @@
 
 import { User } from "@supabase/supabase-js";
-import { BookmarkletItem, BookmarkletExportData } from "@/utils/bookmarklet/types";
+// تصحيح إعادة التصدير باستخدام export type
+import type { BookmarkletItem, BookmarkletExportData } from "@/utils/bookmarklet/types";
 
 export interface ImageData {
   id: string;
@@ -36,4 +37,4 @@ export interface ImageData {
 }
 
 // إعادة تصدير الواجهات من ملف types.ts لضمان التوافق
-export { BookmarkletItem, BookmarkletExportData };
+export type { BookmarkletItem, BookmarkletExportData };

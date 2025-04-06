@@ -55,7 +55,6 @@ export const useImageProcessing = () => {
       }
       
       // استدعاء وظيفة معالجة الصورة من المعالجة الأساسية
-      // تأكد من أن هذه الوظيفة موجودة في useImageProcessingCore
       return await coreProcessing.saveProcessedImage(image);
     } catch (error) {
       console.error("خطأ في معالجة الصورة:", error);
@@ -74,10 +73,13 @@ export const useImageProcessing = () => {
     }
   };
   
-  // إضافة وظيفة محسنة لاكتشاف التكرار  
+  // إضافة وظيفة محسنة لاكتشاف التكرار - تأكد من أن الوظيفة ترجع قيمة boolean
   const checkForDuplicate = (image: ImageData, images: ImageData[]): boolean => {
     return isDuplicateImage(image, images);
   };
+
+  // استخراج isDuplicateImage و clearProcessedHashesCache من useDuplicateDetection
+  const { isDuplicateImage, clearProcessedHashesCache } = useDuplicateDetection();
 
   return {
     ...coreProcessing,

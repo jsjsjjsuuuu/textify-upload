@@ -1,10 +1,14 @@
-
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
-import { extractDataWithGemini, fileToBase64, formatPrice, blobToFile } from "@/lib/gemini";
-import { useToast } from "@/hooks/use-toast";
+import { extractDataWithGemini, fileToBase64 } from "@/lib/gemini";
 import { updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { isPreviewEnvironment } from "@/utils/automationServerUrl";
+import { useToast } from "@/hooks/use-toast";
+
+// إضافة وظيفة تحويل Blob إلى File
+const blobToFile = (blob: Blob, fileName: string): File => {
+  return new File([blob], fileName, { type: blob.type });
+};
 
 // ثوابت لإدارة الطلبات وتتبع القيود
 const MAX_API_RETRIES = 3;        // عدد إعادة المحاولات
@@ -178,7 +182,7 @@ export const useGeminiProcessing = () => {
           if (file instanceof File) {
             processedFile = file;
           } else {
-            // التحويل من Blob إلى File باستخدام الوظيفة المساعدة
+            // التحويل من Blob إلى File باستخدام الوظيفة المساعدة المحلية
             processedFile = blobToFile(file, "image.jpg");
           }
           
