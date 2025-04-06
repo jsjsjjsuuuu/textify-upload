@@ -22,12 +22,17 @@ export interface ImageData {
   user_id?: string;
   storage_path?: string;
   batch_id?: string;
-  added_at?: number; // إضافة حقل للطابع الزمني
-  retryCount?: number; // إضافة حقل لعدد مرات إعادة المحاولة
-  bookmarkletStatus?: "ready" | "pending" | "success" | "error"; // حالة استخدام البوكماركلت
-  bookmarkletMessage?: string; // رسالة خاصة بالبوكماركلت
-  notes1?: string; // إضافة حقل ملاحظات 1
-  recipientName?: string; // إضافة حقل اسم المستلم
+  added_at?: number; 
+  retryCount?: number; 
+  bookmarkletStatus?: "ready" | "pending" | "success" | "error";
+  bookmarkletMessage?: string;
+  notes1?: string;
+  recipientName?: string;
+  // إضافة الحقول المفقودة
+  error?: string;
+  sessionImage?: boolean;
+  apiKeyError?: boolean;
+  userId?: string; // للتوافق مع الكود الموجود، مع أن user_id هو الاسم المفضل
 }
 
 // إعادة تصدير الواجهات من ملف types.ts لضمان التوافق

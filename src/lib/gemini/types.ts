@@ -45,4 +45,5 @@ export interface GeminiExtractParams {
   enhancedExtraction?: boolean;
   maxRetries?: number;
   retryDelayMs?: number;
+  testConnection?: boolean;
 }

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
-import { extractDataWithGemini, fileToBase64, testGeminiConnection } from "@/lib/gemini";
+import { extractDataWithGemini, fileToBase64, formatPrice, blobToFile } from "@/lib/gemini";
 import { useToast } from "@/hooks/use-toast";
 import { updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { isPreviewEnvironment } from "@/utils/automationServerUrl";
@@ -61,7 +61,11 @@ export const useGeminiProcessing = () => {
   const testGeminiApiConnection = async (apiKey: string) => {
     try {
       console.log("اختبار اتصال Gemini API...");
-      const result = await testGeminiConnection(apiKey);
+      const result = await extractDataWithGemini({
+        apiKey,
+        imageBase64: "",
+        testConnection: true
+      });
       if (result.success) {
         console.log("اتصال Gemini API ناجح");
         setConnectionTested(true);
@@ -104,7 +108,7 @@ export const useGeminiProcessing = () => {
   // وظيفة مساعدة للتأخير
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  const processWithGemini = async (file: File, image: ImageData): Promise<ImageData> => {
+  const processWithGemini = async (file: File | Blob, image: ImageData): Promise<ImageData> => {
     const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
     console.log("استخدام مفتاح Gemini API بطول:", geminiApiKey.length);
 
@@ -169,6 +173,15 @@ export const useGeminiProcessing = () => {
         trackApiCall();
         
         try {
+          // تحويل الملف إلى File إذا كان Blob
+          let processedFile: File;
+          if (file instanceof File) {
+            processedFile = file;
+          } else {
+            // التحويل من Blob إلى File باستخدام الوظيفة المساعدة
+            processedFile = blobToFile(file, "image.jpg");
+          }
+          
           const extractionResult = await extractDataWithGemini({
             apiKey: geminiApiKey,
             imageBase64,
@@ -253,7 +266,7 @@ export const useGeminiProcessing = () => {
             return {
               ...image,
               status: "error" as const,
-              extractedText: "فشل استخراج النص: " + extractionResult.message
+              error: "فشل استخراج النص: " + extractionResult.message
             };
           }
         } catch (apiError: any) {
@@ -285,7 +298,7 @@ export const useGeminiProcessing = () => {
       return {
         ...image,
         status: "error" as const,
-        extractedText: "فشل استخراج النص بعد استنفاد جميع المحاولات"
+        error: "فشل استخراج النص بعد استنفاد جميع المحاولات"
       };
     } catch (geminiError: any) {
       console.error("خطأ في معالجة Gemini:", geminiError);
@@ -305,7 +318,7 @@ export const useGeminiProcessing = () => {
       return {
         ...image,
         status: "error" as const,
-        extractedText: "خطأ في المعالجة: " + errorMessage
+        error: "خطأ في المعالجة: " + errorMessage
       };
     }
   };
