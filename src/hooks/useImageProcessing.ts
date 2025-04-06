@@ -47,6 +47,7 @@ export const useImageProcessing = () => {
     try {
       if (isDuplicateImage(image, coreProcessing.images)) {
         console.log("تم اكتشاف صورة مكررة:", image.id);
+        // يجب أن نعيد قيمة من نوع ImageData حتى عند الخطأ
         return {
           ...image,
           status: "error" as const,
@@ -58,6 +59,7 @@ export const useImageProcessing = () => {
       return await coreProcessing.saveProcessedImage(image);
     } catch (error) {
       console.error("خطأ في معالجة الصورة:", error);
+      // نعيد قيمة من نوع ImageData حتى في حالة الخطأ
       return {
         ...image,
         status: "error" as const,
