@@ -1,7 +1,6 @@
 
 import { useState, useCallback } from "react";
 import { 
-  extractDataWithGemini, 
   getNextApiKey, 
   resetAllApiKeys, 
   getApiKeyStats,
@@ -13,6 +12,7 @@ import { fileToBase64 } from "@/lib/gemini/utils";
 import { readImageFile } from "@/utils/fileReader";
 import { toast } from "sonner";
 import { ImageData } from "@/types/ImageData";
+import { extractTextFromImage } from "@/lib/gemini/api";
 
 export interface GeminiStats {
   processed: number;
@@ -54,9 +54,8 @@ export const useGeminiProcessing = () => {
         status: "pending",
         error: null,
         storage_path: null,
-        userId: null,
+        user_id: null,
         number: 0,
-        sessionImage: false,
         submitted: false
       };
       
@@ -182,7 +181,7 @@ export const useGeminiProcessing = () => {
       console.log(`استخدام مفتاح API (الأحرف الأولى): ${apiKey.substring(0, 5)}...`);
       
       // معالجة الصورة
-      const result = await extractDataWithGemini({
+      const result = await extractTextFromImage({
         apiKey,
         imageBase64: base64Data,
         modelVersion: geminiStats.currentModel,

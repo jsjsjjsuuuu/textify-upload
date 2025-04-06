@@ -1,310 +1,244 @@
-import { ApiResult, ApiOptions, GeminiApiResponse, ExtractedTextResult } from './types';
 
-async function safeJsonParse<T>(str: string): Promise<T | null> {
-  try {
-    return JSON.parse(str) as T;
-  } catch (e) {
-    console.error("Failed to parse JSON", str, e);
-    return null;
+import { ApiOptions, ApiResult, ExtractedTextResult } from "./types";
+
+// استخراج نص من صورة باستخدام Gemini
+export async function extractTextFromImage(options: ApiOptions): Promise<ApiResult> {
+  if (!options.apiKey) {
+    return { 
+      success: false, 
+      message: "No API key provided", 
+      apiKeyError: true 
+    };
   }
-}
 
-function isApiKeyError(error: any): boolean {
-  const errorMessage = error?.message || '';
-  
-  return (
-    errorMessage.includes('API key') ||
-    errorMessage.includes('apiKey') ||
-    errorMessage.includes('authentication') ||
-    errorMessage.includes('auth') ||
-    errorMessage.includes('credentials') ||
-    errorMessage.includes('permission') ||
-    errorMessage.includes('quota') ||
-    errorMessage.includes('rate limit') ||
-    error?.code === 401 ||
-    error?.code === 403
-  );
-}
+  if (!options.imageBase64) {
+    return { 
+      success: false, 
+      message: "No image data provided" 
+    };
+  }
 
-export const processGeminiResponse = async (response: Response, apiKey: string): Promise<ApiResult> => {
   try {
-    if (!response.ok) {
-      const statusCode = response.status;
-      const errorText = await response.text();
+    // تحضير البيانات لطلب Gemini
+    const defaultPrompt = `
+      Extract all the text from this image carefully. Then analyze this receipt or invoice image and extract:
+      - code: the order/receipt code
+      - senderName: name of sender or customer
+      - phoneNumber: contact number (format as standard phone number)
+      - province: location or province
+      - price: total price amount
+      - companyName: name of company or business
       
-      const isKeyError = 
-        statusCode === 401 || 
-        statusCode === 403 || 
-        errorText.includes('API key') || 
-        errorText.includes('authentication');
+      Return the results as a clean JSON object with 'extractedText', 'confidence' (percentage), and 'parsedData' fields containing structured data.
+    `;
+
+    const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent";
+    
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            { text: options.prompt || defaultPrompt },
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: options.imageBase64.replace(/^data:image\/[a-z]+;base64,/, '')
+              }
+            }
+          ]
+        }
+      ],
+      generation_config: {
+        temperature: options.temperature || 0.1,
+        max_output_tokens: 2048
+      },
+      safety_settings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_ONLY_HIGH"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_ONLY_HIGH"
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_ONLY_HIGH"
+        }
+      ]
+    };
+
+    const response = await fetch(`${apiUrl}?key=${options.apiKey}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Gemini API error:", data);
+      
+      // تحقق من رسائل خطأ محددة متعلقة بالمفتاح
+      const isApiKeyError = data?.error?.message?.includes("API key") || 
+                           data?.error?.message?.includes("not authorized") ||
+                           data?.error?.message?.includes("billing") ||
+                           data?.error?.status === "PERMISSION_DENIED" ||
+                           data?.error?.status === "UNAUTHENTICATED" ||
+                           response.status === 401 || 
+                           response.status === 403;
       
       return {
         success: false,
-        message: `فشل طلب Gemini API: ${statusCode} - ${errorText}`,
-        apiKeyError: isKeyError
+        message: data?.error?.message || "Error processing image",
+        apiKeyError: isApiKeyError
       };
     }
-    
-    const data = await response.json();
-    return {
-      success: true,
-      data: data,
-      apiKeyError: false
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: `خطأ في معالجة استجابة Gemini: ${error.message}`,
-      apiKeyError: isApiKeyError(error)
-    };
-  }
-};
 
-export const callGeminiApi = async (options: ApiOptions): Promise<ApiResult> => {
-  const { apiKey, prompt, modelVersion = 'gemini-pro', temperature = 0.1 } = options;
-
-  if (!apiKey) {
-    return { success: false, message: "مفتاح API مفقود", apiKeyError: true };
-  }
-
-  if (!prompt) {
-    return { success: false, message: "النص غير موجود" };
-  }
-
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent?key=${apiKey}`;
-
-  try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt: prompt,
-        contents: [{
-          parts: [{ text: prompt }],
-        }],
-        generationConfig: {
-          temperature: temperature,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 2048,
-        },
-        safetySettings: [
-          {
-            "category": "HARM_CATEGORY_HARASSMENT",
-            "threshold": "BLOCK_NONE"
-          },
-          {
-            "category": "HARM_CATEGORY_HATE_SPEECH",
-            "threshold": "BLOCK_NONE"
-          },
-          {
-            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            "threshold": "BLOCK_NONE"
-          },
-          {
-            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-            "threshold": "BLOCK_NONE"
-          }
-        ]
-      }),
-    });
-
-    return processGeminiResponse(response, apiKey);
-  } catch (error) {
-    console.error("خطأ أثناء استدعاء Gemini API:", error);
-    return { success: false, message: `فشل استدعاء Gemini API: ${error.message}`, apiKeyError: isApiKeyError(error) };
-  }
-};
-
-export const extractTextFromImage = async (options: ApiOptions): Promise<ApiResult> => {
-  const { apiKey, imageBase64, modelVersion = 'gemini-pro-vision', temperature = 0.4 } = options;
-
-  if (!apiKey) {
-    return { success: false, message: "مفتاح API مفقود", apiKeyError: true };
-  }
-
-  if (!imageBase64) {
-    return { success: false, message: "لم يتم توفير صورة" };
-  }
-
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent?key=${apiKey}`;
-
-  try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: "What is in this image? Describe it in detail." },
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: imageBase64.split(',')[1]
-              }
-            }
-          ],
-        }],
-        generationConfig: {
-          temperature: temperature,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 2048,
-        },
-        safetySettings: [
-          {
-            "category": "HARM_CATEGORY_HARASSMENT",
-            "threshold": "BLOCK_NONE"
-          },
-          {
-            "category": "HARM_CATEGORY_HATE_SPEECH",
-            "threshold": "BLOCK_NONE"
-          },
-          {
-            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            "threshold": "BLOCK_NONE"
-          },
-          {
-            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-            "threshold": "BLOCK_NONE"
-          }
-        ]
-      }),
-    });
-
-    return processGeminiResponse(response, apiKey);
-  } catch (error) {
-    console.error("خطأ أثناء استدعاء Gemini API:", error);
-    return { success: false, message: `فشل استدعاء Gemini API: ${error.message}`, apiKeyError: isApiKeyError(error) };
-  }
-};
-
-export const enhancedDataExtraction = async (options: ApiOptions): Promise<ApiResult> => {
-  const { apiKey, imageBase64, modelVersion = 'gemini-pro-vision', temperature = 0.1, enhancedExtraction = true } = options;
-
-  if (!apiKey) {
-    return { success: false, message: "مفتاح API مفقود", apiKeyError: true };
-  }
-
-  if (!imageBase64) {
-    return { success: false, message: "لم يتم توفير صورة" };
-  }
-
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent?key=${apiKey}`;
-
-  const extractionPrompt = `استخرج البيانات التالية من الصورة:
-  - اسم الشركة
-  - كود
-  - اسم المرسل
-  - رقم الهاتف
-  - المحافظة
-  - السعر
-  
-  يجب أن تكون الإجابة بتنسيق JSON فقط.`;
-
-  try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: extractionPrompt },
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: imageBase64.split(',')[1]
-              }
-            }
-          ],
-        }],
-        generationConfig: {
-          temperature: temperature,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 2048,
-        },
-        safetySettings: [
-          {
-            "category": "HARM_CATEGORY_HARASSMENT",
-            "threshold": "BLOCK_NONE"
-          },
-          {
-            "category": "HARM_CATEGORY_HATE_SPEECH",
-            "threshold": "BLOCK_NONE"
-          },
-          {
-            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            "threshold": "BLOCK_NONE"
-          },
-          {
-            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-            "threshold": "BLOCK_NONE"
-          }
-        ]
-      }),
-    });
-
-    return processGeminiResponse(response, apiKey);
-  } catch (error) {
-    console.error("خطأ أثناء استدعاء Gemini API:", error);
-    return { success: false, message: `فشل استدعاء Gemini API: ${error.message}`, apiKeyError: isApiKeyError(error) };
-  }
-};
-
-export const testConnection = async (apiKey: string): Promise<ApiResult> => {
-    if (!apiKey) {
-        return { success: false, message: "API key is missing", apiKeyError: true };
+    // معالجة استجابة Gemini والحصول على النص
+    if (!data.candidates || !data.candidates[0]?.content?.parts) {
+      return {
+        success: false,
+        message: "Invalid response format from Gemini",
+        apiKeyError: false
+      };
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+    const text = data.candidates[0].content.parts[0].text;
+    
+    // محاولة استخراج بيانات هيكلية، إما في كتل نص JSON أو من النص العادي
+    const result: ExtractedTextResult = {
+      extractedText: text,
+      confidence: 85, // قيمة افتراضية
+      parsedData: {}
+    };
 
     try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: "Test" }],
-                }],
-                generationConfig: {
-                    temperature: 0.1,
-                    topP: 0.95,
-                    topK: 40,
-                    maxOutputTokens: 2048,
-                },
-                safetySettings: [
-                    {
-                        "category": "HARM_CATEGORY_HARASSMENT",
-                        "threshold": "BLOCK_NONE"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_HATE_SPEECH",
-                        "threshold": "BLOCK_NONE"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        "threshold": "BLOCK_NONE"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                        "threshold": "BLOCK_NONE"
-                    }
-                ]
-            }),
-        });
-
-        return processGeminiResponse(response, apiKey);
-    } catch (error) {
-        console.error("Error while calling Gemini API:", error);
-        return { success: false, message: `Failed to call Gemini API: ${error.message}`, apiKeyError: isApiKeyError(error) };
+      // البحث عن كتل JSON في النص
+      const jsonMatches = text.match(/```(?:json)?([\s\S]*?)```/g) || 
+                         text.match(/{[\s\S]*?}/g);
+      
+      if (jsonMatches && jsonMatches.length > 0) {
+        // تنظيف النص المطابق وتحليله كـ JSON
+        const cleanJson = jsonMatches[0]
+          .replace(/```json\s*/, '')
+          .replace(/```/, '')
+          .trim();
+        
+        try {
+          const parsedJson = JSON.parse(cleanJson);
+          
+          // إذا كان JSON يحتوي على parsedData، استخدمه مباشرة
+          if (parsedJson.parsedData) {
+            result.parsedData = parsedJson.parsedData;
+            
+            // تحديث النص المستخرج والثقة إذا كانت متاحة
+            if (parsedJson.extractedText) {
+              result.extractedText = parsedJson.extractedText;
+            }
+            if (parsedJson.confidence) {
+              result.confidence = parsedJson.confidence;
+            }
+          } else {
+            // إذا لم يكن لديه بنية محددة، افترض أن كامل الكائن يمثل البيانات المنظمة
+            result.parsedData = parsedJson;
+          }
+        } catch (jsonError) {
+          console.error("Error parsing JSON from Gemini response:", jsonError);
+          // المتابعة باستخدام التعبيرات العادية كخطة بديلة
+        }
+      } else {
+        // معالجة النص لاستخراج البيانات الرئيسية باستخدام التعبيرات العادية
+        const extractValue = (text: string, key: string): string => {
+          const regex = new RegExp(`${key}\\s*:?\\s*([^\\n]+)`, 'i');
+          const match = text.match(regex);
+          return match ? match[1].trim() : '';
+        };
+        
+        result.parsedData = {
+          code: extractValue(text, 'code'),
+          senderName: extractValue(text, 'sender[_\\s]?name'),
+          phoneNumber: extractValue(text, 'phone[_\\s]?number'),
+          province: extractValue(text, 'province'),
+          price: extractValue(text, 'price'),
+          companyName: extractValue(text, 'company[_\\s]?name')
+        };
+      }
+    } catch (parseError) {
+      console.error("Error extracting structured data:", parseError);
     }
-};
+
+    return {
+      success: true,
+      data: result,
+      apiKeyError: false
+    };
+
+  } catch (error: any) {
+    console.error("Error calling Gemini API:", error);
+    return {
+      success: false,
+      message: error.message || "Error processing image with Gemini",
+      apiKeyError: false
+    };
+  }
+}
+
+// اختبار الاتصال بـ Gemini API
+export async function testConnection(apiKey: string): Promise<ApiResult> {
+  if (!apiKey) {
+    return { 
+      success: false, 
+      message: "No API key provided", 
+      apiKeyError: true 
+    };
+  }
+
+  try {
+    const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+    
+    const requestBody = {
+      contents: [{
+        parts: [{ text: "Respond with 'Connection successful' if you receive this message." }]
+      }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 20
+      }
+    };
+
+    const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("API test error:", data);
+      return {
+        success: false,
+        message: data?.error?.message || "API connection test failed",
+        apiKeyError: true
+      };
+    }
+
+    return {
+      success: true,
+      message: "Connection successful",
+      apiKeyError: false
+    };
+  } catch (error: any) {
+    console.error("Error testing Gemini API:", error);
+    return {
+      success: false,
+      message: error.message || "Error testing connection",
+      apiKeyError: true
+    };
+  }
+}

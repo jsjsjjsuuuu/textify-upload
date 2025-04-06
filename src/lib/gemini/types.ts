@@ -53,8 +53,3 @@ export interface ApiKeyStatus {
   rateLimited: number;
   lastReset: number;
 }
-
-// إضافة انواع للتصدير للتوافق مع index.ts
-export type GeminiExtractParams = ApiOptions;
-export type GeminiRequest = ExtractedTextResult;
-export type GeminiResponse = GeminiApiResponse;

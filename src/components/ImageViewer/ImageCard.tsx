@@ -162,13 +162,6 @@ const ImageCard: React.FC<ImageCardProps> = ({
               />
             </div>
           )}
-          
-          {image.error && (
-            <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded text-xs text-red-700 dark:text-red-400">
-              <div className="font-medium">خطأ:</div>
-              <div>{image.error}</div>
-            </div>
-          )}
         </CardContent>
         
         <CardFooter className="p-4 pt-0 flex justify-between">

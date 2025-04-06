@@ -1,192 +1,128 @@
 
-// تعريف أسماء البكتات المتاحة في Supabase
-export const STORAGE_BUCKETS = {
-  IMAGES: 'images',  // تم تحديث اسم البكيت من 'receipt_images' إلى 'images' ليتوافق مع قاعدة البيانات
-  PROFILES: 'profiles',
-  GENERAL: 'general'
-};
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-// استيراد المكتبات اللازمة
-import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+// تعريف أنواع Buckets المتاحة
+export const STORAGE_BUCKETS = {
+  IMAGES: "images",
+  PROFILE: "profiles",
+  TEMP: "temp"
+} as const;
+
+export type BucketName = typeof STORAGE_BUCKETS[keyof typeof STORAGE_BUCKETS];
 
 export const useStorage = () => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string>("");
 
   /**
-   * رفع ملف إلى Supabase Storage
-   * @param file الملف المراد رفعه
-   * @param bucketName اسم الـ bucket
-   * @param filePath المسار داخل الـ bucket
+   * رفع ملف إلى تخزين Supabase
    */
-  const uploadFile = useCallback(
-    async (file: File, bucketName: string, filePath: string): Promise<string | null> => {
-      try {
-        setIsUploading(true);
-        setUploadProgress(0);
-        setError(null);
+  const uploadFile = async (file: File, bucketName: string, filePath: string): Promise<string | null> => {
+    try {
+      setIsUploading(true);
+      setUploadProgress(0);
+      setError("");
 
-        // التحقق من صحة المدخلات
-        if (!file) {
-          throw new Error('لم يتم توفير ملف للرفع');
-        }
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
 
-        if (!bucketName) {
-          // استخدام البكيت الافتراضي إذا لم يتم تحديد بكيت
-          bucketName = STORAGE_BUCKETS.IMAGES;
-        }
-
-        if (!filePath) {
-          // إنشاء مسار افتراضي باستخدام اسم الملف
-          filePath = `${Date.now()}_${file.name}`;
-        }
-
-        console.log(`جاري رفع الملف: ${filePath} إلى البكت: ${bucketName}`);
-
-        // رفع الملف إلى Supabase Storage
-        const { data, error } = await supabase.storage
-          .from(bucketName)
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: true
-          });
-        
-        // تحديث نسبة التقدم يدويًا بعد الانتهاء
-        setUploadProgress(100);
-
-        if (error) {
-          throw error;
-        }
-
-        // الحصول على عنوان URL العام للملف المرفوع
-        const { data: urlData } = supabase.storage
-          .from(bucketName)
-          .getPublicUrl(data?.path || filePath);
-
-        console.log('تم الرفع بنجاح:', urlData.publicUrl);
-
-        return urlData.publicUrl;
-      } catch (err: any) {
-        console.error('خطأ في رفع الملف:', err);
-        setError(err.message || 'حدث خطأ غير معروف أثناء رفع الملف');
+      if (error) {
+        console.error("Storage error:", error);
+        setError(`خطأ في رفع الملف: ${error.message}`);
         return null;
-      } finally {
-        setIsUploading(false);
       }
-    },
-    []
-  );
+
+      // إذا تم الرفع بنجاح، نحصل على عنوان URL العام
+      const { data: urlData } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(filePath);
+
+      setUploadProgress(100);
+      
+      // إرجاع المسار للتخزين
+      return filePath;
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      setError(`خطأ غير متوقع: ${err.message}`);
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   /**
-   * حذف ملف من Supabase Storage
-   * @param bucketName اسم الـ bucket
-   * @param filePath المسار داخل الـ bucket
+   * حذف ملف من تخزين Supabase
    */
-  const deleteFile = useCallback(
-    async (bucketName: string, filePath: string): Promise<boolean> => {
-      try {
-        setError(null);
+  const deleteFile = async (bucketName: string, filePath: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.storage
+        .from(bucketName)
+        .remove([filePath]);
 
-        if (!bucketName || !filePath) {
-          throw new Error('لم يتم توفير معلومات كافية لحذف الملف');
-        }
-
-        console.log(`جاري حذف الملف: ${filePath} من البكت: ${bucketName}`);
-
-        const { error } = await supabase.storage
-          .from(bucketName)
-          .remove([filePath]);
-
-        if (error) {
-          throw error;
-        }
-
-        console.log('تم حذف الملف بنجاح');
-        return true;
-      } catch (err: any) {
-        console.error('خطأ في حذف الملف:', err);
-        setError(err.message || 'حدث خطأ غير معروف أثناء حذف الملف');
+      if (error) {
+        console.error("Error deleting file:", error);
+        setError(`خطأ في حذف الملف: ${error.message}`);
         return false;
       }
-    },
-    []
-  );
+
+      return true;
+    } catch (err: any) {
+      console.error("Delete error:", err);
+      setError(`خطأ غير متوقع: ${err.message}`);
+      return false;
+    }
+  };
 
   /**
-   * الحصول على قائمة بالملفات في مجلد معين
-   * @param bucketName اسم الـ bucket
-   * @param folderPath مسار المجلد داخل الـ bucket
+   * الحصول على رابط عام للملف
    */
-  const listFiles = useCallback(
-    async (bucketName: string, folderPath?: string) => {
-      try {
-        setError(null);
-
-        if (!bucketName) {
-          throw new Error('لم يتم تحديد اسم الـ bucket');
-        }
-
-        const { data, error } = await supabase.storage
-          .from(bucketName)
-          .list(folderPath || '');
-
-        if (error) {
-          throw error;
-        }
-
-        return data;
-      } catch (err: any) {
-        console.error('خطأ في جلب قائمة الملفات:', err);
-        setError(err.message || 'حدث خطأ غير معروف أثناء جلب قائمة الملفات');
-        return [];
-      }
-    },
-    []
-  );
+  const getPublicUrl = (bucketName: string, filePath: string): string => {
+    const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+    return data.publicUrl;
+  };
 
   /**
-   * تنزيل ملف من Supabase Storage
-   * @param bucketName اسم الـ bucket
-   * @param filePath المسار داخل الـ bucket
+   * إنشاء مجلد جديد في التخزين (لا يوجد API مباشر، لذا نستخدم ملفًا فارغًا كعلامة)
    */
-  const downloadFile = useCallback(
-    async (bucketName: string, filePath: string) => {
-      try {
-        setError(null);
+  const createFolder = async (bucketName: string, folderPath: string): Promise<boolean> => {
+    try {
+      // إنشاء ملف وهمي باسم ".folder" في المسار المطلوب
+      const emptyFile = new File([""], ".folder", { type: "application/octet-stream" });
+      
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(`${folderPath}/.folder`, emptyFile, {
+          cacheControl: "3600",
+          upsert: true,
+        });
 
-        if (!bucketName || !filePath) {
-          throw new Error('لم يتم توفير معلومات كافية لتنزيل الملف');
-        }
-
-        console.log(`جاري تنزيل الملف: ${filePath} من البكت: ${bucketName}`);
-
-        const { data, error } = await supabase.storage
-          .from(bucketName)
-          .download(filePath);
-
-        if (error) {
-          throw error;
-        }
-
-        return data;
-      } catch (err: any) {
-        console.error('خطأ في تنزيل الملف:', err);
-        setError(err.message || 'حدث خطأ غير معروف أثناء تنزيل الملف');
-        return null;
+      if (error) {
+        console.error("Error creating folder:", error);
+        setError(`خطأ في إنشاء المجلد: ${error.message}`);
+        return false;
       }
-    },
-    []
-  );
+
+      return true;
+    } catch (err: any) {
+      console.error("Folder creation error:", err);
+      setError(`خطأ غير متوقع: ${err.message}`);
+      return false;
+    }
+  };
 
   return {
     uploadFile,
     deleteFile,
-    listFiles,
-    downloadFile,
+    getPublicUrl,
+    createFolder,
     isUploading,
     uploadProgress,
-    error,
+    error
   };
 };

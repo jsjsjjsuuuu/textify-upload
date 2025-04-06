@@ -14,9 +14,9 @@ export {
 } from "./apiKeyManager";
 
 // تصدير وظائف API الرئيسية
-export { extractTextFromImage as extractDataWithGemini, testConnection as testGeminiConnection } from "./api";
+export { extractTextFromImage, testConnection } from "./api";
 export { testGeminiModels } from "./models";
 export { fileToBase64, formatPrice } from "./utils";
 
 // تصدير الأنواع
-export type { ApiOptions as GeminiExtractParams, ExtractedTextResult as GeminiRequest, GeminiApiResponse as GeminiResponse } from "./types";
+export type { ApiOptions, ApiResult, ExtractedTextResult } from "./types";

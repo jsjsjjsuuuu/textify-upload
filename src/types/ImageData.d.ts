@@ -19,7 +19,7 @@ export interface ImageData {
   userId?: string | null;
   user_id?: string | null;
   number: number;
-  sessionImage: boolean;
+  sessionImage?: boolean;
   submitted: boolean;
   retryCount?: number;
   imageHash?: string;

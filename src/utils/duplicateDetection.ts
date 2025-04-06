@@ -1,144 +1,82 @@
 
 import { ImageData } from "@/types/ImageData";
-import { calculateImageHash } from "./fileReader";
+import CryptoJS from "crypto-js";
 
-// تخزين هاشات الصور المعالجة بالفعل
+// مجموعة لتخزين هاشات الصور المعالجة في ذاكرة التخزين المؤقت
 const processedImageHashes = new Set<string>();
 
-// تخزين هاشات الصور في جلسة حالية
-const sessionImageHashes = new Map<string, boolean>();
-
-// وظيفة للتحقق مما إذا كانت الصورة مكررة
-export const isDuplicateImage = async (image: ImageData, allImages: ImageData[]): Promise<boolean> => {
+/**
+ * تحميل هاشات الصور المعالجة من التخزين المحلي
+ */
+export function loadProcessedHashesFromStorage(): void {
   try {
-    // إذا لم يكن هناك ملف، لا يمكننا معرفة ما إذا كانت مكررة
-    if (!image.file) {
-      console.log("لا يمكن التحقق من تكرار الصورة: لا يوجد ملف", image.id);
-      return false;
-    }
-    
-    // 1. استخدام هاش الصورة المخزن إذا كان موجوداً
-    if (image.imageHash) {
-      // التحقق من كاش التكرارات المحلي
-      if (processedImageHashes.has(image.imageHash)) {
-        console.log(`تم اكتشاف صورة مكررة باستخدام الهاش المخزن: ${image.imageHash}`);
-        return true;
-      }
+    const storedHashes = localStorage.getItem('processedImageHashes');
+    if (storedHashes) {
+      const hashesArray = JSON.parse(storedHashes);
       
-      // البحث عن الهاش في قائمة الصور الحالية
-      const duplicateByHash = allImages.some(existingImage => 
-        existingImage.id !== image.id && 
-        existingImage.imageHash === image.imageHash
-      );
+      // تهيئة المجموعة بالهاشات المخزنة
+      hashesArray.forEach((hash: string) => {
+        processedImageHashes.add(hash);
+      });
       
-      if (duplicateByHash) {
-        console.log(`تم اكتشاف صورة مكررة من خلال مقارنة الهاش: ${image.imageHash}`);
-        return true;
-      }
+      console.log(`تم تحميل ${processedImageHashes.size} هاش للصور المعالجة`);
     }
-    
-    // 2. في حالة عدم وجود هاش مخزن، نقوم بحساب الهاش
-    const newHash = await calculateImageHash(image.file);
-    image.imageHash = newHash;
-    
-    // التحقق من كاش التكرارات المحلي
-    if (processedImageHashes.has(newHash)) {
-      console.log(`تم اكتشاف صورة مكررة باستخدام الهاش الجديد: ${newHash}`);
-      return true;
+  } catch (error) {
+    console.error("خطأ في تحميل هاشات الصور المعالجة:", error);
+  }
+}
+
+/**
+ * تحديث التخزين المحلي بالهاشات المعالجة الحالية
+ */
+function updateProcessedHashesStorage(): void {
+  try {
+    const hashesArray = Array.from(processedImageHashes);
+    if (hashesArray.length > 1000) {
+      // الاحتفاظ بآخر 1000 هاش فقط لتجنب التضخم
+      hashesArray.splice(0, hashesArray.length - 1000);
     }
-    
-    // البحث عن الهاش في قائمة الصور الحالية
-    const duplicateByNewHash = allImages.some(existingImage => 
-      existingImage.id !== image.id && 
-      existingImage.imageHash === newHash
+    localStorage.setItem('processedImageHashes', JSON.stringify(hashesArray));
+  } catch (error) {
+    console.error("خطأ في حفظ هاشات الصور المعالجة:", error);
+  }
+}
+
+/**
+ * وضع علامة على صورة بأنها تمت معالجتها
+ */
+export function markImageAsProcessed(imageHash: string): void {
+  if (imageHash && !processedImageHashes.has(imageHash)) {
+    processedImageHashes.add(imageHash);
+    updateProcessedHashesStorage();
+    console.log(`تمت إضافة الهاش ${imageHash.substring(0, 10)}... إلى قائمة الصور المعالجة`);
+  }
+}
+
+/**
+ * التحقق مما إذا كانت الصورة مكررة (تم معالجتها بالفعل)
+ */
+export async function isDuplicateImage(image: ImageData, allImages: ImageData[]): Promise<boolean> {
+  // التحقق من وجود هاش الصورة
+  if (image.imageHash && processedImageHashes.has(image.imageHash)) {
+    console.log(`الصورة ${image.id} مكررة استنادًا إلى الهاش المخزن`);
+    return true;
+  }
+  
+  // المزيد من عمليات التحقق من التكرار
+  if (image.sessionImage) {
+    // تحقق إضافي للصور المؤقتة
+    const duplicates = allImages.filter(img => 
+      // التحقق من الهاش إذا كان متاحًا
+      (image.imageHash && img.imageHash && img.imageHash === image.imageHash) ||
+      // أو تحقق من خصائص أخرى
+      (img.id !== image.id && img.file && image.file && img.file.name === image.file.name) ||
+      // أو التحقق من URLs المعاينة
+      (img.previewUrl && image.previewUrl && img.previewUrl === image.previewUrl)
     );
     
-    if (duplicateByNewHash) {
-      console.log(`تم اكتشاف صورة مكررة باستخدام الهاش الجديد: ${newHash}`);
-      return true;
-    }
-    
-    // 3. نقوم بتخزين الهاش للاستخدام المستقبلي
-    processedImageHashes.add(newHash);
-    
-    // إذا كانت صورة جلسة، نضيفها إلى خريطة هاشات الجلسة
-    if (image.sessionImage) {
-      sessionImageHashes.set(image.id, true);
-    }
-    
-    // لم يتم العثور على تكرار
-    return false;
-  } catch (error) {
-    console.error("خطأ أثناء التحقق من تكرار الصورة:", error);
-    // في حالة وجود خطأ، نفترض أن الصورة غير مكررة
-    return false;
-  }
-};
-
-// وظيفة لتنظيف هاشات الصور المعالجة
-export const clearProcessedHashes = (): void => {
-  processedImageHashes.clear();
-  console.log("تم مسح كاش هاشات الصور المعالجة");
-};
-
-// وظيفة للتحقق من أن الصورة تمت معالجتها بالفعل
-export const markImageAsProcessed = (imageHash: string): void => {
-  processedImageHashes.add(imageHash);
-  
-  // تخزين الهاش في localStorage أيضًا للاستمرار بين تحديثات الصفحة
-  try {
-    // الحصول على قائمة الهاشات المخزنة
-    const storedHashes = JSON.parse(localStorage.getItem('processedImageHashes') || '[]');
-    
-    // إضافة الهاش إذا لم يكن موجوداً بالفعل
-    if (!storedHashes.includes(imageHash)) {
-      storedHashes.push(imageHash);
-      
-      // تحديد عدد الهاشات التي سيتم الاحتفاظ بها لتجنب تضخم التخزين المحلي
-      const maxStoredHashes = 500;
-      const trimmedHashes = storedHashes.slice(-maxStoredHashes);
-      
-      localStorage.setItem('processedImageHashes', JSON.stringify(trimmedHashes));
-    }
-  } catch (error) {
-    console.error("خطأ في تخزين هاش الصورة المعالجة في التخزين المحلي:", error);
-  }
-};
-
-// وظيفة لتحميل هاشات الصور المعالجة من التخزين المحلي
-export const loadProcessedHashesFromStorage = (): void => {
-  try {
-    const storedHashes = JSON.parse(localStorage.getItem('processedImageHashes') || '[]');
-    
-    storedHashes.forEach((hash: string) => {
-      processedImageHashes.add(hash);
-    });
-    
-    console.log(`تم تحميل ${processedImageHashes.size} هاش من التخزين المحلي`);
-  } catch (error) {
-    console.error("خطأ في تحميل هاشات الصور المعالجة من التخزين المحلي:", error);
-  }
-};
-
-// وظيفة لإزالة الصور المكررة من قائمة الصور
-export const removeDuplicateImages = (images: ImageData[]): ImageData[] => {
-  const uniqueHashes = new Set<string>();
-  const uniqueImages: ImageData[] = [];
-  
-  for (const image of images) {
-    if (image.imageHash) {
-      if (!uniqueHashes.has(image.imageHash)) {
-        uniqueHashes.add(image.imageHash);
-        uniqueImages.push(image);
-      } else {
-        console.log(`تم حذف صورة مكررة: ${image.id} - الهاش: ${image.imageHash}`);
-      }
-    } else {
-      // إذا لم يكن هناك هاش، نحتفظ بالصورة
-      uniqueImages.push(image);
-    }
+    return duplicates.length > 0;
   }
   
-  console.log(`تم إزالة ${images.length - uniqueImages.length} صور مكررة`);
-  return uniqueImages;
-};
+  return false;
+}
