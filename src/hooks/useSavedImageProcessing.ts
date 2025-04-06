@@ -15,8 +15,29 @@ export const useSavedImageProcessing = (
   
   const { saveImageToDatabase, loadUserImages } = useImageDatabase(updateImage);
   
+  // وظيفة مساعدة للتسجيل في التخزين المحلي
+  const markImageAsProcessedInStorage = (imageId: string) => {
+    try {
+      // الحصول على القائمة الحالية
+      const currentIds = localStorage.getItem('processedImageIds') || '[]';
+      let idsArray = JSON.parse(currentIds);
+      
+      // إضافة المعرف إذا لم يكن موجودًا بالفعل
+      if (!idsArray.includes(imageId)) {
+        idsArray.push(imageId);
+        localStorage.setItem('processedImageIds', JSON.stringify(idsArray));
+        console.log(`تم تسجيل الصورة ${imageId} في التخزين المحلي كمعالجة`);
+      }
+    } catch (error) {
+      console.error('خطأ في تسجيل الصورة في التخزين المحلي:', error);
+    }
+  };
+  
   // وظيفة حفظ الصورة المعالجة عند النقر على زر الإرسال - تحسين التعامل مع الأخطاء
   const saveProcessedImage = async (image: ImageData): Promise<void> => {
+    // تسجيل الصورة كمعالجة بغض النظر عن نتيجة الحفظ
+    markImageAsProcessedInStorage(image.id);
+    
     if (!user) {
       console.log("المستخدم غير مسجل الدخول، لا يمكن حفظ الصورة");
       return;
@@ -40,6 +61,9 @@ export const useSavedImageProcessing = (
           });
           console.log("تم حفظ الصورة بنجاح في قاعدة البيانات:", image.id);
           
+          // إضافة تسجيل إضافي في التخزين المحلي بعد الحفظ الناجح
+          markImageAsProcessedInStorage(image.id);
+          
           // إعادة تحميل الصور بعد الحفظ
           if (user) {
             await loadUserImages(user.id, setAllImages);
@@ -55,7 +79,8 @@ export const useSavedImageProcessing = (
         
         // تحديث حالة الصورة لتعكس أنها لم يتم حفظها بنجاح
         updateImage(image.id, { 
-          error: "حدث خطأ أثناء محاولة حفظ البيانات"
+          error: "حدث خطأ أثناء محاولة حفظ البيانات",
+          status: "error" // تأكيد تحديث الحالة إلى خطأ
         });
         
         toast({
@@ -74,7 +99,8 @@ export const useSavedImageProcessing = (
       
       // تحديث حالة الصورة لتعكس أن البيانات غير مكتملة
       updateImage(image.id, { 
-        error: "البيانات غير مكتملة"
+        error: "البيانات غير مكتملة",
+        status: "error" // تحديث الحالة إلى خطأ
       });
       
       toast({
@@ -91,6 +117,7 @@ export const useSavedImageProcessing = (
   return {
     isSubmitting,
     setIsSubmitting,
-    saveProcessedImage
+    saveProcessedImage,
+    markImageAsProcessedInStorage // تصدير الوظيفة المساعدة للاستخدام الخارجي
   };
 };

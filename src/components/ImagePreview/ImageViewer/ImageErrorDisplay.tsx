@@ -2,36 +2,34 @@
 import { ImageOff, RefreshCw } from "lucide-react";
 
 interface ImageErrorDisplayProps {
-  onRetry?: () => void; // إضافة وظيفة إعادة المحاولة
-  errorMessage?: string; // إضافة رسالة خطأ مخصصة
-  retryCount?: number; // عدد المحاولات السابقة
+  onRetry?: () => void; // وظيفة إعادة المحاولة
+  errorMessage?: string; // رسالة الخطأ
 }
 
-const ImageErrorDisplay = ({ 
-  onRetry, 
-  errorMessage, 
-  retryCount = 0 
-}: ImageErrorDisplayProps) => {
+// مكون لعرض خطأ تحميل الصورة بشكل أكثر فائدة
+const ImageErrorDisplay = ({ onRetry, errorMessage }: ImageErrorDisplayProps) => {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 bg-white/80 dark:bg-gray-800/80">
-      <ImageOff size={48} />
-      <p className="mt-2 text-center font-medium">فشل تحميل الصورة</p>
-      <p className="text-sm text-muted-foreground mt-1 mb-2">
-        {errorMessage || "الصورة غير متاحة أو تم حذفها من الخادم"}
-      </p>
+    <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 bg-opacity-50 rounded-md p-4 text-center">
+      <ImageOff className="h-20 w-20 text-gray-400 mb-4" />
       
-      {retryCount > 0 && (
-        <p className="text-xs text-amber-500 mb-2">
-          تمت المحاولة {retryCount} {retryCount === 1 ? 'مرة' : 'مرات'} من قبل
+      <h3 className="text-lg font-medium text-gray-800 mb-2">فشل تحميل الصورة</h3>
+      
+      {errorMessage && (
+        <p className="text-sm text-gray-600 mb-4 max-w-md">{errorMessage}</p>
+      )}
+      
+      {!errorMessage && (
+        <p className="text-sm text-gray-600 mb-4 max-w-md">
+          تعذر عرض الصورة. قد تكون الصورة غير متوفرة أو تالفة.
         </p>
       )}
       
       {onRetry && (
-        <button 
-          onClick={onRetry} 
-          className="px-4 py-1.5 text-sm rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors dark:bg-blue-800 dark:text-blue-100 dark:hover:bg-blue-700 flex items-center"
+        <button
+          onClick={onRetry}
+          className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
         >
-          <RefreshCw className="h-3.5 w-3.5 ml-1.5 animate-pulse" />
+          <RefreshCw className="h-4 w-4" />
           إعادة المحاولة
         </button>
       )}

@@ -17,13 +17,14 @@ export const useImageProcessing = () => {
     localStorage.getItem('defaultSheetId') || ''
   );
   
-  // إضافة استخدام وظيفة اكتشاف التكرار مع خيارات موسعة
+  // تحسين استخدام وظيفة اكتشاف التكرار مع خيارات موسعة
   const { 
     isDuplicateImage, 
     clearProcessedHashesCache, 
     markImageAsProcessed,
     isFullyProcessed,
-    addToProcessedCache
+    addToProcessedCache,
+    cleanupOldData
   } = useDuplicateDetection();
   
   // حفظ تفضيلات المستخدم في التخزين المحلي
@@ -38,6 +39,17 @@ export const useImageProcessing = () => {
     }
   }, [defaultSheetId]);
   
+  // إضافة تنظيف دوري للبيانات القديمة
+  useEffect(() => {
+    // تنظيف البيانات القديمة عند بدء التشغيل
+    cleanupOldData();
+    
+    // تنظيف دوري كل 24 ساعة
+    const cleanupInterval = setInterval(cleanupOldData, 24 * 60 * 60 * 1000);
+    
+    return () => clearInterval(cleanupInterval);
+  }, [cleanupOldData]);
+  
   // تفعيل/تعطيل التصدير التلقائي
   const toggleAutoExport = (value: boolean) => {
     setAutoExportEnabled(value);
@@ -48,29 +60,44 @@ export const useImageProcessing = () => {
     setDefaultSheetId(sheetId);
   };
   
-  // وظيفة محسنة لتسجيل الصور المعالجة
+  // وظيفة محسنة لتسجيل الصور المعالجة مع تحسين التوثيق
   const trackProcessedImage = useCallback((image: ImageData) => {
-    console.log(`تسجيل الصورة ${image.id} كمعالجة`);
+    if (!image || !image.id) {
+      console.error("محاولة تسجيل صورة غير صالحة");
+      return false;
+    }
+    
+    console.log(`تسجيل الصورة ${image.id} (${image.file?.name || 'بدون اسم ملف'}) كمعالجة`);
     
     // تسجيل الصورة كمعالجة بغض النظر عن حالتها (نجاح أو فشل)
     markImageAsProcessed(image);
+    
+    // تحسين توثيق الإضافة
+    if (image.status === "completed") {
+      console.log(`نجاح: الصورة ${image.id} تمت معالجتها وتسجيلها كمكتملة`);
+    } else if (image.status === "error") {
+      console.log(`خطأ: الصورة ${image.id} تمت معالجتها وتسجيلها مع خطأ: ${image.error || 'خطأ غير محدد'}`);
+    } else {
+      console.log(`الصورة ${image.id} تمت معالجتها وتسجيلها بحالة: ${image.status || 'غير محدد'}`);
+    }
+    
     return true;
   }, [markImageAsProcessed]);
 
   // وظيفة لمعالجة صورة واحدة مع اكتشاف التكرار محسن
   const processImage = async (image: ImageData): Promise<ImageData> => {
     try {
-      // التحقق من اكتمال الصورة أولاً - تم تحسين دالة isFullyProcessed 
+      // التحقق بشكل أكثر دقة من اكتمال معالجة الصورة أولاً
       if (isFullyProcessed(image)) {
-        console.log(`الصورة ${image.id} مكتملة المعالجة بالفعل، تخطي المعالجة`);
+        console.log(`الصورة ${image.id} (${image.file?.name || 'بدون اسم ملف'}) مكتملة المعالجة بالفعل، تخطي المعالجة`);
         return image;
       }
       
-      // فحص ما إذا كانت الصورة مكررة قبل معالجتها
+      // التحقق بشكل أكثر دقة مما إذا كانت الصورة مكررة مع تحسين القدرة على اكتشاف التكرار
       if (isDuplicateImage(image, coreProcessing.images)) {
-        console.log("تم اكتشاف صورة مكررة:", image.id);
+        console.log("تم اكتشاف صورة مكررة:", image.id, image.file?.name);
         
-        // تسجيل الصورة كمعالجة رغم أنها مكررة
+        // تسجيل الصورة كمعالجة رغم أنها مكررة للتأكد من عدم معالجتها مرة أخرى
         trackProcessedImage(image);
         
         return {
@@ -81,13 +108,30 @@ export const useImageProcessing = () => {
       }
       
       try {
-        console.log(`بدء معالجة الصورة: ${image.id}`);
+        console.log(`بدء معالجة الصورة: ${image.id} (${image.file?.name || 'بدون اسم ملف'})`);
+        
+        // تسجيل الصورة قبل المعالجة لتجنب المعالجة المتكررة
+        addToProcessedCache({
+          ...image,
+          status: "processing"
+        });
         
         // معالجة الصورة - معالجة القيمة الفارغة التي قد ترجعها saveProcessedImage
         try {
           await coreProcessing.saveProcessedImage(image);
         } catch (saveError) {
           console.error("خطأ في حفظ الصورة المعالجة:", saveError);
+          
+          // تحديث حالة الخطأ وتسجيل الصورة كمعالجة رغم الفشل
+          const errorImage = {
+            ...image,
+            status: "error" as const,
+            error: saveError.message || "فشل في معالجة الصورة"
+          };
+          
+          // تسجيل الصورة كمعالجة رغم الفشل
+          trackProcessedImage(errorImage);
+          
           throw new Error(`فشل في معالجة الصورة: ${saveError.message || 'خطأ غير معروف'}`);
         }
         
@@ -117,13 +161,13 @@ export const useImageProcessing = () => {
           error: processingError.message || "فشل في حفظ الصورة المعالجة" 
         };
         
-        // تسجيل الصورة كمعالجة حتى في حالة الخطأ
+        // تسجيل الصورة كمعالجة حتى في حالة الخطأ لتجنب معالجتها مرة أخرى
         trackProcessedImage(errorImage);
         
         return errorImage;
       }
     } catch (error) {
-      console.error("خطأ في معالجة الصورة:", error);
+      console.error("خطأ عام في معالجة الصورة:", error);
       
       const errorImage = {
         ...image,
@@ -131,19 +175,22 @@ export const useImageProcessing = () => {
         error: error.message || "حدث خطأ أثناء معالجة الصورة"
       };
       
-      // تسجيل الصورة كمعالجة حتى في حالة الخطأ
+      // تسجيل الصورة كمعالجة حتى في حالة الخطأ العام
       trackProcessedImage(errorImage);
       
       return errorImage;
     }
   };
 
-  // وظيفة لمعالجة مجموعة من الصور
+  // وظيفة لمعالجة مجموعة من الصور مع تجاهل المكررات والمكتملة
   const processMultipleImages = async (images: ImageData[]): Promise<void> => {
     for (const image of images) {
-      // تخطي الصور المكتملة المعالجة - تم تحسين دالة isFullyProcessed
-      if (isFullyProcessed(image)) {
-        console.log(`تخطي الصورة المكتملة المعالجة: ${image.id}`);
+      // فحص إضافي للتأكد من أن الصورة لم تتم معالجتها أو أنها مكررة
+      if (isFullyProcessed(image) || isDuplicateImage(image, coreProcessing.images)) {
+        console.log(`تخطي الصورة المكررة أو المكتملة المعالجة: ${image.id} (${image.file?.name || 'بدون اسم ملف'})`);
+        
+        // تسجيل الصورة كمعالجة للتأكد من عدم معالجتها في المستقبل
+        trackProcessedImage(image);
         continue;
       }
       
@@ -169,6 +216,8 @@ export const useImageProcessing = () => {
     isDuplicateImage: checkForDuplicate,
     clearProcessedHashesCache,
     trackProcessedImage,
-    isFullyProcessed
+    isFullyProcessed,
+    // إضافة وظائف جديدة
+    cleanupOldData
   };
 };
