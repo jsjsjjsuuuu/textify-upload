@@ -3,51 +3,61 @@ import { useState, useCallback } from 'react';
 import { ImageData } from '@/types/ImageData';
 import { useToast } from '@/hooks/use-toast';
 import CryptoJS from 'crypto-js';
+import { createImageHash, isImageDuplicate } from '@/utils/duplicateDetection';
 
 interface UseDuplicateDetectionOptions {
   enabled?: boolean;
+  ignoreTemporary?: boolean;
 }
 
 export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}) => {
-  const { enabled = true } = options;
+  const { enabled = true, ignoreTemporary = true } = options;
   const [processedHashes, setProcessedHashes] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
-  // إنشاء تجزئة للصورة للكشف عن التكرار
-  const createImageHash = useCallback((image: ImageData): string => {
-    // إنشاء سلسلة فريدة من بيانات الصورة
-    const uniqueString = `${image.file.name}-${image.file.size}-${image.file.lastModified}`;
+  // تحسين وظيفة إنشاء تجزئة للصورة
+  const createUniqueImageHash = useCallback((image: ImageData): string => {
+    // إنشاء سلسلة فريدة تتضمن المزيد من المعلومات لتجنب التكرار الكاذب
+    const uniqueIdentifiers = [
+      image.file.name,
+      image.file.size.toString(),
+      image.file.lastModified.toString(),
+      image.user_id || '',
+      image.batch_id || ''
+    ].join('|');
+    
     // استخدام خوارزمية MD5 لإنشاء بصمة للصورة
-    return CryptoJS.MD5(uniqueString).toString();
+    return CryptoJS.MD5(uniqueIdentifiers).toString();
   }, []);
 
-  // التحقق من تكرار الصورة
+  // التحقق من تكرار الصورة - تحسين المنطق
   const isDuplicateImage = useCallback((image: ImageData, images: ImageData[] = []): boolean => {
-    if (!enabled) return false;
+    if (!enabled || !image) return false;
 
     try {
       // إنشاء تجزئة للصورة
-      const imageHash = createImageHash(image);
+      const imageHash = createUniqueImageHash(image);
       
       // التحقق من وجود التجزئة في قائمة التجزئات المعالجة
       if (processedHashes.has(imageHash)) {
+        console.log(`تم العثور على تجزئة مطابقة في الذاكرة المؤقتة: ${imageHash} للصورة ${image.id}`);
         return true;
       }
       
-      // التحقق من تكرار الصورة في قائمة الصور
-      const isDuplicate = images.some(img => {
-        // التحقق من تطابق الاسم والحجم والتاريخ
-        return (
-          img.file.name === image.file.name &&
-          img.file.size === image.file.size &&
-          img.file.lastModified === image.file.lastModified &&
-          img.sessionImage !== true // تجاهل الصور المؤقتة
-        );
-      });
+      // تحديد ما إذا كنا سنتجاهل الصور المؤقتة
+      const checkDuplicateOptions = { ignoreTemporary };
       
-      // إذا لم يكن هناك تكرار، إضافة التجزئة إلى القائمة
-      if (!isDuplicate) {
-        setProcessedHashes(prev => new Set(prev).add(imageHash));
+      // استخدام الوظيفة المساعدة من utils/duplicateDetection
+      const isDuplicate = isImageDuplicate(image, images, ignoreTemporary);
+      
+      // إذا لم يكن هناك تكرار وليست صورة مؤقتة، إضافة التجزئة إلى القائمة
+      if (!isDuplicate && !image.sessionImage) {
+        console.log(`إضافة تجزئة جديدة إلى الذاكرة المؤقتة: ${imageHash} للصورة ${image.id}`);
+        setProcessedHashes(prev => {
+          const newSet = new Set(prev);
+          newSet.add(imageHash);
+          return newSet;
+        });
       }
       
       return isDuplicate;
@@ -55,15 +65,22 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
       console.error('خطأ في اكتشاف تكرار الصورة:', error);
       return false;
     }
-  }, [processedHashes, createImageHash, enabled]);
+  }, [processedHashes, createUniqueImageHash, enabled, ignoreTemporary]);
 
   // مسح ذاكرة التخزين المؤقت للتجزئات
   const clearProcessedHashesCache = useCallback(() => {
+    console.log('تم مسح ذاكرة التخزين المؤقت لتجزئات الصور');
     setProcessedHashes(new Set());
-  }, []);
+    
+    toast({
+      title: "تم مسح الذاكرة المؤقتة",
+      description: "تم مسح ذاكرة التخزين المؤقت لاكتشاف الصور المكررة"
+    });
+  }, [toast]);
 
   return {
     isDuplicateImage,
-    clearProcessedHashesCache
+    clearProcessedHashesCache,
+    processedHashesCount: processedHashes.size
   };
 };

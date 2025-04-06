@@ -45,6 +45,7 @@ export const useImageProcessing = () => {
   // وظيفة لمعالجة صورة واحدة مع اكتشاف التكرار
   const processImage = async (image: ImageData): Promise<ImageData> => {
     try {
+      // فحص ما إذا كانت الصورة مكررة قبل معالجتها
       if (isDuplicateImage(image, coreProcessing.images)) {
         console.log("تم اكتشاف صورة مكررة:", image.id);
         return {
@@ -55,12 +56,20 @@ export const useImageProcessing = () => {
       }
       
       try {
-        // معالجة الصورة واستخدام الإرجاع بشكل مباشر، والتأكد من أن الوظيفة تعيد ImageData
+        // معالجة الصورة واستخدام الإرجاع بشكل مباشر
         const processedImage = await coreProcessing.saveProcessedImage(image);
-        // نتحقق إذا كانت processedImage غير محددة
+        
+        // التعامل مع حالة عدم وجود قيمة عائدة من saveProcessedImage
+        // بما أن saveProcessedImage قد تعيد undefined، نرجع الصورة الأصلية مع رسالة خطأ
         if (!processedImage) {
-          throw new Error("فشل في معالجة الصورة");
+          // نستخدم حالة الخطأ ونضيف رسالة
+          return {
+            ...image,
+            status: "error" as const,
+            error: "فشل في معالجة الصورة"
+          };
         }
+        
         return processedImage;
       } catch (processingError) {
         console.error("خطأ أثناء معالجة الصورة:", processingError);
