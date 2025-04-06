@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { ImageData } from '@/types/ImageData';
 import { useImageDatabase } from './useImageDatabase';
 import { useFileUpload } from './useFileUpload';
-import { useDuplicateDetection } from './useDuplicateDetection';
 import { useToast } from './use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiKeyStats } from '@/lib/gemini';
@@ -14,6 +13,21 @@ export const useImageProcessing = () => {
   const [currentlyProcessingId, setCurrentlyProcessingId] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // وظيفة الإضافة للصورة
+  const addImage = useCallback((image: ImageData) => {
+    setImages(prevImages => [...prevImages, image]);
+  }, []);
+  
+  // وظيفة تحديث الصورة
+  const updateImage = useCallback((id: string, fields: Partial<ImageData>) => {
+    setImages(prevImages =>
+      prevImages.map(image => (image.id === id ? { ...image, ...fields } : image))
+    );
+  }, []);
+  
+  // استيراد useDuplicateDetection
+  const { isDuplicateImage, removeDuplicates } = useDuplicateDetection(images);
   
   // Load processed hashes from local storage on component mount
   useEffect(() => {
@@ -30,6 +44,15 @@ export const useImageProcessing = () => {
     cleanupOldRecords,
     runCleanupNow
   } = useImageDatabase(updateImage);
+  
+  // وظيفة حفظ الصورة المعالجة
+  const saveProcessedImage = useCallback(async (image: ImageData) => {
+    if (user) {
+      await saveImageToDatabase(image, user.id);
+    } else {
+      console.warn("User not logged in, cannot save image.");
+    }
+  }, [user, saveImageToDatabase]);
   
   // Initialize useFileUpload
   const {
@@ -53,22 +76,7 @@ export const useImageProcessing = () => {
     removeDuplicates
   });
   
-  // Initialize useDuplicateDetection
-  const { isDuplicateImage, removeDuplicates } = useDuplicateDetection(images);
-  
-  // Function to add a single image
-  const addImage = useCallback((image: ImageData) => {
-    setImages(prevImages => [...prevImages, image]);
-  }, []);
-  
-  // Function to update a single image
-  const updateImage = useCallback((id: string, fields: Partial<ImageData>) => {
-    setImages(prevImages =>
-      prevImages.map(image => (image.id === id ? { ...image, ...fields } : image))
-    );
-  }, []);
-  
-  // Load user images from the database
+  // وظيفة تحميل صور المستخدم
   const loadUserImages = useCallback(() => {
     if (user) {
       loadImagesFromDatabase(user.id, setImages);
@@ -81,13 +89,13 @@ export const useImageProcessing = () => {
     }
   }, [user, loadUserImages]);
   
-  // Function to delete a single image
+  // وظيفة حذف الصورة
   const handleDelete = useCallback(async (id: string): Promise<boolean> => {
     try {
-      // First, delete the image from the database
+      // أولاً، احذف الصورة من قاعدة البيانات
       await deleteImageFromDatabase(id);
       
-      // Then, update the local state
+      // ثم قم بتحديث الحالة المحلية
       setImages(prevImages => prevImages.filter(image => image.id !== id));
       
       toast({
@@ -107,12 +115,12 @@ export const useImageProcessing = () => {
     }
   }, [deleteImageFromDatabase, toast]);
   
-  // Clear all session images
+  // حذف صور الجلسة الحالية
   const clearSessionImages = useCallback(() => {
     setImages([]);
   }, []);
   
-  // Handle error with toast notification
+  // معالجة الخطأ مع إشعار
   const handleError = (id: string, errorMessage: string, isApiKeyError = false) => {
     updateImage(id, {
       status: "error",
@@ -121,21 +129,12 @@ export const useImageProcessing = () => {
     });
   };
   
-  // Save processed image to database
-  const saveProcessedImage = useCallback(async (image: ImageData) => {
-    if (user) {
-      await saveImageToDatabase(image, user.id);
-    } else {
-      console.warn("User not logged in, cannot save image.");
-    }
-  }, [user, saveImageToDatabase]);
-  
-  // Handle text change in image data
+  // تغيير النص في بيانات الصورة
   const handleTextChange = useCallback((id: string, field: string, value: string) => {
     updateImage(id, { [field]: value });
   }, [updateImage]);
   
-  // Format date
+  // تنسيق التاريخ
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('ar-SA', {
       year: 'numeric',
@@ -150,7 +149,7 @@ export const useImageProcessing = () => {
     isProcessing,
     processingProgress,
     currentlyProcessingId,
-    isSubmitting: false, // This should be managed internally or passed as needed
+    isSubmitting: false, // سيتم إدارة هذا داخليًا حسب الحاجة
     activeUploads,
     queueLength,
     useGemini,
@@ -173,3 +172,6 @@ export const useImageProcessing = () => {
     clearProcessedHashesCache
   };
 };
+
+// إضافة استيراد useDuplicateDetection لمنع الخطأ
+import { useDuplicateDetection } from './useDuplicateDetection';

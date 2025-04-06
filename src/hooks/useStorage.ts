@@ -138,7 +138,7 @@ export const useStorage = () => {
     deleteFile,
     getPublicUrl,
     createFolder,
-    uploadImageToStorage,  // إضافة الوظيفة للتصدير
+    uploadImageToStorage,
     isUploading,
     uploadProgress,
     error

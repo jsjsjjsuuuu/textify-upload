@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { 
   getNextApiKey, 
   resetAllApiKeys, 
@@ -64,7 +64,10 @@ export const useGeminiProcessing = () => {
         fileToProcess = file;
       } else {
         // تحويل Blob إلى File (إضافة خصائص File المفقودة)
-        const blobAsFile = new File([file], "image.jpg", { type: file.type || "image/jpeg", lastModified: Date.now() });
+        const blobAsFile = new File([file], "image.jpg", { 
+          type: file.type || "image/jpeg", 
+          lastModified: Date.now() 
+        });
         fileToProcess = blobAsFile;
       }
       
@@ -253,7 +256,7 @@ export const useGeminiProcessing = () => {
       setIsProcessing(false);
     }
   }, []);
-  
+
   // إعادة تعيين مفاتيح API
   const resetApiKeys = useCallback(() => {
     resetAllApiKeys();
