@@ -15,7 +15,7 @@ export const useSavedImageProcessing = (
   
   const { saveImageToDatabase, loadUserImages } = useImageDatabase(updateImage);
   
-  // وظيفة حفظ الصورة المعالجة عند النقر على زر الإرسال
+  // وظيفة حفظ الصورة المعالجة عند النقر على زر الإرسال - تحسين التعامل مع الأخطاء
   const saveProcessedImage = async (image: ImageData): Promise<void> => {
     if (!user) {
       console.log("المستخدم غير مسجل الدخول، لا يمكن حفظ الصورة");
@@ -33,7 +33,11 @@ export const useSavedImageProcessing = (
         
         if (savedData) {
           // تحديث الصورة بمعلومات أنها تم حفظها
-          updateImage(image.id, { submitted: true });
+          updateImage(image.id, { 
+            submitted: true,
+            // نضيف أيضًا تحديث حالة الصورة إلى مكتملة
+            status: "completed"
+          });
           console.log("تم حفظ الصورة بنجاح في قاعدة البيانات:", image.id);
           
           // إعادة تحميل الصور بعد الحفظ
@@ -48,21 +52,39 @@ export const useSavedImageProcessing = (
         }
       } catch (error) {
         console.error("خطأ أثناء حفظ الصورة:", error);
+        
+        // تحديث حالة الصورة لتعكس أنها لم يتم حفظها بنجاح
+        updateImage(image.id, { 
+          error: "حدث خطأ أثناء محاولة حفظ البيانات"
+        });
+        
         toast({
           title: "خطأ في الحفظ",
           description: "حدث خطأ أثناء محاولة حفظ البيانات",
           variant: "destructive"
         });
+        
+        // إعادة إلقاء الخطأ للتعامل معه في المستدعي
+        throw new Error("حدث خطأ أثناء محاولة حفظ البيانات");
       } finally {
         setIsSubmitting(false);
       }
     } else {
       console.log("البيانات غير مكتملة، تم تخطي الحفظ في قاعدة البيانات:", image.id);
+      
+      // تحديث حالة الصورة لتعكس أن البيانات غير مكتملة
+      updateImage(image.id, { 
+        error: "البيانات غير مكتملة"
+      });
+      
       toast({
         title: "بيانات غير مكتملة",
         description: "يرجى ملء جميع الحقول المطلوبة أولاً",
         variant: "destructive"
       });
+      
+      // إلقاء خطأ ليتم التعامل معه في المستدعي
+      throw new Error("يرجى ملء جميع الحقول المطلوبة أولاً");
     }
   };
 

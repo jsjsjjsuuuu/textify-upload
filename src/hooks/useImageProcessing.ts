@@ -50,18 +50,17 @@ export const useImageProcessing = () => {
   
   // وظيفة محسنة لتسجيل الصور المعالجة
   const trackProcessedImage = useCallback((image: ImageData) => {
-    if (isFullyProcessed(image)) {
-      console.log(`تسجيل الصورة ${image.id} كمعالجة بالكامل`);
-      addToProcessedCache(image);
-      return true;
-    }
-    return false;
-  }, [isFullyProcessed, addToProcessedCache]);
+    console.log(`تسجيل الصورة ${image.id} كمعالجة`);
+    
+    // تسجيل الصورة كمعالجة بغض النظر عن حالتها (نجاح أو فشل)
+    markImageAsProcessed(image);
+    return true;
+  }, [markImageAsProcessed]);
 
   // وظيفة لمعالجة صورة واحدة مع اكتشاف التكرار محسن
   const processImage = async (image: ImageData): Promise<ImageData> => {
     try {
-      // التحقق من اكتمال الصورة أولاً
+      // التحقق من اكتمال الصورة أولاً - تم تحسين دالة isFullyProcessed 
       if (isFullyProcessed(image)) {
         console.log(`الصورة ${image.id} مكتملة المعالجة بالفعل، تخطي المعالجة`);
         return image;
@@ -70,6 +69,10 @@ export const useImageProcessing = () => {
       // فحص ما إذا كانت الصورة مكررة قبل معالجتها
       if (isDuplicateImage(image, coreProcessing.images)) {
         console.log("تم اكتشاف صورة مكررة:", image.id);
+        
+        // تسجيل الصورة كمعالجة رغم أنها مكررة
+        trackProcessedImage(image);
+        
         return {
           ...image,
           status: "error" as const,
@@ -78,19 +81,29 @@ export const useImageProcessing = () => {
       }
       
       try {
-        // معالجة الصورة - لاحظ أن saveProcessedImage لا ترجع قيمة (void)
-        await coreProcessing.saveProcessedImage(image);
+        console.log(`بدء معالجة الصورة: ${image.id}`);
+        
+        // معالجة الصورة - معالجة القيمة الفارغة التي قد ترجعها saveProcessedImage
+        try {
+          await coreProcessing.saveProcessedImage(image);
+        } catch (saveError) {
+          console.error("خطأ في حفظ الصورة المعالجة:", saveError);
+          throw new Error(`فشل في معالجة الصورة: ${saveError.message || 'خطأ غير معروف'}`);
+        }
         
         // بعد المعالجة، نحاول العثور على الصورة المحدثة في القائمة
         const updatedImage = coreProcessing.images.find(img => img.id === image.id);
         
         if (updatedImage) {
-          // تسجيل الصورة كمعالجة إذا كانت مكتملة أو بها خطأ
-          if (updatedImage.status === "completed" || updatedImage.status === "error") {
-            trackProcessedImage(updatedImage);
-          }
+          // تسجيل الصورة كمعالجة في جميع الحالات (نجاح أو فشل)
+          trackProcessedImage(updatedImage);
+          
+          console.log(`تم الانتهاء من معالجة الصورة ${image.id} بحالة: ${updatedImage.status}`);
           return updatedImage;
         }
+        
+        // إذا لم نتمكن من العثور على الصورة المحدثة، نسجل الصورة الأصلية كمعالجة
+        trackProcessedImage(image);
         
         // إرجاع الصورة الأصلية إذا لم نتمكن من العثور على نسخة محدثة
         return image;
@@ -101,27 +114,34 @@ export const useImageProcessing = () => {
         const errorImage = { 
           ...image, 
           status: "error" as const, 
-          error: "فشل في حفظ الصورة المعالجة" 
+          error: processingError.message || "فشل في حفظ الصورة المعالجة" 
         };
         
+        // تسجيل الصورة كمعالجة حتى في حالة الخطأ
         trackProcessedImage(errorImage);
         
         return errorImage;
       }
     } catch (error) {
       console.error("خطأ في معالجة الصورة:", error);
-      return {
+      
+      const errorImage = {
         ...image,
         status: "error" as const,
-        error: "حدث خطأ أثناء معالجة الصورة"
+        error: error.message || "حدث خطأ أثناء معالجة الصورة"
       };
+      
+      // تسجيل الصورة كمعالجة حتى في حالة الخطأ
+      trackProcessedImage(errorImage);
+      
+      return errorImage;
     }
   };
 
   // وظيفة لمعالجة مجموعة من الصور
   const processMultipleImages = async (images: ImageData[]): Promise<void> => {
     for (const image of images) {
-      // تخطي الصور المكتملة المعالجة
+      // تخطي الصور المكتملة المعالجة - تم تحسين دالة isFullyProcessed
       if (isFullyProcessed(image)) {
         console.log(`تخطي الصورة المكتملة المعالجة: ${image.id}`);
         continue;

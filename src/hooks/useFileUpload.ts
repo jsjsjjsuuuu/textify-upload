@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -69,13 +68,19 @@ export const useFileUpload = ({
       }
     } catch (error) {
       console.error('خطأ في تحميل معرفات الصور المعالجة:', error);
+      // إعادة تعيين في حالة الخطأ
+      localStorage.removeItem('processedSessionImageIds');
     }
   }, []);
 
   // حفظ معرفات الصور المعالجة في التخزين المحلي
   useEffect(() => {
-    if (processedImageIds.size > 0) {
-      localStorage.setItem('processedSessionImageIds', JSON.stringify([...processedImageIds]));
+    try {
+      if (processedImageIds.size > 0) {
+        localStorage.setItem('processedSessionImageIds', JSON.stringify([...processedImageIds]));
+      }
+    } catch (error) {
+      console.error('خطأ في حفظ معرفات الصور المعالجة:', error);
     }
   }, [processedImageIds]);
 
@@ -86,12 +91,47 @@ export const useFileUpload = ({
       newIds.add(imageId);
       return newIds;
     });
+    
+    // حفظ مباشر إلى التخزين المحلي لتجنب فقدان البيانات
+    try {
+      const currentIds = localStorage.getItem('processedSessionImageIds');
+      let idsArray: string[] = currentIds ? JSON.parse(currentIds) : [];
+      if (!idsArray.includes(imageId)) {
+        idsArray.push(imageId);
+        localStorage.setItem('processedSessionImageIds', JSON.stringify(idsArray));
+      }
+    } catch (error) {
+      console.error('خطأ في الحفظ المباشر لمعرف الصورة في التخزين المحلي:', error);
+    }
   }, []);
 
-  // التحقق إذا كانت الصورة قد تمت معالجتها بالفعل
-  const isAlreadyProcessed = useCallback((imageId: string) => {
-    return processedImageIds.has(imageId) || 
-           images.some(img => img.id === imageId && (img.status === "completed" || img.status === "error"));
+  // التحقق إذا كانت الصورة قد تمت معالجتها بالفعل - تحسين دقة الكشف
+  const isAlreadyProcessed = useCallback((imageId: string, fileName?: string, fileSize?: number, userId?: string) => {
+    // 1. التحقق من معرف الصورة
+    const idMatch = processedImageIds.has(imageId);
+    
+    // 2. البحث في حالات الصور الحالية
+    const statusMatch = images.some(img => 
+      img.id === imageId && 
+      (img.status === "completed" || img.status === "error")
+    );
+    
+    // 3. البحث عن مطابقة اسم الملف والحجم والمستخدم (إذا كانت متوفرة)
+    const fileMatch = fileName && fileSize && userId && images.some(img => 
+      img.file && 
+      img.file.name === fileName && 
+      img.file.size === fileSize && 
+      img.user_id === userId &&
+      (img.status === "completed" || img.status === "error")
+    );
+    
+    const result = idMatch || statusMatch || fileMatch;
+    
+    if (result) {
+      console.log(`الصورة تمت معالجتها بالفعل: ${imageId}${fileName ? ' (' + fileName + ')' : ''}`);
+    }
+    
+    return result;
   }, [processedImageIds, images]);
 
   // وظيفة رفع الصورة إلى Supabase Storage
@@ -131,13 +171,13 @@ export const useFileUpload = ({
     batchId: string, 
     retryCount = 0
   ): Promise<boolean> => {
-    // تعريف imageId خارج كتلة try لضمان وصول جميع أجزاء الكود إليه
+    // تعريف imageId مبكراً
     const imageId = crypto.randomUUID();
     let tempPreviewUrl: string | null = null;
     
-    // التحقق أولاً إذا كانت الصورة تمت معالجتها بالفعل (في حالة محاولة إعادة المعالجة يدويًا)
-    if (isAlreadyProcessed(imageId)) {
-      console.log(`الصورة ${imageId} تمت معالجتها بالفعل، تخطي المعالجة`);
+    // التحقق أولاً إذا كانت الصورة تمت معالجتها بالفعل (بناءً على المعرف)
+    if (isAlreadyProcessed(imageId, file.name, file.size, user?.id)) {
+      console.log(`الصورة ${imageId} (${file.name}) تمت معالجتها بالفعل، تخطي المعالجة`);
       return true;
     }
     
@@ -179,6 +219,9 @@ export const useFileUpload = ({
           description: `فشل في إنشاء معاينة للصورة "${file.name}"`,
           variant: "destructive"
         });
+        
+        // تسجيل الصورة كمعالجة حتى بعد الفشل
+        markImageAsProcessedLocally(imageId);
         return false;
       }
       
@@ -203,6 +246,14 @@ export const useFileUpload = ({
         const isDuplicate = processedImage.isDuplicateImage(newImage, images);
         if (isDuplicate) {
           console.log(`الصورة ${file.name} تم اكتشافها كمكررة، تخطي المعالجة`);
+          // تسجيل الصورة كمعالجة حتى في حالة التكرار
+          markImageAsProcessedLocally(imageId);
+          
+          // إذا كان لدينا إمكانية تسجيل الصورة كمعالجة في نظام اكتشاف التكرار
+          if (processedImage.markImageAsProcessed) {
+            processedImage.markImageAsProcessed(newImage);
+          }
+          
           return true;
         }
       }
@@ -232,6 +283,15 @@ export const useFileUpload = ({
         
         // تسجيل الصورة كمعالجة (بحالة خطأ) لتجنب إعادة المحاولة
         markImageAsProcessedLocally(imageId);
+        
+        // تسجيل الصورة كمعالجة في نظام اكتشاف التكرار
+        if (processedImage && processedImage.markImageAsProcessed) {
+          processedImage.markImageAsProcessed({
+            ...newImage,
+            status: "error",
+            error: "فشل في تخزين الصورة على الخادم"
+          });
+        }
         
         return false;
       }
@@ -284,11 +344,6 @@ export const useFileUpload = ({
         // تحديث حالة الصورة إلى "مكتملة" إذا كانت تحتوي على جميع البيانات الأساسية
         if (processedData.code && processedData.senderName && processedData.phoneNumber) {
           processedData.status = "completed";
-          
-          // **تسجيل الصورة كمعالجة لتجنب إعادة المعالجة**
-          if (processedImage && processedImage.addToProcessedCache) {
-            processedImage.addToProcessedCache(processedData);
-          }
         } else if (processedData.status !== "error") {
           processedData.status = "pending";
         }
@@ -307,13 +362,30 @@ export const useFileUpload = ({
         // تسجيل الصورة كمعالجة سواء نجحت أو فشلت
         markImageAsProcessedLocally(imageId);
         
-        // **حفظ الصورة المعالجة** - التأكد من عدم محاولة اختبار القيمة المرجعة من saveProcessedImage
-        if (saveProcessedImage && processedData.status === "completed") {
+        // تسجيل الصورة كمعالجة في نظام اكتشاف التكرار
+        if (processedImage && processedImage.markImageAsProcessed) {
+          processedImage.markImageAsProcessed({
+            ...newImage,
+            ...processedData
+          });
+        } else if (processedImage && processedImage.addToProcessedCache) {
+          processedImage.addToProcessedCache({
+            ...newImage,
+            ...processedData
+          });
+        }
+        
+        // **حفظ الصورة المعالجة** - معالجة محسنة للوعد
+        if (saveProcessedImage && (processedData.status === "completed" || processedData.status === "error")) {
           try {
-            await saveProcessedImage(processedData);
+            await saveProcessedImage({
+              ...newImage,
+              ...processedData
+            });
             console.log("تم حفظ الصورة المعالجة بنجاح:", imageId);
           } catch (saveError) {
             console.error("خطأ في حفظ الصورة المعالجة:", saveError);
+            // لا نريد أن نفشل العملية كاملة بسبب فشل الحفظ
           }
         }
         
@@ -353,15 +425,30 @@ export const useFileUpload = ({
         }
         
         // إذا استنفدت جميع المحاولات، حدّث الحالة إلى "خطأ"
-        const friendlyErrorMessage = getFriendlyErrorMessage(errorMessage);
+        const friendlyErrorMessage = getFriendlyErrorMessage(processingError.message || 'خطأ غير معروف');
         
-        updateImage(imageId, { 
-          status: "error",
+        const errorUpdate = { 
+          status: "error" as const,
           extractedText: `فشل في المعالجة بعد ${MAX_RETRIES + 1} محاولات. ${friendlyErrorMessage}`
-        });
+        };
+        
+        updateImage(imageId, errorUpdate);
         
         // تسجيل الصورة كمعالجة (بحالة خطأ) لمنع إعادة المحاولة
         markImageAsProcessedLocally(imageId);
+        
+        // تسجيل الصورة كمعالجة في نظام اكتشاف التكرار
+        if (processedImage && processedImage.markImageAsProcessed) {
+          processedImage.markImageAsProcessed({
+            ...newImage,
+            ...errorUpdate
+          });
+        } else if (processedImage && processedImage.addToProcessedCache) {
+          processedImage.addToProcessedCache({
+            ...newImage,
+            ...errorUpdate
+          });
+        }
         
         toast({
           title: "فشل في استخراج النص",
@@ -376,13 +463,28 @@ export const useFileUpload = ({
       
       // إذا كانت الصورة قد تمت إضافتها، قم بتحديث حالتها
       if (imageId) {
-        updateImage(imageId, {
-          status: "error",
+        const errorUpdate = {
+          status: "error" as const,
           extractedText: `خطأ عام: ${error.message || "خطأ غير معروف"}`
-        });
+        };
+        
+        updateImage(imageId, errorUpdate);
         
         // تسجيل الصورة كمعالجة (بحالة خطأ)
         markImageAsProcessedLocally(imageId);
+        
+        // تسجيل الصورة كمعالجة في نظام اكتشاف التكرار
+        if (processedImage && processedImage.markImageAsProcessed && file) {
+          processedImage.markImageAsProcessed({
+            id: imageId,
+            file,
+            previewUrl: tempPreviewUrl || '',
+            date: new Date(),
+            status: "error",
+            error: error.message || "خطأ غير معروف",
+            extractedText: `خطأ عام: ${error.message || "خطأ غير معروف"}`
+          });
+        }
       }
       
       return false;
@@ -581,13 +683,36 @@ export const useFileUpload = ({
     const fileArray = Array.from(files);
     console.log("معالجة", fileArray.length, "ملفات");
     
-    // تحسين فحص الصور المكررة عن طريق استخدام اسم الملف وحجمه معًا
+    // تحسين فحص الصور المكررة ليشمل التحقق من نظام اكتشاف التكرار
     const uniqueFiles = fileArray.filter(file => {
-      const isDuplicate = images.some(img => 
+      // البحث عن تطابق في الصور الحالية
+      const isDuplicateInCurrent = images.some(img => 
         img.file.name === file.name && 
         img.file.size === file.size &&
         (img.status === "completed" || img.status === "error")
       );
+      
+      // فحص إضافي باستخدام معالج التكرار المحسن
+      let isDuplicateInDetector = false;
+      if (processedImage && processedImage.isDuplicateImage) {
+        // إنشاء كائن بيانات صورة مؤقت للفحص
+        const tempId = crypto.randomUUID();
+        const tempImage: ImageData = {
+          id: tempId,
+          file,
+          previewUrl: URL.createObjectURL(file),
+          date: new Date(),
+          status: "pending",
+          user_id: user.id
+        };
+        
+        isDuplicateInDetector = processedImage.isDuplicateImage(tempImage, images);
+        
+        // تنظيف عنوان URL المؤقت
+        URL.revokeObjectURL(tempImage.previewUrl);
+      }
+      
+      const isDuplicate = isDuplicateInCurrent || isDuplicateInDetector;
       
       if (isDuplicate) {
         console.log("تم تخطي صورة مكررة:", file.name);
