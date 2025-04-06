@@ -257,3 +257,54 @@ export const enhancedDataExtraction = async (options: ApiOptions): Promise<ApiRe
     return { success: false, message: `فشل استدعاء Gemini API: ${error.message}`, apiKeyError: isApiKeyError(error) };
   }
 };
+
+export const testConnection = async (apiKey: string): Promise<ApiResult> => {
+    if (!apiKey) {
+        return { success: false, message: "API key is missing", apiKeyError: true };
+    }
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: "Test" }],
+                }],
+                generationConfig: {
+                    temperature: 0.1,
+                    topP: 0.95,
+                    topK: 40,
+                    maxOutputTokens: 2048,
+                },
+                safetySettings: [
+                    {
+                        "category": "HARM_CATEGORY_HARASSMENT",
+                        "threshold": "BLOCK_NONE"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_HATE_SPEECH",
+                        "threshold": "BLOCK_NONE"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        "threshold": "BLOCK_NONE"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                        "threshold": "BLOCK_NONE"
+                    }
+                ]
+            }),
+        });
+
+        return processGeminiResponse(response, apiKey);
+    } catch (error) {
+        console.error("Error while calling Gemini API:", error);
+        return { success: false, message: `Failed to call Gemini API: ${error.message}`, apiKeyError: isApiKeyError(error) };
+    }
+};

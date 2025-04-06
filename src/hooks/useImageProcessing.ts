@@ -6,6 +6,7 @@ import { useStorage, STORAGE_BUCKETS } from "./useStorage";
 import { calculateImageHash, readImageFile } from "@/utils/fileReader";
 import { isDuplicateImage, markImageAsProcessed, loadProcessedHashesFromStorage } from "@/utils/duplicateDetection";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UseImageProcessingProps {
   updateImage: (id: string, data: Partial<ImageData>) => void;
@@ -127,7 +128,7 @@ export const useImageProcessing = ({ updateImage, saveImage, allImages }: UseIma
       console.log(`تمت معالجة الصورة ${image.id} بنجاح`);
       return processedImage;
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(`خطأ في معالجة الصورة ${image.id}:`, error);
       
       updateImage(image.id, {

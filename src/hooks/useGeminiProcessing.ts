@@ -7,7 +7,7 @@ import {
   getApiKeyStats,
   addApiKey,
   testGeminiConnection
-} from "@/lib/gemini/geminiService";
+} from "@/lib/gemini";
 import { ApiResult } from "@/lib/gemini/types";
 import { fileToBase64 } from "@/lib/gemini/utils";
 import { readImageFile } from "@/utils/fileReader";
@@ -28,16 +28,6 @@ const geminiStats: GeminiStats = {
   failed: 0,
   currentModel: 'gemini-2.0-flash'
 };
-
-// تعديل تعريف واجهة ApiResult لتضمين حقل apiKeyError
-declare module '@/lib/gemini/types' {
-  export interface ApiResult {
-    success: boolean;
-    message?: string;
-    data?: any;
-    apiKeyError?: boolean;
-  }
-}
 
 export const useGeminiProcessing = () => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -109,16 +99,18 @@ export const useGeminiProcessing = () => {
       
       return baseImageData;
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("خطأ في معالجة الصورة مع Gemini:", error);
       
       // إرجاع بيانات الصورة مع حالة الخطأ
-      return {
-        ...imageData,
-        status: "error" as "error",
+      const errorImageData: ImageData = {
+        ...(imageData as ImageData),
+        status: "error",
         error: error.message || "حدث خطأ غير معروف أثناء معالجة الصورة",
         apiKeyError: false
-      } as ImageData;
+      };
+      
+      return errorImageData;
       
     } finally {
       setIsProcessing(false);
@@ -145,8 +137,14 @@ export const useGeminiProcessing = () => {
         }
       } else {
         // تحويل ملف أو Blob إلى Base64
-        const fileToConvert = imageFile instanceof File ? imageFile : new File([imageFile], "image.jpg", { type: 'image/jpeg', lastModified: Date.now() });
-        base64Data = await fileToBase64(fileToConvert);
+        // الحل لمشكلة Blob/File
+        if (imageFile instanceof File) {
+          base64Data = await fileToBase64(imageFile);
+        } else {
+          // إذا كان Blob، نحوله إلى File أولاً
+          const blobAsFile = new File([imageFile], "image.jpg", { type: 'image/jpeg', lastModified: Date.now() });
+          base64Data = await fileToBase64(blobAsFile);
+        }
       }
       
       // إعادة ضغط الصورة إذا كانت كبيرة جدًا
@@ -154,12 +152,16 @@ export const useGeminiProcessing = () => {
         console.log("الصورة كبيرة جدًا، محاولة ضغطها...");
         try {
           // إذا كان imageFile من نوع string، قم بتحويله إلى blob أولاً
-          const blob = typeof imageFile === 'string' 
-            ? await (await fetch(imageFile)).blob() 
-            : (imageFile instanceof Blob ? imageFile : new Blob([imageFile]));
-          
-          // تحويل Blob إلى File لضمان توافقه مع readImageFile
-          const fileForCompression = new File([blob], "image.jpg", { type: 'image/jpeg', lastModified: Date.now() });
+          let fileForCompression: File;
+          if (typeof imageFile === 'string') {
+            const fetchedBlob = await (await fetch(imageFile)).blob();
+            fileForCompression = new File([fetchedBlob], "image.jpg", { type: 'image/jpeg', lastModified: Date.now() });
+          } else if (imageFile instanceof File) {
+            fileForCompression = imageFile;
+          } else {
+            // Blob to File
+            fileForCompression = new File([imageFile], "image.jpg", { type: 'image/jpeg', lastModified: Date.now() });
+          }
           base64Data = await readImageFile(fileForCompression, 0.7); // ضغط بجودة 70%
         } catch (compressionError) {
           console.error("فشل ضغط الصورة:", compressionError);
@@ -189,7 +191,7 @@ export const useGeminiProcessing = () => {
       });
       
       // التأكد من أن النتيجة تحتوي على حقل apiKeyError
-      if (!result.hasOwnProperty('apiKeyError')) {
+      if (!('apiKeyError' in result)) {
         result.apiKeyError = false;
       }
       
@@ -237,7 +239,7 @@ export const useGeminiProcessing = () => {
       }
       
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error("خطأ في معالجة الصورة باستخدام Gemini:", error);
       geminiStats.failed++;
       
@@ -309,11 +311,30 @@ export const useGeminiProcessing = () => {
   return {
     processImageWithGemini,
     processWithGemini,
-    resetApiKeys,
-    getApiStats,
-    setGeminiModel,
-    getProcessingStats,
-    testGeminiApiConnection,
+    resetApiKeys: resetAllApiKeys,
+    getApiStats: getApiKeyStats,
+    setGeminiModel: (model: string) => {
+      geminiStats.currentModel = model;
+      console.log(`تم تعيين نموذج Gemini إلى: ${model}`);
+    },
+    getProcessingStats: () => ({ ...geminiStats }),
+    testGeminiApiConnection: async (customApiKey?: string): Promise<boolean> => {
+      try {
+        const apiKey = customApiKey || getNextApiKey();
+        if (!apiKey) return false;
+        
+        const result = await testGeminiConnection(apiKey);
+        
+        if (result.success) {
+          if (customApiKey) addApiKey(customApiKey);
+          return true;
+        } else {
+          return false;
+        }
+      } catch (error) {
+        return false;
+      }
+    },
     isGeminiProcessing: isProcessing
   };
 };

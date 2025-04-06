@@ -16,14 +16,14 @@ export interface ImageData {
   error: string | null;
   apiKeyError?: boolean;
   storage_path: string | null;
-  userId: string | null;
-  user_id?: string | null; // حقل إضافي للتوافق مع قاعدة البيانات
+  userId?: string | null;
+  user_id?: string | null;
   number: number;
   sessionImage: boolean;
   submitted: boolean;
   retryCount?: number;
-  imageHash?: string; // إضافة حقل هاش للصورة لاكتشاف التكرار
-  processingAttempts?: number; // عدد محاولات المعالجة
-  processed?: boolean; // علامة لتحديد ما إذا تمت معالجة الصورة بالفعل
-  batch_id?: string; // معرف المجموعة للصور المرفوعة معًا
+  imageHash?: string;
+  processingAttempts?: number;
+  processed?: boolean;
+  batch_id?: string;
 }

@@ -4,19 +4,19 @@
 // تصدير مدير مفاتيح API
 export { 
   DEFAULT_GEMINI_API_KEY, 
-  getNextApiKey, 
+  getNextApiKey,
   reportApiKeyError,
   resetAllApiKeys,
   getApiKeyStats,
   addApiKey,
   getCurrentApiKey,
-  isCustomKeyActive  // تصدير وظيفة معرفة إذا كان المفتاح المخصص نشطًا
+  isCustomKeyActive
 } from "./apiKeyManager";
 
 // تصدير وظائف API الرئيسية
-export { extractDataWithGemini, testGeminiConnection } from "./api";
+export { extractTextFromImage as extractDataWithGemini, testConnection as testGeminiConnection } from "./api";
 export { testGeminiModels } from "./models";
 export { fileToBase64, formatPrice } from "./utils";
 
 // تصدير الأنواع
-export type { GeminiExtractParams, GeminiRequest, GeminiResponse } from "./types";
+export type { ApiOptions as GeminiExtractParams, ExtractedTextResult as GeminiRequest, GeminiApiResponse as GeminiResponse } from "./types";
