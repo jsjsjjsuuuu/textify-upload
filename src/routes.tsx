@@ -1,113 +1,76 @@
 
 import React from 'react';
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
-import { useAuth } from "@/contexts/AuthContext";
-import ProtectedRoute from './components/ProtectedRoute';
+import { Route, Routes, Navigate } from 'react-router-dom';
+import Index from './pages/Index';
 import NotFound from './pages/NotFound';
+import ServicePage from './pages/PolicyPage';
+import PolicyPage from './pages/PolicyPage';
+import AutomationPage from './pages/AutomationPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Records from './pages/Records';
 import Profile from './pages/Profile';
-import Index from './pages/Index';
+import Records from './pages/Records';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import Bookmarklet from './pages/Bookmarklet';
-import ServerAutomation from './pages/ServerAutomation';
-import ServerSettings from './pages/ServerSettings';
-import ApiSettings from './pages/ApiSettings';
-import PolicyPage from './pages/PolicyPage';
-import ServicePage from './pages/ServicePage';
 import AdminApproval from './pages/AdminApproval';
-import AutomationPage from './pages/AutomationPage';
-import HomePage from './pages/HomePage';
+import ProtectedRoute from './components/ProtectedRoute';
 
-// مكون الصفحة الرئيسية مع التحقق من حالة تسجيل الدخول
-const HomePageWithAuth = () => {
-  const { user } = useAuth();
-  
-  // إذا كان المستخدم قد سجل الدخول، يتم توجيهه إلى صفحة التطبيق
-  if (user) {
-    return <Navigate to="/app" replace />;
-  }
-  
-  // إذا لم يكن المستخدم مسجلاً، يتم عرض الصفحة الرئيسية
-  return <HomePage />;
-};
-
-export const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <HomePageWithAuth />,
-  },
-  {
-    path: "/app",
-    element: <ProtectedRoute><Index /></ProtectedRoute>,
-  },
-  {
-    path: "/login",
-    element: <Login />,
-  },
-  {
-    path: "/register",
-    element: <Register />,
-  },
-  {
-    path: "/records",
-    element: <ProtectedRoute><Records /></ProtectedRoute>,
-  },
-  {
-    path: "/profile",
-    element: <ProtectedRoute><Profile /></ProtectedRoute>,
-  },
-  {
-    path: "/forgot-password",
-    element: <ForgotPassword />,
-  },
-  {
-    path: "/reset-password",
-    element: <ResetPassword />,
-  },
-  {
-    path: "/bookmarklet",
-    element: <ProtectedRoute><Bookmarklet /></ProtectedRoute>,
-  },
-  {
-    path: "/server-automation",
-    element: <ProtectedRoute><ServerAutomation /></ProtectedRoute>,
-  },
-  {
-    path: "/server-settings",
-    element: <ProtectedRoute><ServerSettings /></ProtectedRoute>,
-  },
-  {
-    path: "/api-settings",
-    element: <ProtectedRoute><ApiSettings /></ProtectedRoute>,
-  },
-  {
-    path: "/policy",
-    element: <PolicyPage />,
-  },
-  {
-    path: "/service",
-    element: <ServicePage />,
-  },
-  {
-    path: "/admin/approvals",
-    element: <ProtectedRoute><AdminApproval /></ProtectedRoute>,
-  },
-  {
-    path: "/automation",
-    element: <ProtectedRoute><AutomationPage /></ProtectedRoute>,
-  },
-  {
-    path: "*",
-    element: <NotFound />,
-  },
-]);
-
-// مكون AppRoutes
+/**
+ * تكوين مسارات التطبيق
+ * يمكن استيراد هذا المكون واستخدامه في App.tsx
+ */
 export const AppRoutes = () => {
-  return <RouterProvider router={router} />;
+  console.log("تحميل المسارات...");
+  
+  return (
+    <Routes>
+      {/* صفحات المصادقة */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      
+      {/* الصفحات المحمية */}
+      <Route path="/" element={
+        <ProtectedRoute>
+          <Records />
+        </ProtectedRoute>
+      } />
+      <Route path="/upload" element={
+        <ProtectedRoute>
+          <Index />
+        </ProtectedRoute>
+      } />
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <Profile />
+        </ProtectedRoute>
+      } />
+      
+      {/* صفحة إدارة المستخدمين - للمسؤولين فقط مع تعطيل requireApproval للمسؤولين */}
+      <Route path="/admin/approvals" element={
+        <ProtectedRoute adminOnly={true} requireApproval={false} redirectTo="/">
+          <AdminApproval />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/records" element={
+        <ProtectedRoute>
+          <Navigate to="/" replace />
+        </ProtectedRoute>
+      } />
+      <Route path="/automation/:imageId" element={
+        <ProtectedRoute>
+          <AutomationPage />
+        </ProtectedRoute>
+      } />
+      
+      {/* الصفحات العامة */}
+      <Route path="/services" element={<ServicePage />} />
+      <Route path="/policy" element={<PolicyPage />} />
+      
+      {/* صفحة 404 والتحويلات */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
 };
-
-export default router;

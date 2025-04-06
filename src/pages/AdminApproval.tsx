@@ -1,56 +1,48 @@
-
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { AdminUserManagementTab } from '@/components/Profile';
-import ResetPasswordDialog from '@/components/admin/ResetPasswordDialog';
-import UserStats from '@/components/admin/UserStats';
-import { useUserManagement } from '@/hooks/useUserManagement';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
-// استيراد المكونات الجديدة
-import AdminHeader from '@/components/admin/AdminHeader';
-import AdminTabs from '@/components/admin/AdminTabs';
-import UserManagementPanel from '@/components/admin/UserManagementPanel';
+// استيراد المكونات المستخرجة
+import UserTable from '@/components/admin/UserTable';
+import UserEditForm from '@/components/admin/UserEditForm';
+import UserFilters from '@/components/admin/UserFilters';
+import UserTabsFilter from '@/components/admin/UserTabsFilter';
+import ResetPasswordDialog from '@/components/admin/ResetPasswordDialog';
+
+// استيراد custom hook
+import { useUserManagement } from '@/hooks/useUserManagement';
 
 const AdminApproval = () => {
   const { user, userProfile } = useAuth();
-  const [activeAdminTab, setActiveAdminTab] = React.useState('users');
-  
   const {
     users,
-    detailedUsers,
     isLoading,
-    isLoadingDetails,
     activeTab,
     filterPlan,
     filterStatus,
     searchQuery,
     isEditingUser,
     editedUserData,
+    newPassword,
     showPassword,
     isProcessing,
     selectedDate,
     showConfirmReset,
     userToReset,
-    newPassword,
-    confirmPassword,
-    passwordError,
     fetchAttempted,
-    fetchError,
     setActiveTab,
     setFilterPlan,
     setFilterStatus,
     setSearchQuery,
+    setNewPassword,
     setShowPassword,
     setShowConfirmReset,
     setUserToReset,
-    setNewPassword,
-    setConfirmPassword,
-    setPasswordError,
     fetchUsers,
-    fetchUserDetails,
     approveUser,
     rejectUser,
     resetUserPassword,
@@ -63,8 +55,6 @@ const AdminApproval = () => {
     getUserCounts,
     prepareUserPasswordReset,
     handleDateSelect,
-    validatePassword,
-    ErrorAlert,
   } = useUserManagement();
 
   // جلب البيانات عند تحميل الصفحة - مع منع التكرار
@@ -80,110 +70,117 @@ const AdminApproval = () => {
     });
     
     // جلب البيانات فقط إذا لم تتم محاولة الجلب من قبل أو إذا كانت قائمة المستخدمين فارغة
-    if (!fetchAttempted || users.length === 0) {
+    if (!fetchAttempted && user && userProfile) {
       fetchUsers();
     }
-  }, [user, userProfile, fetchAttempted, users.length, fetchUsers]);
+  }, [user, userProfile, fetchAttempted]);
 
-  // التعامل مع تأكيد إعادة تعيين كلمة المرور - تحسين التصحيح والتعامل مع الأخطاء
+  // التعامل مع تأكيد إعادة تعيين كلمة المرور - محسن مع مزيد من السجلات
   const handleConfirmReset = () => {
-    if (!userToReset) {
-      console.error('لا يمكن إعادة تعيين كلمة المرور: معرف المستخدم غير محدد');
-      toast.error('لم يتم تحديد مستخدم لإعادة تعيين كلمة المرور');
-      return;
-    }
-    
-    // التحقق من كلمة المرور قبل إعادة التعيين
-    if (validatePassword()) {
-      console.log('تنفيذ إعادة تعيين كلمة المرور للمستخدم:', {
+    if (userToReset && newPassword) {
+      // طباعة سجل تصحيح لمساعدة في تشخيص المشكلة
+      console.log('تنفيذ إعادة تعيين كلمة المرور مع البيانات:', {
         userToReset,
-        passwordLength: newPassword.length
+        userToResetType: typeof userToReset,
+        userToResetLength: userToReset.length,
+        passwordLength: newPassword.length,
+        passwordEmpty: !newPassword.trim()
       });
       
-      // تعديل التعامل مع النتيجة المرجعة من resetUserPassword
-      resetUserPassword(userToReset, newPassword)
-        .then(success => {
-          if (!success) {
-            console.error('فشلت عملية إعادة تعيين كلمة المرور');
-            toast.error('فشلت عملية إعادة تعيين كلمة المرور');
-          }
-        });
+      // تنفيذ عملية إعادة تعيين كلمة المرور
+      resetUserPassword(userToReset, newPassword);
     } else {
-      console.error('كلمة المرور غير صالحة:', {
-        passwordError
+      console.error('لا يمكن إعادة تعيين كلمة المرور:', {
+        userToReset,
+        hasPassword: !!newPassword,
+        passwordLength: newPassword ? newPassword.length : 0
       });
-      toast.error(passwordError || 'كلمة المرور غير صالحة');
+      
+      if (!userToReset) {
+        toast.error('لم يتم تحديد مستخدم لإعادة تعيين كلمة المرور');
+      }
+      
+      if (!newPassword) {
+        toast.error('يرجى إدخال كلمة المرور الجديدة');
+      }
     }
   };
 
   const userCounts = getUserCounts();
   const filteredUsers = getFilteredUsers();
 
-  // إحصائيات إضافية للمستخدمين
-  const userStats = {
-    ...userCounts,
-    active: users.filter(u => u.account_status === 'active').length,
-    suspended: users.filter(u => u.account_status === 'suspended').length,
-    expired: users.filter(u => u.account_status === 'expired').length,
-    standard: users.filter(u => u.subscription_plan === 'standard').length,
-    vip: users.filter(u => u.subscription_plan === 'vip').length,
-    pro: users.filter(u => u.subscription_plan === 'pro').length,
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
       <div className="container py-6">
-        <Card className="mb-6">
-          <CardHeader>
-            <AdminHeader onRefresh={fetchUsers} isLoading={isLoading} />
-          </CardHeader>
-          <CardContent>
-            {/* عرض رسالة الخطأ إذا كان هناك خطأ في جلب البيانات */}
-            <ErrorAlert />
-            
-            {/* عرض إحصائيات المستخدمين */}
-            <UserStats stats={userStats} />
-          </CardContent>
-        </Card>
-      
         <Card>
           <CardHeader>
-            <AdminTabs 
-              activeTab={activeAdminTab} 
-              onTabChange={setActiveAdminTab}
-              managementTabContent={<AdminUserManagementTab />}
-            >
-              <UserManagementPanel 
-                searchQuery={searchQuery}
-                filterPlan={filterPlan}
-                filterStatus={filterStatus}
-                activeTab={activeTab}
-                isEditingUser={isEditingUser}
-                editedUserData={editedUserData}
-                isProcessing={isProcessing}
-                selectedDate={selectedDate}
-                userCounts={userCounts}
-                filteredUsers={filteredUsers}
-                isLoading={isLoading}
-                isLoadingDetails={isLoadingDetails}
-                detailedUsers={detailedUsers}
-                onSearchChange={setSearchQuery}
-                onPlanFilterChange={setFilterPlan}
-                onStatusFilterChange={setFilterStatus}
-                onTabChange={setActiveTab}
-                onEdit={startEditing}
-                onApprove={approveUser}
-                onReject={rejectUser}
-                onCancel={cancelEditing}
-                onSave={saveUserData}
-                onUserDataChange={handleEditChange}
-                onDateSelect={handleDateSelect}
-                onEmailChange={updateUserEmail}
-                onFetchDetails={fetchUserDetails}
-              />
-            </AdminTabs>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <CardTitle className="text-2xl">إدارة المستخدمين</CardTitle>
+                <CardDescription>
+                  إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchUsers} 
+                  disabled={isLoading}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  تحديث
+                </Button>
+              </div>
+            </div>
           </CardHeader>
+          <CardContent>
+            {/* أدوات البحث والتصفية */}
+            <UserFilters 
+              searchQuery={searchQuery}
+              filterPlan={filterPlan}
+              filterStatus={filterStatus}
+              onSearchChange={setSearchQuery}
+              onPlanFilterChange={setFilterPlan}
+              onStatusFilterChange={setFilterStatus}
+            />
+            
+            <UserTabsFilter
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              totalUsers={userCounts.total}
+              pendingUsers={userCounts.pending}
+              approvedUsers={userCounts.approved}
+            >
+              {isEditingUser ? (
+                <UserEditForm 
+                  userData={editedUserData!}
+                  newPassword={newPassword}
+                  showPassword={showPassword}
+                  isProcessing={isProcessing}
+                  selectedDate={selectedDate}
+                  onCancel={cancelEditing}
+                  onSave={saveUserData}
+                  onShowPasswordToggle={() => setShowPassword(!showPassword)}
+                  onNewPasswordChange={setNewPassword}
+                  onUserDataChange={handleEditChange}
+                  onDateSelect={handleDateSelect}
+                  onPasswordReset={() => prepareUserPasswordReset(editedUserData!.id)}
+                  onEmailChange={updateUserEmail}
+                />
+              ) : (
+                <UserTable 
+                  users={filteredUsers}
+                  isLoading={isLoading}
+                  onEdit={startEditing}
+                  onApprove={approveUser}
+                  onReject={rejectUser}
+                />
+              )}
+            </UserTabsFilter>
+          </CardContent>
         </Card>
       </div>
       
@@ -193,6 +190,7 @@ const AdminApproval = () => {
         onOpenChange={setShowConfirmReset}
         onCancel={() => {
           setUserToReset(null);
+          setNewPassword('');
         }}
         onConfirm={handleConfirmReset}
         isProcessing={isProcessing}

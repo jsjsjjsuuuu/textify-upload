@@ -9,34 +9,72 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { CalendarIcon, RefreshCw, Save, Mail } from 'lucide-react';
+import { Lock, Eye, EyeOff, CalendarIcon, RefreshCw, Save, Mail, AlertCircle } from 'lucide-react';
 
 import { UserProfile } from '@/types/UserProfile';
-import PasswordResetPopover from './PasswordResetPopover';
 
 interface UserEditFormProps {
   userData: UserProfile;
+  newPassword: string;
+  showPassword: boolean;
   isProcessing: boolean;
   selectedDate: Date | undefined;
   onCancel: () => void;
   onSave: () => void;
+  onShowPasswordToggle: () => void;
+  onNewPasswordChange: (password: string) => void;
   onUserDataChange: (field: string, value: any) => void;
   onDateSelect: (date: Date | undefined) => void;
+  onPasswordReset: () => void;
   onEmailChange?: (userId: string, newEmail: string) => void;
 }
 
 const UserEditForm: React.FC<UserEditFormProps> = ({
   userData,
+  newPassword,
+  showPassword,
   isProcessing,
   selectedDate,
   onCancel,
   onSave,
+  onShowPasswordToggle,
+  onNewPasswordChange,
   onUserDataChange,
   onDateSelect,
+  onPasswordReset,
   onEmailChange
 }) => {
   const [newEmail, setNewEmail] = useState('');
   const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // تحقق من صحة كلمة المرور
+  const validatePassword = (password: string): boolean => {
+    if (!password || password.trim() === '') {
+      setPasswordError('كلمة المرور لا يمكن أن تكون فارغة');
+      return false;
+    }
+    
+    if (password.length < 6) {
+      setPasswordError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+      return false;
+    }
+    
+    setPasswordError(null);
+    return true;
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    onNewPasswordChange(newValue);
+    
+    // نتحقق من صحة كلمة المرور مباشرةً أثناء الكتابة
+    if (newValue.trim() !== '') {
+      validatePassword(newValue);
+    } else {
+      setPasswordError(null); // نزيل رسالة الخطأ إذا كان الحقل فارغًا
+    }
+  };
 
   const handleEmailChangeSubmit = () => {
     if (newEmail && onEmailChange) {
@@ -44,6 +82,14 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
       setIsEditingEmail(false);
       setNewEmail('');
     }
+  };
+
+  const handlePasswordReset = () => {
+    if (!newPassword || !validatePassword(newPassword)) {
+      return; // منع الإرسال إذا كانت كلمة المرور غير صالحة
+    }
+    
+    onPasswordReset();
   };
 
   return (
@@ -175,10 +221,48 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mt-6">
-        <div className="flex-none">
-          {userData && (
-            <PasswordResetPopover user={userData} />
+        <div className="flex-1">
+          <Label htmlFor="new-password">تعيين كلمة مرور جديدة (اختياري)</Label>
+          <div className="relative">
+            <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="new-password"
+              type={showPassword ? "text" : "password"}
+              placeholder="كلمة المرور الجديدة"
+              className={`pr-10 ${passwordError ? 'border-red-500' : ''}`}
+              value={newPassword}
+              onChange={handlePasswordChange}
+            />
+            <button
+              type="button"
+              className="absolute left-3 top-3 text-muted-foreground"
+              onClick={onShowPasswordToggle}
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+          {passwordError && (
+            <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
+              <AlertCircle className="h-3.5 w-3.5" />
+              <span>{passwordError}</span>
+            </div>
           )}
+        </div>
+        <div className="flex-none self-end">
+          <Button 
+            variant="outline" 
+            className="w-full md:w-auto text-red-600 hover:text-red-700 hover:bg-red-50"
+            onClick={handlePasswordReset}
+            disabled={!newPassword || !!passwordError}
+          >
+            <Lock className="h-4 w-4 mr-1" />
+            تغيير كلمة المرور
+          </Button>
         </div>
       </div>
       

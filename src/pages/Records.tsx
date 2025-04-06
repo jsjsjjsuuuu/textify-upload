@@ -20,11 +20,6 @@ import { ImageData } from "@/types/ImageData";
 import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import ImageErrorDisplay from "@/components/ImagePreview/ImageViewer/ImageErrorDisplay";
-import GeminiApiManager from "@/components/GeminiApiManager";
-
-// صورة تعبئة افتراضية للصور التي لا يمكن تحميلها
-const PLACEHOLDER_IMAGE_URL = '/placeholder-image.jpg';
 
 // مكون الصفحة الرئيسي
 const Records = () => {
@@ -40,12 +35,9 @@ const Records = () => {
     isSubmitting,
     handleDelete,
     handleSubmitToApi,
+    formatDate: formatImageDate,
     loadUserImages,
-    saveProcessedImage
   } = useImageProcessing();
-  
-  // إضافة حالة لتتبع حالة تحميل الصور
-  const [imageLoadErrors, setImageLoadErrors] = useState<{[key: string]: number}>({});
 
   // التعامل مع حذف صورة
   const onDeleteImage = async (id: string) => {
@@ -73,62 +65,6 @@ const Records = () => {
         description: "حدث خطأ أثناء محاولة حذف السجل",
         variant: "destructive"
       });
-    }
-  };
-  
-  // معالجة فشل تحميل الصورة
-  const handleImageError = (imageId: string) => {
-    setImageLoadErrors(prev => ({
-      ...prev,
-      [imageId]: (prev[imageId] || 0) + 1
-    }));
-  };
-  
-  // إعادة محاولة تحميل الصورة
-  const retryLoadImage = (imageId: string, storagePath: string | null, previewUrl: string | null) => {
-    // تحديث العداد
-    setImageLoadErrors(prev => ({
-      ...prev,
-      [imageId]: (prev[imageId] || 0) + 1
-    }));
-    
-    // إعادة تحميل الصورة
-    if (storagePath) {
-      const { data } = supabase.storage
-        .from('receipt_images')
-        .getPublicUrl(storagePath);
-        
-      if (data?.publicUrl) {
-        // إضافة طابع زمني لمنع التخزين المؤقت
-        const timestamp = Date.now();
-        const url = `${data.publicUrl}?t=${timestamp}`;
-        
-        // تحديث عنصر الصورة إذا كان موجوداً
-        const imgElement = document.querySelector(`img[data-image-id="${imageId}"]`) as HTMLImageElement;
-        if (imgElement) {
-          imgElement.src = url;
-        }
-        
-        toast({
-          title: "إعادة تحميل",
-          description: "جاري إعادة تحميل الصورة..."
-        });
-      }
-    } else if (previewUrl) {
-      // استخدام URL المعاينة مع إضافة طابع زمني
-      const timestamp = Date.now();
-      const url = `${previewUrl}?t=${timestamp}`;
-      
-      // تحديث عنصر الصورة
-      const imgElement = document.querySelector(`img[data-image-id="${imageId}"]`) as HTMLImageElement;
-      if (imgElement) {
-        imgElement.src = url;
-      }
-      
-      toast({
-        title: "إعادة تحميل",
-        description: "جاري إعادة تحميل الصورة من URL المعاينة..."
-        });
     }
   };
 
@@ -245,23 +181,13 @@ const Records = () => {
 
   // قم بإنشاء عنوان URL للصورة من Storage
   const getImageUrl = (image) => {
-    // التحقق من وجود مسار التخزين
     if (image.storage_path) {
       const { data } = supabase.storage
         .from('receipt_images')
         .getPublicUrl(image.storage_path);
-      
-      // إضافة طابع زمني لمنع مشاكل التخزين المؤقت
-      return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : (image.previewUrl || PLACEHOLDER_IMAGE_URL);
+      return data?.publicUrl || image.previewUrl;
     }
-    
-    // التحقق من وجود URL المعاينة وأنه ليس blob URL (يسبب أخطاء)
-    if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
-      return image.previewUrl;
-    }
-    
-    // استخدام الصورة الافتراضية إذا لم تكن هناك صورة صالحة
-    return PLACEHOLDER_IMAGE_URL;
+    return image.previewUrl;
   };
 
   return (
@@ -289,9 +215,6 @@ const Records = () => {
               </Link>
             </Button>
           </div>
-
-          {/* إضافة مكون إدارة مفتاح API */}
-          <GeminiApiManager />
 
           {/* فلتر البحث */}
           <div className="relative">
@@ -417,28 +340,18 @@ const Records = () => {
                           {image.number || "-"}
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <span className="text-muted-foreground">{formatDate(image.date)}</span>
+                          <span className="text-muted-foreground">{formatImageDate(image.date)}</span>
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-transparent relative flex items-center justify-center border border-border/40 dark:border-gray-700/40">
-                            {imageLoadErrors[image.id] && imageLoadErrors[image.id] > 2 ? (
-                              <div className="absolute inset-0">
-                                <ImageErrorDisplay 
-                                  onRetry={() => retryLoadImage(image.id, image.storage_path, image.previewUrl)} 
-                                  retryCount={imageLoadErrors[image.id]} 
-                                />
-                              </div>
-                            ) : (
-                              <img 
-                                data-image-id={image.id}
-                                src={getImageUrl(image)} 
-                                alt="صورة مصغرة" 
-                                className="object-contain h-full w-full" 
-                                style={{ mixBlendMode: 'multiply' }} 
-                                onError={() => handleImageError(image.id)}
-                                loading="lazy"
-                              />
-                            )}
+                          <div 
+                            className="w-16 h-16 rounded-lg overflow-hidden bg-transparent cursor-pointer border border-border/40 dark:border-gray-700/40"
+                          >
+                            <img 
+                              src={getImageUrl(image)} 
+                              alt="صورة مصغرة" 
+                              className="object-contain h-full w-full" 
+                              style={{ mixBlendMode: 'multiply' }} 
+                            />
                           </div>
                         </TableCell>
                         <TableCell className="px-6 py-4 font-medium">
@@ -464,18 +377,15 @@ const Records = () => {
                           {getStatusBadge(image.status, image.submitted)}
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 rounded-full bg-muted/30 text-destructive hover:bg-destructive/10" 
-                              onClick={() => onDeleteImage(image.id)}
-                              title="حذف السجل"
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                            {/* تمت إزالة زر إعادة المعالجة */}
-                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-full bg-muted/30 text-destructive hover:bg-destructive/10" 
+                            onClick={() => onDeleteImage(image.id)}
+                            title="حذف السجل"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))

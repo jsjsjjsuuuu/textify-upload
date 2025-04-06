@@ -11,9 +11,4 @@ export interface UserProfile {
   account_status?: string;
   subscription_end_date?: string;
   username?: string;
-  last_login_at?: string;
-  phone_number?: string;
-  address?: string;
-  notes?: string;
-  updated_at?: string;
 }

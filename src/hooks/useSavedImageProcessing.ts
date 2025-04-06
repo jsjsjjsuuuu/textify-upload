@@ -16,77 +16,33 @@ export const useSavedImageProcessing = (
   const { saveImageToDatabase, loadUserImages } = useImageDatabase(updateImage);
   
   // وظيفة حفظ الصورة المعالجة عند النقر على زر الإرسال
-  const saveProcessedImage = async (image: ImageData): Promise<void> => {
+  const saveProcessedImage = async (image: ImageData) => {
     if (!user) {
       console.log("المستخدم غير مسجل الدخول، لا يمكن حفظ الصورة");
       return;
     }
 
     // التحقق من أن الصورة مكتملة المعالجة وتحتوي على البيانات الأساسية
-    const hasRequiredData = image.code || image.senderName || image.phoneNumber;
-    
-    if (hasRequiredData) {
-      console.log("حفظ الصورة في قاعدة البيانات:", image.id);
-      console.log("البيانات التي سيتم حفظها:", {
-        code: image.code,
-        senderName: image.senderName,
-        phoneNumber: image.phoneNumber,
-        province: image.province,
-        price: image.price,
-        companyName: image.companyName
-      });
+    if (image.code && image.senderName && image.phoneNumber) {
+      console.log("حفظ الصورة في قاعدة البيانات بواسطة زر الإرسال:", image.id);
       
       try {
-        // تعيين حالة الإرسال
         setIsSubmitting(true);
-        
-        // قبل الحفظ، نتأكد من أن البيانات منسقة بشكل صحيح
-        // مثلاً، تنسيق رقم الهاتف إذا لم يكن في الصيغة الصحيحة
-        const formattedImage = {
-          ...image,
-          phoneNumber: formatPhoneNumber(image.phoneNumber)
-        };
-        
-        // حفظ البيانات في قاعدة البيانات
-        const savedData = await saveImageToDatabase(formattedImage, user.id);
+        // حفظ البيانات في قاعدة البيانات - تمرير الصورة فقط
+        const savedData = await saveImageToDatabase(image);
         
         if (savedData) {
-          console.log("البيانات المستردة من قاعدة البيانات بعد الحفظ:", savedData);
-          
-          // تأخير قبل تحديث واجهة المستخدم لضمان اكتمال العملية
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // تحديث الصورة بمعلومات أنها تم حفظها والبيانات المحدثة من قاعدة البيانات
-          const updatedFields: Partial<ImageData> = { 
-            submitted: true
-          };
-          
-          // التحقق من كل حقل قبل تحديثه
-          if (savedData.code) updatedFields.code = savedData.code;
-          if (savedData.sender_name) updatedFields.senderName = savedData.sender_name;
-          if (savedData.phone_number) updatedFields.phoneNumber = savedData.phone_number;
-          if (savedData.province) updatedFields.province = savedData.province;
-          if (savedData.price) updatedFields.price = savedData.price;
-          if (savedData.company_name) updatedFields.companyName = savedData.company_name;
-          if (savedData.extracted_text) updatedFields.extractedText = savedData.extracted_text;
-          
-          // طباعة البيانات المحدثة للتحقق منها
-          console.log("تحديث الصورة بالبيانات التالية:", updatedFields);
-          
-          // تحديث الصورة في حالة التطبيق
-          updateImage(image.id, updatedFields);
-          
+          // تحديث الصورة بمعلومات أنها تم حفظها
+          updateImage(image.id, { submitted: true });
           console.log("تم حفظ الصورة بنجاح في قاعدة البيانات:", image.id);
           
-          // إعادة تحميل الصور بعد الحفظ لضمان تحديث البيانات في واجهة المستخدم
+          // إعادة تحميل الصور بعد الحفظ
           await loadUserImages(user.id, setAllImages);
           
           toast({
             title: "تم الحفظ",
             description: "تم حفظ البيانات في قاعدة البيانات بنجاح",
           });
-          
-          return; // تعديل هنا لضمان إرجاع void
         }
       } catch (error) {
         console.error("خطأ أثناء حفظ الصورة:", error);
@@ -95,8 +51,6 @@ export const useSavedImageProcessing = (
           description: "حدث خطأ أثناء محاولة حفظ البيانات",
           variant: "destructive"
         });
-        
-        throw error; // إعادة رمي الخطأ للتعامل معه في الاستدعاء
       } finally {
         setIsSubmitting(false);
       }
@@ -108,26 +62,6 @@ export const useSavedImageProcessing = (
         variant: "destructive"
       });
     }
-  };
-
-  // وظيفة مساعدة لتنسيق رقم الهاتف
-  const formatPhoneNumber = (phone?: string): string => {
-    if (!phone) return '';
-    
-    // إزالة جميع الأحرف غير الرقمية
-    let cleaned = phone.replace(/\D/g, '');
-    
-    // التأكد من أن الرقم يبدأ بـ 0
-    if (cleaned.length === 10 && !cleaned.startsWith('0')) {
-      cleaned = '0' + cleaned;
-    }
-    
-    // التأكد من الطول الصحيح (11 رقم)
-    if (cleaned.length > 11) {
-      cleaned = cleaned.substring(0, 11);
-    }
-    
-    return cleaned;
   };
 
   return {

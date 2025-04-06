@@ -1,130 +1,203 @@
 
-import React, { useCallback, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { FilePlus, Image, Loader2, X } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Upload, FileImage, LoaderCircle, ImageIcon, AlertTriangle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ImageUploaderProps {
   isProcessing: boolean;
   processingProgress: number;
-  onFileChange: (files: File[]) => void;
-  onCancelUpload?: () => void;
+  activeUploads?: number;
+  queueLength?: number;
+  onFileChange: (files: FileList | null) => void;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ 
-  isProcessing, 
-  processingProgress, 
-  onFileChange,
-  onCancelUpload
-}) => {
-  const [dragOver, setDragOver] = useState(false);
+const ImageUploader = ({
+  isProcessing,
+  processingProgress,
+  activeUploads = 0,
+  queueLength = 0,
+  onFileChange
+}: ImageUploaderProps) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragCounter, setDragCounter] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    // التحقق من أن الملفات هي صور
-    const imageFiles = acceptedFiles.filter(file => file.type.startsWith('image/'));
-    
-    if (imageFiles.length === 0) {
-      console.error("لا توجد ملفات صور صالحة");
-      return;
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragCounter(prev => prev + 1);
+    setIsDragging(true);
+  };
+  
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragCounter(prev => prev - 1);
+    if (dragCounter - 1 === 0) {
+      setIsDragging(false);
     }
+  };
+  
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    setDragCounter(0);
     
-    // تقليص حجم الملفات إذا كان كبيرًا جدًا
-    if (imageFiles.length > 20) {
-      console.log(`تم اختيار ${imageFiles.length} صورة، سيتم معالجة أول 20 صورة فقط`);
-      onFileChange(imageFiles.slice(0, 20));
-    } else {
-      onFileChange(imageFiles);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      onFileChange(e.dataTransfer.files);
     }
-    
-    // إعادة تعيين حالة التأثير
-    setDragOver(false);
-  }, [onFileChange]);
-
-  const {getRootProps, getInputProps, isDragActive} = useDropzone({
-    onDrop,
-    accept: {
-      'image/*': ['.jpeg', '.png', '.jpg', '.webp', '.gif'],
-    },
-    multiple: true,
-    disabled: isProcessing,
-    onDragEnter: () => setDragOver(true),
-    onDragLeave: () => setDragOver(false),
-  });
-
+  };
+  
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onFileChange(e.target.files);
+  };
+  
+  const handleButtonClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+  
+  // حساب الإجمالي الكلي للصور قيد المعالجة
+  const totalProcessingItems = activeUploads + queueLength;
+  
+  // إضافة تأخير للتجسيد المرئي للتقدم - هذا يضمن أن المستخدم يرى أن هناك تقدمًا دائمًا
+  const visualProgress = processingProgress === 0 && isProcessing ? 5 : processingProgress;
+  
   return (
-    <div className="relative">
-      <div
-        {...getRootProps()}
-        className={cn(
-          "relative border-2 border-dashed rounded-md cursor-pointer transition-all duration-200",
-          "hover:bg-accent hover:border-primary",
-          "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-          "dark:bg-popover dark:border-muted dark:hover:bg-secondary",
-          isDragActive || dragOver ? "bg-accent border-primary scale-[1.02]" : "bg-background",
-          isProcessing ? "cursor-not-allowed opacity-60" : ""
-        )}
+    <div className="w-full max-w-md mx-auto">
+      <div 
+        className={`border-2 border-dashed rounded-xl p-10 text-center transition-colors cursor-pointer flex flex-col items-center justify-center h-64 
+          ${isDragging 
+            ? "border-primary bg-primary/10 dark:bg-primary/5" 
+            : "border-gray-300 dark:border-gray-700 hover:border-primary/50"}
+          ${isProcessing ? "cursor-not-allowed opacity-75" : "cursor-pointer"}`
+        } 
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onClick={isProcessing ? undefined : handleButtonClick}
       >
-        <input {...getInputProps()} disabled={isProcessing} />
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden" 
+          accept="image/*" 
+          multiple 
+          onChange={handleFileInputChange} 
+          disabled={isProcessing} 
+        />
+
+        <div className="flex flex-col items-center justify-center space-y-4">
           {isProcessing ? (
             <>
-              <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-              <p className="text-sm text-muted-foreground font-medium">
-                جاري المعالجة {processingProgress}%
-              </p>
-              <div className="w-full max-w-xs bg-gray-200 rounded-full h-2.5 mt-3 overflow-hidden dark:bg-gray-700">
-                <div 
-                  className="bg-primary h-2.5 rounded-full transition-all duration-300" 
-                  style={{ width: `${processingProgress}%` }}
-                ></div>
+              <div className="relative w-16 h-16 mb-2">
+                <AnimatePresence>
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.8 }} 
+                    animate={{ opacity: 1, scale: 1 }} 
+                    exit={{ opacity: 0, scale: 0.8 }} 
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <LoaderCircle className="w-14 h-14 text-primary animate-spin" />
+                  </motion.div>
+                </AnimatePresence>
               </div>
+              
+              <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300">
+                جاري معالجة الصور...
+              </h3>
+              
+              <div className="w-full max-w-md">
+                <Progress value={visualProgress} className="h-2" />
+                <div className="mt-2 flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                  <p>{visualProgress}% مكتمل</p>
+                  {totalProcessingItems > 0 && (
+                    <p className="text-blue-500 dark:text-blue-400 animate-pulse">
+                      <LoaderCircle className="w-3.5 h-3.5 inline ml-1 animate-spin" />
+                      <span className="font-medium">{activeUploads}</span> قيد المعالجة
+                      {queueLength > 0 && (
+                        <span className="mx-1">| <span className="font-medium">{queueLength}</span> في الانتظار</span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* تحسين معلومات حول عملية المعالجة */}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+                {visualProgress === 0 ? 
+                  "جاري تحضير الصور للمعالجة..." : 
+                  "يتم استخدام Gemini AI لاستخراج النص من الصور"}
+              </p>
+              
+              {/* إضافة معلومات عن الصبر في حالة التعليق */}
+              {(visualProgress < 10 && isProcessing) && (
+                <p className="text-xs text-amber-500 mt-1 animate-pulse">
+                  قد تستغرق عملية المعالجة بعض الوقت، يرجى الانتظار...
+                </p>
+              )}
             </>
           ) : (
             <>
-              <Image className="h-12 w-12 text-muted-foreground mb-3 opacity-70" />
-              <p className="text-base text-muted-foreground">
-                {isDragActive || dragOver ? 
-                  <span className="font-medium text-primary">أسقط الصور هنا ...</span> : 
-                  <span>اسحب وأسقط الصور <span className="hidden sm:inline">أو انقر للاختيار</span></span>
-                }
+              <div className="relative w-16 h-16 mb-2">
+                <AnimatePresence>
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.8 }} 
+                    animate={{ opacity: 1, scale: 1 }} 
+                    exit={{ opacity: 0, scale: 0.8 }} 
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    {isDragging 
+                      ? <FileImage className="w-14 h-14 text-primary" /> 
+                      : <Upload className="w-12 h-12 text-gray-400 dark:text-gray-600" />
+                    }
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+              
+              <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300">
+                اسحب الصور هنا
+              </h3>
+              
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                أو اضغط لاختيار الصور
               </p>
-              <p className="text-xs text-muted-foreground mt-2 max-w-xs">
-                يمكنك تحميل صور بصيغة JPEG، PNG، أو WebP. الحد الأقصى هو 20 صورة في المرة الواحدة.
-              </p>
+              
               <Button 
-                className="mt-4" 
-                size="sm" 
-                variant="outline"
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // محاكاة النقر على input الخفي
-                  const input = document.querySelector('input[type="file"]');
-                  if (input) {
-                    (input as HTMLInputElement).click();
-                  }
-                }}
+                disabled={isProcessing} 
+                className="text-white px-6 bg-gray-900 hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
               >
-                <FilePlus className="h-4 w-4 ml-2" />
-                اختيار الصور
+                <Upload className="w-4 h-4 ml-2" /> اختر الصور
               </Button>
+              
+              {/* نصائح للمستخدم */}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 max-w-xs">
+                للحصول على أفضل النتائج، استخدم صور واضحة وذات إضاءة جيدة
+              </p>
             </>
           )}
         </div>
       </div>
       
-      {isProcessing && onCancelUpload && (
-        <Button 
-          variant="destructive" 
-          size="sm" 
-          className="absolute top-2 right-2 h-8 w-8 p-0 rounded-full"
-          onClick={onCancelUpload}
-          title="إلغاء التحميل"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      )}
+      {/* معلومات إضافية تحت المربع */}
+      <div className="mt-4 text-center">
+        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center">
+          <ImageIcon className="w-3.5 h-3.5 ml-1 text-blue-500" />
+          يمكنك تحميل صور بتنسيق JPG, PNG, WEBP
+        </p>
+        
+        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center justify-center">
+          <AlertTriangle className="w-3.5 h-3.5 ml-1" />
+          تأكد من أن الصور واضحة ومقروءة للحصول على أفضل النتائج
+        </p>
+      </div>
     </div>
   );
 };

@@ -1,113 +1,62 @@
 
+import { GeminiExtractParams } from "./types";
+import { ApiResult } from "../apiService";
+import { extractDataWithGemini } from "./api";
+
 /**
- * ملف للتعامل مع نماذج Gemini المختلفة
+ * وظيفة لاختبار نماذج Gemini المختلفة ومقارنة النتائج
  */
-
-import { getNextApiKey, reportApiKeyError } from "./apiKeyManager";
-
-// أنواع النماذج المتاحة
-export enum GeminiModelType {
-  FLASH = 'gemini-2.0-flash', // النموذج السريع والمحدث
-  PRO = 'gemini-1.5-pro', // النموذج الدقيق للمحتوى المعقد
-  VISION = 'gemini-1.5-vision-latest' // نموذج الرؤية المتخصص للصور
-}
-
-// قائمة كاملة بجميع النماذج المتاحة
-export const AVAILABLE_MODELS = [
-  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (الأحدث)', description: 'الإصدار الأحدث والسريع' },
-  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'نموذج سريع مناسب للاستخدام العام' },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'نموذج متقدم للمهام المعقدة' },
-  { id: 'gemini-1.5-vision-latest', name: 'Gemini Vision', description: 'نموذج متخصص للتعرف على الصور' }
-];
-
-// الإعدادات الافتراضية لكل نموذج
-export const MODEL_SETTINGS = {
-  [GeminiModelType.FLASH]: {
-    maxTokens: 800,
-    temperature: 0.1,
-    topK: 40,
-    topP: 0.95
-  },
-  [GeminiModelType.PRO]: {
-    maxTokens: 1024,
-    temperature: 0.2,
-    topK: 40,
-    topP: 0.95
-  },
-  [GeminiModelType.VISION]: {
-    maxTokens: 1024,
-    temperature: 0.2,
-    topK: 40,
-    topP: 0.95
-  }
-};
-
-// النموذج الافتراضي للاستخدام في استخراج البيانات من الصور
-export const DEFAULT_EXTRACTION_MODEL = GeminiModelType.FLASH;
-
-// وظيفة لاختبار النماذج المتاحة
-export async function testGeminiModels(): Promise<Record<string, boolean>> {
-  const apiKey = getNextApiKey();
-  const results: Record<string, boolean> = {};
+export async function testGeminiModels(
+  apiKey: string, 
+  imageBase64: string, 
+  models: string[] = ['gemini-2.0-flash', 'gemini-2.0-pro', 'gemini-1.5-flash']
+): Promise<{
+  results: Array<{
+    model: string;
+    success: boolean;
+    data?: any;
+    confidence?: number;
+    error?: string;
+  }>;
+  bestModel: string;
+}> {
+  const results = [];
   
-  for (const model of AVAILABLE_MODELS) {
+  for (const model of models) {
     try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent`;
+      console.log(`Testing Gemini model: ${model}`);
+      const result = await extractDataWithGemini({
+        apiKey,
+        imageBase64,
+        modelVersion: model,
+        enhancedExtraction: true
+      });
       
-      const fetchOptions = {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: "اختبار بسيط" }]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 128
-          }
-        })
-      };
-      
-      const response = await fetch(`${endpoint}?key=${apiKey}`, fetchOptions);
-      
-      if (response.ok) {
-        results[model.id] = true;
-      } else {
-        results[model.id] = false;
-        const error = await response.text();
-        reportApiKeyError(apiKey, `فشل اختبار النموذج ${model.id}: ${error}`);
-      }
+      results.push({
+        model,
+        success: result.success,
+        data: result.data,
+        confidence: result.data?.confidence || 0,
+        error: result.success ? undefined : result.message
+      });
     } catch (error) {
-      results[model.id] = false;
-      reportApiKeyError(apiKey, `خطأ اختبار النموذج ${model.id}: ${error.message}`);
-      console.error(`خطأ في اختبار نموذج ${model.id}:`, error);
+      console.error(`Error testing model ${model}:`, error);
+      results.push({
+        model,
+        success: false,
+        error: error instanceof Error ? error.message : 'خطأ غير معروف'
+      });
     }
   }
   
-  return results;
+  // ترتيب النتائج حسب نسبة الثقة
+  results.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+  
+  // اختيار أفضل نموذج (النموذج بأعلى نسبة ثقة)
+  const bestModel = results.length > 0 && results[0].success ? results[0].model : models[0];
+  
+  return {
+    results,
+    bestModel
+  };
 }
-
-// وظيفة لاختيار أفضل نموذج بناءً على نوع المدخلات
-export function selectOptimalModel(imageSize: number, complexity: 'low' | 'medium' | 'high' = 'medium'): GeminiModelType {
-  // حجم الصورة بالميجابايت
-  const imageSizeMB = imageSize / (1024 * 1024);
-  
-  if (imageSizeMB > 5) {
-    // للصور الكبيرة جدًا، نستخدم النموذج السريع
-    return GeminiModelType.FLASH;
-  }
-  
-  if (complexity === 'high') {
-    // للمهام المعقدة، نستخدم النموذج المتقدم
-    return GeminiModelType.PRO;
-  }
-  
-  // الافتراضي: استخدام النموذج السريع لأغلب الاستخدامات
-  return GeminiModelType.FLASH;
-}
-

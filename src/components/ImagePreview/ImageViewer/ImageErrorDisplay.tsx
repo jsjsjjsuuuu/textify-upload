@@ -1,74 +1,39 @@
 
-import React, { useState } from 'react';
-import { AlertCircle, RefreshCw, Key } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import { useImageStats } from "@/hooks/useImageStats";
-import WelcomeScreen from '@/components/WelcomeScreen';
+import { ImageOff, RefreshCw } from "lucide-react";
 
 interface ImageErrorDisplayProps {
-  onRetry: () => void;
-  errorMessage?: string;
-  retryCount?: number;
-  isApiKeyError?: boolean; // إضافة خاصية للتحقق مما إذا كان الخطأ متعلقًا بمفتاح API
+  onRetry?: () => void; // إضافة وظيفة إعادة المحاولة
+  errorMessage?: string; // إضافة رسالة خطأ مخصصة
+  retryCount?: number; // عدد المحاولات السابقة
 }
 
-const ImageErrorDisplay: React.FC<ImageErrorDisplayProps> = ({ 
-  onRetry,
-  errorMessage = "تعذر تحميل الصورة",
-  retryCount = 0,
-  isApiKeyError = false
-}) => {
-  const { user } = useAuth();
-  const { clearProcessedImagesCache } = useImageStats();
-  const [showApiKeyManager, setShowApiKeyManager] = useState(false);
-  
-  // التحقق مما إذا كان الخطأ متعلقًا بمفتاح API
-  const isApiError = isApiKeyError || 
-    errorMessage?.includes('API key') || 
-    errorMessage?.includes('مفتاح API') ||
-    errorMessage?.includes('API_KEY_INVALID') ||
-    errorMessage?.includes('quota') ||
-    errorMessage?.includes('حصة');
-  
+const ImageErrorDisplay = ({ 
+  onRetry, 
+  errorMessage, 
+  retryCount = 0 
+}: ImageErrorDisplayProps) => {
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full p-6 bg-gray-50 dark:bg-gray-800/50 rounded-md">
-      <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-      
-      <p className="text-center text-muted-foreground mb-4 whitespace-pre-line">{errorMessage}</p>
+    <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 bg-white/80 dark:bg-gray-800/80">
+      <ImageOff size={48} />
+      <p className="mt-2 text-center font-medium">فشل تحميل الصورة</p>
+      <p className="text-sm text-muted-foreground mt-1 mb-2">
+        {errorMessage || "الصورة غير متاحة أو تم حذفها من الخادم"}
+      </p>
       
       {retryCount > 0 && (
-        <p className="text-sm text-muted-foreground mb-2">
-          عدد المحاولات: {retryCount}
+        <p className="text-xs text-amber-500 mb-2">
+          تمت المحاولة {retryCount} {retryCount === 1 ? 'مرة' : 'مرات'} من قبل
         </p>
       )}
       
-      <div className="flex flex-col sm:flex-row gap-2">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="flex items-center gap-1"
-          onClick={onRetry}
+      {onRetry && (
+        <button 
+          onClick={onRetry} 
+          className="px-4 py-1.5 text-sm rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors dark:bg-blue-800 dark:text-blue-100 dark:hover:bg-blue-700 flex items-center"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className="h-3.5 w-3.5 ml-1.5 animate-pulse" />
           إعادة المحاولة
-        </Button>
-        
-        {isApiError && (
-          <Button 
-            variant="destructive" 
-            size="sm" 
-            className="flex items-center gap-1"
-            onClick={() => setShowApiKeyManager(true)}
-          >
-            <Key className="h-4 w-4" />
-            إدارة مفتاح API
-          </Button>
-        )}
-      </div>
-      
-      {showApiKeyManager && (
-        <WelcomeScreen onClose={() => setShowApiKeyManager(false)} />
+        </button>
       )}
     </div>
   );

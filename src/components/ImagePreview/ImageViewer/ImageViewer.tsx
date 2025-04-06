@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import ZoomControls from "./ZoomControls";
 import ImageInfoBadges from "./ImageInfoBadges";
@@ -25,13 +25,11 @@ const ImageViewer = ({
 }: ImageViewerProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   
   // Reset image loaded state when selected image changes
   useEffect(() => {
     setImageLoaded(false);
     setImgError(false);
-    setRetryCount(0);
   }, [selectedImage.id, selectedImage.previewUrl]);
   
   // Get safe image URL or fallback
@@ -50,30 +48,6 @@ const ImageViewer = ({
     setImageLoaded(false);
     setImgError(true);
   };
-
-  // إضافة وظيفة إعادة المحاولة
-  const handleRetry = useCallback(() => {
-    setImgError(false);
-    setRetryCount(prev => prev + 1);
-    
-    // إضافة تأخير قبل إعادة تحميل الصورة لمنع إعادة التحميل الفوري
-    setTimeout(() => {
-      // إجبار المتصفح على إعادة تحميل الصورة عن طريق إضافة رقم عشوائي إلى URL
-      const newUrl = `${selectedImage.previewUrl}?t=${Date.now()}`;
-      
-      // إنشاء صورة جديدة لتجربة التحميل
-      const img = new Image();
-      img.onload = () => {
-        setImageLoaded(true);
-        setImgError(false);
-      };
-      img.onerror = () => {
-        setImageLoaded(false);
-        setImgError(true);
-      };
-      img.src = newUrl;
-    }, 500);
-  }, [selectedImage.previewUrl]);
 
   // تحديد حالة البوكماركلت للعرض
   const getBookmarkletStatusBadge = () => {
@@ -105,19 +79,6 @@ const ImageViewer = ({
     );
   };
 
-  // تحسين عرض الخطأ لاستخدام وظيفة إعادة المحاولة
-  const renderErrorDisplay = () => {
-    return (
-      <div className="overflow-hidden relative h-[550px] w-full flex items-center justify-center bg-transparent rounded-md">
-        <ImageErrorDisplay 
-          onRetry={handleRetry} 
-          retryCount={retryCount}
-          errorMessage={selectedImage.status === "error" ? "حدث خطأ أثناء معالجة الصورة. يمكنك إعادة المحاولة." : undefined}
-        />
-      </div>
-    );
-  };
-
   return (
     <div className="col-span-1 bg-transparent rounded-lg p-4 flex flex-col items-center justify-center relative">
       {!imgError ? (
@@ -129,7 +90,9 @@ const ImageViewer = ({
           imageLoaded={imageLoaded}
         />
       ) : (
-        renderErrorDisplay()
+        <div className="overflow-hidden relative h-[550px] w-full flex items-center justify-center bg-transparent rounded-md">
+          <ImageErrorDisplay />
+        </div>
       )}
       
       <ZoomControls 

@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Check, Edit2, X, Copy, Wand2, Loader2 } from "lucide-react";
+import { Check, Edit2, X, Copy, Wand2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
@@ -11,7 +11,6 @@ interface ExtractedDataActionsProps {
   onCopyText: () => void;
   onAutoExtract: () => void;
   hasExtractedText: boolean;
-  isProcessing?: boolean; // إضافة الخاصية كاختيارية
 }
 
 const ExtractedDataActions = ({ 
@@ -20,8 +19,7 @@ const ExtractedDataActions = ({
   onCancel, 
   onCopyText, 
   onAutoExtract,
-  hasExtractedText,
-  isProcessing = false // تعيين قيمة افتراضية
+  hasExtractedText
 }: ExtractedDataActionsProps) => {
   const { toast } = useToast();
 
@@ -43,15 +41,7 @@ const ExtractedDataActions = ({
 
   return (
     <div className="flex justify-between items-center mb-4">
-      <h3 className="text-lg font-semibold text-brand-brown dark:text-brand-beige">
-        البيانات المستخرجة
-        {isProcessing && (
-          <span className="text-amber-500 text-sm mr-2 inline-flex items-center">
-            <Loader2 size={14} className="animate-spin ml-1" />
-            جاري المعالجة...
-          </span>
-        )}
-      </h3>
+      <h3 className="text-lg font-semibold text-brand-brown dark:text-brand-beige">البيانات المستخرجة</h3>
       <motion.div 
         className="flex gap-2"
         initial={{ opacity: 0, x: 20 }}
@@ -65,7 +55,6 @@ const ExtractedDataActions = ({
               variant="ghost" 
               onClick={onCancel}
               className="h-8 text-destructive hover:bg-destructive/10"
-              disabled={isProcessing}
             >
               <X size={16} className="ml-1" />
               إلغاء
@@ -75,7 +64,6 @@ const ExtractedDataActions = ({
               variant="default" 
               onClick={onEditToggle}
               className="h-8 bg-brand-green hover:bg-brand-green/90"
-              disabled={isProcessing}
             >
               <Check size={16} className="ml-1" />
               حفظ
@@ -88,7 +76,6 @@ const ExtractedDataActions = ({
               variant="outline" 
               onClick={handleCopy}
               className="h-8"
-              disabled={isProcessing}
             >
               <Copy size={16} className="ml-1" />
               نسخ
@@ -98,13 +85,9 @@ const ExtractedDataActions = ({
               variant="outline" 
               onClick={handleAutoExtract}
               className="h-8"
-              disabled={!hasExtractedText || isProcessing}
+              disabled={!hasExtractedText}
             >
-              {isProcessing ? (
-                <Loader2 size={16} className="ml-1 animate-spin" />
-              ) : (
-                <Wand2 size={16} className="ml-1" />
-              )}
+              <Wand2 size={16} className="ml-1" />
               إعادة استخراج
             </Button>
             <Button 
@@ -112,7 +95,6 @@ const ExtractedDataActions = ({
               variant="outline" 
               onClick={onEditToggle}
               className="h-8"
-              disabled={isProcessing}
             >
               <Edit2 size={16} className="ml-1" />
               تعديل

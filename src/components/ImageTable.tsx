@@ -4,7 +4,7 @@ import { Edit, Trash, Send, AlertCircle } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface ImageTableProps {
   images: ImageData[];
@@ -39,6 +39,26 @@ const ImageTable = ({
     
     setGroupedImages(grouped);
   }, [images]);
+  
+  // التحقق مما إذا كانت الصورة مكتملة (لديها البيانات الإلزامية)
+  const isImageComplete = useCallback((image: ImageData): boolean => {
+    // التحقق من وجود البيانات الأساسية
+    const hasRequiredFields = 
+      Boolean(image.code) && 
+      Boolean(image.senderName) && 
+      Boolean(image.province) &&
+      Boolean(image.price);
+      
+    // التحقق من صحة رقم الهاتف (إما فارغ أو صحيح بطول 11 رقم)
+    const hasValidPhone = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+    
+    return hasRequiredFields && hasValidPhone;
+  }, []);
+  
+  // التحقق مما إذا كانت الصورة تحتوي على خطأ في رقم الهاتف
+  const hasPhoneError = useCallback((image: ImageData): boolean => {
+    return Boolean(image.phoneNumber) && image.phoneNumber.replace(/[^\d]/g, '').length !== 11;
+  }, []);
   
   if (images.length === 0) return null;
   
@@ -96,11 +116,11 @@ const ImageTable = ({
                 <th className="font-semibold text-sm py-3.5 px-4">الرقم</th>
                 <th className="font-semibold text-sm py-3.5 px-4">التاريخ</th>
                 <th className="font-semibold text-sm py-3.5 px-4">صورة معاينة</th>
-                <th className="font-semibold text-sm py-3.5 px-4">الكود</th>
-                <th className="font-semibold text-sm py-3.5 px-4">اسم المرسل</th>
+                <th className="font-semibold text-sm py-3.5 px-4">الكود *</th>
+                <th className="font-semibold text-sm py-3.5 px-4">اسم المرسل *</th>
                 <th className="font-semibold text-sm py-3.5 px-4">رقم الهاتف</th>
-                <th className="font-semibold text-sm py-3.5 px-4">المحافظة</th>
-                <th className="font-semibold text-sm py-3.5 px-4">السعر</th>
+                <th className="font-semibold text-sm py-3.5 px-4">المحافظة *</th>
+                <th className="font-semibold text-sm py-3.5 px-4">السعر *</th>
                 <th className="font-semibold text-sm py-3.5 px-4">دقة الاستخراج</th>
                 <th className="font-semibold text-sm py-3.5 px-4">الحالة</th>
                 <th className="font-semibold text-sm py-3.5 px-4">الإجراءات</th>
@@ -149,22 +169,44 @@ const ImageTable = ({
                         />
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-sm font-medium">{image.code || "—"}</td>
-                    <td className="py-3 px-4 text-sm">{image.senderName || "—"}</td>
+                    <td className="py-3 px-4 text-sm font-medium">
+                      {image.code || 
+                        <span className="text-muted-foreground text-xs italic">غير متوفر</span>
+                      }
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      {image.senderName || 
+                        <span className="text-muted-foreground text-xs italic">غير متوفر</span>
+                      }
+                    </td>
                     <td className="py-3 px-4 text-sm relative">
                       <div className="flex items-center">
-                        <span className={image.phoneNumber && !isPhoneNumberValid ? "text-destructive" : ""}>
-                          {image.phoneNumber || "—"}
-                        </span>
-                        {image.phoneNumber && !isPhoneNumberValid && (
-                          <span className="mr-1.5 text-destructive">
-                            <AlertCircle size={14} />
-                          </span>
+                        {image.phoneNumber ? (
+                          <>
+                            <span className={!isPhoneNumberValid ? "text-destructive" : ""}>
+                              {image.phoneNumber}
+                            </span>
+                            {!isPhoneNumberValid && (
+                              <span className="mr-1.5 text-destructive" title="يجب أن يكون رقم الهاتف 11 رقم بالضبط">
+                                <AlertCircle size={14} />
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground text-xs italic">غير متوفر</span>
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-sm">{image.province || "—"}</td>
-                    <td className="py-3 px-4 text-sm">{image.price || "—"}</td>
+                    <td className="py-3 px-4 text-sm">
+                      {image.province || 
+                        <span className="text-muted-foreground text-xs italic">غير متوفر</span>
+                      }
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      {image.price || 
+                        <span className="text-muted-foreground text-xs italic">غير متوفر</span>
+                      }
+                    </td>
                     <td className="py-3 px-4 text-sm">
                       {image.confidence ? (
                         <div className="flex items-center">
@@ -185,16 +227,22 @@ const ImageTable = ({
                           قيد المعالجة
                         </Badge>
                       )}
-                      {image.status === "completed" && !image.submitted && (
+                      {image.status === "completed" && !image.submitted && isImageComplete(image) && (
                         <Badge variant="outline" className="text-[11px] px-2 py-0.5 h-5 font-medium bg-blue-100/50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800/40 dark:text-blue-300">
                           <span className="w-1 h-1 bg-blue-500 rounded-full mr-1.5"></span>
-                          تم المعالجة
+                          جاهز للإرسال
                         </Badge>
                       )}
-                      {image.status === "error" && (
+                      {image.status === "completed" && !image.submitted && !isImageComplete(image) && !hasPhoneError(image) && (
+                        <Badge variant="outline" className="text-[11px] px-2 py-0.5 h-5 font-medium bg-purple-100/50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800/40 dark:text-purple-300">
+                          <span className="w-1 h-1 bg-purple-500 rounded-full mr-1.5"></span>
+                          غير مكتملة
+                        </Badge>
+                      )}
+                      {(image.status === "error" || hasPhoneError(image)) && (
                         <Badge variant="outline" className="text-[11px] px-2 py-0.5 h-5 font-medium bg-red-100/50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800/40 dark:text-red-300">
                           <span className="w-1 h-1 bg-red-500 rounded-full mr-1.5"></span>
-                          فشل
+                          {hasPhoneError(image) ? "خطأ في رقم الهاتف" : "فشل"}
                         </Badge>
                       )}
                       {image.submitted && (
@@ -210,6 +258,7 @@ const ImageTable = ({
                           variant="ghost" 
                           size="icon" 
                           className="h-7 w-7 rounded-full bg-muted/30 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                          onClick={() => onImageClick(image)}
                         >
                           <Edit size={14} />
                         </Button>
@@ -221,12 +270,12 @@ const ImageTable = ({
                         >
                           <Trash size={14} />
                         </Button>
-                        {image.status === "completed" && !image.submitted && (
+                        {image.status === "completed" && !image.submitted && isImageComplete(image) && !hasPhoneError(image) && (
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             className="h-7 w-7 rounded-full bg-muted/30 text-brand-green hover:bg-brand-green/10" 
-                            disabled={isSubmitting || (image.phoneNumber && !isPhoneNumberValid)} 
+                            disabled={isSubmitting} 
                             onClick={() => onSubmit(image.id)}
                           >
                             <Send size={14} />

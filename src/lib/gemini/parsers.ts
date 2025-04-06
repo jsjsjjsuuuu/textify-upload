@@ -35,16 +35,10 @@ export function parseGeminiResponse(extractedText: string): {
         // إذا فشل تحليل JSON، نحاول إصلاحه
         try {
           // تنظيف النص وإضافة علامات اقتباس للمفاتيح والقيم
-          let cleanedText = jsonText
+          const cleanedText = jsonText
             .replace(/([{,]\s*)([^"}\s][^":,}]*?)(\s*:)/g, '$1"$2"$3')
             .replace(/(:(?:\s*)(?!true|false|null|{|\[|"|')([^,}\s]+))/g, ':"$2"')
             .replace(/'/g, '"');
-          
-          // إصلاح بعض أخطاء JSON الشائعة
-          cleanedText = cleanedText
-            .replace(/,\s*}/g, '}') // إزالة الفاصلة الأخيرة
-            .replace(/,\s*,/g, ',') // إزالة الفواصل المتكررة
-            .replace(/:\s*,/g, ':"",'); // إضافة قيمة فارغة للخصائص بدون قيمة
           
           console.log("Cleaned JSON text:", cleanedText);
           parsedData = JSON.parse(cleanedText);
@@ -54,14 +48,13 @@ export function parseGeminiResponse(extractedText: string): {
           
           // إذا فشل تنظيف JSON، نحاول استخراج أزواج المفاتيح والقيم
           try {
-            // تحسين نمط المطابقة للعثور على أزواج المفاتيح والقيم
-            const keyValuePattern = /["\']?([^":,}\s]+)["\']?\s*:\s*["\']?([^",}]+)["\']?/g;
+            const keyValuePattern = /"?([^":,}\s]+)"?\s*:\s*"?([^",}]+)"?/g;
             const matches = [...extractedText.matchAll(keyValuePattern)];
             
             matches.forEach(match => {
               const key = match[1].trim();
               const value = match[2].trim();
-              if (key && value && !value.includes('{') && !value.includes('[')) {
+              if (key && value) {
                 parsedData[key] = value;
               }
             });
@@ -83,10 +76,7 @@ export function parseGeminiResponse(extractedText: string): {
                           extractedText.match(/كود[:\s]+([0-9]+)/i) ||
                           extractedText.match(/الكود[:\s]+([0-9]+)/i) ||
                           extractedText.match(/code[:\s]+([0-9]+)/i) ||
-                          extractedText.match(/رقم[:\s]+([0-9]+)/i) ||
-                          // أنماط إضافية للبحث عن الرمز
-                          extractedText.match(/رمز[:\s]+([0-9]+)/i) ||
-                          extractedText.match(/ID[:\s]+([0-9]+)/i);
+                          extractedText.match(/رقم[:\s]+([0-9]+)/i);
       
       if (codeMatches && codeMatches[1]) {
         parsedData.code = codeMatches[1].trim();
@@ -97,11 +87,7 @@ export function parseGeminiResponse(extractedText: string): {
       const senderNameMatches = extractedText.match(/اسم المرسل[:\s]+([^\n]+)/i) ||
                                extractedText.match(/المرسل[:\s]+([^\n]+)/i) ||
                                extractedText.match(/اسم الزبون[:\s]+([^\n]+)/i) ||
-                               extractedText.match(/الزبون[:\s]+([^\n]+)/i) ||
-                               // أنماط إضافية للعثور على اسم المرسل
-                               extractedText.match(/اسم العميل[:\s]+([^\n]+)/i) ||
-                               extractedText.match(/العميل[:\s]+([^\n]+)/i) ||
-                               extractedText.match(/اسم[:\s]+([^\n]+)/i);
+                               extractedText.match(/الزبون[:\s]+([^\n]+)/i);
       
       if (senderNameMatches && senderNameMatches[1]) {
         parsedData.senderName = senderNameMatches[1].trim();
@@ -111,9 +97,6 @@ export function parseGeminiResponse(extractedText: string): {
       // استخراج رقم الهاتف
       const phoneNumberMatches = extractedText.match(/هاتف[:\s]+([0-9\s\-]+)/i) ||
                                 extractedText.match(/رقم الهاتف[:\s]+([0-9\s\-]+)/i) ||
-                                extractedText.match(/الهاتف[:\s]+([0-9\s\-]+)/i) ||
-                                extractedText.match(/جوال[:\s]+([0-9\s\-]+)/i) ||
-                                extractedText.match(/موبايل[:\s]+([0-9\s\-]+)/i) ||
                                 // البحث عن رقم هاتف عراقي نموذجي (يبدأ بـ 07)
                                 extractedText.match(/\b(07\d{2}[0-9\s\-]{7,8})\b/);
       
@@ -126,10 +109,7 @@ export function parseGeminiResponse(extractedText: string): {
       // استخراج المحافظة
       const provinceMatches = extractedText.match(/المحافظة[:\s]+([^\n]+)/i) ||
                              extractedText.match(/محافظة[:\s]+([^\n]+)/i) ||
-                             extractedText.match(/عنوان الزبون[^:\n]*[:\s]+([^\n]+)/i) ||
-                             // أنماط إضافية للعثور على المحافظة
-                             extractedText.match(/العنوان[:\s]+([^\n]+)/i) ||
-                             extractedText.match(/المدينة[:\s]+([^\n]+)/i);
+                             extractedText.match(/عنوان الزبون[^:\n]*[:\s]+([^\n]+)/i);
       
       if (provinceMatches && provinceMatches[1]) {
         // استخراج اسم المحافظة من النص وتصحيحه
@@ -155,14 +135,7 @@ export function parseGeminiResponse(extractedText: string): {
       const priceMatches = extractedText.match(/السعر[:\s]+([0-9\s\-,\.]+)/i) ||
                           extractedText.match(/المبلغ[:\s]+([0-9\s\-,\.]+)/i) ||
                           extractedText.match(/سعر[:\s]+([0-9\s\-,\.]+)/i) ||
-                          extractedText.match(/قيمة[:\s]+([0-9\s\-,\.]+)/i) ||
-                          // أنماط إضافية للعثور على السعر
-                          extractedText.match(/التكلفة[:\s]+([0-9\s\-,\.]+)/i) ||
-                          extractedText.match(/الكلفة[:\s]+([0-9\s\-,\.]+)/i) ||
-                          // البحث عن أنماط الأرقام مع وحدات العملة
-                          extractedText.match(/\$\s*([0-9,\.]+)/i) ||
-                          extractedText.match(/([0-9,\.]+)\s*د\.ع/i) ||
-                          extractedText.match(/([0-9,\.]+)\s*دينار/i);
+                          extractedText.match(/قيمة[:\s]+([0-9\s\-,\.]+)/i);
       
       if (priceMatches && priceMatches[1]) {
         parsedData.price = priceMatches[1].trim();
@@ -172,10 +145,7 @@ export function parseGeminiResponse(extractedText: string): {
       // استخراج اسم الشركة
       const companyNameMatches = extractedText.match(/شركة\s+([^\n]+)/i) ||
                                 extractedText.match(/مؤسسة\s+([^\n]+)/i) ||
-                                extractedText.match(/اسم الشركة[:\s]+([^\n]+)/i) ||
-                                // أنماط إضافية للعثور على اسم الشركة
-                                extractedText.match(/الشركة[:\s]+([^\n]+)/i) ||
-                                extractedText.match(/مجموعة\s+([^\n]+)/i);
+                                extractedText.match(/اسم الشركة[:\s]+([^\n]+)/i);
       
       if (companyNameMatches && companyNameMatches[1]) {
         parsedData.companyName = companyNameMatches[1].trim();
@@ -192,8 +162,7 @@ export function parseGeminiResponse(extractedText: string): {
     
     // البحث عن رقم هاتف عراقي في النص بشكل مباشر إذا لم يتم العثور عليه سابقًا
     if (!parsedData.phoneNumber) {
-      // تحسين التعبير النمطي للعثور على أرقام الهواتف العراقية
-      const iraqiPhoneRegex = /\b(07[0-9]{2}[\s\-]?[0-9]{3}[\s\-]?[0-9]{4})\b/;
+      const iraqiPhoneRegex = /\b(07[0-9]{2}[0-9\s\-]{7,8})\b/;
       const phoneMatchDirect = extractedText.match(iraqiPhoneRegex);
       if (phoneMatchDirect && phoneMatchDirect[1]) {
         parsedData.phoneNumber = phoneMatchDirect[1].replace(/\D/g, '');
@@ -203,23 +172,11 @@ export function parseGeminiResponse(extractedText: string): {
     
     // البحث عن أرقام بصيغ مختلفة قد تكون كود الشحنة
     if (!parsedData.code) {
-      // تحسين استخراج الكود: التركيز على الأرقام التي تبدو كرموز
-      const possibleCodes = extractedText.match(/\b\d{5,8}\b/g);
+      const possibleCodes = extractedText.match(/\b\d{5,10}\b/g);
       if (possibleCodes && possibleCodes.length > 0) {
-        // استخدام أول رقم بطول مناسب (5-8 أرقام) كرمز محتمل
+        // استخدام أول رقم طويل (5-10 أرقام) كرمز محتمل
         parsedData.code = possibleCodes[0];
         console.log("Using first numeric sequence as code:", parsedData.code);
-      }
-    }
-    
-    // البحث عن المحافظات العراقية بشكل مباشر إذا لم يتم العثور عليها سابقًا
-    if (!parsedData.province) {
-      for (const province of IRAQ_PROVINCES) {
-        if (extractedText.toLowerCase().includes(province.toLowerCase())) {
-          parsedData.province = province;
-          console.log("Found province name directly in text:", parsedData.province);
-          break;
-        }
       }
     }
     
@@ -231,6 +188,15 @@ export function parseGeminiResponse(extractedText: string): {
     if (enhancedData.province) {
       enhancedData.province = correctProvinceName(enhancedData.province);
       console.log("Corrected province name:", enhancedData.province);
+    } else {
+      // البحث في النص كاملاً عن أي اسم محافظة عراقية
+      for (const province of IRAQ_PROVINCES) {
+        if (extractedText.includes(province)) {
+          enhancedData.province = province;
+          console.log("Found province name in text:", enhancedData.province);
+          break;
+        }
+      }
     }
     
     // تنسيق السعر وفقًا لقواعد العمل

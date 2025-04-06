@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,7 +96,7 @@ const UserManagementTab: React.FC = () => {
     }
   };
 
-  // وظيفة إعادة تعيين كلمة المرور - في نموذج تغيير كلمة المرور
+  // إعادة تعيين كلمة المرور
   const onResetPasswordSubmit = async (data: ResetPasswordFormValues) => {
     setIsLoading(true);
     try {
