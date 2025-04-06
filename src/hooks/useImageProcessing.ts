@@ -19,10 +19,10 @@ export const useImageProcessing = () => {
     localStorage.getItem('defaultSheetId') || ''
   );
   
-  // إضافة استخدام وظيفة اكتشاف التكرار
+  // إضافة استخدام وظيفة اكتشاف التكرار مع خيارات أكثر تشددًا
   const { isDuplicateImage, clearProcessedHashesCache } = useDuplicateDetection({
     enabled: true,
-    ignoreTemporary: false  // لا نتجاهل الصور المؤقتة لتجنب التكرار
+    ignoreTemporary: false  // لا نتجاهل الصور المؤقتة لتحسين اكتشاف التكرار
   });
   
   // حفظ تفضيلات المستخدم في التخزين المحلي
@@ -47,13 +47,38 @@ export const useImageProcessing = () => {
     setDefaultSheetId(sheetId);
   };
   
-  // وظيفة لمعالجة صورة واحدة مع اكتشاف التكرار
+  // وظيفة لمعالجة صورة واحدة مع تحسين اكتشاف التكرار
   const processImage = async (image: ImageData): Promise<ImageData> => {
     try {
+      console.log(`بدء معالجة الصورة ${image.id} بالحالة ${image.status}`);
+      
       // التحقق من أن الصورة ليست في حالة "مكتملة" أو "خطأ"
       if (image.status === "completed" || image.status === "error") {
         console.log(`تخطي معالجة الصورة ${image.id} لأنها بالفعل في حالة ${image.status}`);
         return image;
+      }
+      
+      // التحقق من وجود نص مستخرج بالفعل
+      if (image.extractedText && image.extractedText.length > 10 && 
+          image.extractedText !== "جاري تحميل الصورة وتحسينها..." && 
+          image.extractedText !== "جاري معالجة الصورة واستخراج البيانات...") {
+        console.log(`الصورة ${image.id} لديها بالفعل نص مستخرج: ${image.extractedText.substring(0, 20)}...`);
+        
+        // إذا كان لديها أيضًا البيانات الأساسية، نعتبرها مكتملة
+        if (image.code && image.senderName && image.phoneNumber) {
+          console.log(`الصورة ${image.id} لديها بالفعل البيانات الأساسية، تحديثها إلى مكتملة`);
+          
+          // تحديث الحالة إلى مكتملة
+          const completedImage = {
+            ...image,
+            status: "completed" as const
+          };
+          
+          // تحديث الصورة في الحالة
+          coreProcessing.updateImage(image.id, { status: "completed" });
+          
+          return completedImage;
+        }
       }
       
       // فحص ما إذا كانت الصورة مكررة قبل معالجتها
@@ -61,42 +86,28 @@ export const useImageProcessing = () => {
         console.log("تم اكتشاف صورة مكررة:", image.id);
         toast({
           title: "صورة مكررة",
-          description: "تم تخطي هذه الصورة لأنها مكررة"
+          description: "تم تخطي هذه الصورة لأنها مكررة أو تمت معالجتها بالفعل"
         });
         
         return {
           ...image,
-          status: "error" as const,
-          error: "هذه الصورة مكررة وتم تخطيها"
+          status: "completed" as const,
+          error: "هذه الصورة تمت معالجتها بالفعل"
         };
-      }
-      
-      // التحقق إذا كانت الصورة لديها بالفعل نص مستخرج
-      if (image.extractedText && image.extractedText.trim().length > 0) {
-        console.log(`الصورة ${image.id} لديها بالفعل نص مستخرج، تخطي استخراج النص مرة أخرى`);
       }
       
       try {
         // معالجة الصورة فقط إذا لم تكن مكتملة أو بها خطأ
         const processedImage = await coreProcessing.saveProcessedImage(image);
         
-        // التعامل مع حالة عدم وجود قيمة عائدة من saveProcessedImage
-        if (!processedImage) {
-          // نستخدم حالة الخطأ ونضيف رسالة
-          return {
-            ...image,
-            status: "error" as const,
-            error: "فشل في معالجة الصورة"
-          };
-        }
-        
+        console.log(`تمت معالجة الصورة ${image.id} بنجاح، الحالة الجديدة: ${processedImage.status}`);
         return processedImage;
       } catch (processingError) {
         console.error("خطأ أثناء معالجة الصورة:", processingError);
         return { 
           ...image, 
           status: "error" as const, 
-          error: "فشل في حفظ الصورة المعالجة" 
+          error: "فشل في معالجة الصورة" 
         };
       }
     } catch (error) {
@@ -111,13 +122,23 @@ export const useImageProcessing = () => {
 
   // وظيفة لمعالجة مجموعة من الصور
   const processMultipleImages = async (images: ImageData[]): Promise<void> => {
+    console.log(`بدء معالجة ${images.length} صور`);
+    
     // تصفية الصور للاحتفاظ فقط بالصور الفريدة وغير المعالجة بالفعل
-    const uniqueImages = images.filter(image => 
+    const uniqueImages = images.filter(image => {
       // استبعاد الصور المكتملة أو التي بها أخطاء
-      image.status !== "completed" && image.status !== "error" && 
+      if (image.status === "completed" || image.status === "error") {
+        console.log(`تخطي صورة مكتملة/خطأ: ${image.id} (${image.status})`);
+        return false;
+      }
+      
       // التحقق من أن الصورة ليست مكررة
-      !isDuplicateImage(image, coreProcessing.images)
-    );
+      const duplicate = isDuplicateImage(image, coreProcessing.images);
+      if (duplicate) {
+        console.log(`تخطي صورة مكررة: ${image.id}`);
+      }
+      return !duplicate;
+    });
     
     console.log(`معالجة ${uniqueImages.length} من ${images.length} صور (تم تخطي ${images.length - uniqueImages.length} صور مكررة أو مكتملة)`);
     
@@ -127,7 +148,7 @@ export const useImageProcessing = () => {
     }
   };
   
-  // إضافة وظيفة محسنة لاكتشاف التكرار - تأكد من أن الوظيفة ترجع قيمة boolean
+  // إضافة وظيفة محسنة لاكتشاف التكرار
   const checkForDuplicate = (image: ImageData, images: ImageData[]): boolean => {
     return isDuplicateImage(image, images);
   };

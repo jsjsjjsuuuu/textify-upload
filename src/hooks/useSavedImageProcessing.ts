@@ -18,7 +18,7 @@ export const useSavedImageProcessing = (
   const { saveImageToDatabase, loadUserImages } = useImageDatabase(updateImage);
   
   // وظيفة حفظ الصورة المعالجة مع تجنب التكرار
-  const saveProcessedImage = async (image: ImageData): Promise<ImageData | undefined> => {
+  const saveProcessedImage = async (image: ImageData): Promise<ImageData> => {
     try {
       // التحقق من أن الصورة غير معالجة بالفعل
       if (processedImageIds.has(image.id)) {
@@ -37,7 +37,7 @@ export const useSavedImageProcessing = (
       
       if (!user) {
         console.log("المستخدم غير مسجل الدخول، لا يمكن حفظ الصورة");
-        return undefined;
+        return image;
       }
       
       // إضافة معرف الصورة إلى المجموعة لتجنب المعالجة المتكررة

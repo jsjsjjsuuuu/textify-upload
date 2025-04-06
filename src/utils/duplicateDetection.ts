@@ -53,16 +53,33 @@ export const imagesMatch = (image1: ImageData, image2: ImageData): boolean => {
     image1.file.lastModified === image2.file.lastModified;
   
   // إذا كان النص المستخرج موجوداً، يمكن استخدامه للمقارنة
-  const sameExtractedText = 
-    image1.extractedText && 
-    image2.extractedText && 
-    image1.extractedText === image2.extractedText;
+  let sameExtractedText = false;
+  
+  if (image1.extractedText && image2.extractedText && 
+      image1.extractedText.length > 20 && image2.extractedText.length > 20) {
+    // المقارنة الحرفية للنص المستخرج
+    if (image1.extractedText === image2.extractedText) {
+      sameExtractedText = true;
+    } 
+    // أو تشابه كبير: النص يحتوي على نفس الكود أو رقم الهاتف
+    else if (image1.code && image2.code && image1.code === image2.code && 
+            image1.phoneNumber && image2.phoneNumber && image1.phoneNumber === image2.phoneNumber) {
+      sameExtractedText = true;
+    }
+  }
+  
+  // تشابه البيانات المهمة المستخرجة
+  const sameImportantData = 
+    image1.code && image2.code && image1.code === image2.code &&
+    image1.phoneNumber && image2.phoneNumber && image1.phoneNumber === image2.phoneNumber &&
+    image1.senderName && image2.senderName && image1.senderName === image2.senderName;
   
   // يجب أن تكون من نفس المستخدم ولنفس الملف
-  const isMatch = sameUser && sameFile;
+  const isMatch = (sameUser && sameFile) || 
+                  (sameUser && sameExtractedText) || 
+                  (sameUser && sameImportantData);
   
-  // إذا كان النص المستخرج متطابقاً، فهذا يزيد من احتمال التطابق
-  return isMatch || (sameUser && sameExtractedText);
+  return isMatch;
 };
 
 /**
@@ -84,6 +101,14 @@ export const isImageDuplicate = (
   // تجنب الصور الخاطئة في عملية الاكتشاف
   if (image.status === "error") {
     return false;
+  }
+  
+  // التحقق السريع من وجود الصورة في نفس الحالة - تحسين للأداء
+  if (image.status === "completed" && image.extractedText && 
+      image.code && image.senderName && image.phoneNumber) {
+    // الصورة مكتملة بالفعل
+    console.log(`الصورة ${image.id} مكتملة بالفعل ولديها بيانات مستخرجة`);
+    return true; // تعتبر مكررة لتجنب إعادة معالجتها
   }
   
   // إذا كانت الصورة المراد فحصها مؤقتة، وتم تمكين تجاهل المؤقت، فلا نعتبرها مكررة
@@ -113,6 +138,13 @@ export const isImageDuplicate = (
     // إذا كان ignoreTemporary مفعلاً، تجاهل الصور المؤقتة
     if (ignoreTemporary && existingImage.sessionImage === true) {
       return false;
+    }
+    
+    // التحقق بسرعة مما إذا كانت الصورة الحالية لها نفس البيانات المستخرجة
+    if (existingImage.code && image.code && existingImage.code === image.code &&
+        existingImage.phoneNumber && image.phoneNumber && existingImage.phoneNumber === image.phoneNumber) {
+      console.log(`تم العثور على تطابق في البيانات المستخرجة بين ${image.id} و ${existingImage.id}`);
+      return true;
     }
     
     // هل هي في نفس المجموعة (إذا كانت متوفرة)
@@ -153,7 +185,10 @@ export const findDuplicateImages = (images: ImageData[]): ImageData[] => {
     
     // إذا لم يكن هناك صورة بهذا المفتاح، أو إذا كانت الصورة الحالية أحدث
     const existingImage = uniqueImagesMap.get(key);
+    const isCompleted = img.status === "completed";
+    const existingIsNotCompleted = existingImage && existingImage.status !== "completed";
     const shouldReplace = !existingImage || 
+                        isCompleted && existingIsNotCompleted ||
                         (img.added_at && existingImage.added_at && 
                          img.added_at > existingImage.added_at);
     

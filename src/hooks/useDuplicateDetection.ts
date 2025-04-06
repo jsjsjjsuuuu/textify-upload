@@ -54,12 +54,31 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
         return false;
       }
 
+      // التحقق من الصور التي تمت معالجتها بالفعل
+      if (image.status === "completed") {
+        console.log(`الصورة ${image.id} مكتملة بالفعل، لا داعي للفحص المتكرر`);
+        return true;  // تعتبر مكررة لتجنب إعادة معالجتها
+      }
+
       // إنشاء تجزئة للصورة
       const imageHash = createUniqueImageHash(image);
       
       // التحقق من وجود التجزئة في مجموعة التجزئات المعالجة
       if (processedHashesRef.current.has(imageHash)) {
         console.log(`تم العثور على تجزئة مطابقة في الذاكرة المؤقتة: ${imageHash} للصورة ${image.id}`);
+        return true;
+      }
+      
+      // التحقق إذا كانت الصورة لديها نص مستخرج بالفعل
+      const hasExtractedText = image.extractedText && image.extractedText.length > 10;
+      if (hasExtractedText && image.code && image.senderName && image.phoneNumber) {
+        console.log(`الصورة ${image.id} لديها بالفعل بيانات مستخرجة، تعتبر مكتملة`);
+        // إضافة التجزئة إلى الكاش
+        setProcessedHashes(prev => {
+          const newSet = new Set(prev);
+          newSet.add(imageHash);
+          return newSet;
+        });
         return true;
       }
       
@@ -75,7 +94,7 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
           return newSet;
         });
       }
-      // إذا لم يكن هناك تكرار وليست صورة مؤقتة، إضافة التجزئة إلى القائمة
+      // إذا لم يكن هناك تكرار وليست صورة مؤقتة، إضافة التجزئة إلى القائمة عند اكتمالها
       else if (!image.sessionImage && image.status === "completed") {
         console.log(`إضافة تجزئة جديدة للصورة المكتملة إلى الذاكرة المؤقتة: ${imageHash} للصورة ${image.id}`);
         setProcessedHashes(prev => {
