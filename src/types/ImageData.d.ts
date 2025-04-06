@@ -14,12 +14,16 @@ export interface ImageData {
   price: string;
   status: "pending" | "processing" | "completed" | "error";
   error: string | null;
-  apiKeyError?: boolean; // إضافة حقل للأخطاء المتعلقة بمفتاح API
+  apiKeyError?: boolean;
   storage_path: string | null;
   userId: string | null;
-  user_id?: string | null; // إضافة حقل user_id للتوافق
+  user_id?: string | null; // حقل إضافي للتوافق مع قاعدة البيانات
   number: number;
-  sessionImage: boolean; // إضافة حقل sessionImage
+  sessionImage: boolean;
   submitted: boolean;
   retryCount?: number;
+  imageHash?: string; // إضافة حقل هاش للصورة لاكتشاف التكرار
+  processingAttempts?: number; // عدد محاولات المعالجة
+  processed?: boolean; // علامة لتحديد ما إذا تمت معالجة الصورة بالفعل
+  batch_id?: string; // معرف المجموعة للصور المرفوعة معًا
 }

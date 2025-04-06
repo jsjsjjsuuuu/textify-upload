@@ -1,4 +1,12 @@
 
+// تعريف أسماء البكتات المتاحة في Supabase
+export const STORAGE_BUCKETS = {
+  IMAGES: 'images',  // تم تحديث اسم البكيت من 'receipt_images' إلى 'images' ليتوافق مع قاعدة البيانات
+  PROFILES: 'profiles',
+  GENERAL: 'general'
+};
+
+// استيراد المكتبات اللازمة
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -26,7 +34,8 @@ export const useStorage = () => {
         }
 
         if (!bucketName) {
-          throw new Error('لم يتم تحديد اسم الـ bucket');
+          // استخدام البكيت الافتراضي إذا لم يتم تحديد بكيت
+          bucketName = STORAGE_BUCKETS.IMAGES;
         }
 
         if (!filePath) {
@@ -41,14 +50,11 @@ export const useStorage = () => {
           .from(bucketName)
           .upload(filePath, file, {
             cacheControl: '3600',
-            upsert: true,
-            onUploadProgress: (progress) => {
-              // تحديث نسبة التقدم
-              const progressPercentage = (progress.loaded / progress.total) * 100;
-              setUploadProgress(progressPercentage);
-              console.log(`تقدم الرفع: ${progressPercentage.toFixed(2)}%`);
-            },
+            upsert: true
           });
+        
+        // تحديث نسبة التقدم يدويًا بعد الانتهاء
+        setUploadProgress(100);
 
         if (error) {
           throw error;
@@ -61,10 +67,8 @@ export const useStorage = () => {
 
         console.log('تم الرفع بنجاح:', urlData.publicUrl);
 
-        setUploadProgress(100);
-
         return urlData.publicUrl;
-      } catch (err) {
+      } catch (err: any) {
         console.error('خطأ في رفع الملف:', err);
         setError(err.message || 'حدث خطأ غير معروف أثناء رفع الملف');
         return null;
@@ -101,7 +105,7 @@ export const useStorage = () => {
 
         console.log('تم حذف الملف بنجاح');
         return true;
-      } catch (err) {
+      } catch (err: any) {
         console.error('خطأ في حذف الملف:', err);
         setError(err.message || 'حدث خطأ غير معروف أثناء حذف الملف');
         return false;
@@ -133,7 +137,7 @@ export const useStorage = () => {
         }
 
         return data;
-      } catch (err) {
+      } catch (err: any) {
         console.error('خطأ في جلب قائمة الملفات:', err);
         setError(err.message || 'حدث خطأ غير معروف أثناء جلب قائمة الملفات');
         return [];
@@ -167,7 +171,7 @@ export const useStorage = () => {
         }
 
         return data;
-      } catch (err) {
+      } catch (err: any) {
         console.error('خطأ في تنزيل الملف:', err);
         setError(err.message || 'حدث خطأ غير معروف أثناء تنزيل الملف');
         return null;

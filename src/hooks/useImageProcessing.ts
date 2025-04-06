@@ -1,170 +1,184 @@
 
-import { formatDate } from "@/utils/dateFormatter";
-import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
-import { useState, useEffect, useCallback } from "react";
-import { DEFAULT_GEMINI_API_KEY, resetAllApiKeys, getNextApiKey } from "@/lib/gemini/apiKeyManager";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useCallback, useEffect } from "react";
+import { ImageData } from "@/types/ImageData";
+import { useGeminiProcessing } from "./useGeminiProcessing";
+import { useStorage, STORAGE_BUCKETS } from "./useStorage";
+import { calculateImageHash, readImageFile } from "@/utils/fileReader";
+import { isDuplicateImage, markImageAsProcessed, loadProcessedHashesFromStorage } from "@/utils/duplicateDetection";
 import { toast } from "sonner";
 
-export const useImageProcessing = () => {
-  const coreProcessing = useImageProcessingCore();
-  const { toast } = useToast();
+interface UseImageProcessingProps {
+  updateImage: (id: string, data: Partial<ImageData>) => void;
+  saveImage: (image: ImageData) => Promise<void>;
+  allImages: ImageData[];
+}
 
-  // يجب أن تكون جميع hooks مستدعاة في كل مرة يتم فيها استدعاء الـ hook بنفس الترتيب
-  const [autoExportEnabled, setAutoExportEnabled] = useState<boolean>(
-    localStorage.getItem('autoExportEnabled') === 'true'
-  );
+export const useImageProcessing = ({ updateImage, saveImage, allImages }: UseImageProcessingProps) => {
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [currentlyProcessingId, setCurrentlyProcessingId] = useState<string | null>(null);
+  const { processWithGemini } = useGeminiProcessing();
+  const { uploadFile } = useStorage();
   
-  const [defaultSheetId, setDefaultSheetId] = useState<string>(
-    localStorage.getItem('defaultSheetId') || ''
-  );
-  
-  // التأكد من تعيين مفتاح Gemini عند بدء التشغيل وإعادة تعيين جميع المفاتيح
+  // تحميل هاشات الصور المعالجة عند التهيئة
   useEffect(() => {
-    // إعادة تعيين جميع المفاتيح عند بدء التطبيق
-    resetAllApiKeys();
-    console.log("تم إعادة تعيين جميع مفاتيح API عند بدء التطبيق");
+    loadProcessedHashesFromStorage();
+  }, []);
+
+  // معالجة صورة واحدة
+  const processImage = useCallback(async (image: ImageData): Promise<ImageData> => {
+    try {
+      console.log(`بدء معالجة الصورة: ${image.id}`);
+      
+      // تحقق مما إذا كانت الصورة قد تمت معالجتها بالفعل
+      if (image.processed) {
+        console.log(`تم تخطي الصورة ${image.id} لأنها تمت معالجتها بالفعل`);
+        return image;
+      }
+      
+      // تحقق من التكرار قبل المعالجة
+      const isDuplicate = await isDuplicateImage(image, allImages);
+      if (isDuplicate) {
+        console.log(`تم تخطي الصورة ${image.id} لأنها مكررة`);
+        return {
+          ...image,
+          status: "completed" as "completed",
+          processed: true,
+          error: "تم تخطي المعالجة لأن الصورة مكررة"
+        };
+      }
+      
+      // تحديث حالة الصورة إلى "جاري المعالجة"
+      updateImage(image.id, {
+        status: "processing",
+        extractedText: "جاري استخراج النص من الصورة...",
+        processingAttempts: (image.processingAttempts || 0) + 1
+      });
+      
+      setIsProcessing(true);
+      setCurrentlyProcessingId(image.id);
+      
+      // التحقق من وجود الملف
+      if (!image.file) {
+        throw new Error("ملف الصورة غير متاح");
+      }
+      
+      // حساب هاش الصورة إذا لم يكن موجوداً
+      if (!image.imageHash) {
+        image.imageHash = await calculateImageHash(image.file);
+      }
+      
+      // رفع الصورة إلى التخزين إذا كان هناك مستخدم مسجل
+      let storageUrl = null;
+      const user = await supabase.auth.getUser();
+      
+      if (user.data.user) {
+        const userId = user.data.user.id;
+        const timestamp = Date.now();
+        const fileExt = image.file.name.split('.').pop();
+        const filePath = `${userId}/${image.id}_${timestamp}.${fileExt}`;
+        
+        storageUrl = await uploadFile(image.file, STORAGE_BUCKETS.IMAGES, filePath);
+        if (storageUrl) {
+          updateImage(image.id, {
+            storage_path: filePath
+          });
+        }
+      }
+      
+      // معالجة الصورة باستخدام Gemini
+      let processedImage = await processWithGemini(image.file, image);
+      
+      // تضمين معلومات التخزين في النتيجة
+      if (storageUrl) {
+        processedImage.storage_path = storageUrl;
+      }
+      
+      // وضع علامة على الصورة بأنها تمت معالجتها
+      processedImage.processed = true;
+      processedImage.processingAttempts = (image.processingAttempts || 0) + 1;
+      
+      // إضافة الهاش إلى كاش الصور المعالجة
+      if (processedImage.imageHash) {
+        markImageAsProcessed(processedImage.imageHash);
+      }
+      
+      // تحديث الواجهة بالبيانات المستخرجة
+      updateImage(image.id, {
+        status: processedImage.status,
+        code: processedImage.code,
+        senderName: processedImage.senderName,
+        phoneNumber: processedImage.phoneNumber,
+        province: processedImage.province,
+        price: processedImage.price,
+        companyName: processedImage.companyName,
+        extractedText: processedImage.extractedText,
+        confidence: processedImage.confidence,
+        processed: true,
+        storage_path: processedImage.storage_path
+      });
+      
+      // حفظ البيانات في قاعدة البيانات
+      try {
+        await saveImage(processedImage);
+      } catch (saveError) {
+        console.error(`خطأ في حفظ الصورة ${image.id}:`, saveError);
+      }
+      
+      console.log(`تمت معالجة الصورة ${image.id} بنجاح`);
+      return processedImage;
+      
+    } catch (error) {
+      console.error(`خطأ في معالجة الصورة ${image.id}:`, error);
+      
+      updateImage(image.id, {
+        status: "error",
+        error: error.message || "خطأ غير معروف",
+        extractedText: `فشل المعالجة: ${error.message || "خطأ غير معروف"}`
+      });
+      
+      return {
+        ...image,
+        status: "error" as "error",
+        error: error.message || "خطأ غير معروف"
+      };
+    } finally {
+      setIsProcessing(false);
+      setCurrentlyProcessingId(null);
+    }
+  }, [updateImage, saveImage, allImages, processWithGemini, uploadFile]);
+
+  // معالجة مجموعة من الصور
+  const processMultipleImages = useCallback(async (images: ImageData[]): Promise<void> => {
+    if (images.length === 0) return;
     
-    // أولوية استخدام المفتاح المخصص إذا كان متاحاً
-    const useCustomKey = localStorage.getItem('use_custom_gemini_api_key') === 'true';
-    const customKey = localStorage.getItem('custom_gemini_api_key');
-    
-    if (useCustomKey && customKey && customKey.length > 20) {
-      console.log("استخدام مفتاح API مخصص من المستخدم");
-    } else {
-      // تعيين المفتاح الافتراضي إذا لم يكن هناك مفتاح مخصص
-      console.log("تم تعيين مفتاح Gemini API الافتراضي عند بدء التطبيق");
+    const imagesToProcess = images.filter(img => !img.processed);
+    if (imagesToProcess.length === 0) {
+      console.log("لا توجد صور جديدة للمعالجة");
+      toast.info("لا توجد صور جديدة للمعالجة");
+      return;
     }
     
-    // محاولة معالجة الصور العالقة في حالة "قيد الانتظار"
-    if (coreProcessing.images && coreProcessing.images.length > 0) {
-      const pendingImages = coreProcessing.images.filter(img => img.status === "pending" || img.status === "processing");
-      
-      if (pendingImages.length > 0) {
-        console.log(`تم العثور على ${pendingImages.length} صورة في انتظار المعالجة، سيتم محاولة إعادة معالجتها...`);
-        
-        // محاولة إعادة التشغيل تلقائيًا بعد قليل
-        setTimeout(() => {
-          if (coreProcessing.retryProcessing) {
-            coreProcessing.retryProcessing();
-            toast({
-              title: "إعادة المعالجة",
-              description: `تم العثور على ${pendingImages.length} صورة في انتظار المعالجة، وتمت محاولة إعادة معالجتها تلقائيًا`,
-            });
-          }
-        }, 3000); // انتظار 3 ثوانٍ قبل محاولة المعالجة
+    toast.info(`جاري معالجة ${imagesToProcess.length} صور...`, {
+      duration: 3000
+    });
+    
+    for (const image of imagesToProcess) {
+      try {
+        await processImage(image);
+        // إضافة تأخير بين المعالجات لتجنب تجاوز حدود API
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } catch (error) {
+        console.error(`خطأ في معالجة الصورة ${image.id}:`, error);
       }
     }
-  }, [coreProcessing.images]);
-  
-  // حفظ تفضيلات المستخدم في التخزين المحلي
-  useEffect(() => {
-    localStorage.setItem('autoExportEnabled', autoExportEnabled.toString());
-  }, [autoExportEnabled]);
-  
-  // حفظ معرف جدول البيانات الافتراضي
-  useEffect(() => {
-    if (defaultSheetId) {
-      localStorage.setItem('defaultSheetId', defaultSheetId);
-    }
-  }, [defaultSheetId]);
-  
-  // تفعيل/تعطيل التصدير التلقائي
-  const toggleAutoExport = (value: boolean) => {
-    setAutoExportEnabled(value);
-  };
-  
-  // تعيين جدول البيانات الافتراضي
-  const setDefaultSheet = (sheetId: string) => {
-    setDefaultSheetId(sheetId);
-  };
-  
-  // يمكن إعادة تشغيل عملية المعالجة عندما تتوقف
-  const retryProcessing = useCallback(() => {
-    // التأكد من استخدام مفتاح صالح
-    const apiKey = getNextApiKey();
-    if (!apiKey || apiKey.length < 10) {
-      toast({
-        title: "خطأ في المفتاح",
-        description: "لم يتم العثور على مفتاح API صالح. يرجى التحقق من إعدادات المفتاح.",
-        variant: "destructive"
-      });
-      return false;
-    }
     
-    // إعادة تعيين جميع مفاتيح API قبل إعادة التشغيل
-    resetAllApiKeys();
-    console.log("تم إعادة تعيين جميع مفاتيح API قبل إعادة المحاولة");
-    
-    if (coreProcessing.retryProcessing) {
-      console.log("إعادة تشغيل عملية معالجة الصور...");
-      coreProcessing.retryProcessing();
-      
-      // عرض إشعار للمستخدم
-      toast({
-        title: "إعادة تشغيل",
-        description: "تم إعادة تشغيل المعالجة للصور في قائمة الانتظار",
-      });
-      
-      return true;
-    }
-    return false;
-  }, [coreProcessing.retryProcessing, toast]);
-  
-  // وظيفة لحفظ صورة معالجة مباشرة (مفيدة لإعادة المعالجة)
-  const saveProcessedImage = useCallback(async (image) => {
-    if (!coreProcessing.saveProcessedImage) {
-      throw new Error("وظيفة حفظ الصور المعالجة غير متوفرة");
-    }
-    
-    try {
-      // عرض إشعار بدء المعالجة
-      toast({
-        title: "جاري المعالجة",
-        description: "جاري معالجة الصورة...",
-      });
-      
-      // استدعاء وظيفة الحفظ الأساسية
-      await coreProcessing.saveProcessedImage(image);
-      
-      // عرض إشعار نجاح
-      toast({
-        title: "تمت المعالجة",
-        description: "تم معالجة الصورة وحفظها بنجاح",
-      });
-      
-      return true;
-    } catch (error) {
-      console.error("خطأ في معالجة الصورة:", error);
-      
-      // عرض إشعار فشل
-      toast({
-        title: "فشل المعالجة",
-        description: "حدث خطأ أثناء معالجة الصورة",
-        variant: "destructive"
-      });
-      
-      throw error;
-    }
-  }, [coreProcessing.saveProcessedImage, toast]);
-  
+    toast.success(`تمت معالجة ${imagesToProcess.length} صور`);
+  }, [processImage]);
+
   return {
-    ...coreProcessing,
-    formatDate,
-    autoExportEnabled,
-    defaultSheetId,
-    toggleAutoExport,
-    setDefaultSheet,
-    // تصدير وظائف إضافية إلى الواجهة
-    runCleanupNow: coreProcessing.runCleanupNow,
-    isDuplicateImage: coreProcessing.isDuplicateImage,
-    clearImageCache: coreProcessing.clearImageCache,
-    retryProcessing,
-    pauseProcessing: coreProcessing.pauseProcessing,
-    clearQueue: coreProcessing.clearQueue,
-    activeUploads: coreProcessing.activeUploads || 0,
-    queueLength: coreProcessing.queueLength || 0,
-    useGemini: coreProcessing.useGemini || false,
-    saveProcessedImage: saveProcessedImage
+    processImage,
+    processMultipleImages,
+    isProcessing,
+    currentlyProcessingId
   };
 };
