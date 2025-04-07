@@ -10,7 +10,8 @@ import BookmarkletDashboard from '@/components/BookmarkletDashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Loader, AlertCircle, Upload } from 'lucide-react';
+import { Loader, AlertCircle, Upload, BroomIcon } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
   const {
@@ -29,7 +30,11 @@ const Index = () => {
     runCleanupNow,
     activeUploads,
     queueLength,
-    bookmarkletStats = { total: 0, ready: 0, success: 0, error: 0 } // قيمة افتراضية
+    bookmarkletStats = { total: 0, ready: 0, success: 0, error: 0 },
+    // وظائف جديدة لتنظيف الذاكرة المؤقتة
+    clearProcessedHashesCache,
+    cleanupOldData,
+    resetCaches
   } = useImageProcessing();
 
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -76,6 +81,15 @@ const Index = () => {
       runCleanupNow(user.id);
     }
   };
+  
+  // تنظيف جميع ذاكرات التخزين المؤقت للصور المعالجة
+  const handleCleanCaches = () => {
+    resetCaches();
+    toast({
+      title: "تم تنظيف الذاكرة المؤقتة",
+      description: "تم مسح جميع سجلات الصور المعالجة من الذاكرة المؤقتة"
+    });
+  };
 
   return (
     <div className="container mx-auto py-6">
@@ -86,6 +100,20 @@ const Index = () => {
       />
       
       <BookmarkletDashboard bookmarkletStats={bookmarkletStats} />
+      
+      <div className="mb-6 flex justify-between items-center">
+        <h2 className="text-xl font-semibold">أدوات إضافية</h2>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCleanCaches}
+          className="flex items-center gap-1"
+        >
+          <BroomIcon className="w-4 h-4" />
+          تنظيف ذاكرة التخزين المؤقت
+        </Button>
+      </div>
       
       <ProcessingIndicator 
         isProcessing={isProcessing}

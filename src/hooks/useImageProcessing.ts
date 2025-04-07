@@ -5,50 +5,50 @@ import { useState, useEffect, useCallback } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useDuplicateDetection } from "./useDuplicateDetection";
 
+// المفتاح الموحد للتخزين المحلي
+const AUTO_EXPORT_KEY = 'autoExportEnabled';
+const DEFAULT_SHEET_ID_KEY = 'defaultSheetId';
+
 export const useImageProcessing = () => {
   const coreProcessing = useImageProcessingCore();
   
   // دوال وحالات إضافية
   const [autoExportEnabled, setAutoExportEnabled] = useState<boolean>(
-    localStorage.getItem('autoExportEnabled') === 'true'
+    localStorage.getItem(AUTO_EXPORT_KEY) === 'true'
   );
   
   const [defaultSheetId, setDefaultSheetId] = useState<string>(
-    localStorage.getItem('defaultSheetId') || ''
+    localStorage.getItem(DEFAULT_SHEET_ID_KEY) || ''
   );
   
   // تحسين استخدام وظيفة اكتشاف التكرار مع خيارات موسعة
-  const { 
-    isDuplicateImage, 
-    clearProcessedHashesCache, 
-    markImageAsProcessed,
-    isFullyProcessed,
-    addToProcessedCache,
-    cleanupOldData
-  } = useDuplicateDetection();
+  const duplicateDetection = useDuplicateDetection({ 
+    enabled: true,
+    ignoreTemporary: false // نفحص جميع الصور بما في ذلك المؤقتة
+  });
   
-  // حفظ تفضيلات المستخدم في التخزين المحلي
+  // حفظ تفضيلات المستخدم في التخزين المحلي الموحد
   useEffect(() => {
-    localStorage.setItem('autoExportEnabled', autoExportEnabled.toString());
+    localStorage.setItem(AUTO_EXPORT_KEY, autoExportEnabled.toString());
   }, [autoExportEnabled]);
   
   // حفظ معرف جدول البيانات الافتراضي
   useEffect(() => {
     if (defaultSheetId) {
-      localStorage.setItem('defaultSheetId', defaultSheetId);
+      localStorage.setItem(DEFAULT_SHEET_ID_KEY, defaultSheetId);
     }
   }, [defaultSheetId]);
   
   // إضافة تنظيف دوري للبيانات القديمة
   useEffect(() => {
     // تنظيف البيانات القديمة عند بدء التشغيل
-    cleanupOldData();
+    duplicateDetection.cleanupOldData();
     
     // تنظيف دوري كل 24 ساعة
-    const cleanupInterval = setInterval(cleanupOldData, 24 * 60 * 60 * 1000);
+    const cleanupInterval = setInterval(duplicateDetection.cleanupOldData, 24 * 60 * 60 * 1000);
     
     return () => clearInterval(cleanupInterval);
-  }, [cleanupOldData]);
+  }, [duplicateDetection.cleanupOldData]);
   
   // تفعيل/تعطيل التصدير التلقائي
   const toggleAutoExport = (value: boolean) => {
@@ -69,8 +69,8 @@ export const useImageProcessing = () => {
     
     console.log(`تسجيل الصورة ${image.id} (${image.file?.name || 'بدون اسم ملف'}) كمعالجة`);
     
-    // تسجيل الصورة كمعالجة بغض النظر عن حالتها (نجاح أو فشل)
-    markImageAsProcessed(image);
+    // تسجيل الصورة كمعالجة في نظام اكتشاف التكرار الموحد
+    duplicateDetection.markImageAsProcessed(image);
     
     // تحسين توثيق الإضافة
     if (image.status === "completed") {
@@ -82,12 +82,12 @@ export const useImageProcessing = () => {
     }
     
     return true;
-  }, [markImageAsProcessed]);
+  }, [duplicateDetection]);
 
-  // وظيفة لمعالجة صورة واحدة مع اكتشاف التكرار محسن - تم تعديلها لمنع إعادة المعالجة
+  // وظيفة لمعالجة صورة واحدة - آلية منع إعادة المعالجة
   const processImage = async (image: ImageData): Promise<ImageData> => {
     try {
-      // تسجيل الصورة كمعالجة مهما كانت النتيجة
+      // تسجيل الصورة كمعالجة قبل أي شيء
       trackProcessedImage(image);
       
       // وضع علامة عليها كمكتملة المعالجة لمنع محاولة إعادة المعالجة
@@ -124,14 +124,14 @@ export const useImageProcessing = () => {
   // وظيفة لمعالجة مجموعة من الصور مع تجاهل المكررات والمكتملة
   const processMultipleImages = async (images: ImageData[]): Promise<void> => {
     for (const image of images) {
-      // وضع علامة على كل الصور كمعالجة
+      // تسجيل كل الصور مباشرة كمعالجة
       trackProcessedImage(image);
     }
   };
   
-  // إضافة وظيفة محسنة لاكتشاف التكرار
+  // إضافة وظيفة للتحقق من تكرار الصور
   const checkForDuplicate = (image: ImageData, images: ImageData[]): boolean => {
-    return isDuplicateImage(image, images);
+    return duplicateDetection.isDuplicateImage(image, images);
   };
 
   return {
@@ -145,10 +145,11 @@ export const useImageProcessing = () => {
     processImage,
     processMultipleImages,
     isDuplicateImage: checkForDuplicate,
-    clearProcessedHashesCache,
+    clearProcessedHashesCache: duplicateDetection.clearProcessedHashesCache,
     trackProcessedImage,
-    isFullyProcessed,
-    // إضافة وظائف جديدة
-    cleanupOldData
+    isFullyProcessed: duplicateDetection.isFullyProcessed,
+    // إضافة وظائف التنظيف
+    cleanupOldData: duplicateDetection.cleanupOldData,
+    resetCaches: duplicateDetection.resetLocalStorage
   };
 };

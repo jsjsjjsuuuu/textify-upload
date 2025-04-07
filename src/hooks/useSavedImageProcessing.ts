@@ -2,8 +2,12 @@
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useImageDatabase } from "./useImageDatabase";
+import { useDuplicateDetection } from "./useDuplicateDetection";
+
+// المفتاح الموحد للتخزين المحلي
+const PROCESSED_SAVED_IMAGES_KEY = 'processedUnifiedSavedImages';
 
 export const useSavedImageProcessing = (
   updateImage: (id: string, fields: Partial<ImageData>) => void, 
@@ -14,55 +18,83 @@ export const useSavedImageProcessing = (
   const { user } = useAuth();
   
   const { saveImageToDatabase, loadUserImages } = useImageDatabase(updateImage);
+  const duplicateDetection = useDuplicateDetection({ enabled: true });
   
-  // وظيفة مساعدة للتسجيل في التخزين المحلي
-  const markImageAsProcessedInStorage = (imageId: string) => {
+  // وظيفة مساعدة للتسجيل في نظام التخزين الموحد
+  const markImageAsSaved = useCallback((imageId: string) => {
     try {
       // الحصول على القائمة الحالية
-      const currentIds = localStorage.getItem('processedImageIds') || '[]';
+      const currentIds = localStorage.getItem(PROCESSED_SAVED_IMAGES_KEY) || '[]';
       let idsArray = JSON.parse(currentIds);
       
       // إضافة المعرف إذا لم يكن موجودًا بالفعل
       if (!idsArray.includes(imageId)) {
         idsArray.push(imageId);
-        localStorage.setItem('processedImageIds', JSON.stringify(idsArray));
-        console.log(`تم تسجيل الصورة ${imageId} في التخزين المحلي كمعالجة`);
+        localStorage.setItem(PROCESSED_SAVED_IMAGES_KEY, JSON.stringify(idsArray));
+        console.log(`تم تسجيل الصورة ${imageId} في التخزين الموحد كمحفوظة`);
       }
     } catch (error) {
-      console.error('خطأ في تسجيل الصورة في التخزين المحلي:', error);
+      console.error('خطأ في تسجيل الصورة في التخزين الموحد:', error);
     }
-  };
+  }, []);
   
-  // وظيفة حفظ الصورة المعالجة عند النقر على زر الإرسال - تم تعطيل إعادة المعالجة
+  // التحقق مما إذا كانت الصورة محفوظة بالفعل
+  const isImageAlreadySaved = useCallback((imageId: string): boolean => {
+    try {
+      const savedIds = localStorage.getItem(PROCESSED_SAVED_IMAGES_KEY) || '[]';
+      const idsArray = JSON.parse(savedIds);
+      return idsArray.includes(imageId);
+    } catch (error) {
+      console.error('خطأ في التحقق من حالة حفظ الصورة:', error);
+      return false;
+    }
+  }, []);
+  
+  // وظيفة حفظ الصورة المعالجة عند النقر على زر الإرسال
   const saveProcessedImage = async (image: ImageData): Promise<void> => {
-    // تسجيل الصورة كمعالجة بغض النظر عن نتيجة الحفظ
-    markImageAsProcessedInStorage(image.id);
+    // تسجيل الصورة في نظام اكتشاف التكرار
+    duplicateDetection.markImageAsProcessed(image);
+    
+    // التحقق مما إذا كانت الصورة محفوظة بالفعل
+    if (isImageAlreadySaved(image.id)) {
+      console.log(`الصورة ${image.id} محفوظة بالفعل، تخطي الحفظ المتكرر`);
+      toast({
+        title: "تم الحفظ مسبقًا",
+        description: "تم حفظ هذه الصورة بالفعل"
+      });
+      return;
+    }
     
     if (!user) {
       console.log("المستخدم غير مسجل الدخول، لا يمكن حفظ الصورة");
+      toast({
+        title: "غير مسجل الدخول",
+        description: "يجب تسجيل الدخول لحفظ البيانات",
+        variant: "destructive"
+      });
       return;
     }
 
-    // التحقق من أن الصورة مكتملة المعالجة وتحتوي على البيانات الأساسية
+    // التحقق من أن الصورة تحتوي على البيانات الأساسية
     if (image.code && image.senderName && image.phoneNumber) {
       console.log("حفظ الصورة في قاعدة البيانات بواسطة زر الإرسال:", image.id);
       
       try {
         setIsSubmitting(true);
-        // حفظ البيانات في قاعدة البيانات - تمرير الصورة فقط
+        // حفظ البيانات في قاعدة البيانات
         const savedData = await saveImageToDatabase(image);
         
         if (savedData) {
+          // تسجيل الصورة كمحفوظة في التخزين الموحد
+          markImageAsSaved(image.id);
+          
           // تحديث الصورة بمعلومات أنها تم حفظها
           updateImage(image.id, { 
             submitted: true,
-            // نضيف أيضًا تحديث حالة الصورة إلى مكتملة
             status: "completed"
           });
-          console.log("تم حفظ الصورة بنجاح في قاعدة البيانات:", image.id);
           
-          // إضافة تسجيل إضافي في التخزين المحلي بعد الحفظ الناجح
-          markImageAsProcessedInStorage(image.id);
+          console.log("تم حفظ الصورة بنجاح في قاعدة البيانات:", image.id);
           
           // إعادة تحميل الصور بعد الحفظ
           if (user) {
@@ -80,7 +112,7 @@ export const useSavedImageProcessing = (
         // تحديث حالة الصورة لتعكس أنها لم يتم حفظها بنجاح
         updateImage(image.id, { 
           error: "حدث خطأ أثناء محاولة حفظ البيانات",
-          status: "error" // تأكيد تحديث الحالة إلى خطأ
+          status: "error"
         });
         
         toast({
@@ -100,7 +132,7 @@ export const useSavedImageProcessing = (
       // تحديث حالة الصورة لتعكس أن البيانات غير مكتملة
       updateImage(image.id, { 
         error: "البيانات غير مكتملة",
-        status: "error" // تحديث الحالة إلى خطأ
+        status: "error"
       });
       
       toast({
@@ -118,6 +150,7 @@ export const useSavedImageProcessing = (
     isSubmitting,
     setIsSubmitting,
     saveProcessedImage,
-    markImageAsProcessedInStorage // تصدير الوظيفة المساعدة للاستخدام الخارجي
+    markImageAsSaved,
+    isImageAlreadySaved
   };
 };

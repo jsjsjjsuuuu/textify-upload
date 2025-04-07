@@ -20,6 +20,11 @@ interface StoredImageData {
   dateProcessed: number;
 }
 
+// المفتاح الموحد للتخزين المؤقت - استخدام مفتاح واحد عبر التطبيق بأكمله
+const PROCESSED_IMAGES_STORAGE_KEY = 'processedUnifiedImageData';
+const PROCESSED_IDS_STORAGE_KEY = 'processedUnifiedImageIds';
+const PROCESSED_HASHES_STORAGE_KEY = 'processedUnifiedImageHashes';
+
 export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}) => {
   const { enabled = true, ignoreTemporary = true } = options;
   const [processedHashes, setProcessedHashes] = useState<Set<string>>(new Set());
@@ -50,29 +55,32 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
   // استعادة بيانات الصور المعالجة من التخزين المحلي عند بدء التشغيل
   useEffect(() => {
     try {
-      // استرجاع معرفات الصور المعالجة
-      const storedProcessedIds = localStorage.getItem('processedImageIds');
+      // استرجاع معرفات الصور المعالجة (موحدة)
+      const storedProcessedIds = localStorage.getItem(PROCESSED_IDS_STORAGE_KEY);
       if (storedProcessedIds) {
         const idsArray = JSON.parse(storedProcessedIds);
         setProcessedIds(new Set(idsArray));
-        console.log(`تم تحميل ${idsArray.length} معرف صورة معالجة من التخزين المحلي`);
+        console.log(`تم تحميل ${idsArray.length} معرف صورة معالجة من التخزين المحلي (موحد)`);
       }
       
-      // استرجاع تجزئات الصور المعالجة
-      const storedProcessedHashes = localStorage.getItem('processedImageHashes');
+      // استرجاع تجزئات الصور المعالجة (موحدة)
+      const storedProcessedHashes = localStorage.getItem(PROCESSED_HASHES_STORAGE_KEY);
       if (storedProcessedHashes) {
         const hashesArray = JSON.parse(storedProcessedHashes);
         setProcessedHashes(new Set(hashesArray));
-        console.log(`تم تحميل ${hashesArray.length} تجزئة صورة معالجة من التخزين المحلي`);
+        console.log(`تم تحميل ${hashesArray.length} تجزئة صورة معالجة من التخزين المحلي (موحدة)`);
       }
       
-      // استرجاع بيانات الصور المعالجة
-      const storedImageData = localStorage.getItem('processedImageData');
+      // استرجاع بيانات الصور المعالجة (موحدة)
+      const storedImageData = localStorage.getItem(PROCESSED_IMAGES_STORAGE_KEY);
       if (storedImageData) {
         const imageDataArray = JSON.parse(storedImageData);
         setProcessedImageData(imageDataArray);
-        console.log(`تم تحميل بيانات ${imageDataArray.length} صورة معالجة من التخزين المحلي`);
+        console.log(`تم تحميل بيانات ${imageDataArray.length} صورة معالجة من التخزين المحلي (موحدة)`);
       }
+      
+      // دمج البيانات من المفاتيح القديمة للتوافق مع الإصدارات السابقة
+      mergeOldStorageData();
       
       // تنظيف البيانات القديمة (أكثر من 7 أيام)
       cleanupOldData();
@@ -84,15 +92,97 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
     }
   }, []);
 
+  // دمج بيانات التخزين القديمة مع البيانات الموحدة
+  const mergeOldStorageData = useCallback(() => {
+    try {
+      // استرجاع البيانات من المفاتيح القديمة
+      const oldIds = localStorage.getItem('processedImageIds');
+      const oldHashes = localStorage.getItem('processedImageHashes');
+      const oldData = localStorage.getItem('processedImageData');
+      const oldSessionIds = localStorage.getItem('processedSessionImageIds');
+      
+      // دمج المعرفات
+      if (oldIds) {
+        const oldIdsArray = JSON.parse(oldIds);
+        setProcessedIds(prev => {
+          const newSet = new Set(prev);
+          oldIdsArray.forEach((id: string) => newSet.add(id));
+          return newSet;
+        });
+      }
+      
+      if (oldSessionIds) {
+        const oldSessionIdsArray = JSON.parse(oldSessionIds);
+        setProcessedIds(prev => {
+          const newSet = new Set(prev);
+          oldSessionIdsArray.forEach((id: string) => newSet.add(id));
+          return newSet;
+        });
+      }
+      
+      // دمج التجزئات
+      if (oldHashes) {
+        const oldHashesArray = JSON.parse(oldHashes);
+        setProcessedHashes(prev => {
+          const newSet = new Set(prev);
+          oldHashesArray.forEach((hash: string) => newSet.add(hash));
+          return newSet;
+        });
+      }
+      
+      // دمج بيانات الصور
+      if (oldData) {
+        const oldDataArray = JSON.parse(oldData) as StoredImageData[];
+        setProcessedImageData(prev => {
+          // فحص التكرار قبل الإضافة
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = oldDataArray.filter(item => !existingIds.has(item.id));
+          return [...prev, ...newItems];
+        });
+      }
+      
+      // حفظ البيانات المدمجة
+      saveToLocalStorage();
+      
+      // حذف البيانات القديمة بعد دمجها
+      localStorage.removeItem('processedImageIds');
+      localStorage.removeItem('processedImageHashes');
+      localStorage.removeItem('processedImageData');
+      localStorage.removeItem('processedSessionImageIds');
+      
+      console.log('تم دمج بيانات التخزين القديمة مع البيانات الموحدة');
+    } catch (error) {
+      console.error('خطأ أثناء دمج بيانات التخزين القديمة:', error);
+    }
+  }, []);
+
   // إعادة تعيين التخزين المحلي
   const resetLocalStorage = useCallback(() => {
+    localStorage.removeItem(PROCESSED_IDS_STORAGE_KEY);
+    localStorage.removeItem(PROCESSED_HASHES_STORAGE_KEY);
+    localStorage.removeItem(PROCESSED_IMAGES_STORAGE_KEY);
+    // حذف المفاتيح القديمة أيضًا
     localStorage.removeItem('processedImageIds');
     localStorage.removeItem('processedImageHashes');
     localStorage.removeItem('processedImageData');
+    localStorage.removeItem('processedSessionImageIds');
+    
     setProcessedIds(new Set());
     setProcessedHashes(new Set());
     setProcessedImageData([]);
   }, []);
+
+  // حفظ البيانات في التخزين المحلي
+  const saveToLocalStorage = useCallback(() => {
+    try {
+      // حفظ البيانات الموحدة
+      localStorage.setItem(PROCESSED_IDS_STORAGE_KEY, JSON.stringify([...processedIds]));
+      localStorage.setItem(PROCESSED_HASHES_STORAGE_KEY, JSON.stringify([...processedHashes]));
+      localStorage.setItem(PROCESSED_IMAGES_STORAGE_KEY, JSON.stringify(processedImageData));
+    } catch (error) {
+      console.error('خطأ في حفظ البيانات الموحدة في التخزين المحلي:', error);
+    }
+  }, [processedIds, processedHashes, processedImageData]);
 
   // تنظيف البيانات القديمة (أكثر من 7 أيام)
   const cleanupOldData = useCallback(() => {
@@ -100,52 +190,31 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
       const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
       
       // تنظيف بيانات الصور المعالجة
-      const storedImageData = localStorage.getItem('processedImageData');
-      if (storedImageData) {
-        const imageDataArray: StoredImageData[] = JSON.parse(storedImageData);
-        const filteredImageData = imageDataArray.filter(data => data.dateProcessed > oneWeekAgo);
+      const filteredImageData = processedImageData.filter(data => data.dateProcessed > oneWeekAgo);
+      
+      if (filteredImageData.length < processedImageData.length) {
+        console.log(`تم حذف ${processedImageData.length - filteredImageData.length} سجل قديم من بيانات الصور المعالجة`);
+        setProcessedImageData(filteredImageData);
         
-        if (filteredImageData.length < imageDataArray.length) {
-          console.log(`تم حذف ${imageDataArray.length - filteredImageData.length} سجل قديم من بيانات الصور المعالجة`);
-          localStorage.setItem('processedImageData', JSON.stringify(filteredImageData));
-          setProcessedImageData(filteredImageData);
-          
-          // أيضًا تحديث مجموعات المعرفات والتجزئات
-          const newIds = new Set(filteredImageData.map(data => data.id));
-          const newHashes = new Set(filteredImageData.map(data => data.hash).filter(Boolean));
-          
-          localStorage.setItem('processedImageIds', JSON.stringify([...newIds]));
-          localStorage.setItem('processedImageHashes', JSON.stringify([...newHashes]));
-          
-          setProcessedIds(newIds);
-          setProcessedHashes(newHashes);
-        }
+        // أيضًا تحديث مجموعات المعرفات والتجزئات
+        const newIds = new Set(filteredImageData.map(data => data.id));
+        const newHashes = new Set(filteredImageData.map(data => data.hash).filter(Boolean));
+        
+        setProcessedIds(newIds);
+        setProcessedHashes(newHashes);
+        
+        // حفظ البيانات المحدثة
+        saveToLocalStorage();
       }
     } catch (error) {
       console.error('خطأ في تنظيف البيانات القديمة:', error);
     }
-  }, []);
+  }, [processedImageData, saveToLocalStorage]);
 
   // حفظ بيانات الصور المعالجة في التخزين المحلي عند التغيير
   useEffect(() => {
-    try {
-      // حفظ بيانات الصور المعالجة
-      if (processedImageData.length > 0) {
-        localStorage.setItem('processedImageData', JSON.stringify(processedImageData));
-      }
-      
-      // حفظ مجموعات المعرفات والتجزئات
-      if (processedIds.size > 0) {
-        localStorage.setItem('processedImageIds', JSON.stringify([...processedIds]));
-      }
-      
-      if (processedHashes.size > 0) {
-        localStorage.setItem('processedImageHashes', JSON.stringify([...processedHashes]));
-      }
-    } catch (error) {
-      console.error('خطأ في حفظ بيانات الصور المعالجة في التخزين المحلي:', error);
-    }
-  }, [processedIds, processedHashes, processedImageData]);
+    saveToLocalStorage();
+  }, [processedIds, processedHashes, processedImageData, saveToLocalStorage]);
 
   // إضافة صورة إلى الذاكرة المؤقتة للصور المعالجة
   const addToProcessedCache = useCallback((image: ImageData) => {
@@ -201,60 +270,12 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
         }
       });
       
-      // حفظ مباشر إلى التخزين المحلي لتجنب فقدان البيانات
-      try {
-        // حفظ المعرف
-        const currentIds = localStorage.getItem('processedImageIds');
-        let idsArray: string[] = currentIds ? JSON.parse(currentIds) : [];
-        if (!idsArray.includes(image.id)) {
-          idsArray.push(image.id);
-          localStorage.setItem('processedImageIds', JSON.stringify(idsArray));
-        }
-        
-        // حفظ التجزئة
-        if (image.file) {
-          const imageHash = createUniqueImageHash(image);
-          const currentHashes = localStorage.getItem('processedImageHashes');
-          let hashesArray: string[] = currentHashes ? JSON.parse(currentHashes) : [];
-          if (!hashesArray.includes(imageHash)) {
-            hashesArray.push(imageHash);
-            localStorage.setItem('processedImageHashes', JSON.stringify(hashesArray));
-          }
-        }
-        
-        // حفظ البيانات المختصرة
-        const currentImageData = localStorage.getItem('processedImageData');
-        let imageDataArray: StoredImageData[] = currentImageData ? JSON.parse(currentImageData) : [];
-        
-        // التحقق مما إذا كانت الصورة موجودة بالفعل
-        const existingIndex = imageDataArray.findIndex(item => item.id === image.id);
-        
-        const newImageData: StoredImageData = {
-          id: image.id,
-          fileName: image.file?.name,
-          fileSize: image.file?.size,
-          hash: image.file ? createUniqueImageHash(image) : undefined,
-          status: image.status,
-          dateProcessed: Date.now()
-        };
-        
-        if (existingIndex >= 0) {
-          // تحديث البيانات الموجودة
-          imageDataArray[existingIndex] = newImageData;
-        } else {
-          // إضافة بيانات جديدة
-          imageDataArray.push(newImageData);
-        }
-        
-        localStorage.setItem('processedImageData', JSON.stringify(imageDataArray));
-        
-      } catch (storageError) {
-        console.error('خطأ في الحفظ المباشر للتخزين المحلي:', storageError);
-      }
+      // الحفظ مباشرة في localStorage عند إضافة صورة جديدة - منع تأخير الحفظ
+      setTimeout(saveToLocalStorage, 0);
     } catch (error) {
       console.error('خطأ في إضافة الصورة إلى ذاكرة التخزين المؤقت:', error);
     }
-  }, [createUniqueImageHash]);
+  }, [createUniqueImageHash, saveToLocalStorage]);
 
   // التحقق من تكرار الصورة - تحسين المنطق بإضافة التحقق من البيانات المختصرة
   const isDuplicateImage = useCallback((image: ImageData, images: ImageData[] = []): boolean => {
@@ -440,6 +461,9 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
     markImageAsProcessed,
     isFullyProcessed: isFullyProcessedImage,
     addToProcessedCache,
-    cleanupOldData
+    cleanupOldData,
+    // إضافة وظائف جديدة
+    resetLocalStorage,
+    saveToLocalStorage
   };
 };
