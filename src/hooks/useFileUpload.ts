@@ -53,7 +53,7 @@ export const useFileUpload = ({
   const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
   const [currentProcessingIndex, setCurrentProcessingIndex] = useState<number>(-1);
   const [lastProcessedImageTime, setLastProcessedImageTime] = useState<number>(0); // تتبع وقت آخر معالجة
-  const [processedFileSignatures, setProcessedFileSignatures = useState<Set<string>>(new Set()); // تتبع توقيعات الملفات المعالجة
+  const [processedFileSignatures, setProcessedFileSignatures] = useState<Set<string>>(new Set()); // تتبع توقيعات الملفات المعالجة
   const { toast } = useToast();
   const { user } = useAuth();
   
