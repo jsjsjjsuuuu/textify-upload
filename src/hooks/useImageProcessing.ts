@@ -93,7 +93,7 @@ export const useImageProcessing = () => {
       // وضع علامة عليها كمكتملة المعالجة لمنع محاولة إعادة المعالجة
       const updatedImage = {
         ...image,
-        status: image.status === "error" ? "error" : "completed"
+        status: image.status === "error" ? "error" as const : "completed" as const
       };
       
       // تحديث الصورة في القائمة
