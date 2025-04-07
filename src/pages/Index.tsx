@@ -10,7 +10,7 @@ import BookmarkletDashboard from '@/components/BookmarkletDashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Loader, AlertCircle, Upload, BroomIcon } from 'lucide-react';
+import { Loader, AlertCircle, Upload, Broom } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
@@ -110,7 +110,7 @@ const Index = () => {
           onClick={handleCleanCaches}
           className="flex items-center gap-1"
         >
-          <BroomIcon className="w-4 h-4" />
+          <Broom className="w-4 h-4" />
           تنظيف ذاكرة التخزين المؤقت
         </Button>
       </div>

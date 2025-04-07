@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -54,7 +53,7 @@ export const useFileUpload = ({
   const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
   const [currentProcessingIndex, setCurrentProcessingIndex] = useState<number>(-1);
   const [lastProcessedImageTime, setLastProcessedImageTime] = useState<number>(0); // تتبع وقت آخر معالجة
-  const [processedFileSignatures, setProcessedFileSignatures] = useState<Set<string>>(new Set()); // تتبع توقيعات الملفات المعالجة
+  const [processedFileSignatures, setProcessedFileSignatures = useState<Set<string>>(new Set()); // تتبع توقيعات الملفات المعالجة
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -350,7 +349,7 @@ export const useFileUpload = ({
         toast({
           title: "ملفات مكررة",
           description: "جميع الملفات التي تم تحميلها تمت معالجتها من قبل",
-          variant: "warning",
+          variant: "destructive",
         });
         return;
       }
