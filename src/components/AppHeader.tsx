@@ -56,9 +56,9 @@ const AppHeader = () => {
               تحميل الصور
             </Link>
             <Link
-              to="/"
+              to="/records"
               className={`transition-colors hover:text-foreground/80 ${
-                pathname === "/" || pathname === "/records" ? "text-foreground font-bold" : "text-foreground/60"
+                pathname === "/records" ? "text-foreground font-bold" : "text-foreground/60"
               }`}
             >
               <Database className="h-4 w-4 inline-block ml-1" />

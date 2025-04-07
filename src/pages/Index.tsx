@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Loader, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import AppHeader from '@/components/AppHeader';
 
 const Index = () => {
   const {
@@ -66,42 +67,45 @@ const Index = () => {
   }
 
   return (
-    <div className="container mx-auto py-6">
-      {/* تم تعديل ترويسة لوحة التحكم لإزالة الأزرار غير المطلوبة */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">لوحة التحكم</h1>
-        <p className="text-muted-foreground">إدارة ومعالجة الصور والبيانات المستخرجة</p>
-      </div>
-      
-      {/* تم إزالة قسم BookmarkletDashboard */}
-      
-      <ProcessingIndicator 
-        isProcessing={isProcessing}
-        processingProgress={processingProgress}
-        activeUploads={activeUploads}
-        queueLength={queueLength}
-      />
-      
-      {!isProcessing && (
+    <div className="min-h-screen bg-background">
+      <AppHeader />
+      <div className="container mx-auto py-6">
+        {/* تم تعديل ترويسة لوحة التحكم لإزالة الأزرار غير المطلوبة */}
         <div className="mb-6">
-          <FileUploader 
-            onFilesSelected={handleFileChange}
-            isProcessing={isProcessing}
+          <h1 className="text-2xl font-bold">لوحة التحكم</h1>
+          <p className="text-muted-foreground">إدارة ومعالجة الصور والبيانات المستخرجة</p>
+        </div>
+        
+        {/* تم إزالة قسم BookmarkletDashboard */}
+        
+        <ProcessingIndicator 
+          isProcessing={isProcessing}
+          processingProgress={processingProgress}
+          activeUploads={activeUploads}
+          queueLength={queueLength}
+        />
+        
+        {!isProcessing && (
+          <div className="mb-6">
+            <FileUploader 
+              onFilesSelected={handleFileChange}
+              isProcessing={isProcessing}
+            />
+          </div>
+        )}
+        
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold mb-4">الصور المعالجة</h2>
+          
+          <ImagePreviewContainer
+            images={images}
+            isSubmitting={isSubmitting}
+            onTextChange={handleTextChange}
+            onDelete={handleDelete}
+            onSubmit={handleSubmitToApi}
+            formatDate={formatDate}
           />
         </div>
-      )}
-      
-      <div className="mb-10">
-        <h2 className="text-xl font-semibold mb-4">الصور المعالجة</h2>
-        
-        <ImagePreviewContainer
-          images={images}
-          isSubmitting={isSubmitting}
-          onTextChange={handleTextChange}
-          onDelete={handleDelete}
-          onSubmit={handleSubmitToApi}
-          formatDate={formatDate}
-        />
       </div>
     </div>
   );
