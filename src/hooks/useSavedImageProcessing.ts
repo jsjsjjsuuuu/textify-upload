@@ -33,7 +33,7 @@ export const useSavedImageProcessing = (
     }
   };
   
-  // وظيفة حفظ الصورة المعالجة عند النقر على زر الإرسال - تحسين التعامل مع الأخطاء
+  // وظيفة حفظ الصورة المعالجة عند النقر على زر الإرسال - تم تعطيل إعادة المعالجة
   const saveProcessedImage = async (image: ImageData): Promise<void> => {
     // تسجيل الصورة كمعالجة بغض النظر عن نتيجة الحفظ
     markImageAsProcessedInStorage(image.id);

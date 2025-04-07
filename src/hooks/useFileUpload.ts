@@ -634,25 +634,12 @@ export const useFileUpload = ({
     }
   }, [processingQueue, queueProcessing, images, addImage, updateImage, setProcessingProgress, updateProgress, removeDuplicates, markImageAsProcessedLocally]);
 
-  // وظيفة لإعادة تشغيل المعالجة يدويًا
+  // وظيفة لإعادة تشغيل المعالجة يدويًا - معطلة الآن
   const manuallyTriggerProcessingQueue = useCallback(() => {
-    console.log("تم استدعاء إعادة تشغيل المعالجة يدويًا");
-    
-    // تأكد من أن هناك صورًا في قائمة الانتظار
-    if (processingQueue.length === 0) {
-      console.log("لا توجد صور في قائمة الانتظار للمعالجة");
-      return;
-    }
-    
-    // إعادة تعيين حالة المعالجة
-    setQueueProcessing(false);
-    setCurrentProcessingIndex(-1);
-    
-    // استدعاء وظيفة معالجة القائمة بعد تأخير قصير
-    setTimeout(() => {
-      processQueue();
-    }, 500);
-  }, [processingQueue, processQueue]);
+    console.log("تم تعطيل وظيفة إعادة تشغيل المعالجة");
+    // لا تفعل شيئًا - الوظيفة معطلة
+    return;
+  }, []);
 
   // استخدام useEffect لبدء معالجة القائمة عندما تتغير
   useEffect(() => {
@@ -743,7 +730,7 @@ export const useFileUpload = ({
     handleFileChange,
     activeUploads,
     queueLength: processingQueue.length,
-    manuallyTriggerProcessingQueue,
+    manuallyTriggerProcessingQueue, // مرجع للوظيفة المعطلة
     // إضافة وظيفة جديدة لعمليات التنظيف
     cleanupDuplicates: () => {
       if (removeDuplicates && typeof removeDuplicates === 'function') {

@@ -1,14 +1,13 @@
 
-import { ImageOff, RefreshCw } from "lucide-react";
+import { ImageOff } from "lucide-react";
 
 interface ImageErrorDisplayProps {
-  onRetry?: () => void; // وظيفة إعادة المحاولة
   errorMessage?: string; // رسالة الخطأ
   retryCount?: number; // عدد محاولات إعادة التحميل
 }
 
-// مكون لعرض خطأ تحميل الصورة بشكل أكثر فائدة
-const ImageErrorDisplay = ({ onRetry, errorMessage, retryCount = 0 }: ImageErrorDisplayProps) => {
+// مكون لعرض خطأ تحميل الصورة بشكل أكثر فائدة - تمت إزالة وظيفة إعادة المحاولة
+const ImageErrorDisplay = ({ errorMessage, retryCount = 0 }: ImageErrorDisplayProps) => {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 bg-opacity-50 rounded-md p-4 text-center">
       <ImageOff className="h-20 w-20 text-gray-400 mb-4" />
@@ -29,16 +28,6 @@ const ImageErrorDisplay = ({ onRetry, errorMessage, retryCount = 0 }: ImageError
         <p className="text-xs text-amber-600 mb-2">
           عدد المحاولات السابقة: {retryCount}
         </p>
-      )}
-      
-      {onRetry && (
-        <button
-          onClick={onRetry}
-          className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
-        >
-          <RefreshCw className="h-4 w-4" />
-          إعادة المحاولة
-        </button>
       )}
     </div>
   );

@@ -29,7 +29,6 @@ const Index = () => {
     runCleanupNow,
     activeUploads,
     queueLength,
-    retryProcessing,
     bookmarkletStats = { total: 0, ready: 0, success: 0, error: 0 } // قيمة افتراضية
   } = useImageProcessing();
 
@@ -83,7 +82,6 @@ const Index = () => {
       <DashboardHeader 
         isProcessing={isProcessing}
         onClearSessionImages={clearSessionImages}
-        onRetryProcessing={retryProcessing}
         onRunCleanup={handleRunCleanup}
       />
       

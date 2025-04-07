@@ -3,10 +3,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ImagePreview from "@/components/ImagePreview/ImagePreview";
-import { Trash2, Save, SendHorizonal, RotateCcw, Filter, Loader, Image } from "lucide-react";
+import { Trash2, Save, SendHorizonal, Filter, Loader, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -16,7 +15,6 @@ interface ImagePreviewContainerProps {
   onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
   showOnlySession?: boolean;
-  onReprocess?: (id: string) => Promise<void>;
 }
 
 // تحديد الحد الأقصى لعدد الصور التي سيتم عرضها في كل مجموعة
@@ -29,18 +27,13 @@ const ImagePreviewContainer = ({
   onDelete,
   onSubmit,
   formatDate,
-  showOnlySession = false,
-  onReprocess
+  showOnlySession = false
 }: ImagePreviewContainerProps) => {
   const [activeImage, setActiveImage] = useState<ImageData | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [isReprocessing, setIsReprocessing] = useState(false);
   const { toast } = useToast();
-  
-  // للمعالجة المباشرة للصور
-  const { processWithGemini } = useGeminiProcessing();
   
   // تعيين أول صورة كصورة نشطة تلقائيًا عند التحميل أو عند تغيير الصور
   useEffect(() => {
@@ -152,71 +145,6 @@ const ImagePreviewContainer = ({
   const handleSubmit = () => {
     if (activeImage) {
       onSubmit(activeImage.id);
-    }
-  };
-  
-  // وظيفة لإعادة معالجة الصورة باستخدام Gemini
-  const handleReprocess = async () => {
-    if (!activeImage) return;
-    
-    if (onReprocess) {
-      // استخدام وظيفة إعادة المعالجة المقدمة من الخارج
-      try {
-        setIsReprocessing(true);
-        await onReprocess(activeImage.id);
-        toast({
-          title: "تمت إعادة المعالجة",
-          description: "تمت إعادة معالجة الصورة بنجاح"
-        });
-      } catch (error) {
-        console.error("خطأ في إعادة معالجة الصورة:", error);
-        toast({
-          title: "خطأ",
-          description: "حدث خطأ أثناء إعادة معالجة الصورة",
-          variant: "destructive"
-        });
-      } finally {
-        setIsReprocessing(false);
-      }
-    } else if (processWithGemini) {
-      // استخدام وظيفة المعالجة المباشرة
-      try {
-        setIsReprocessing(true);
-        
-        // تحديث حالة الصورة إلى "جاري المعالجة"
-        onTextChange(activeImage.id, "status", "processing");
-        
-        // إعادة معالجة الصورة
-        const processedImage = await processWithGemini(activeImage.file, activeImage);
-        
-        // تحديث بيانات الصورة بالبيانات الجديدة
-        for (const [key, value] of Object.entries(processedImage)) {
-          if (key !== "id" && key !== "file" && typeof value === "string") {
-            onTextChange(activeImage.id, key, value);
-          }
-        }
-        
-        // تحديث حالة الصورة
-        onTextChange(activeImage.id, "status", processedImage.status);
-        
-        toast({
-          title: "تمت إعادة المعالجة",
-          description: "تمت إعادة معالجة الصورة بنجاح"
-        });
-      } catch (error) {
-        console.error("خطأ في إعادة معالجة الصورة:", error);
-        
-        // تحديث حالة الصورة إلى "خطأ"
-        onTextChange(activeImage.id, "status", "error");
-        
-        toast({
-          title: "خطأ",
-          description: "حدث خطأ أثناء إعادة معالجة الصورة",
-          variant: "destructive"
-        });
-      } finally {
-        setIsReprocessing(false);
-      }
     }
   };
 
@@ -353,17 +281,6 @@ const ImagePreviewContainer = ({
               >
                 <Trash2 className="w-4 h-4 ml-1" />
                 حذف
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleReprocess}
-                disabled={isReprocessing || activeImage.status === "processing"}
-                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
-              >
-                <RotateCcw className={`w-4 h-4 ml-1 ${isReprocessing ? "animate-spin" : ""}`} />
-                إعادة معالجة
               </Button>
               
               {activeImage.status === "completed" && isImageComplete(activeImage) && !activeImage.submitted && !hasPhoneError(activeImage) && (

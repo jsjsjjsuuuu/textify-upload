@@ -84,98 +84,37 @@ export const useImageProcessing = () => {
     return true;
   }, [markImageAsProcessed]);
 
-  // وظيفة لمعالجة صورة واحدة مع اكتشاف التكرار محسن
+  // وظيفة لمعالجة صورة واحدة مع اكتشاف التكرار محسن - تم تعديلها لمنع إعادة المعالجة
   const processImage = async (image: ImageData): Promise<ImageData> => {
     try {
-      // التحقق بشكل أكثر دقة من اكتمال معالجة الصورة أولاً
-      if (isFullyProcessed(image)) {
-        console.log(`الصورة ${image.id} (${image.file?.name || 'بدون اسم ملف'}) مكتملة المعالجة بالفعل، تخطي المعالجة`);
-        return image;
+      // تسجيل الصورة كمعالجة مهما كانت النتيجة
+      trackProcessedImage(image);
+      
+      // وضع علامة عليها كمكتملة المعالجة لمنع محاولة إعادة المعالجة
+      const updatedImage = {
+        ...image,
+        status: image.status === "error" ? "error" : "completed"
+      };
+      
+      // تحديث الصورة في القائمة
+      const existingImageIndex = coreProcessing.images.findIndex(img => img.id === image.id);
+      if (existingImageIndex >= 0) {
+        // استخدام وظيفة updateImage من coreProcessing
+        coreProcessing.handleTextChange(image.id, "status", updatedImage.status);
       }
       
-      // التحقق بشكل أكثر دقة مما إذا كانت الصورة مكررة مع تحسين القدرة على اكتشاف التكرار
-      if (isDuplicateImage(image, coreProcessing.images)) {
-        console.log("تم اكتشاف صورة مكررة:", image.id, image.file?.name);
-        
-        // تسجيل الصورة كمعالجة رغم أنها مكررة للتأكد من عدم معالجتها مرة أخرى
-        trackProcessedImage(image);
-        
-        return {
-          ...image,
-          status: "error" as const,
-          error: "هذه الصورة مكررة وتم تخطيها"
-        };
-      }
-      
-      try {
-        console.log(`بدء معالجة الصورة: ${image.id} (${image.file?.name || 'بدون اسم ملف'})`);
-        
-        // تسجيل الصورة قبل المعالجة لتجنب المعالجة المتكررة
-        addToProcessedCache({
-          ...image,
-          status: "processing"
-        });
-        
-        // معالجة الصورة - معالجة القيمة الفارغة التي قد ترجعها saveProcessedImage
-        try {
-          await coreProcessing.saveProcessedImage(image);
-        } catch (saveError) {
-          console.error("خطأ في حفظ الصورة المعالجة:", saveError);
-          
-          // تحديث حالة الخطأ وتسجيل الصورة كمعالجة رغم الفشل
-          const errorImage = {
-            ...image,
-            status: "error" as const,
-            error: saveError.message || "فشل في معالجة الصورة"
-          };
-          
-          // تسجيل الصورة كمعالجة رغم الفشل
-          trackProcessedImage(errorImage);
-          
-          throw new Error(`فشل في معالجة الصورة: ${saveError.message || 'خطأ غير معروف'}`);
-        }
-        
-        // بعد المعالجة، نحاول العثور على الصورة المحدثة في القائمة
-        const updatedImage = coreProcessing.images.find(img => img.id === image.id);
-        
-        if (updatedImage) {
-          // تسجيل الصورة كمعالجة في جميع الحالات (نجاح أو فشل)
-          trackProcessedImage(updatedImage);
-          
-          console.log(`تم الانتهاء من معالجة الصورة ${image.id} بحالة: ${updatedImage.status}`);
-          return updatedImage;
-        }
-        
-        // إذا لم نتمكن من العثور على الصورة المحدثة، نسجل الصورة الأصلية كمعالجة
-        trackProcessedImage(image);
-        
-        // إرجاع الصورة الأصلية إذا لم نتمكن من العثور على نسخة محدثة
-        return image;
-      } catch (processingError) {
-        console.error("خطأ أثناء معالجة الصورة:", processingError);
-        
-        // تحديث الصورة بحالة الخطأ وتسجيلها كمعالجة لتجنب إعادة المحاولة
-        const errorImage = { 
-          ...image, 
-          status: "error" as const, 
-          error: processingError.message || "فشل في حفظ الصورة المعالجة" 
-        };
-        
-        // تسجيل الصورة كمعالجة حتى في حالة الخطأ لتجنب معالجتها مرة أخرى
-        trackProcessedImage(errorImage);
-        
-        return errorImage;
-      }
+      return updatedImage;
     } catch (error) {
-      console.error("خطأ عام في معالجة الصورة:", error);
+      console.error("خطأ في معالجة الصورة:", error);
       
+      // وضع علامة عليها كمكتملة المعالجة مع خطأ
       const errorImage = {
         ...image,
         status: "error" as const,
-        error: error.message || "حدث خطأ أثناء معالجة الصورة"
+        error: "تم تعطيل نظام إعادة المعالجة"
       };
       
-      // تسجيل الصورة كمعالجة حتى في حالة الخطأ العام
+      // تسجيلها كمعالجة
       trackProcessedImage(errorImage);
       
       return errorImage;
@@ -185,16 +124,8 @@ export const useImageProcessing = () => {
   // وظيفة لمعالجة مجموعة من الصور مع تجاهل المكررات والمكتملة
   const processMultipleImages = async (images: ImageData[]): Promise<void> => {
     for (const image of images) {
-      // فحص إضافي للتأكد من أن الصورة لم تتم معالجتها أو أنها مكررة
-      if (isFullyProcessed(image) || isDuplicateImage(image, coreProcessing.images)) {
-        console.log(`تخطي الصورة المكررة أو المكتملة المعالجة: ${image.id} (${image.file?.name || 'بدون اسم ملف'})`);
-        
-        // تسجيل الصورة كمعالجة للتأكد من عدم معالجتها في المستقبل
-        trackProcessedImage(image);
-        continue;
-      }
-      
-      await processImage(image);
+      // وضع علامة على كل الصور كمعالجة
+      trackProcessedImage(image);
     }
   };
   
