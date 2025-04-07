@@ -8,7 +8,7 @@ export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Avoid hydration mismatch by only rendering after mount
+  // تجنب مشكلة عدم تطابق الـ hydration عن طريق عرض المكون فقط بعد التحميل
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -21,7 +21,7 @@ export function ThemeToggle() {
       size="icon"
       className="rounded-full"
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      aria-label="Toggle theme"
+      aria-label="تبديل السمة"
     >
       {theme === "dark" ? (
         <Sun className="h-5 w-5" />
