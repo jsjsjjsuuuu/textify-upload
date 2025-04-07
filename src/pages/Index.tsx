@@ -5,12 +5,10 @@ import { ImageData } from '@/types/ImageData';
 import FileUploader from '@/components/FileUploader';
 import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
 import ProcessingIndicator from '@/components/ProcessingIndicator';
-import DashboardHeader from '@/components/DashboardHeader';
-import BookmarkletDashboard from '@/components/BookmarkletDashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Loader, AlertCircle, Upload, Trash } from 'lucide-react';
+import { Loader, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
@@ -25,16 +23,8 @@ const Index = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     formatDate,
-    clearSessionImages,
-    loadUserImages,
-    runCleanupNow,
     activeUploads,
     queueLength,
-    bookmarkletStats = { total: 0, ready: 0, success: 0, error: 0 },
-    // وظائف جديدة لتنظيف الذاكرة المؤقتة
-    clearProcessedHashesCache,
-    cleanupOldData,
-    resetCaches
   } = useImageProcessing();
 
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -42,7 +32,7 @@ const Index = () => {
   // إعادة تحميل صور المستخدم عند تغيير المستخدم
   useEffect(() => {
     if (user && !isAuthLoading) {
-      loadUserImages();
+      // تم حذف loadUserImages() حيث أنه لم يعد مطلوباً بعد إزالة الأزرار المتعلقة بالسجلات
     }
   }, [user, isAuthLoading]);
 
@@ -75,45 +65,15 @@ const Index = () => {
     );
   }
 
-  // تنفيذ وظيفة تنظيف السجلات القديمة
-  const handleRunCleanup = () => {
-    if (user) {
-      runCleanupNow(user.id);
-    }
-  };
-  
-  // تنظيف جميع ذاكرات التخزين المؤقت للصور المعالجة
-  const handleCleanCaches = () => {
-    resetCaches();
-    toast({
-      title: "تم تنظيف الذاكرة المؤقتة",
-      description: "تم مسح جميع سجلات الصور المعالجة من الذاكرة المؤقتة"
-    });
-  };
-
   return (
     <div className="container mx-auto py-6">
-      <DashboardHeader 
-        isProcessing={isProcessing}
-        onClearSessionImages={clearSessionImages}
-        onRunCleanup={handleRunCleanup}
-      />
-      
-      <BookmarkletDashboard bookmarkletStats={bookmarkletStats} />
-      
-      <div className="mb-6 flex justify-between items-center">
-        <h2 className="text-xl font-semibold">أدوات إضافية</h2>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCleanCaches}
-          className="flex items-center gap-1"
-        >
-          <Trash className="w-4 h-4" />
-          تنظيف ذاكرة التخزين المؤقت
-        </Button>
+      {/* تم تعديل ترويسة لوحة التحكم لإزالة الأزرار غير المطلوبة */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">لوحة التحكم</h1>
+        <p className="text-muted-foreground">إدارة ومعالجة الصور والبيانات المستخرجة</p>
       </div>
+      
+      {/* تم إزالة قسم BookmarkletDashboard */}
       
       <ProcessingIndicator 
         isProcessing={isProcessing}

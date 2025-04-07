@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Moon, Sun, UserCog } from 'lucide-react';
+import { Moon, Sun, UserCog, Database, FileImage } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 const AppHeader = () => {
@@ -52,6 +52,7 @@ const AppHeader = () => {
               to="/upload"
               className={`transition-colors hover:text-foreground/80 ${pathname === "/upload" ? "text-foreground font-bold" : "text-foreground/60"}`}
             >
+              <FileImage className="h-4 w-4 inline-block ml-1" />
               تحميل الصور
             </Link>
             <Link
@@ -60,6 +61,7 @@ const AppHeader = () => {
                 pathname === "/" || pathname === "/records" ? "text-foreground font-bold" : "text-foreground/60"
               }`}
             >
+              <Database className="h-4 w-4 inline-block ml-1" />
               السجلات
             </Link>
             
