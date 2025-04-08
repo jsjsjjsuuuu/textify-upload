@@ -173,7 +173,7 @@ const Records = () => {
       description: `تم حذف ${successCount} صورة بنجاح${errorCount > 0 ? ` (فشل حذف ${errorCount} صورة)` : ''}`,
     });
     
-    // إعادة تحميل الصور
+    // إعادة تحميل الصور - مع تصحيح استدعاء وظيفة loadUserImages
     if (user) {
       setDataLoaded(false); // إعادة تعيين حالة التحميل لإعادة تحميل البيانات
       loadUserImages((loadedImages) => {
