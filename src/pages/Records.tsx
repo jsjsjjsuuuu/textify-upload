@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { motion } from "framer-motion";
@@ -36,8 +37,16 @@ const Records = () => {
     handleDelete,
     handleSubmitToApi,
     formatDate: formatImageDate,
-    loadUserImages,
+    // استخدام الوظيفة التي أضفناها
+    loadUserImages
   } = useImageProcessing();
+
+  // التأكد من أننا نقوم بتحميل الصور عند تحميل المكون
+  useEffect(() => {
+    if (user) {
+      loadUserImages();
+    }
+  }, [user, loadUserImages]);
 
   // التعامل مع حذف صورة
   const onDeleteImage = async (id: string) => {

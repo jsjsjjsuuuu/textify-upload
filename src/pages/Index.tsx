@@ -103,7 +103,12 @@ const Index = () => {
                 isSubmitting={isSubmitting} 
                 onTextChange={handleTextChange} 
                 onDelete={handleDelete} 
-                onSubmit={handleSubmitToApi} 
+                onSubmit={(id) => {
+                  const image = images.find(img => img.id === id);
+                  if (image && user) {
+                    handleSubmitToApi(id, image, user.id);
+                  }
+                }} 
                 formatDate={formatDate} 
               />
             </div>

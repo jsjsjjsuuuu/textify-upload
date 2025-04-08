@@ -37,10 +37,16 @@ const RecentRecords: React.FC = () => {
 
         if (data) {
           // تحويل البيانات المسترجعة إلى كائنات ImageData
-          const formattedRecords: ImageData[] = data.map((record, index) => {
+          const formattedRecords = data.map((record, index) => {
             const dummyFile = new File([], record.file_name || "image.jpg", { 
               type: "image/jpeg" 
             });
+            
+            // التأكد من أن status يتوافق مع النوع المحدد
+            let status: "pending" | "processing" | "completed" | "error" = "completed";
+            if (record.status === "pending") status = "pending";
+            else if (record.status === "processing") status = "processing";
+            else if (record.status === "error") status = "error";
             
             return {
               id: record.id,
@@ -54,13 +60,13 @@ const RecentRecords: React.FC = () => {
               price: record.price || "",
               companyName: record.company_name || "",
               date: new Date(record.created_at),
-              status: record.status || "completed",
+              status: status,
               submitted: record.submitted || false,
               user_id: record.user_id,
               storage_path: record.storage_path,
               batch_id: record.batch_id,
               number: index + 1
-            };
+            } as ImageData;
           });
           
           setRecords(formattedRecords);
