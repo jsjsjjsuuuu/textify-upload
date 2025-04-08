@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,16 +52,18 @@ const Records = () => {
   const [activeImage, setActiveImage] = useState<ImageData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false); // إضافة حالة جديدة لتتبع ما إذا تم تحميل البيانات بالفعل
   const itemsPerPage = 20;
   
-  // تحميل صور المستخدم عند تحميل الصفحة
+  // تحميل صور المستخدم عند تحميل الصفحة - مع تحسين لمنع التحميل المتكرر
   useEffect(() => {
-    if (user) {
+    if (user && !dataLoaded) {
       setIsLoading(true);
       // استدعاء loadUserImages والتأكد من تمرير وسيطة الإرجاع
       loadUserImages((loadedImages) => {
         console.log(`تم تحميل ${loadedImages.length} صورة للمستخدم`);
         setIsLoading(false);
+        setDataLoaded(true); // تعيين حالة التحميل إلى "تم" لمنع إعادة التحميل
         
         // التحقق من وجود معرف في عنوان URL
         const idParam = searchParams.get('id');
@@ -72,7 +75,7 @@ const Records = () => {
         }
       });
     }
-  }, [user, loadUserImages, searchParams]);
+  }, [user, loadUserImages, searchParams, dataLoaded]); // إضافة dataLoaded إلى مصفوفة التبعيات
 
   // تصفية الصور بناءً على معايير البحث
   useEffect(() => {
@@ -172,6 +175,7 @@ const Records = () => {
     
     // إعادة تحميل الصور
     if (user) {
+      setDataLoaded(false); // إعادة تعيين حالة التحميل لإعادة تحميل البيانات
       loadUserImages();
     }
   };
@@ -226,7 +230,7 @@ const Records = () => {
   if (isAuthLoading || isLoading) {
     return <div className="flex justify-center items-center h-screen">
       <Loader className="w-8 h-8 animate-spin" />
-      <span className="ml-2">جاري تحميل البيانات...</span>
+      <span className="mr-2">جاري تحميل البيانات...</span>
     </div>;
   }
 
