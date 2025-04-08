@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { ImageData } from '@/types/ImageData';
@@ -10,6 +11,9 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Loader, AlertCircle, Upload } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import AppHeader from '@/components/AppHeader';
+import RecentRecords from '@/components/RecentRecords';
+import DashboardHeader from '@/components/DashboardHeader';
+
 const Index = () => {
   const {
     images,
@@ -23,7 +27,12 @@ const Index = () => {
     saveImageToDatabase,
     formatDate,
     activeUploads,
-    queueLength
+    queueLength,
+    clearSessionImages,
+    retryProcessing,
+    pauseProcessing,
+    clearQueue,
+    runCleanup
   } = useImageProcessing();
   const {
     user,
@@ -60,24 +69,45 @@ const Index = () => {
       <AppHeader />
       
       <div className="container mx-auto py-8 px-4">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold mb-2">لوحة التحكم</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">إدارة ومعالجة الصور والبيانات المستخرجة</p>
-        </div>
+        <DashboardHeader 
+          isProcessing={isProcessing}
+          onClearSessionImages={clearSessionImages}
+          onRetryProcessing={retryProcessing}
+          onPauseProcessing={pauseProcessing}
+          onClearQueue={clearQueue}
+          onRunCleanup={user ? () => runCleanup(user.id) : undefined}
+        />
         
         <ProcessingIndicator isProcessing={isProcessing} processingProgress={processingProgress} activeUploads={activeUploads} queueLength={queueLength} />
         
-        {!isProcessing && <div className="mb-10 max-w-2xl mx-auto">
-            <div className="bg-card border rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
-              
-              <FileUploader onFilesSelected={handleFileChange} isProcessing={isProcessing} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+          <div className="lg:col-span-2">
+            {!isProcessing && (
+              <div className="mb-6">
+                <div className="bg-card border rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                  <FileUploader onFilesSelected={handleFileChange} isProcessing={isProcessing} />
+                </div>
+              </div>
+            )}
+            
+            <div className="mb-6">
+              <RecentRecords />
             </div>
-          </div>}
-        
-        <div className="mb-10">
-          <h2 className="text-2xl font-semibold mb-6 text-center">الصور المعالجة</h2>
+          </div>
           
-          <ImagePreviewContainer images={images} isSubmitting={isSubmitting} onTextChange={handleTextChange} onDelete={handleDelete} onSubmit={handleSubmitToApi} formatDate={formatDate} />
+          <div className="lg:col-span-1">
+            <div className="sticky top-20">
+              <h2 className="text-xl font-semibold mb-4">الصور المعالجة</h2>
+              <ImagePreviewContainer 
+                images={images} 
+                isSubmitting={isSubmitting} 
+                onTextChange={handleTextChange} 
+                onDelete={handleDelete} 
+                onSubmit={handleSubmitToApi} 
+                formatDate={formatDate} 
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>;

@@ -1,155 +1,271 @@
 
-import { formatDate } from "@/utils/dateFormatter";
-import { useImageProcessingCore } from "@/hooks/useImageProcessingCore";
-import { useState, useEffect, useCallback } from "react";
-import { ImageData } from "@/types/ImageData";
-import { useDuplicateDetection } from "./useDuplicateDetection";
+// تنبيه: لا تقم بتعديل هذا الملف مباشرة، استخدم المكتبات الموجودة مثل useImageDatabase.ts
 
-// المفتاح الموحد للتخزين المحلي
-const AUTO_EXPORT_KEY = 'autoExportEnabled';
-const DEFAULT_SHEET_ID_KEY = 'defaultSheetId';
+import { useEffect, useState, useCallback } from "react";
+import { v4 as uuidv4 } from "uuid";
+import { ImageData } from "@/types/ImageData";
+import { useAuth } from "@/contexts/AuthContext";
+import { useOcrProcessing } from "./useOcrProcessing";
+import { useGeminiProcessing } from "./useGeminiProcessing";
+import { useFileUpload } from "./useFileUpload";
+import { extractProvinceFromText } from "@/utils/provinceCorrection";
+import { extractPhoneNumber } from "@/utils/phoneNumberUtils";
+import { processExtractedText, parseExtractedTextWithGemini } from "@/utils/extractionUtils";
+import { formatDate } from "@/utils/dateFormatter";
+import { useImageDatabase } from "./useImageDatabase";
+import { useToast } from "./use-toast";
+import { useDuplicateDetection } from "./useDuplicateDetection";
+import { useDataExtraction } from "./useDataExtraction";
+import { useSavedImageProcessing } from "./useSavedImageProcessing";
+import { useImageState } from "./useImageState";
 
 export const useImageProcessing = () => {
-  const coreProcessing = useImageProcessingCore();
-  
-  // دوال وحالات إضافية
-  const [autoExportEnabled, setAutoExportEnabled] = useState<boolean>(
-    localStorage.getItem(AUTO_EXPORT_KEY) === 'true'
-  );
-  
-  const [defaultSheetId, setDefaultSheetId] = useState<string>(
-    localStorage.getItem(DEFAULT_SHEET_ID_KEY) || ''
-  );
-  
-  // تحسين استخدام وظيفة اكتشاف التكرار مع خيارات موسعة
-  const duplicateDetection = useDuplicateDetection({ 
-    enabled: true,
-    ignoreTemporary: false // نفحص جميع الصور بما في ذلك المؤقتة
-  });
-  
-  // حفظ تفضيلات المستخدم في التخزين المحلي الموحد
-  useEffect(() => {
-    localStorage.setItem(AUTO_EXPORT_KEY, autoExportEnabled.toString());
-  }, [autoExportEnabled]);
-  
-  // حفظ معرف جدول البيانات الافتراضي
-  useEffect(() => {
-    if (defaultSheetId) {
-      localStorage.setItem(DEFAULT_SHEET_ID_KEY, defaultSheetId);
-    }
-  }, [defaultSheetId]);
-  
-  // إضافة تنظيف دوري للبيانات القديمة
-  useEffect(() => {
-    // تنظيف البيانات القديمة عند بدء التشغيل
-    duplicateDetection.cleanupOldData();
-    
-    // تنظيف دوري كل 24 ساعة
-    const cleanupInterval = setInterval(duplicateDetection.cleanupOldData, 24 * 60 * 60 * 1000);
-    
-    return () => clearInterval(cleanupInterval);
-  }, [duplicateDetection.cleanupOldData]);
-  
-  // تفعيل/تعطيل التصدير التلقائي
-  const toggleAutoExport = (value: boolean) => {
-    setAutoExportEnabled(value);
-  };
-  
-  // تعيين جدول البيانات الافتراضي
-  const setDefaultSheet = (sheetId: string) => {
-    setDefaultSheetId(sheetId);
-  };
-  
-  // وظيفة محسنة لتسجيل الصور المعالجة مع تحسين التوثيق
-  const trackProcessedImage = useCallback((image: ImageData) => {
-    if (!image || !image.id) {
-      console.error("محاولة تسجيل صورة غير صالحة");
-      return false;
-    }
-    
-    console.log(`تسجيل الصورة ${image.id} (${image.file?.name || 'بدون اسم ملف'}) كمعالجة`);
-    
-    // تسجيل الصورة كمعالجة في نظام اكتشاف التكرار الموحد
-    duplicateDetection.markImageAsProcessed(image);
-    
-    // تحسين توثيق الإضافة
-    if (image.status === "completed") {
-      console.log(`نجاح: الصورة ${image.id} تمت معالجتها وتسجيلها كمكتملة`);
-    } else if (image.status === "error") {
-      console.log(`خطأ: الصورة ${image.id} تمت معالجتها وتسجيلها مع خطأ: ${image.error || 'خطأ غير محدد'}`);
-    } else {
-      console.log(`الصورة ${image.id} تمت معالجتها وتسجيلها بحالة: ${image.status || 'غير محدد'}`);
-    }
-    
-    return true;
-  }, [duplicateDetection]);
+  // إعادة تصدير دالة formatDate لاستخدامها في المكونات
+  const formatDateFn = formatDate;
 
-  // وظيفة لمعالجة صورة واحدة - آلية منع إعادة المعالجة
-  const processImage = async (image: ImageData): Promise<ImageData> => {
+  // توابع المعالجة الرئيسية من الهوكس الخاصة
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  // استيراد الهوكس
+  const { images, setImages, updateImage, removeImage, addImage, clearImages } = useImageState();
+  const { processImages } = useOcrProcessing();
+  const { processWithGemini } = useGeminiProcessing();
+  const { uploadImage } = useFileUpload();
+  
+  // حالة معالجة الصور
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
+  const [activeUploads, setActiveUploads] = useState(0);
+  const [queueLength, setQueueLength] = useState(0);
+  const [imageQueue, setImageQueue] = useState<File[]>([]);
+  
+  // استيراد هوك قاعدة البيانات مع تمرير دالة updateImage
+  const { loadUserImages, saveImageToDatabase, handleSubmitToApi, deleteImageFromDatabase, runCleanupNow } = useImageDatabase(updateImage);
+  
+  // هوك كشف التكرارات
+  const { isDuplicate } = useDuplicateDetection(images);
+  
+  // معالجة النصوص المستخرجة
+  const { extractDataFromText } = useDataExtraction();
+
+  // تحميل الصور السابقة
+  useEffect(() => {
+    if (user) {
+      loadUserImages(user.id, (loadedImages) => {
+        // إضافة الصور المحملة للصور الحالية
+        const updatedImages = [...loadedImages];
+        setImages(updatedImages);
+      });
+    }
+  }, [user]);
+
+  // معالجة ملف واحد من القائمة
+  const processNextFile = useCallback(async () => {
+    if (imageQueue.length === 0 || isPaused) {
+      // تم الانتهاء من معالجة الصور أو تم إيقاف المعالجة مؤقتًا
+      setIsProcessing(false);
+      setProcessingProgress(100);
+      setActiveUploads(0);
+      return;
+    }
+
+    // أخذ أول ملف من القائمة
+    const file = imageQueue[0];
+    setImageQueue((prevQueue) => prevQueue.slice(1)); // إزالة الملف من القائمة
+    setActiveUploads(1); // تحديث عدد الملفات قيد المعالجة
+
+    // تحقق من التكرار
+    if (isDuplicate(file)) {
+      console.log("تم اكتشاف ملف مكرر:", file.name);
+      toast({
+        title: "ملف مكرر",
+        description: `تم تجاهل "${file.name}" لأنه موجود بالفعل`,
+        variant: "destructive"
+      });
+      
+      // المعالجة التالية
+      processNextFile();
+      return;
+    }
+
     try {
-      // تسجيل الصورة كمعالجة قبل أي شيء
-      trackProcessedImage(image);
-      
-      // وضع علامة عليها كمكتملة المعالجة لمنع محاولة إعادة المعالجة
-      const updatedImage = {
-        ...image,
-        status: image.status === "error" ? "error" as const : "completed" as const
+      // إنشاء معرّف فريد للصورة
+      const id = uuidv4();
+      const batchId = uuidv4(); // يمكن استخدامه لتجميع الصور المرتبطة
+
+      // تهيئة كائن الصورة
+      const imageData: ImageData = {
+        id,
+        file,
+        previewUrl: URL.createObjectURL(file),
+        date: new Date(),
+        status: "pending",
+        user_id: user?.id,
+        batch_id: batchId
       };
-      
-      // تحديث الصورة في القائمة
-      const existingImageIndex = coreProcessing.images.findIndex(img => img.id === image.id);
-      if (existingImageIndex >= 0) {
-        // استخدام وظيفة updateImage من coreProcessing
-        coreProcessing.handleTextChange(image.id, "status", updatedImage.status);
+
+      // إضافة الصورة إلى القائمة
+      addImage(imageData);
+
+      // معالجة الصورة باستخدام OCR
+      updateImage(id, { status: "processing" });
+      const extractedText = await processImages(file);
+
+      // تحميل الصورة إلى التخزين إذا كان هناك مستخدم
+      let storagePath = null;
+      if (user) {
+        storagePath = `images/${user.id}/${id}-${file.name}`;
+        await uploadImage(file, storagePath);
       }
+
+      // التعرف على النص باستخدام OCR
+      if (!extractedText) {
+        throw new Error("لم يتم استخراج أي نص من الصورة");
+      }
+
+      // استخراج البيانات من النص المستخرج
+      const parsedData = extractDataFromText(extractedText);
       
-      return updatedImage;
+      // تحديث الصورة بالنص المستخرج والبيانات المحللة
+      updateImage(id, { 
+        extractedText,
+        status: "completed",
+        senderName: parsedData.senderName,
+        phoneNumber: parsedData.phoneNumber,
+        province: parsedData.province,
+        price: parsedData.price,
+        companyName: parsedData.companyName,
+        code: parsedData.code,
+        storage_path: storagePath,
+      });
+
+      // حفظ في قاعدة البيانات إذا كان هناك مستخدم
+      if (user && extractedText) {
+        const updatedImageData = images.find((img) => img.id === id);
+        if (updatedImageData) {
+          await saveImageToDatabase(updatedImageData);
+        }
+      }
     } catch (error) {
-      console.error("خطأ في معالجة الصورة:", error);
+      console.error("Error processing image:", error);
+    } finally {
+      // تحديث التقدم
+      const progress = Math.min(100, ((queueLength - imageQueue.length) / queueLength) * 100);
+      setProcessingProgress(progress);
       
-      // وضع علامة عليها كمكتملة المعالجة مع خطأ
-      const errorImage = {
-        ...image,
-        status: "error" as const,
-        error: "تم تعطيل نظام إعادة المعالجة"
-      };
-      
-      // تسجيلها كمعالجة
-      trackProcessedImage(errorImage);
-      
-      return errorImage;
+      // معالجة الملف التالي
+      processNextFile();
+    }
+  }, [imageQueue, isPaused, user, images]);
+
+  // بدء معالجة الصور عندما تتغير قائمة الانتظار
+  useEffect(() => {
+    if (imageQueue.length > 0 && !isProcessing && !isPaused) {
+      setIsProcessing(true);
+      processNextFile();
+    }
+    
+    // تحديث عدد الملفات في قائمة الانتظار
+    setQueueLength(imageQueue.length);
+  }, [imageQueue, isProcessing, isPaused]);
+
+  // إعادة تصدير بعض الدوال المفيدة
+  const handleFileChange = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    setImageQueue((prev) => [...prev, ...fileArray]);
+    setQueueLength((prev) => prev + fileArray.length);
+    setProcessingProgress(0);
+  };
+
+  const handleTextChange = (id: string, field: keyof ImageData, value: string) => {
+    updateImage(id, { [field]: value });
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      if (user) {
+        await deleteImageFromDatabase(id);
+      }
+      removeImage(id);
+    } catch (error) {
+      console.error("Error deleting image:", error);
     }
   };
 
-  // وظيفة لمعالجة مجموعة من الصور مع تجاهل المكررات والمكتملة
-  const processMultipleImages = async (images: ImageData[]): Promise<void> => {
-    for (const image of images) {
-      // تسجيل كل الصور مباشرة كمعالجة
-      trackProcessedImage(image);
+  const pauseProcessing = () => {
+    setIsPaused(true);
+    toast({
+      title: "تم إيقاف المعالجة",
+      description: "تم إيقاف معالجة الصور مؤقتًا. يمكنك استئناف المعالجة في أي وقت."
+    });
+  };
+
+  const retryProcessing = () => {
+    setIsPaused(false);
+    if (imageQueue.length > 0) {
+      setIsProcessing(true);
+      processNextFile();
     }
   };
-  
-  // إضافة وظيفة للتحقق من تكرار الصور
-  const checkForDuplicate = (image: ImageData, images: ImageData[]): boolean => {
-    return duplicateDetection.isDuplicateImage(image, images);
+
+  const clearQueue = () => {
+    setImageQueue([]);
+    setQueueLength(0);
+    setIsProcessing(false);
+    toast({
+      title: "تم مسح قائمة الانتظار",
+      description: "تم مسح قائمة انتظار معالجة الصور بنجاح."
+    });
+  };
+
+  const clearSessionImages = () => {
+    // حذف الصور المؤقتة التي لم يتم حفظها في قاعدة البيانات
+    const tempImages = images.filter(img => img.sessionImage || !img.user_id);
+    tempImages.forEach(img => {
+      URL.revokeObjectURL(img.previewUrl);
+    });
+    
+    // تحديث قائمة الصور
+    const permanentImages = images.filter(img => !img.sessionImage && img.user_id);
+    setImages(permanentImages);
+    
+    toast({
+      title: "تم مسح الصور المؤقتة",
+      description: "تم مسح الصور المؤقتة من الجلسة الحالية."
+    });
+  };
+
+  const runCleanup = (userId: string) => {
+    if (userId) {
+      runCleanupNow(userId);
+    }
   };
 
   return {
-    ...coreProcessing,
-    formatDate,
-    autoExportEnabled,
-    defaultSheetId,
-    toggleAutoExport,
-    setDefaultSheet,
-    runCleanupNow: coreProcessing.runCleanupNow,
-    processImage,
-    processMultipleImages,
-    isDuplicateImage: checkForDuplicate,
-    clearProcessedHashesCache: duplicateDetection.clearProcessedHashesCache,
-    trackProcessedImage,
-    isFullyProcessed: duplicateDetection.isFullyProcessed,
-    // إضافة وظائف التنظيف
-    cleanupOldData: duplicateDetection.cleanupOldData,
-    resetCaches: duplicateDetection.resetLocalStorage
+    // البيانات
+    images,
+    // الحالة
+    isProcessing,
+    processingProgress,
+    isPaused,
+    isSubmitting,
+    activeUploads,
+    queueLength,
+    // الدوال
+    handleFileChange,
+    handleTextChange,
+    handleDelete,
+    handleSubmitToApi,
+    saveImageToDatabase,
+    formatDate: formatDateFn,
+    // إضافة الدوال الجديدة
+    clearSessionImages,
+    retryProcessing,
+    pauseProcessing,
+    clearQueue,
+    runCleanup
   };
 };

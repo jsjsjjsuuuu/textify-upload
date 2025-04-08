@@ -93,3 +93,12 @@
   }
 }
 
+@layer utilities {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border shadow-sm;
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+}
