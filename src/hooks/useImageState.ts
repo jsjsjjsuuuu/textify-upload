@@ -27,6 +27,11 @@ export const useImageState = () => {
     );
   }, []);
 
+  // تحديث بيانات النص
+  const handleTextChange = useCallback((id: string, field: string, value: string) => {
+    updateImage(id, { [field]: value } as any);
+  }, [updateImage]);
+
   // حذف صورة
   const deleteImage = useCallback((id: string) => {
     setImages(prev => prev.filter(img => img.id !== id));
@@ -110,6 +115,7 @@ export const useImageState = () => {
     clearSessionImages,
     setAllImages,
     addDatabaseImages,
-    removeDuplicates
+    removeDuplicates,
+    handleTextChange
   };
 };

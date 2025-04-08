@@ -30,11 +30,17 @@ export const useImageProcessing = () => {
     updateImage, 
     deleteImage, 
     addImage, 
-    clearSessionImages: clearImages 
+    clearSessionImages,
+    clearImages,
+    handleTextChange
   } = useImageState();
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
-  const { handleFileChange: fileUploadHandler } = useFileUpload();
+  const { handleFileChange: fileUploadHandler } = useFileUpload({
+    processWithOcr,
+    addImage,
+    updateImage
+  });
   
   // حالة معالجة الصور
   const [isProcessing, setIsProcessing] = useState(false);
@@ -175,10 +181,6 @@ export const useImageProcessing = () => {
     setProcessingProgress(0);
   };
 
-  const handleTextChange = (id: string, field: keyof ImageData, value: string) => {
-    updateImage(id, { [field]: value } as any);
-  };
-
   const handleDelete = async (id: string) => {
     try {
       if (user) {
@@ -199,14 +201,6 @@ export const useImageProcessing = () => {
   };
   
   // تنفيذ الوظائف الناقصة
-  const clearSessionImages = () => {
-    // حذف الصور المؤقتة فقط
-    toast({
-      title: "تم التنظيف",
-      description: "تم مسح جميع الصور المؤقتة من هذه الجلسة",
-    });
-  };
-  
   const retryProcessing = () => {
     // إعادة معالجة الصور التي فشلت
     toast({

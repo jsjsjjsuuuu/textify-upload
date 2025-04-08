@@ -111,7 +111,7 @@ export function useDuplicateDetector(options?: DuplicateDetectorOptions) {
         }
         
         // للمقارنة مع كائن File
-        if ('name' in input && 'size' in input) {
+        if (!('id' in input) && 'name' in input && 'size' in input) {
           return (
             input.name === existingImage.file.name && 
             input.size === existingImage.file.size

@@ -165,13 +165,12 @@ export const useImageProcessingCore = () => {
     queueLength,
     cleanupDuplicates
   } = useFileUpload({
-    images,
     addImage,
     updateImage,
     setProcessingProgress,
     saveProcessedImage,
     removeDuplicates,
-    processedImage: duplicateDetection // إضافة وظائف اكتشاف التكرار
+    duplicateDetection // إضافة وظائف اكتشاف التكرار
   });
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
@@ -199,11 +198,9 @@ export const useImageProcessingCore = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     saveProcessedImage,
-    loadUserImages: () => {
+    loadUserImages: (callback?: (images: ImageData[]) => void) => {
       if (user) {
-        loadUserImages(user.id, setAllImages);
-        // تنظيف السجلات القديمة أيضًا عند إعادة تحميل الصور يدويًا
-        cleanupOldRecords(user.id);
+        loadUserImages(user.id, callback || setAllImages);
       }
     },
     clearSessionImages,
@@ -212,7 +209,6 @@ export const useImageProcessingCore = () => {
     runCleanupNow,
     activeUploads,
     queueLength,
-    // إزالة وظيفة إعادة تشغيل المعالجة يدويًا
     // إضافة وظيفة تنظيف التكرارات
     cleanupDuplicates,
     // إضافة وظائف التعامل مع التكرار من useDuplicateDetection
