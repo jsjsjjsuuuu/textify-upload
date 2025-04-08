@@ -339,7 +339,7 @@ const Records = () => {
             {activeImage ? (
               <ImageDetailsPanel
                 image={activeImage}
-                onTextChange={handleTextChange}
+                onTextChange={(id, field, value) => handleTextChange(id, field, value)}
                 onSubmit={() => handleSubmitToApi(activeImage.id)}
                 onDelete={() => {
                   handleDelete(activeImage.id);

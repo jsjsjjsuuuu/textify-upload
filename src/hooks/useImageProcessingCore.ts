@@ -114,7 +114,7 @@ export const useImageProcessingCore = () => {
         updateImage(id, { submitted: true, status: "completed" });
         
         // تسجيل الصورة كمعالجة لتجنب إعادة المعالجة
-        duplicateDetection.markImageAsProcessed(image);
+        duplicateDetectionTools.markImageAsProcessed(image);
         
         // إعادة تحميل الصور من قاعدة البيانات للتأكد من التزامن
         if (user) {
@@ -213,6 +213,6 @@ export const useImageProcessingCore = () => {
     // إضافة وظيفة تنظيف التكرارات
     cleanupDuplicates,
     // إضافة وظائف التعامل مع التكرار من useDuplicateDetection
-    ...duplicateDetection
+    ...duplicateDetectionTools
   };
 };
