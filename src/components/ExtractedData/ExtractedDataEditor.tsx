@@ -9,7 +9,7 @@ import ExtractedDataFields from "./ExtractedDataFields";
 import AutomationButton from "./AutomationButton";
 import { useDataExtraction } from "@/hooks/useDataExtraction";
 import { motion } from "framer-motion";
-import { AlertCircle, CheckCircle } from "lucide-react";
+import DataCompletionIndicator from "./DataCompletionIndicator";
 
 interface ExtractedDataEditorProps {
   image: ImageData;
@@ -42,29 +42,6 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
     });
   }, [image.id, setTempData]);
 
-  // التحقق من اكتمال البيانات المطلوبة
-  const isAllDataComplete = useMemo(() => {
-    return !!(
-      image.code && 
-      image.senderName && 
-      image.phoneNumber && 
-      image.province && 
-      image.price
-    );
-  }, [image.code, image.senderName, image.phoneNumber, image.province, image.price]);
-
-  // التحقق من صحة رقم الهاتف
-  const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
-
-  // عرض نسبة الثقة بشكل أفضل
-  const confidenceDisplay = image.confidence ? (
-    <div className="mt-3 text-center">
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-        دقة الاستخراج {image.confidence}%
-      </span>
-    </div>
-  ) : null;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -82,25 +59,9 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
               onAutoExtract={handleAutoExtract}
               hasExtractedText={!!image.extractedText}
             />
-            
-            {/* عرض مؤشر حالة اكتمال البيانات */}
-            <div className="flex items-center gap-2">
-              {isAllDataComplete ? (
-                <div className="flex items-center text-green-600 text-xs">
-                  <CheckCircle size={14} className="ml-1" />
-                  <span>البيانات مكتملة</span>
-                </div>
-              ) : (
-                <div className="flex items-center text-amber-600 text-xs">
-                  <AlertCircle size={14} className="ml-1" />
-                  <span>البيانات غير مكتملة</span>
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* عرض مؤشر الثقة في الأعلى بدلاً من بجانب كل حقل */}
-          {confidenceDisplay}
+          <DataCompletionIndicator image={image} />
 
           <LearningNotifications 
             correctionsMade={correctionsMade} 
@@ -120,33 +81,6 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
               hideConfidence={true} // إخفاء عرض نسبة الثقة بجانب كل حقل
             />
           </motion.div>
-
-          {/* قسم يوضح الحقول المطلوب تعبئتها */}
-          <div className="mt-4 p-2 rounded-md bg-muted/50">
-            <h4 className="text-xs font-medium mb-1 text-center">الحقول المطلوبة للإرسال</h4>
-            <div className="grid grid-cols-2 gap-1 text-xs">
-              <div className={`flex items-center ${image.code ? 'text-green-600' : 'text-amber-600'}`}>
-                <span className="ml-1">{image.code ? '✓' : '•'}</span>
-                <span>الكود</span>
-              </div>
-              <div className={`flex items-center ${image.senderName ? 'text-green-600' : 'text-amber-600'}`}>
-                <span className="ml-1">{image.senderName ? '✓' : '•'}</span>
-                <span>اسم المرسل</span>
-              </div>
-              <div className={`flex items-center ${image.phoneNumber && isPhoneNumberValid ? 'text-green-600' : 'text-amber-600'}`}>
-                <span className="ml-1">{image.phoneNumber && isPhoneNumberValid ? '✓' : '•'}</span>
-                <span>رقم الهاتف</span>
-              </div>
-              <div className={`flex items-center ${image.province ? 'text-green-600' : 'text-amber-600'}`}>
-                <span className="ml-1">{image.province ? '✓' : '•'}</span>
-                <span>المحافظة</span>
-              </div>
-              <div className={`flex items-center ${image.price ? 'text-green-600' : 'text-amber-600'}`}>
-                <span className="ml-1">{image.price ? '✓' : '•'}</span>
-                <span>السعر</span>
-              </div>
-            </div>
-          </div>
 
           {/* إضافة قسم منفصل لزر الأتمتة ليكون أكثر بروزًا */}
           <div className="mt-6 flex justify-center">

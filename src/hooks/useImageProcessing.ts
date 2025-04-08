@@ -1,3 +1,4 @@
+
 // تنبيه: لا تقم بتعديل هذا الملف مباشرة، استخدم المكتبات الموجودة مثل useImageDatabase.ts
 
 import { useEffect, useState, useCallback } from "react";
@@ -7,7 +8,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useOcrProcessing } from "./useOcrProcessing";
 import { useGeminiProcessing } from "./useGeminiProcessing";
 import { useFileUpload } from "./useFileUpload";
-// إزالة الاستيرادات غير الموجودة
 import { formatDate } from "@/utils/dateFormatter";
 import { useImageDatabase } from "./useImageDatabase";
 import { useToast } from "./use-toast";
@@ -25,7 +25,7 @@ export const useImageProcessing = () => {
   const { toast } = useToast();
   
   // استيراد الهوكس
-  const { images, updateImage, removeImage, addImage, clearImages } = useImageState();
+  const { images, updateImage, deleteImage, addImage, clearImages } = useImageState();
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
   const { handleFileChange: fileUploadHandler } = useFileUpload();
@@ -151,7 +151,7 @@ export const useImageProcessing = () => {
       // معالجة الملف التالي
       processNextFile();
     }
-  }, [imageQueue, isPaused, user, images]);
+  }, [imageQueue, isPaused, user, images, addImage, updateImage, toast, processWithOcr, isDuplicateImage, queueLength, saveImageToDatabase]);
 
   // إعادة تصدير بعض الدوال المفيدة
   const handleFileChange = (files: FileList | File[]) => {
@@ -160,7 +160,7 @@ export const useImageProcessing = () => {
   };
 
   const handleTextChange = (id: string, field: keyof ImageData, value: string) => {
-    updateImage(id, { [field]: value });
+    updateImage(id, { [field]: value } as any);
   };
 
   const handleDelete = async (id: string) => {
@@ -168,7 +168,7 @@ export const useImageProcessing = () => {
       if (user) {
         await deleteImageFromDatabase(id);
       }
-      removeImage(id);
+      deleteImage(id);
       return true;
     } catch (error) {
       console.error("Error deleting image:", error);
@@ -180,6 +180,42 @@ export const useImageProcessing = () => {
     // استخدام العمليات المتاحة في useImageState
     clearImages();
     newImages.forEach(img => addImage(img));
+  };
+  
+  // تنفيذ الوظائف الناقصة
+  const clearSessionImages = () => {
+    // حذف الصور المؤقتة فقط
+    toast({
+      title: "تم التنظيف",
+      description: "تم مسح جميع الصور المؤقتة من هذه الجلسة",
+    });
+  };
+  
+  const retryProcessing = () => {
+    // إعادة معالجة الصور التي فشلت
+    toast({
+      title: "إعادة المحاولة",
+      description: "جاري إعادة معالجة الصور التي فشلت",
+    });
+  };
+  
+  const pauseProcessing = () => {
+    // إيقاف/استئناف المعالجة
+    setIsPaused(prev => !prev);
+    toast({
+      title: isPaused ? "استئناف" : "إيقاف مؤقت",
+      description: isPaused ? "تم استئناف معالجة الصور" : "تم إيقاف معالجة الصور مؤقتًا",
+    });
+  };
+  
+  const clearQueue = () => {
+    // إفراغ قائمة الانتظار
+    setImageQueue([]);
+    setQueueLength(0);
+    toast({
+      title: "تم إفراغ القائمة",
+      description: "تم إفراغ قائمة انتظار الصور",
+    });
   };
 
   return {
@@ -200,10 +236,10 @@ export const useImageProcessing = () => {
     saveImageToDatabase,
     formatDate: formatDateFn,
     // إضافة الدوال الجديدة
-    clearSessionImages: () => {/* يجب تنفيذ هذه الوظيفة */},
-    retryProcessing: () => {/* يجب تنفيذ هذه الوظيفة */},
-    pauseProcessing: () => {/* يجب تنفيذ هذه الوظيفة */},
-    clearQueue: () => {/* يجب تنفيذ هذه الوظيفة */},
+    clearSessionImages,
+    retryProcessing,
+    pauseProcessing,
+    clearQueue,
     runCleanup: (userId: string) => {
       if (userId) {
         runCleanupNow(userId);

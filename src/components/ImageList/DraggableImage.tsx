@@ -4,7 +4,7 @@ import { ImageData } from "@/types/ImageData";
 import ZoomControls from "./ZoomControls";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import ImageErrorDisplay from "../ImagePreview/ImageViewer/ImageErrorDisplay";
+import ErrorDisplay from "./ErrorDisplay";
 
 interface DraggableImageProps {
   image: ImageData;
@@ -244,7 +244,7 @@ const DraggableImage = ({
         
         {/* عرض خطأ الصورة مع إمكانية إعادة المحاولة */}
         {imgError && (
-          <ImageErrorDisplay 
+          <ErrorDisplay 
             onRetry={handleRetryImage}
             errorMessage={errorMessage}
             retryCount={retryCount}
