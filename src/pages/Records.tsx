@@ -176,7 +176,9 @@ const Records = () => {
     // إعادة تحميل الصور
     if (user) {
       setDataLoaded(false); // إعادة تعيين حالة التحميل لإعادة تحميل البيانات
-      loadUserImages();
+      loadUserImages((loadedImages) => {
+        console.log(`تم إعادة تحميل ${loadedImages.length} صورة بعد الحذف`);
+      });
     }
   };
 
