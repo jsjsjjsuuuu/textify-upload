@@ -37,7 +37,7 @@ export const useImageProcessingCore = () => {
   } = useImageStats();
   
   // استخدام اكتشاف التكرار
-  const duplicateDetection = useDuplicateDetection({ enabled: true });
+  const duplicateDetectionTools = useDuplicateDetection({ enabled: true });
   
   // تحسين استخدام useSavedImageProcessing مع توقيع الوظيفة الصحيح
   const {
@@ -170,7 +170,8 @@ export const useImageProcessingCore = () => {
     setProcessingProgress,
     saveProcessedImage,
     removeDuplicates,
-    duplicateDetection // إضافة وظائف اكتشاف التكرار
+    // استخدام الأداة كما هي بدلاً من تمريرها كخاصية منفصلة
+    processedImage: duplicateDetectionTools
   });
 
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول

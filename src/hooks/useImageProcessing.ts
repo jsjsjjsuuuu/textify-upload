@@ -1,4 +1,3 @@
-
 // تنبيه: لا تقم بتعديل هذا الملف مباشرة، استخدم المكتبات الموجودة مثل useImageDatabase.ts
 
 import { useEffect, useState, useCallback } from "react";
@@ -37,9 +36,9 @@ export const useImageProcessing = () => {
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
   const { handleFileChange: fileUploadHandler } = useFileUpload({
-    processWithOcr,
     addImage,
-    updateImage
+    updateImage,
+    setProcessingProgress: (progress: number) => setProcessingProgress(progress)
   });
   
   // حالة معالجة الصور
@@ -56,7 +55,7 @@ export const useImageProcessing = () => {
   
   // هوك كشف التكرارات
   const { isDuplicateImage } = useDuplicateDetection();
-  
+
   // تحميل الصور السابقة
   useEffect(() => {
     if (user) {

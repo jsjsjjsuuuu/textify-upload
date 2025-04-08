@@ -11,21 +11,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { compressImage, enhanceImageForOCR } from "@/utils/imageCompression";
 import { enhancePhoneNumber, formatIraqiPhoneNumber } from "@/utils/phoneNumberUtils";
 
-interface DuplicateDetector {
+// إضافة الخصائص الناقصة إلى الواجهة
+export interface DuplicateDetector {
   isDuplicateImage?: (image: ImageData, images: ImageData[]) => boolean;
   markImageAsProcessed?: (image: ImageData) => boolean;
   isFullyProcessed?: (image: ImageData) => boolean;
   addToProcessedCache?: (image: ImageData) => void;
 }
 
-interface UseFileUploadProps {
-  images: ImageData[];
+export interface UseFileUploadProps {
+  images?: ImageData[];
   addImage: (image: ImageData) => void;
   updateImage: (id: string, fields: Partial<ImageData>) => void;
   setProcessingProgress: (progress: number) => void;
   saveProcessedImage?: (image: ImageData) => Promise<void>;
   removeDuplicates?: () => void;
   processedImage?: DuplicateDetector;
+  // إضافة الخصائص المفقودة
+  processWithOcr?: (file: File, image: ImageData) => Promise<ImageData>;
+  duplicateDetection?: DuplicateDetector;
 }
 
 // تحسين معالجة الصور لتتم بشكل متسلسل وبتتبع أفضل
