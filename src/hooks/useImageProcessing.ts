@@ -25,7 +25,13 @@ export const useImageProcessing = () => {
   const { toast } = useToast();
   
   // استيراد الهوكس
-  const { images, updateImage, deleteImage, addImage, clearImages } = useImageState();
+  const { 
+    images, 
+    updateImage, 
+    deleteImage, 
+    addImage, 
+    clearSessionImages: clearImages 
+  } = useImageState();
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
   const { handleFileChange: fileUploadHandler } = useFileUpload();
@@ -71,8 +77,18 @@ export const useImageProcessing = () => {
     setImageQueue((prevQueue) => prevQueue.slice(1)); // إزالة الملف من القائمة
     setActiveUploads(1); // تحديث عدد الملفات قيد المعالجة
 
-    // تحقق من التكرار
-    if (isDuplicateImage(file)) {
+    // تحقق من التكرار - تعديل التوقيع بإضافة وسيط ثانٍ فارغ
+    const imageObj: ImageData = {
+      id: uuidv4(),
+      file,
+      previewUrl: URL.createObjectURL(file),
+      date: new Date(),
+      status: "pending",
+      user_id: user?.id,
+      batch_id: uuidv4()
+    };
+    
+    if (isDuplicateImage(imageObj, [])) {
       console.log("تم اكتشاف ملف مكرر:", file.name);
       toast({
         title: "ملف مكرر",
@@ -249,6 +265,7 @@ export const useImageProcessing = () => {
       if (user) {
         loadUserImages(user.id, callback || setImages);
       }
-    }
+    },
+    setImages
   };
 };

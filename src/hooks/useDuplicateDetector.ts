@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ImageData } from '@/types/ImageData';
 
 interface DuplicateDetectorOptions {
@@ -59,38 +59,38 @@ export function useDuplicateDetector(options?: DuplicateDetectorOptions) {
     }
   }, [processedHashes, processedIds, hashCounter, idCounter, saveToLocalStorage, enabled]);
 
-  // إنشاء بصمة للصورة
-  const createImageHash = useCallback((image: ImageData | File): string => {
+  // إنشاء بصمة للصورة - تصحيح التعامل مع الأنواع المختلفة
+  const createImageHash = useCallback((input: ImageData | File): string => {
     // إذا كان الإدخال من نوع ImageData
-    if ('id' in image && image.id) {
-      if (image.storage_path) {
-        return `path:${image.storage_path}`;
-      } else if (image.previewUrl) {
-        return `url:${image.previewUrl}`;
-      } else if (image.file && image.file.name) {
-        return `file:${image.file.name}:${image.file.size}:${image.file.lastModified || ''}`;
+    if ('id' in input) {
+      if (input.storage_path) {
+        return `path:${input.storage_path}`;
+      } else if (input.previewUrl) {
+        return `url:${input.previewUrl}`;
+      } else if (input.file && input.file.name) {
+        return `file:${input.file.name}:${input.file.size}:${input.file.lastModified || ''}`;
       } else {
-        return `id:${image.id}`;
+        return `id:${input.id}`;
       }
     } 
     // إذا كان الإدخال من نوع File
     else {
-      return `file:${image.name}:${image.size}:${image.lastModified || ''}`;
+      return `file:${input.name}:${input.size}:${input.lastModified || ''}`;
     }
   }, []);
 
   // التحقق مما إذا كانت الصورة مكررة
-  const isDuplicateImage = useCallback((image: ImageData | File, images?: ImageData[]): boolean => {
+  const isDuplicateImage = useCallback((input: ImageData | File, images?: ImageData[]): boolean => {
     if (!enabled) return false;
     
-    // تحقق من المعرف أولاً
-    if ('id' in image && image.id && processedIds.has(image.id)) {
-      console.log(`الصورة مكررة (بواسطة المعرف): ${image.id}`);
+    // تحقق من المعرف أولاً إذا كان من نوع ImageData
+    if ('id' in input && input.id && processedIds.has(input.id)) {
+      console.log(`الصورة مكررة (بواسطة المعرف): ${input.id}`);
       return true;
     }
     
     // ثم تحقق من بصمة الصورة
-    const imageHash = createImageHash(image);
+    const imageHash = createImageHash(input);
     if (processedHashes.has(imageHash)) {
       console.log(`الصورة مكررة (بواسطة البصمة): ${imageHash}`);
       return true;
@@ -100,21 +100,21 @@ export function useDuplicateDetector(options?: DuplicateDetectorOptions) {
     if (compareContent && images && images.length > 0) {
       const isDuplicate = images.some(existingImage => {
         // تخطي المقارنة مع نفس العنصر
-        if ('id' in image && image.id === existingImage.id) return false;
+        if ('id' in input && input.id === existingImage.id) return false;
         
-        // مقارنة الخصائص الأساسية
-        if ('file' in image) {
+        // مقارنة الخصائص الأساسية للملف
+        if ('file' in input && input.file) {
           return (
-            image.file.name === existingImage.file.name && 
-            image.file.size === existingImage.file.size
+            input.file.name === existingImage.file.name && 
+            input.file.size === existingImage.file.size
           );
         }
         
         // للمقارنة مع كائن File
-        if ('name' in image && 'size' in image) {
+        if ('name' in input && 'size' in input) {
           return (
-            image.name === existingImage.file.name && 
-            image.size === existingImage.file.size
+            input.name === existingImage.file.name && 
+            input.size === existingImage.file.size
           );
         }
         
@@ -131,21 +131,21 @@ export function useDuplicateDetector(options?: DuplicateDetectorOptions) {
   }, [enabled, processedIds, processedHashes, createImageHash, compareContent]);
 
   // وسم صورة كمعالجة
-  const markImageAsProcessed = useCallback((image: ImageData | File) => {
+  const markImageAsProcessed = useCallback((input: ImageData | File) => {
     if (!enabled) return;
     
     // إضافة معرّف الصورة إلى قائمة المعرّفات المعالجة
-    if ('id' in image && image.id) {
+    if ('id' in input) {
       setProcessedIds(prev => {
         const newSet = new Set(prev);
-        newSet.add(image.id);
+        newSet.add(input.id);
         return newSet;
       });
       setIdCounter(prev => prev + 1);
     }
     
     // إضافة بصمة الصورة إلى قائمة البصمات المعالجة
-    const imageHash = createImageHash(image);
+    const imageHash = createImageHash(input);
     setProcessedHashes(prev => {
       const newSet = new Set(prev);
       newSet.add(imageHash);
