@@ -255,7 +255,7 @@ export const useImageProcessing = () => {
         runCleanupNow(userId);
       }
     },
-    // تعديل دالة loadUserImages لتتماشى مع التوقيع المطلوب
+    // توحيد وتبسيط واجهة استخدام دالة loadUserImages
     loadUserImages: (callback?: (images: ImageData[]) => void) => {
       if (user) {
         loadUserImages(user.id, callback || setImages);
