@@ -17,6 +17,21 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+// دالة للتحقق من اكتمال الصورة
+const isImageComplete = (image: ImageData): boolean => {
+  return !!(
+    image.code && 
+    image.senderName && 
+    image.province && 
+    image.price
+  );
+};
+
+// دالة للتحقق من وجود خطأ في رقم الهاتف
+const hasPhoneError = (image: ImageData): boolean => {
+  return !!image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, "").length !== 11;
+};
+
 const Index = () => {
   const {
     images,
@@ -77,21 +92,6 @@ const Index = () => {
     completed: images.filter(img => img.status === "completed").length,
     incomplete: images.filter(img => img.status === "completed" && !isImageComplete(img) && !hasPhoneError(img)).length,
     error: images.filter(img => img.status === "error" || hasPhoneError(img)).length
-  };
-
-  // دالة للتحقق من اكتمال الصورة
-  const isImageComplete = (image: ImageData): boolean => {
-    return !!(
-      image.code && 
-      image.senderName && 
-      image.province && 
-      image.price
-    );
-  };
-
-  // دالة للتحقق من وجود خطأ في رقم الهاتف
-  const hasPhoneError = (image: ImageData): boolean => {
-    return !!image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, "").length !== 11;
   };
 
   return (
