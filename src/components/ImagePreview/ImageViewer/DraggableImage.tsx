@@ -2,7 +2,7 @@
 import { useRef, useState, useEffect } from "react";
 import ImageErrorDisplay from "./ImageErrorDisplay";
 import { useToast } from "@/hooks/use-toast";
-import { Motion, animate, useMotionValue, useTransform } from "framer-motion";
+import { motion, animate, useMotionValue, useTransform } from "framer-motion";
 import { ZoomIn, ZoomOut, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
