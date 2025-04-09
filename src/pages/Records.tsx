@@ -59,7 +59,7 @@ const Records = () => {
   useEffect(() => {
     if (user && !dataLoaded) {
       setIsLoading(true);
-      // استدعاء loadUserImages بطريقة صحيحة مع الدالة الرجوعية فقط
+      // استدعاء loadUserImages بالطريقة الصحيحة - دالة رجوعية فقط
       loadUserImages((loadedImages) => {
         console.log(`تم تحميل ${loadedImages.length} صورة للمستخدم`);
         setIsLoading(false);

@@ -1,3 +1,4 @@
+
 // تنبيه: لا تقم بتعديل هذا الملف مباشرة، استخدم المكتبات الموجودة مثل useImageDatabase.ts
 
 import { useEffect, useState, useCallback } from "react";
@@ -51,7 +52,7 @@ export const useImageProcessing = () => {
   const [imageQueue, setImageQueue] = useState<File[]>([]);
   
   // استيراد هوك قاعدة البيانات مع تمرير دالة updateImage
-  const { loadUserImages, saveImageToDatabase, handleSubmitToApi, deleteImageFromDatabase, runCleanupNow } = useImageDatabase(updateImage);
+  const { loadUserImages: fetchUserImages, saveImageToDatabase, handleSubmitToApi, deleteImageFromDatabase, runCleanupNow } = useImageDatabase(updateImage);
   
   // هوك كشف التكرارات
   const { isDuplicateImage } = useDuplicateDetection();
@@ -59,7 +60,7 @@ export const useImageProcessing = () => {
   // تحميل الصور السابقة
   useEffect(() => {
     if (user) {
-      loadUserImages(user.id, (loadedImages) => {
+      fetchUserImages(user.id, (loadedImages) => {
         // إضافة الصور المحملة للصور الحالية
         const updatedImages = [...loadedImages];
         setImages(updatedImages);
@@ -199,6 +200,13 @@ export const useImageProcessing = () => {
     newImages.forEach(img => addImage(img));
   };
   
+  // إعادة تعريف دالة loadUserImages بواجهة مبسطة تتوقع معلمة واحدة فقط (وهي دالة الإرجاع)
+  const loadUserImages = (callback?: (images: ImageData[]) => void) => {
+    if (user) {
+      return fetchUserImages(user.id, callback || setImages);
+    }
+  };
+  
   // تنفيذ الوظائف الناقصة
   const retryProcessing = () => {
     // إعادة معالجة الصور التي فشلت
@@ -254,12 +262,8 @@ export const useImageProcessing = () => {
         runCleanupNow(userId);
       }
     },
-    // توحيد وتبسيط واجهة استخدام دالة loadUserImages
-    loadUserImages: (callback?: (images: ImageData[]) => void) => {
-      if (user) {
-        loadUserImages(user.id, callback || setImages);
-      }
-    },
+    // تصدير واجهة الدالة المبسطة
+    loadUserImages,
     setImages
   };
 };
