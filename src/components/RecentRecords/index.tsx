@@ -22,7 +22,8 @@ const RecentRecords = () => {
   useEffect(() => {
     if (user) {
       setIsLoading(true);
-      loadUserImages(user.id, () => {
+      // Add a callback function to handle loaded images
+      loadUserImages(user.id, (loadedImages) => {
         setIsLoading(false);
       });
     }
