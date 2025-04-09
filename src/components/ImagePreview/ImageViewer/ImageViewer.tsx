@@ -79,8 +79,6 @@ const ImageViewer = ({
     );
   };
 
-  console.log("Rendering ImageViewer with image URL:", getImageUrl());
-
   return (
     <div className="col-span-1 bg-transparent rounded-lg p-4 flex flex-col items-center justify-center relative">
       {!imgError ? (
