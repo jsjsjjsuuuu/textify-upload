@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { ImageData } from '@/types/ImageData';
@@ -116,7 +115,7 @@ const Index = () => {
         />
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <Card className="border shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-0">
                 <CardTitle>تحميل الصور</CardTitle>
@@ -210,20 +209,11 @@ const Index = () => {
               </Card>
             </div>
           </div>
-          
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Database className="ml-2 h-5 w-5" />
-                  آخر السجلات
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RecentRecords />
-              </CardContent>
-            </Card>
-          </div>
+        </div>
+
+        {/* إضافة آخر السجلات في أسفل الصفحة */}
+        <div className="container mx-auto px-4 mt-8">
+          <RecentRecords />
         </div>
       </div>
     </div>
