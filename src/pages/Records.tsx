@@ -1,5 +1,5 @@
+
 import React, { useEffect, useState } from 'react';
-// تعديل استيراد useAuth من المسار الصحيح
 import { useAuth } from '@/contexts/auth';
 import AppHeader from '@/components/AppHeader';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -7,7 +7,7 @@ import { AlertCircle, Loader } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/DataTable/data-table";
-import { columns } from "@/components/DataTable/columns"
+import { columns } from "@/components/DataTable/columns";
 import { getImageRecords } from '@/integrations/supabase/image-records';
 
 const Records = () => {
