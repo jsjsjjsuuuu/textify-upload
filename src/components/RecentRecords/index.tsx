@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useImageState } from "@/hooks/useImageState";
-import { useImageDatabase } from "@/hooks/useImageDatabase";
+import { useImageProcessing } from "@/hooks/useImageProcessing";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,14 +17,13 @@ const RecentRecords = () => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const { images } = useImageState();
-  const { loadUserImages } = useImageDatabase();
+  const { loadUserImages } = useImageProcessing();
 
   useEffect(() => {
     if (user) {
       setIsLoading(true);
-      // إضافة معالجة الاستجابة بعد تحميل الصور ومعلمة معرف المستخدم
-      loadUserImages(user.id, (loadedImages) => {
-        // تمرير دالة رجعية تقوم بتحديث حالة التحميل
+      // استدعاء دالة loadUserImages مع تمرير دالة رجعية لتحديث حالة التحميل
+      loadUserImages((loadedImages) => {
         setIsLoading(false);
       });
     }
