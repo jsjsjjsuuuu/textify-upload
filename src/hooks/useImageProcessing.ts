@@ -1,6 +1,3 @@
-
-// تنبيه: لا تقم بتعديل هذا الملف مباشرة، استخدم المكتبات الموجودة مثل useImageDatabase.ts
-
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -201,7 +198,7 @@ export const useImageProcessing = () => {
   };
   
   /**
-   * تحميل صور المستخدم - واجهة مبسطة
+   * تحميل صور المستخدم - واجهة مبسطة تستخدم دالة الرجوع فقط
    * @param callback - دالة الرجوع التي ستتلقى الصور المحملة
    */
   const loadUserImages = (callback?: (images: ImageData[]) => void) => {

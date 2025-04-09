@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
@@ -175,8 +174,8 @@ const Records = () => {
       description: `تم حذف ${successCount} صورة بنجاح${errorCount > 0 ? ` (فشل حذف ${errorCount} صورة)` : ''}`,
     });
     
-    // إعادة تحميل الصور - تصحيح استدعاء loadUserImages للتوافق مع واجهة التطبيق الجديدة
-    setDataLoaded(false); // إعادة تعيين حالة التحميل لإعادة تحميل البيانات
+    // إعادة تحميل الصور - إعادة تعيين حالة التحميل فقط لتشغيل useEffect من جديد
+    setDataLoaded(false);
   };
 
   // تصدير الصور المحددة
