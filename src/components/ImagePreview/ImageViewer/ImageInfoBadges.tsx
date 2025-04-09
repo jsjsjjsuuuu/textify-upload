@@ -1,11 +1,12 @@
 
+import { CalendarIcon, Hash, Percent } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface ImageInfoBadgesProps {
-  number?: number;
+  number?: number | string;
   date: Date;
   confidence?: number;
-  extractionMethod?: "ocr" | "gemini";
+  extractionMethod?: string;
   formatDate: (date: Date) => string;
 }
 
@@ -16,42 +17,42 @@ const ImageInfoBadges = ({
   extractionMethod,
   formatDate
 }: ImageInfoBadgesProps) => {
-  // تقييم دقة الاستخراج
-  const getAccuracyColor = (confidence: number = 0) => {
-    if (confidence >= 90) return "bg-green-500";
-    if (confidence >= 70) return "bg-emerald-500";
-    if (confidence >= 50) return "bg-amber-500";
-    return "bg-red-500";
-  };
-
   return (
-    <>
+    <div className="absolute top-2 right-2 flex flex-col gap-2 items-end">
       {number !== undefined && (
-        <div className="absolute top-2 right-2 bg-brand-brown text-white px-2 py-1 rounded-full text-xs">
-          صورة {number}
-        </div>
+        <Badge variant="secondary" className="flex items-center gap-1 bg-white/80 backdrop-blur-sm">
+          <Hash className="h-3 w-3" />
+          {number}
+        </Badge>
       )}
       
-      <div className="flex items-center justify-between w-full mt-4">
-        <p className="text-xs text-muted-foreground">
-          {formatDate(date)}
-        </p>
-        
-        <div className="flex items-center gap-2">
-          {extractionMethod && (
-            <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700">
-              {extractionMethod === "gemini" ? "Gemini AI" : "OCR"}
-            </Badge>
-          )}
-          
-          {confidence !== undefined && (
-            <Badge className={`text-xs ${getAccuracyColor(confidence)} text-white`}>
-              دقة الاستخراج: {Math.round(confidence)}%
-            </Badge>
-          )}
-        </div>
-      </div>
-    </>
+      <Badge variant="secondary" className="flex items-center gap-1 bg-white/80 backdrop-blur-sm">
+        <CalendarIcon className="h-3 w-3" />
+        {formatDate(date)}
+      </Badge>
+      
+      {confidence !== undefined && (
+        <Badge 
+          variant="secondary" 
+          className={`flex items-center gap-1 ${
+            confidence > 80 
+              ? 'bg-green-100 text-green-800' 
+              : confidence > 50 
+                ? 'bg-yellow-100 text-yellow-800' 
+                : 'bg-red-100 text-red-800'
+          }`}
+        >
+          <Percent className="h-3 w-3" />
+          {Math.round(confidence)}%
+        </Badge>
+      )}
+      
+      {extractionMethod && (
+        <Badge variant="outline" className="text-xs bg-slate-100 text-slate-800">
+          {extractionMethod}
+        </Badge>
+      )}
+    </div>
   );
 };
 
