@@ -1,89 +1,73 @@
-
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Wifi, WifiOff, AlertCircle, RotateCcw } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+// تعديل استيراد useAuth من المسار الصحيح
 import { useAuth } from '@/contexts/auth';
-import { AlertCircle, Wifi, WifiOff, Loader2 } from 'lucide-react';
 
+/**
+ * معالج أخطاء الاتصال الذي يعرض رسائل وإمكانيات إعادة المحاولة للمستخدم.
+ */
 const ConnectionErrorHandler = () => {
-  const { isLoading, isOffline, connectionError, retryConnection } = useAuth();
-
-  const handleRetry = async () => {
-    await retryConnection();
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <Card className="w-[350px] text-center">
-          <CardHeader>
-            <CardTitle className="flex flex-col items-center justify-center">
-              <Loader2 className="h-12 w-12 animate-spin text-primary mb-2" />
-              <span>جاري الاتصال...</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              الرجاء الانتظار بينما نحاول الاتصال بالخادم...
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  const { isOffline, connectionError, retryConnection, isLoading } = useAuth();
+  
+  // إذا لم يكن هناك خطأ في الاتصال أو انقطاع، لا نعرض شيء
+  if (!isOffline && !connectionError) {
+    return null;
   }
-
-  if (isOffline) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <Card className="w-[350px]">
-          <CardHeader className="text-center pb-2">
-            <WifiOff className="mx-auto h-12 w-12 text-destructive mb-2" />
-            <CardTitle>انقطع الاتصال بالإنترنت</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="mb-4 text-muted-foreground">
-              يبدو أنك غير متصل بالإنترنت. يرجى التحقق من اتصالك والمحاولة مرة أخرى.
-            </p>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <Button onClick={handleRetry} className="w-full">
-              إعادة المحاولة
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
-  if (connectionError) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <Card className="w-[350px]">
-          <CardHeader className="text-center pb-2">
-            <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-2" />
-            <CardTitle>خطأ في الاتصال</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="mb-4 text-muted-foreground">
-              {connectionError || 'حدث خطأ أثناء الاتصال بالخادم. يرجى المحاولة مرة أخرى.'}
-            </p>
-            <div className="text-xs text-muted-foreground bg-muted p-2 rounded text-right mb-4">
-              <p>معلومات إضافية للتصحيح:</p>
-              <p>حالة الاتصال: {isOffline ? 'غير متصل' : 'متصل'}</p>
-              <p>نوع الخطأ: {typeof connectionError === 'string' ? 'نص' : 'غير محدد'}</p>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <Button onClick={handleRetry} className="w-full">
-              إعادة المحاولة
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
-  return null;
+  
+  return (
+    <div className="fixed top-0 left-0 w-full z-50 p-4">
+      <Card className="bg-destructive/90 text-white shadow-md border-none">
+        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+          <div className="flex items-center gap-2">
+            {isOffline ? (
+              <>
+                <WifiOff className="w-5 h-5" />
+                <CardTitle className="text-lg font-semibold">
+                  لا يوجد اتصال بالإنترنت
+                </CardTitle>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="w-5 h-5" />
+                <CardTitle className="text-lg font-semibold">
+                  خطأ في الاتصال بالخادم
+                </CardTitle>
+              </>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <CardDescription>
+            {isOffline
+              ? "الرجاء التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى."
+              : connectionError || "حدث خطأ غير متوقع أثناء محاولة الاتصال بالخادم."}
+          </CardDescription>
+        </CardContent>
+        <CardFooter className="justify-end">
+          <Button 
+            variant="secondary"
+            onClick={retryConnection}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <RotateCcw className="mr-2 h-4 w-4 animate-spin" />
+                إعادة المحاولة...
+              </>
+            ) : (
+              <>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                إعادة المحاولة
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
 };
 
 export default ConnectionErrorHandler;
+
