@@ -1,3 +1,4 @@
+
 // تنبيه: لا تقم بتعديل هذا الملف مباشرة، استخدم المكتبات الموجودة مثل useImageDatabase.ts
 
 import { useEffect, useState, useCallback } from "react";
@@ -254,6 +255,7 @@ export const useImageProcessing = () => {
         runCleanupNow(userId);
       }
     },
+    // تعديل دالة loadUserImages لتتماشى مع التوقيع المطلوب
     loadUserImages: (callback?: (images: ImageData[]) => void) => {
       if (user) {
         loadUserImages(user.id, callback || setImages);

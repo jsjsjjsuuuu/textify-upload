@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
@@ -178,7 +177,7 @@ const Records = () => {
       setDataLoaded(false); // إعادة تعيين حالة التحميل لإعادة تحميل البيانات
       loadUserImages((loadedImages) => {
         console.log(`تم إعادة تحميل ${loadedImages.length} صورة بعد الحذف`);
-      }, user.id); // تمرير معرف المستخدم كوسيط ثانٍ
+      });
     }
   };
 
