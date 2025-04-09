@@ -32,7 +32,9 @@ function App() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
               </div>
             }>
-              <AppRoutes />
+              <div className="min-h-screen bg-background transition-colors duration-300">
+                <AppRoutes />
+              </div>
             </Suspense>
             <Toaster />
             <SonnerToaster position="top-center" closeButton />

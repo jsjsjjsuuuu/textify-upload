@@ -22,12 +22,14 @@ const RecentRecords = () => {
   useEffect(() => {
     if (user) {
       setIsLoading(true);
-      // Add a callback function to handle loaded images
-      loadUserImages(user.id, (loadedImages) => {
+      // إضافة معالجة الاستجابة بعد تحميل الصور
+      loadUserImages(user.id).then(() => {
+        setIsLoading(false);
+      }).catch(() => {
         setIsLoading(false);
       });
     }
-  }, [user]);
+  }, [user, loadUserImages]);
 
   // حساب إحصائيات السجلات
   const stats = {
@@ -121,10 +123,10 @@ const RecentRecords = () => {
                           variant="outline"
                           className={`text-xs ml-2 ${
                             image.status === "completed" 
-                              ? "bg-green-50 text-green-700 border-green-200" 
+                              ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-900" 
                               : image.status === "pending"
-                              ? "bg-orange-50 text-orange-700 border-orange-200"
-                              : "bg-red-50 text-red-700 border-red-200"
+                              ? "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-900"
+                              : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-900"
                           }`}
                         >
                           {image.status === "completed" ? "مكتملة" : 
@@ -157,10 +159,10 @@ const RecentRecords = () => {
               className="flex items-center justify-between border rounded-lg p-3 bg-white dark:bg-gray-800"
             >
               <div className="flex items-center">
-                <DatabaseIcon className="h-5 w-5 ml-2 text-blue-600" />
+                <DatabaseIcon className="h-5 w-5 ml-2 text-blue-600 dark:text-blue-400" />
                 <span>إجمالي السجلات</span>
               </div>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-900">
                 {stats.total}
               </Badge>
             </motion.div>
@@ -171,10 +173,10 @@ const RecentRecords = () => {
               className="flex items-center justify-between border rounded-lg p-3 bg-white dark:bg-gray-800"
             >
               <div className="flex items-center">
-                <ClipboardList className="h-5 w-5 ml-2 text-green-600" />
+                <ClipboardList className="h-5 w-5 ml-2 text-green-600 dark:text-green-400" />
                 <span>تم إرسالها</span>
               </div>
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-900">
                 {stats.submitted}
               </Badge>
             </motion.div>

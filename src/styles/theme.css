@@ -101,4 +101,8 @@
   .text-balance {
     text-wrap: balance;
   }
+  
+  .dark-transition {
+    @apply transition-colors duration-300 ease-in-out;
+  }
 }
