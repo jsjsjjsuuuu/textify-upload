@@ -5,39 +5,10 @@ import { AppRoutes } from "@/routes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { useAuth } from "@/contexts/AuthContext";
-import ImageErrorDisplay from "@/components/ImagePreview/ImageViewer/ImageErrorDisplay";
-import { Button } from "@/components/ui/button";
+import { AuthProvider } from "@/contexts/auth/AuthContext";
+import { useAuth } from "@/contexts/auth/AuthContext";
+import ConnectionErrorHandler from "@/components/Connection/ConnectionErrorHandler";
 import { Wifi, WifiOff } from "lucide-react";
-
-// مكون للتعامل مع أخطاء الاتصال
-const ConnectionErrorHandler = () => {
-  const { isLoading, isOffline, connectionError, retryConnection } = useAuth();
-  
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-  
-  if (isOffline || connectionError) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <ImageErrorDisplay 
-          title={isOffline ? "لا يوجد اتصال بالإنترنت" : "خطأ في الاتصال بالخادم"}
-          message={connectionError || "يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى."}
-          onRetry={retryConnection}
-          className="max-w-xl p-8"
-        />
-      </div>
-    );
-  }
-  
-  return null;
-};
 
 // مكون التطبيق الأساسي مع وضع خدمة مراقبة الاتصال
 function AppContent() {
@@ -63,7 +34,7 @@ function AppContent() {
   }, []);
   
   // إذا كان هناك مشكلة في الاتصال، نعرض صفحة الخطأ
-  if (isOffline || connectionError) {
+  if (isLoading || isOffline || connectionError) {
     return <ConnectionErrorHandler />;
   }
   
