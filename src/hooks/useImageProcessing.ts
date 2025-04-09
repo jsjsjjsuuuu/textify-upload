@@ -1,3 +1,4 @@
+
 // تنبيه: لا تقم بتعديل هذا الملف مباشرة، استخدم المكتبات الموجودة مثل useImageDatabase.ts
 
 import { useEffect, useState, useCallback } from "react";
@@ -202,6 +203,7 @@ export const useImageProcessing = () => {
   // إعادة تعريف دالة loadUserImages بواجهة مبسطة تتوقع معلمة واحدة فقط (وهي دالة الإرجاع)
   const loadUserImages = (callback?: (images: ImageData[]) => void) => {
     if (user) {
+      // تصحيح الاستدعاء بتمرير user.id وليس user فقط
       return fetchUserImages(user.id, callback || setImages);
     }
   };
