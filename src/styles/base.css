@@ -70,7 +70,6 @@
     @apply transition-all duration-300 hover:shadow-lg hover:translate-y-[-2px] hover:bg-slate-800/80;
   }
   
-  /* تحسينات وضع الظلام */
   .dark .apple-button {
     @apply hover:bg-white/10;
   }
@@ -99,5 +98,30 @@
   
   .status-badge-error {
     @apply bg-red-950/30 text-red-400 border-red-800/30;
+  }
+  
+  /* دعم ميزات العرض الموسع للصور */
+  .image-zoom-container {
+    @apply overflow-hidden relative cursor-move;
+  }
+  
+  .image-zoom-overlay {
+    @apply fixed inset-0 bg-black/70 z-50 flex items-center justify-center;
+  }
+  
+  .image-zoom-controls {
+    @apply absolute top-2 left-2 z-10 flex gap-2;
+  }
+  
+  .image-zoom-button {
+    @apply h-8 w-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center;
+  }
+  
+  .dark .image-zoom-button {
+    @apply bg-slate-800/80 hover:bg-slate-700 text-white;
+  }
+  
+  .image-zoom-info {
+    @apply absolute bottom-2 left-2 z-10 bg-black/50 text-white px-2 py-1 rounded-full text-xs;
   }
 }

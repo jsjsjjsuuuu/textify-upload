@@ -3,9 +3,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ImagePreview from "@/components/ImagePreview/ImagePreview";
-import { Trash2, Save, SendHorizonal, Filter, Loader, Image } from "lucide-react";
+import { Trash2, Save, SendHorizonal, Filter, Loader, Image, ZoomIn, ZoomOut, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import DraggableImage from "@/components/ImagePreview/ImageViewer/DraggableImage";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -34,6 +35,11 @@ const ImagePreviewContainer = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const { toast } = useToast();
+  
+  // حالة جديدة لتكبير الصورة
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   // تعيين أول صورة كصورة نشطة تلقائيًا عند التحميل أو عند تغيير الصور
   useEffect(() => {
@@ -108,6 +114,33 @@ const ImagePreviewContainer = ({
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab]);
+  
+  // وظائف التكبير/التصغير
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.2, 3));
+  };
+  
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+  };
+  
+  const handleResetZoom = () => {
+    setZoomLevel(1);
+  };
+  
+  // تبديل حالة التكبير
+  const toggleZoom = () => {
+    setIsZoomed(!isZoomed);
+    setImageLoaded(false);
+  };
+  
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+  };
+  
+  const handleImageError = () => {
+    setImageLoaded(false);
+  };
 
   // وظيفة التنقل بين الصفحات
   const goToPage = (page: number) => {
@@ -273,6 +306,17 @@ const ImagePreviewContainer = ({
               عرض الصورة والبيانات
             </h3>
             <div className="flex items-center space-x-2 space-x-reverse">
+              {activeImage.previewUrl && (
+                <Button
+                  size="sm"
+                  variant={isZoomed ? "secondary" : "outline"}
+                  onClick={toggleZoom}
+                  className="ml-2"
+                >
+                  {isZoomed ? "عرض البيانات" : "تكبير الصورة"}
+                </Button>
+              )}
+              
               <Button
                 size="sm"
                 variant="ghost"
@@ -298,10 +342,22 @@ const ImagePreviewContainer = ({
             </div>
           </div>
           
-          <ImagePreview
-            image={activeImage}
-            onTextChange={onTextChange}
-          />
+          {isZoomed ? (
+            <div className="h-[650px] bg-gray-100 dark:bg-gray-900 relative">
+              <DraggableImage
+                src={activeImage.previewUrl}
+                zoomLevel={zoomLevel}
+                onImageLoad={handleImageLoad}
+                onImageError={handleImageError}
+                imageLoaded={imageLoaded}
+              />
+            </div>
+          ) : (
+            <ImagePreview
+              image={activeImage}
+              onTextChange={onTextChange}
+            />
+          )}
         </div>
       </motion.div>
     ) : (
