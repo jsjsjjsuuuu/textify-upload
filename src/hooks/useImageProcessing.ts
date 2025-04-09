@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -49,7 +50,7 @@ export const useImageProcessing = () => {
   const [imageQueue, setImageQueue] = useState<File[]>([]);
   
   // استيراد هوك قاعدة البيانات مع تمرير دالة updateImage
-  const { loadUserImages: fetchUserImages, saveImageToDatabase, handleSubmitToApi, deleteImageFromDatabase, runCleanupNow } = useImageDatabase(updateImage);
+  const { loadUserImages: fetchUserImages, saveImageToDatabase, handleSubmitToApi: submitToApi, deleteImageFromDatabase, runCleanupNow } = useImageDatabase(updateImage);
   
   // هوك كشف التكرارات
   const { isDuplicateImage } = useDuplicateDetection();
@@ -205,6 +206,45 @@ export const useImageProcessing = () => {
     if (user) {
       // استدعاء دالة fetchUserImages من useImageDatabase مع تمرير معرف المستخدم ودالة الرجوع
       return fetchUserImages(user.id, callback || setImages);
+    }
+  };
+
+  /**
+   * معالجة إرسال الصورة إلى API - تمثل واجهة مبسطة لـ handleSubmitToApi
+   * @param id - معرف الصورة المراد إرسالها
+   */
+  const handleSubmitToApi = async (id: string) => {
+    try {
+      // تحديث حالة التقديم
+      setIsSubmitting(prev => ({ ...prev, [id]: true }));
+      
+      // البحث عن الصورة المقابلة
+      const image = images.find(img => img.id === id);
+      
+      if (!image) {
+        throw new Error(`الصورة ذات المعرف ${id} غير موجودة`);
+      }
+      
+      // استدعاء دالة submitToApi مع تمرير المعلومات المطلوبة
+      const result = await submitToApi(id, image, user?.id);
+      
+      // تحديث حالة الصورة إذا كان الإرسال ناجحًا
+      if (result) {
+        updateImage(id, { submitted: true });
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Error submitting image:", error);
+      toast({
+        title: "خطأ في الإرسال",
+        description: "حدث خطأ أثناء إرسال البيانات",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      // إعادة تعيين حالة التقديم
+      setIsSubmitting(prev => ({ ...prev, [id]: false }));
     }
   };
   
