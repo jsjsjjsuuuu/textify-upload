@@ -67,6 +67,11 @@ const ConnectionErrorHandler = () => {
             <p className="mb-4 text-muted-foreground">
               {connectionError || 'حدث خطأ أثناء الاتصال بالخادم. يرجى المحاولة مرة أخرى.'}
             </p>
+            <div className="text-xs text-muted-foreground bg-muted p-2 rounded text-right mb-4">
+              <p>معلومات إضافية للتصحيح:</p>
+              <p>حالة الاتصال: {isOffline ? 'غير متصل' : 'متصل'}</p>
+              <p>نوع الخطأ: {typeof connectionError === 'string' ? 'نص' : 'غير محدد'}</p>
+            </div>
           </CardContent>
           <CardFooter className="flex justify-center">
             <Button onClick={handleRetry} className="w-full">

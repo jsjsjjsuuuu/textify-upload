@@ -11,12 +11,14 @@ import { Wifi, WifiOff } from "lucide-react";
 
 // مكون منفصل لمحتوى التطبيق الذي يستخدم useAuth
 function AppContent() {
-  const { isLoading, isOffline, connectionError } = useAuth();
+  const { isLoading, isOffline, connectionError, user } = useAuth();
   
   console.log("حالة التطبيق:", {
     isLoading, 
     isOffline, 
-    hasConnectionError: !!connectionError
+    hasConnectionError: !!connectionError,
+    isAuthenticated: !!user,
+    userId: user?.id
   });
   
   // تسجيل نوع المتصفح ومعلومات أخرى يمكن أن تساعد في التصحيح

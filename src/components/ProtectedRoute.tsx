@@ -1,6 +1,8 @@
+
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
+import { toast } from 'sonner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -22,15 +24,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     location: location.pathname
   });
   
-  const { user, userProfile, isLoading, refreshUserProfile } = useAuth();
+  const { user, userProfile, isLoading, refreshUserProfile, isOffline, connectionError } = useAuth();
 
   // عند تحميل المكون، قم بتحديث الملف الشخصي للتأكد من أحدث البيانات
   useEffect(() => {
-    if (user) {
+    if (user && !isLoading && !isOffline && !connectionError) {
       console.log("محاولة تحديث ملف المستخدم في ProtectedRoute");
-      refreshUserProfile();
+      try {
+        refreshUserProfile();
+      } catch (error) {
+        console.error("خطأ في تحديث ملف المستخدم:", error);
+      }
     }
-  }, [user, refreshUserProfile]);
+  }, [user, refreshUserProfile, isLoading, isOffline, connectionError]);
 
   // للتصحيح المباشر في وحدة التحكم
   useEffect(() => {
@@ -48,6 +54,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }, [user, userProfile, adminOnly, requireApproval, location.pathname]);
 
+  // إذا كان هناك مشكلة في الاتصال، نسمح للمستخدم بالمتابعة إلى ConnectionErrorHandler
+  if (isOffline || connectionError) {
+    return <>{children}</>;
+  }
+  
   if (isLoading) {
     console.log("جاري تحميل بيانات المستخدم في ProtectedRoute");
     return (
@@ -60,12 +71,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // إذا لم يكن المستخدم مسجلاً، قم بتوجيهه إلى صفحة تسجيل الدخول
   if (!user) {
     console.log("لا يوجد مستخدم مسجل الدخول، التوجيه إلى:", redirectTo);
+    // تأخير عرض التوست حتى بعد الانتقال
+    setTimeout(() => {
+      toast.error("يجب تسجيل الدخول للوصول إلى هذه الصفحة");
+    }, 100);
     return <Navigate to={redirectTo} state={{ from: location.pathname }} />;
   }
 
   // التحقق من حالة الموافقة إذا كان مطلوبًا
   if (requireApproval && userProfile && !userProfile.is_approved) {
     console.log("المستخدم غير معتمد، التوجيه إلى صفحة تسجيل الدخول");
+    setTimeout(() => {
+      toast.warning("حسابك قيد المراجعة. يرجى الانتظار حتى تتم الموافقة عليه.");
+    }, 100);
     return <Navigate to="/login" state={{ message: "حسابك قيد المراجعة. يرجى الانتظار حتى تتم الموافقة عليه." }} />;
   }
 
@@ -76,6 +94,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const isAdmin = userProfile.is_admin === true;
     if (!isAdmin) {
       console.log("المستخدم ليس مسؤولاً، التوجيه إلى الصفحة الرئيسية");
+      setTimeout(() => {
+        toast.error("ليس لديك صلاحيات الوصول إلى هذه الصفحة");
+      }, 100);
       return <Navigate to="/" />;
     } else {
       console.log("المستخدم مسؤول، السماح بالوصول إلى صفحة الإدارة");
