@@ -1,191 +1,193 @@
 
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ImageData } from '@/types/ImageData';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { formatDate } from '@/utils/dateFormatter';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card } from "@/components/ui/card";
-import { Database, ExternalLink, Filter } from 'lucide-react';
-import TabBar, { useRecordTabs } from './TabBar';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useImageState } from "@/hooks/useImageState";
+import { useImageDatabase } from "@/hooks/useImageDatabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Loader, DatabaseIcon, ClipboardList, FileSearch } from "lucide-react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { formatDistanceToNow } from 'date-fns';
+import { ar } from 'date-fns/locale';
 
-const RecentRecords: React.FC = () => {
-  const [records, setRecords] = useState<ImageData[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+const RecentRecords = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  
-  // استخدام هوك التبويبات لتصفية السجلات
-  const { tabs, activeTab, handleTabChange, getFilteredRecords } = useRecordTabs(records);
-  
-  // الحصول على السجلات المصفاة
-  const filteredRecords = getFilteredRecords();
+  const [isLoading, setIsLoading] = useState(true);
+  const { images } = useImageState();
+  const { loadUserImages } = useImageDatabase();
 
   useEffect(() => {
-    if (!user) return;
-
-    const fetchRecentRecords = async () => {
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase
-          .from('images')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(15);
-
-        if (error) {
-          console.error("خطأ في جلب السجلات الأخيرة:", error);
-          throw error;
-        }
-
-        if (data) {
-          // تحويل البيانات المسترجعة إلى كائنات ImageData
-          const formattedRecords = data.map((record, index) => {
-            const dummyFile = new File([], record.file_name || "image.jpg", { 
-              type: "image/jpeg" 
-            });
-            
-            // التأكد من أن status يتوافق مع النوع المحدد
-            let status: "pending" | "processing" | "completed" | "error" = "completed";
-            if (record.status === "pending") status = "pending";
-            else if (record.status === "processing") status = "processing";
-            else if (record.status === "error") status = "error";
-            
-            return {
-              id: record.id,
-              file: dummyFile,
-              previewUrl: record.preview_url,
-              extractedText: record.extracted_text || "",
-              code: record.code || "",
-              senderName: record.sender_name || "",
-              phoneNumber: record.phone_number || "",
-              province: record.province || "",
-              price: record.price || "",
-              companyName: record.company_name || "",
-              date: new Date(record.created_at),
-              status: status,
-              submitted: record.submitted || false,
-              user_id: record.user_id,
-              storage_path: record.storage_path,
-              batch_id: record.batch_id,
-              number: index + 1
-            } as ImageData;
-          });
-          
-          setRecords(formattedRecords);
-        }
-      } catch (error) {
-        console.error("خطأ في جلب السجلات الأخيرة:", error);
-      } finally {
+    if (user) {
+      setIsLoading(true);
+      loadUserImages(user.id, () => {
         setIsLoading(false);
-      }
-    };
-
-    fetchRecentRecords();
+      });
+    }
   }, [user]);
 
-  const handleViewAllClick = () => {
-    navigate('/records');
+  // حساب إحصائيات السجلات
+  const stats = {
+    total: images.length,
+    submitted: images.filter(img => img.submitted).length,
+    completed: images.filter(img => img.status === "completed").length,
+    pending: images.filter(img => img.status === "pending").length,
+    error: images.filter(img => img.status === "error").length,
+  };
+
+  // الحصول على آخر 5 سجلات
+  const recentImages = [...images]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+
+  // تنسيق الوقت لعرض "منذ..."
+  const formatRelativeTime = (date: Date) => {
+    try {
+      return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ar });
+    } catch (error) {
+      return 'وقت غير صالح';
+    }
   };
 
   if (isLoading) {
     return (
-      <Card className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">آخر السجلات</h2>
-          <Button variant="ghost" size="sm" disabled>
-            <ExternalLink className="w-4 h-4 ml-1" /> عرض الكل
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex justify-between items-center">
-              <Skeleton className="h-6 w-3/4" />
-              <Skeleton className="h-6 w-1/5" />
-            </div>
-          ))}
-        </div>
-      </Card>
-    );
-  }
-
-  if (records.length === 0) {
-    return (
-      <Card className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">آخر السجلات</h2>
-          <Button variant="ghost" size="sm" onClick={handleViewAllClick}>
-            <ExternalLink className="w-4 h-4 ml-1" /> عرض الكل
-          </Button>
-        </div>
-        <div className="text-center p-8 text-muted-foreground">
-          <Database className="w-12 h-12 mx-auto mb-2 opacity-20" />
-          <p>لا توجد سجلات حتى الآن</p>
-        </div>
-      </Card>
+      <div className="flex flex-col items-center justify-center p-8">
+        <Loader className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+        <p className="text-sm text-muted-foreground">جاري تحميل السجلات...</p>
+      </div>
     );
   }
 
   return (
-    <Card className="overflow-hidden">
-      <div className="p-4 flex justify-between items-center border-b">
-        <h2 className="text-xl font-bold">آخر السجلات</h2>
-        <Button variant="ghost" size="sm" onClick={handleViewAllClick}>
-          <ExternalLink className="w-4 h-4 ml-1" /> عرض الكل
-        </Button>
+    <div>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <motion.div 
+          className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900 rounded-lg p-3"
+          whileHover={{ y: -2, transition: { duration: 0.2 } }}
+        >
+          <div className="text-2xl font-semibold text-green-700 dark:text-green-400">{stats.completed}</div>
+          <div className="text-sm text-green-600 dark:text-green-500">مكتملة</div>
+        </motion.div>
+        <motion.div 
+          className="bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-900 rounded-lg p-3"
+          whileHover={{ y: -2, transition: { duration: 0.2 } }}
+        >
+          <div className="text-2xl font-semibold text-orange-700 dark:text-orange-400">{stats.pending}</div>
+          <div className="text-sm text-orange-600 dark:text-orange-500">قيد الانتظار</div>
+        </motion.div>
       </div>
-      
-      {/* شريط التبويبات */}
-      <div className="px-4 pt-2">
-        <TabBar 
-          tabs={tabs} 
-          activeTab={activeTab} 
-          onTabChange={handleTabChange} 
-        />
-      </div>
-      
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[60px]">#</TableHead>
-              <TableHead>التاريخ</TableHead>
-              <TableHead>المرسل</TableHead>
-              <TableHead>الهاتف</TableHead>
-              <TableHead>المبلغ</TableHead>
-              <TableHead>الشركة</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredRecords.map((record) => (
-              <TableRow 
-                key={record.id} 
-                className="cursor-pointer hover:bg-muted transition-colors"
-                onClick={() => navigate(`/records?id=${record.id}`)}
-              >
-                <TableCell className="font-medium">{record.number}</TableCell>
-                <TableCell>{formatDate(record.date)}</TableCell>
-                <TableCell>{record.senderName || '—'}</TableCell>
-                <TableCell>{record.phoneNumber || '—'}</TableCell>
-                <TableCell>{record.price || '—'}</TableCell>
-                <TableCell>{record.companyName || '—'}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      
-      {filteredRecords.length === 0 && (
-        <div className="text-center p-8 text-muted-foreground">
-          <Filter className="w-8 h-8 mx-auto mb-2 opacity-20" />
-          <p>لا توجد سجلات تطابق التصفية الحالية</p>
-        </div>
-      )}
-    </Card>
+
+      <Tabs defaultValue="recent" className="w-full">
+        <TabsList className="mb-4 grid grid-cols-2 w-full">
+          <TabsTrigger value="recent">آخر السجلات</TabsTrigger>
+          <TabsTrigger value="stats">الإحصائيات</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="recent" className="space-y-4">
+          {recentImages.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <DatabaseIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground/60" />
+              <p>لا توجد سجلات حتى الآن</p>
+              <p className="text-sm mt-1">قم بتحميل بعض الصور للبدء</p>
+            </div>
+          ) : (
+            <>
+              {recentImages.map((image) => (
+                <motion.div
+                  key={image.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="border rounded-lg overflow-hidden bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center p-3">
+                    <div className="h-12 w-12 rounded-md bg-gray-100 dark:bg-gray-700 overflow-hidden ml-3 flex-shrink-0">
+                      {image.previewUrl && (
+                        <img 
+                          src={image.previewUrl} 
+                          alt="" 
+                          className="h-full w-full object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <div className="flex justify-between items-start">
+                        <p className="font-medium truncate" title={image.code || image.senderName || "صورة بدون عنوان"}>
+                          {image.code || image.senderName || "صورة بدون عنوان"}
+                        </p>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ml-2 ${
+                            image.status === "completed" 
+                              ? "bg-green-50 text-green-700 border-green-200" 
+                              : image.status === "pending"
+                              ? "bg-orange-50 text-orange-700 border-orange-200"
+                              : "bg-red-50 text-red-700 border-red-200"
+                          }`}
+                        >
+                          {image.status === "completed" ? "مكتملة" : 
+                           image.status === "pending" ? "قيد الانتظار" : "خطأ"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1" title={formatRelativeTime(image.date)}>
+                        {formatRelativeTime(image.date)}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+              
+              <Button variant="outline" size="sm" className="w-full mt-2" asChild>
+                <Link to="/records">
+                  <FileSearch className="ml-1 h-4 w-4" />
+                  عرض كل السجلات
+                </Link>
+              </Button>
+            </>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="stats">
+          <div className="space-y-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center justify-between border rounded-lg p-3 bg-white dark:bg-gray-800"
+            >
+              <div className="flex items-center">
+                <DatabaseIcon className="h-5 w-5 ml-2 text-blue-600" />
+                <span>إجمالي السجلات</span>
+              </div>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                {stats.total}
+              </Badge>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: { delay: 0.1 } }}
+              className="flex items-center justify-between border rounded-lg p-3 bg-white dark:bg-gray-800"
+            >
+              <div className="flex items-center">
+                <ClipboardList className="h-5 w-5 ml-2 text-green-600" />
+                <span>تم إرسالها</span>
+              </div>
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                {stats.submitted}
+              </Badge>
+            </motion.div>
+            
+            <Button variant="outline" size="sm" className="w-full mt-2" asChild>
+              <Link to="/records">
+                <FileSearch className="ml-1 h-4 w-4" />
+                عرض التقارير والإحصائيات
+              </Link>
+            </Button>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

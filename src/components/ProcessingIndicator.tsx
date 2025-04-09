@@ -1,92 +1,68 @@
 
 import React from 'react';
 import { Progress } from "@/components/ui/progress";
-import { Loader, AlertCircle, Check, Clock } from "lucide-react";
+import { Loader, CheckCircle2, Clock } from "lucide-react";
+import { motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 
 interface ProcessingIndicatorProps {
   isProcessing: boolean;
   processingProgress: number;
   activeUploads: number;
   queueLength: number;
-  error?: string;
 }
 
-const ProcessingIndicator: React.FC<ProcessingIndicatorProps> = ({
+const ProcessingIndicator = ({
   isProcessing,
   processingProgress,
   activeUploads,
-  queueLength,
-  error
-}) => {
-  if (!isProcessing && processingProgress === 0 && activeUploads === 0 && queueLength === 0) {
-    return null;
-  }
-
-  const getStatusMessage = () => {
-    if (error) {
-      return (
-        <div className="flex items-center text-red-500">
-          <AlertCircle className="h-4 w-4 ml-1" />
-          <span>{error}</span>
-        </div>
-      );
-    }
-
-    if (!isProcessing && processingProgress === 100) {
-      return (
-        <div className="flex items-center text-green-500">
-          <Check className="h-4 w-4 ml-1" />
-          <span>تمت معالجة جميع الصور بنجاح</span>
-        </div>
-      );
-    }
-
-    if (isProcessing && queueLength > 0) {
-      return (
-        <div className="flex items-center text-blue-500">
-          <Loader className="h-4 w-4 ml-1 animate-spin" />
-          <span>جاري معالجة {activeUploads} من {queueLength} صورة...</span>
-        </div>
-      );
-    }
-
-    if (isProcessing) {
-      return (
-        <div className="flex items-center text-blue-500">
-          <Loader className="h-4 w-4 ml-1 animate-spin" />
-          <span>جاري معالجة الصور...</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex items-center text-yellow-500">
-        <Clock className="h-4 w-4 ml-1" />
-        <span>في انتظار معالجة الصور...</span>
-      </div>
-    );
-  };
+  queueLength
+}: ProcessingIndicatorProps) => {
+  if (!isProcessing) return null;
 
   return (
-    <div className="mb-4 p-4 border rounded-lg bg-white dark:bg-gray-800 shadow-sm">
-      <div className="mb-2 flex justify-between items-center">
-        <span className="font-medium">حالة المعالجة</span>
-        {getStatusMessage()}
-      </div>
-      
-      <Progress value={processingProgress} className="h-2" />
-      
-      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-        {processingProgress > 0 && (
-          <span>{Math.round(processingProgress)}% مكتمل</span>
-        )}
-        {queueLength > 0 && (
-          <span className="mr-2">
-            {queueLength - activeUploads} في قائمة الانتظار
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900 rounded-xl p-4 shadow-sm"
+    >
+      <div className="flex flex-wrap justify-between items-center">
+        <div className="flex items-center">
+          <div className="flex items-center justify-center bg-blue-100 dark:bg-blue-800 rounded-full w-10 h-10 ml-3">
+            <Loader className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+              جاري المعالجة
+              <Badge variant="outline" className="mr-2 bg-blue-100 text-blue-700 border-blue-200">
+                {activeUploads} / {queueLength}
+              </Badge>
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              يتم معالجة الصور، يرجى الانتظار...
+            </p>
+          </div>
+        </div>
+        
+        <div className="mt-2 sm:mt-0 flex items-center gap-2">
+          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+            {Math.round(processingProgress)}%
           </span>
-        )}
+          <div className="flex items-center">
+            <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 ml-1" />
+            <span className="text-xs text-gray-600 dark:text-gray-300">
+              جاري العمل...
+            </span>
+          </div>
+        </div>
       </div>
-    </div>
+      
+      <div className="mt-3">
+        <Progress value={processingProgress} className="h-2 bg-blue-200 dark:bg-blue-800/50">
+          <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full transition-all duration-500" />
+        </Progress>
+      </div>
+    </motion.div>
   );
 };
 
