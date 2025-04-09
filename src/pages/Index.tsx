@@ -1,10 +1,11 @@
+
 import React, { useEffect } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { ImageData } from '@/types/ImageData';
 import FileUploader from '@/components/FileUploader';
 import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
 import ProcessingIndicator from '@/components/ProcessingIndicator';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Loader, AlertCircle, Upload, Database } from 'lucide-react';

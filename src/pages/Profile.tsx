@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import { ProfileCard, ProfileEditCard, ProfileSkeleton } from '@/components/Profile';
 import { useProfileData } from '@/hooks/useProfileData';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext';
 
 const Profile = () => {
   const { signOut, refreshUserProfile } = useAuth();
