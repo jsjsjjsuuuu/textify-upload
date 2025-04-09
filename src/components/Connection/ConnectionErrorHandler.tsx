@@ -3,7 +3,6 @@ import React from 'react';
 import { Wifi, WifiOff, AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-// تصحيح استيراد useAuth من المسار الصحيح
 import { useAuth } from '@/contexts/auth';
 
 /**
