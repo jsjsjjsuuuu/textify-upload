@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { Loader, Search, Filter, Download, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { ImageData } from '@/types/ImageData';
