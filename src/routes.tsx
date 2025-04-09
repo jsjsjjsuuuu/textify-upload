@@ -14,6 +14,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AdminApproval from './pages/AdminApproval';
 import ProtectedRoute from './components/ProtectedRoute';
+import ImageDetail from './pages/ImageDetail';
 
 /**
  * تكوين مسارات التطبيق
@@ -44,6 +45,13 @@ export const AppRoutes = () => {
       <Route path="/profile" element={
         <ProtectedRoute>
           <Profile />
+        </ProtectedRoute>
+      } />
+      
+      {/* مسار لعرض تفاصيل الصورة */}
+      <Route path="/image/:id" element={
+        <ProtectedRoute>
+          <ImageDetail />
         </ProtectedRoute>
       } />
       

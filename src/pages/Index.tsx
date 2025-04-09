@@ -15,6 +15,7 @@ import DashboardHeader from '@/components/DashboardHeader';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from 'react-router-dom';
 
 // دالة للتحقق من اكتمال الصورة
 const isImageComplete = (image: ImageData): boolean => {
@@ -77,7 +78,7 @@ const Index = () => {
           </Alert>
 
           <Button className="w-full rounded-xl" asChild>
-            <a href="/login">تسجيل الدخول</a>
+            <Link to="/login">تسجيل الدخول</Link>
           </Button>
         </div>
       </div>;
