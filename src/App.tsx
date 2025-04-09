@@ -5,12 +5,11 @@ import { AppRoutes } from "@/routes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import { AuthProvider } from "@/contexts/auth";
-import { useAuth } from "@/contexts/auth";
+import { AuthProvider, useAuth } from "@/contexts/auth";
 import ConnectionErrorHandler from "@/components/Connection/ConnectionErrorHandler";
 import { Wifi, WifiOff } from "lucide-react";
 
-// مكون التطبيق الأساسي مع وضع خدمة مراقبة الاتصال
+// مكون منفصل لمحتوى التطبيق الذي يستخدم useAuth
 function AppContent() {
   const { isLoading, isOffline, connectionError } = useAuth();
   
