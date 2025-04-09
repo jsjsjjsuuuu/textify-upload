@@ -200,10 +200,13 @@ export const useImageProcessing = () => {
     newImages.forEach(img => addImage(img));
   };
   
-  // إعادة تعريف دالة loadUserImages بواجهة مبسطة تتوقع معلمة واحدة فقط (وهي دالة الإرجاع)
+  /**
+   * تحميل صور المستخدم - واجهة مبسطة
+   * @param callback - دالة الرجوع التي ستتلقى الصور المحملة
+   */
   const loadUserImages = (callback?: (images: ImageData[]) => void) => {
     if (user) {
-      // تصحيح الاستدعاء بتمرير user.id وليس user فقط
+      // استدعاء دالة fetchUserImages من useImageDatabase مع تمرير معرف المستخدم ودالة الرجوع
       return fetchUserImages(user.id, callback || setImages);
     }
   };

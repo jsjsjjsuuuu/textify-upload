@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,7 +60,8 @@ const Records = () => {
   useEffect(() => {
     if (user && !dataLoaded) {
       setIsLoading(true);
-      // استخدام loadUserImages بالطريقة الصحيحة - تمرير دالة رجوع فقط
+      
+      // استخدام loadUserImages مع دالة رجوع فقط - تم تصحيح طريقة الاستدعاء هنا
       loadUserImages((loadedImages) => {
         console.log(`تم تحميل ${loadedImages.length} صورة للمستخدم`);
         setIsLoading(false);
@@ -174,12 +176,7 @@ const Records = () => {
     });
     
     // إعادة تحميل الصور - تصحيح استدعاء loadUserImages للتوافق مع واجهة التطبيق الجديدة
-    if (user) {
-      setDataLoaded(false); // إعادة تعيين حالة التحميل لإعادة تحميل البيانات
-      loadUserImages((loadedImages) => {
-        console.log(`تم إعادة تحميل ${loadedImages.length} صورة بعد الحذف`);
-      });
-    }
+    setDataLoaded(false); // إعادة تعيين حالة التحميل لإعادة تحميل البيانات
   };
 
   // تصدير الصور المحددة
