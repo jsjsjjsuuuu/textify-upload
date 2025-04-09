@@ -3,7 +3,7 @@ import React from 'react';
 import { Wifi, WifiOff } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import ImageErrorDisplay from "@/components/ImagePreview/ImageViewer/ImageErrorDisplay";
-import { useAuth } from '@/contexts/auth/AuthContext';
+import { useAuth } from '@/contexts/auth';
 
 interface ConnectionErrorHandlerProps {
   className?: string;

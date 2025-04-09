@@ -5,8 +5,8 @@ import { AppRoutes } from "@/routes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import { AuthProvider } from "@/contexts/auth/AuthContext";
-import { useAuth } from "@/contexts/auth/AuthContext";
+import { AuthProvider } from "@/contexts/auth";
+import { useAuth } from "@/contexts/auth";
 import ConnectionErrorHandler from "@/components/Connection/ConnectionErrorHandler";
 import { Wifi, WifiOff } from "lucide-react";
 
