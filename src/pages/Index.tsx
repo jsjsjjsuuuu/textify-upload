@@ -100,7 +100,7 @@ const Index = () => {
               <h2 className="text-xl font-semibold mb-4">الصور المعالجة</h2>
               <ImagePreviewContainer 
                 images={images} 
-                isSubmitting={isSubmitting} 
+                isSubmitting={Object.values(isSubmitting).some(Boolean)} 
                 onTextChange={handleTextChange} 
                 onDelete={handleDelete} 
                 onSubmit={(id) => handleSubmitToApi(id)} 
