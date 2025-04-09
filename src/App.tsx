@@ -5,12 +5,49 @@ import { AppRoutes } from "@/routes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import { AuthProvider } from "@/contexts/auth";
+import { AuthProvider, useAuth } from "@/contexts/auth";
 import ConnectionErrorHandler from "@/components/Connection/ConnectionErrorHandler";
 import { Wifi, WifiOff } from "lucide-react";
 
-// مكون منفصل لاستخدامه داخل AuthProvider
+// مكون منفصل لاستخدامه داخل AuthProvider ويستخدم useAuth
 function AppContent() {
+  const { isLoading, isOffline, connectionError, user } = useAuth();
+  
+  console.log("حالة التطبيق:", {
+    isLoading, 
+    isOffline, 
+    hasConnectionError: !!connectionError,
+    isAuthenticated: !!user,
+    userId: user?.id
+  });
+  
+  // تسجيل نوع المتصفح ومعلومات أخرى يمكن أن تساعد في التصحيح
+  useEffect(() => {
+    console.log("معلومات المتصفح:", {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language,
+      cookiesEnabled: navigator.cookieEnabled,
+      screenWidth: window.innerWidth,
+      screenHeight: window.innerHeight,
+      online: navigator.onLine
+    });
+  }, []);
+  
+  // إذا كان هناك مشكلة في الاتصال، نعرض صفحة الخطأ
+  if (isOffline || connectionError) {
+    return <ConnectionErrorHandler />;
+  }
+
+  // عرض مؤشر التحميل إذا كانت البيانات قيد التحميل
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
   return (
     <Suspense fallback={
       <div className="flex justify-center items-center h-screen bg-background">
