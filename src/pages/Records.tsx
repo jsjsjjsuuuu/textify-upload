@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,6 +34,7 @@ import ImageDetailsPanel from '@/components/ImageViewer/ImageDetailsPanel';
 const Records = () => {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
+  
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     loadUserImages,
@@ -59,7 +59,7 @@ const Records = () => {
   useEffect(() => {
     if (user && !dataLoaded) {
       setIsLoading(true);
-      // استدعاء loadUserImages والتأكد من تمرير وسيطة الإرجاع
+      // استدعاء loadUserImages بطريقة صحيحة مع الدالة الرجوعية فقط
       loadUserImages((loadedImages) => {
         console.log(`تم تحميل ${loadedImages.length} صورة للمستخدم`);
         setIsLoading(false);
@@ -173,7 +173,7 @@ const Records = () => {
       description: `تم حذف ${successCount} صورة بنجاح${errorCount > 0 ? ` (فشل حذف ${errorCount} صورة)` : ''}`,
     });
     
-    // إعادة تحميل الصور - تصحيح استدعاء loadUserImages بدون معرف المستخدم
+    // إعادة تحميل الصور - تعديل استدعاء loadUserImages للتوافق مع واجهة التطبيق الجديدة
     if (user) {
       setDataLoaded(false); // إعادة تعيين حالة التحميل لإعادة تحميل البيانات
       loadUserImages((loadedImages) => {
