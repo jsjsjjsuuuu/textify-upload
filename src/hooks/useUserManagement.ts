@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -98,11 +97,8 @@ export const useUserManagement = () => {
       
       // إذا كان هناك خطأ في جلب البريد الإلكتروني، عرض إشعار للمستخدم
       if (emailsError) {
-        toast({
-          title: "تنبيه",
-          description: "بعض بيانات المستخدمين غير مكتملة، يرجى التحقق من قاعدة البيانات",
-          variant: "warning",
-        });
+        // تصحيح الخطأ - استخدام toast.warning بدلاً من الصيغة الخاطئة
+        toast.warning("بعض بيانات المستخدمين غير مكتملة، يرجى التحقق من قاعدة البيانات");
       }
     } catch (error) {
       console.error('خطأ في جلب بيانات المستخدمين:', error);
