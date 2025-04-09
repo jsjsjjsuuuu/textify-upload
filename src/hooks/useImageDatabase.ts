@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +11,7 @@ export const useImageDatabase = (updateImage: (id: string, update: Partial<Image
   const { toast } = useToast();
 
   // تحميل صور المستخدم من قاعدة البيانات
-  const loadUserImages = async (userId: string, setAllImages: (images: ImageData[]) => void) => {
+  const loadUserImages = async (userId: string, callback?: (images: ImageData[]) => void) => {
     try {
       setIsLoadingUserImages(true);
       console.log("جاري تحميل صور المستخدم:", userId);
@@ -77,11 +76,16 @@ export const useImageDatabase = (updateImage: (id: string, update: Partial<Image
         const uniqueImages = Array.from(uniqueImagesMap.values());
         console.log(`تم إزالة ${convertedImages.length - uniqueImages.length} صورة مكررة من قاعدة البيانات`);
         
-        // تحديث الحالة بالصور الفريدة فقط
-        setAllImages(uniqueImages);
+        // استدعاء الدالة الرجعية إذا كانت موجودة وإلا استخدام دالة setAllImages
+        if (callback) {
+          callback(uniqueImages);
+        }
       } else {
         console.log("لا توجد صور مخزنة للمستخدم");
-        setAllImages([]);
+        // استدعاء الدالة الرجعية مع مصفوفة فارغة إذا كانت موجودة
+        if (callback) {
+          callback([]);
+        }
       }
     } catch (error) {
       console.error("خطأ في تحميل الصور:", error);

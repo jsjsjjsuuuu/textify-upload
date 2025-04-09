@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -22,10 +21,9 @@ const RecentRecords = () => {
   useEffect(() => {
     if (user) {
       setIsLoading(true);
-      // إضافة معالجة الاستجابة بعد تحميل الصور
-      loadUserImages(user.id).then(() => {
-        setIsLoading(false);
-      }).catch(() => {
+      // إضافة معالجة الاستجابة بعد تحميل الصور ومعلمة معرف المستخدم
+      loadUserImages(user.id, (loadedImages) => {
+        // تمرير دالة رجعية تقوم بتحديث حالة التحميل
         setIsLoading(false);
       });
     }
