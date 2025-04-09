@@ -100,15 +100,10 @@ const Index = () => {
               <h2 className="text-xl font-semibold mb-4">الصور المعالجة</h2>
               <ImagePreviewContainer 
                 images={images} 
-                isSubmitting={false} 
+                isSubmitting={isSubmitting} 
                 onTextChange={handleTextChange} 
                 onDelete={handleDelete} 
-                onSubmit={(id) => {
-                  const image = images.find(img => img.id === id);
-                  if (image && user) {
-                    handleSubmitToApi(id, image, user.id);
-                  }
-                }} 
+                onSubmit={(id) => handleSubmitToApi(id)} 
                 formatDate={formatDate} 
               />
             </div>
