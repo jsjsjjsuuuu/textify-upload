@@ -48,11 +48,20 @@ export const useUserManagement = () => {
       let emailsError = null;
       
       try {
+        console.log('جاري استدعاء دالة get_users_emails...');
         const response = await supabase.rpc('get_users_emails');
+        
         if (response.error) {
           emailsError = response.error;
           console.error('خطأ في جلب بيانات البريد الإلكتروني:', emailsError);
+          console.error('تفاصيل الخطأ:', {
+            code: emailsError.code,
+            message: emailsError.message,
+            details: emailsError.details,
+            hint: emailsError.hint
+          });
         } else {
+          console.log('تم جلب بيانات البريد الإلكتروني بنجاح:', response.data?.length);
           emailsData = response.data || [];
         }
       } catch (error) {
@@ -65,6 +74,7 @@ export const useUserManagement = () => {
       
       // التحقق من وجود بيانات البريد الإلكتروني قبل معالجتها
       if (emailsData && Array.isArray(emailsData)) {
+        console.log('عدد سجلات البريد الإلكتروني التي تم جلبها:', emailsData.length);
         emailsData.forEach((user: any) => {
           if (user && user.id) {
             // التحقق من نوع البيانات وتحويلها إلى نص إذا لزم الأمر
@@ -74,6 +84,8 @@ export const useUserManagement = () => {
             authUsersMap[user.id] = { email, created_at };
           }
         });
+      } else {
+        console.warn('بيانات البريد الإلكتروني غير متوفرة أو ليست مصفوفة');
       }
       
       // تحويل بيانات الملفات الشخصية إلى قائمة المستخدمين
@@ -97,7 +109,6 @@ export const useUserManagement = () => {
       
       // إذا كان هناك خطأ في جلب البريد الإلكتروني، عرض إشعار للمستخدم
       if (emailsError) {
-        // تصحيح الخطأ - استخدام toast.warning بدلاً من الصيغة الخاطئة
         toast.warning("بعض بيانات المستخدمين غير مكتملة، يرجى التحقق من قاعدة البيانات");
       }
     } catch (error) {
