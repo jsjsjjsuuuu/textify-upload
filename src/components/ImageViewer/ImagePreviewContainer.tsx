@@ -8,6 +8,7 @@ import { Trash2, Save, SendHorizonal, Filter, Loader, Image, ZoomIn, ZoomOut, Re
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import ExtractedDataEditor from "@/components/ExtractedData/ExtractedDataEditor";
+
 interface ImagePreviewContainerProps {
   images: ImageData[];
   isSubmitting?: boolean;
@@ -20,6 +21,7 @@ interface ImagePreviewContainerProps {
 
 // تحديد الحد الأقصى لعدد الصور التي سيتم عرضها في كل مجموعة
 const ITEMS_PER_PAGE = 10;
+
 const ImagePreviewContainer = ({
   images,
   isSubmitting = false,
@@ -33,13 +35,40 @@ const ImagePreviewContainer = ({
   const [activeTab, setActiveTab] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   // حالات جديدة لتكبير الصورة
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isFullScreen, setIsFullScreen] = useState(false);
+
+  // الاستماع إلى حدث معالجة الصورة لتحديث الصورة النشطة
+  useEffect(() => {
+    const handleImageProcessed = (event: CustomEvent) => {
+      const { imageId } = event.detail;
+      const processedImage = images.find(img => img.id === imageId);
+      
+      if (processedImage) {
+        console.log("تم معالجة الصورة وتعيينها كصورة نشطة:", imageId);
+        setActiveImage(processedImage);
+        
+        // إذا كانت الصورة المعالجة في صفحة مختلفة، انتقل إلى الصفحة المناسبة
+        const filteredImages = filteredImages();
+        const imageIndex = filteredImages.findIndex(img => img.id === imageId);
+        if (imageIndex >= 0) {
+          const page = Math.floor(imageIndex / ITEMS_PER_PAGE) + 1;
+          if (page !== currentPage) {
+            setCurrentPage(page);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('image-processed', handleImageProcessed as EventListener);
+    
+    return () => {
+      window.removeEventListener('image-processed', handleImageProcessed as EventListener);
+    };
+  }, [images]);
 
   // تعيين أول صورة كصورة نشطة تلقائيًا عند التحميل أو عند تغيير الصور
   useEffect(() => {
@@ -50,6 +79,11 @@ const ImagePreviewContainer = ({
       const updatedActiveImage = images.find(img => img.id === activeImage.id);
       if (updatedActiveImage && JSON.stringify(updatedActiveImage) !== JSON.stringify(activeImage)) {
         setActiveImage(updatedActiveImage);
+      }
+      
+      // إذا تم حذف الصورة النشطة، حدد صورة أخرى
+      if (!updatedActiveImage) {
+        setActiveImage(images[0]);
       }
     } else if (images.length === 0) {
       setActiveImage(null);

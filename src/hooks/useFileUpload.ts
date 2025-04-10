@@ -240,6 +240,13 @@ export const useFileUpload = ({
               status: "completed",
             });
             
+            // تعيين الصورة الحالية كصورة نشطة لعرض البيانات المستخرجة فوراً
+            if (window && window.dispatchEvent) {
+              window.dispatchEvent(new CustomEvent('image-processed', { 
+                detail: { imageId: newImage.id } 
+              }));
+            }
+            
             // حفظ الصورة المعالجة إذا كانت الوظيفة متاحة
             if (saveProcessedImage) {
               await saveProcessedImage(processedImage);
@@ -255,6 +262,13 @@ export const useFileUpload = ({
               ...processedImage,
               status: "completed",
             });
+            
+            // تعيين الصورة الحالية كصورة نشطة لعرض البيانات المستخرجة فوراً
+            if (window && window.dispatchEvent) {
+              window.dispatchEvent(new CustomEvent('image-processed', { 
+                detail: { imageId: newImage.id } 
+              }));
+            }
             
             // حفظ الصورة المعالجة إذا كانت الوظيفة متاحة
             if (saveProcessedImage) {
@@ -344,7 +358,7 @@ export const useFileUpload = ({
     processWithGemini,
     geminiProcessor
   ]);
-  
+
   // وظيفة تنظيف التكرارات من الذاكرة المؤقتة
   const cleanupDuplicates = useCallback(() => {
     // تنظيف القائمة الحالية من التكرارات

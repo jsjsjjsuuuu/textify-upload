@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -30,14 +29,18 @@ export const useImageProcessing = () => {
     addImage, 
     clearSessionImages,
     clearImages,
-    handleTextChange
+    handleTextChange,
+    setAllImages
   } = useImageState();
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
   const { handleFileChange: fileUploadHandler } = useFileUpload({
+    images,
     addImage,
     updateImage,
-    setProcessingProgress: (progress: number) => setProcessingProgress(progress)
+    setProcessingProgress: (progress: number) => setProcessingProgress(progress),
+    processWithOcr,
+    processWithGemini
   });
   
   // حالة معالجة الصور
@@ -62,8 +65,7 @@ export const useImageProcessing = () => {
       setIsLoadingUserImages(true);
       fetchUserImages(user.id, (loadedImages) => {
         // إضافة الصور المحملة للصور الحالية
-        const updatedImages = [...loadedImages];
-        setImages(updatedImages);
+        setAllImages(loadedImages);
         setIsLoadingUserImages(false);
       });
     }
@@ -180,6 +182,7 @@ export const useImageProcessing = () => {
   const handleFileChange = (files: FileList | File[]) => {
     fileUploadHandler(files);
     setProcessingProgress(0);
+    setIsProcessing(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -220,11 +223,8 @@ export const useImageProcessing = () => {
     }
   };
 
-  /**
-   * معالجة إرسال الصورة إلى API - تمثل واجهة مبسطة لـ handleSubmitToApi
-   * @param id - معرف الصورة المراد إرسالها
-   */
-  const handleSubmitToApi = async (id: string) => {
+  // مواجهة مبسطة للتقديم
+  const handleSubmitToApi = useCallback(async (id: string) => {
     try {
       // تحديث حالة التقديم
       setIsSubmitting(prev => ({ ...prev, [id]: true }));
@@ -242,6 +242,12 @@ export const useImageProcessing = () => {
       // تحديث حالة الصورة إذا كان الإرسال ناجحًا
       if (result) {
         updateImage(id, { submitted: true });
+        
+        // عرض رسالة نجاح للمستخدم
+        toast({
+          title: "تم الإرسال بنجاح",
+          description: "تم إرسال البيانات بنجاح إلى API"
+        });
       }
       
       return result;
@@ -257,8 +263,8 @@ export const useImageProcessing = () => {
       // إعادة تعيين حالة التقديم
       setIsSubmitting(prev => ({ ...prev, [id]: false }));
     }
-  };
-  
+  }, [images, submitToApi, toast, updateImage, user?.id]);
+
   // تنفيذ الوظائف الناقصة
   const retryProcessing = () => {
     // إعادة معالجة الصور التي فشلت
@@ -342,7 +348,7 @@ export const useImageProcessing = () => {
     },
     // تصدير واجهة الدالة المبسطة
     loadUserImages,
-    setImages,
+    setImages: setAllImages,
     clearOldApiKey
   };
 };
