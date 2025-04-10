@@ -1,9 +1,10 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import { ProfileCard, ProfileEditCard, ProfileSkeleton } from '@/components/Profile';
 import { useProfileData } from '@/hooks/useProfileData';
-import { useAuth } from '@/contexts/auth';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Profile = () => {
   const { signOut, refreshUserProfile } = useAuth();

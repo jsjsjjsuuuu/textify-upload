@@ -1,8 +1,7 @@
 
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { SupabaseClient, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 // واجهة UserProfile موحدة مع استخدام أسماء الحقول الجديدة فقط
 interface UserProfile {
@@ -26,8 +25,6 @@ interface AuthContextType {
   session: Session | null;
   userProfile: UserProfile | null;
   isLoading: boolean;
-  isOffline: boolean;
-  connectionError: string | null;
   signIn: (email: string, password: string) => Promise<{ error: any; user: any | null }>;
   signOut: () => Promise<void>;
   signUp: (email: string, password: string, fullName: string, plan: string) => Promise<{ error: any; user: any | null }>;
@@ -36,7 +33,6 @@ interface AuthContextType {
   updateUser: (updates: any) => Promise<{ data: any; error: any }>;
   fetchUserProfile: (userId: string) => Promise<UserProfile | null>;
   refreshUserProfile: () => Promise<void>;
-  retryConnection: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,10 +40,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 interface AuthProviderProps {
   children: React.ReactNode;
 }
-
-// ثوابت إعادة المحاولة
-const MAX_RETRY_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 1500;
 
 const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [supabaseClient, setSupabaseClient] = useState<SupabaseClient | null>(null);
@@ -57,115 +49,23 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isOffline, setIsOffline] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
 
-  // دالة لمحاولة الاتصال
-  const initializeSupabase = useCallback(async (attempt = 0) => {
-    try {
-      console.log(`محاولة الاتصال بـ Supabase (${attempt + 1}/${MAX_RETRY_ATTEMPTS})...`);
-      
-      // التحقق من الاتصال بالإنترنت
-      if (!navigator.onLine) {
-        setIsOffline(true);
-        setConnectionError("لا يوجد اتصال بالإنترنت. تحقق من اتصالك وحاول مرة أخرى.");
-        console.error("لا يوجد اتصال بالإنترنت");
-        setIsLoading(false);
-        return false;
-      }
-      
-      // محاولة تهيئة العميل
-      const client = supabase;
-      
-      // التحقق من الاتصال عبر استعلام بسيط
-      const { error } = await client.from('profiles').select('count').limit(1).maybeSingle();
-      
-      if (error) {
-        console.error("خطأ في الاتصال بـ Supabase:", error.message);
-        
-        // إذا وصلنا للحد الأقصى من المحاولات
-        if (attempt >= MAX_RETRY_ATTEMPTS - 1) {
-          setConnectionError(`تعذر الاتصال بالخادم. ${error.message}`);
-          setIsOffline(true);
-          setIsLoading(false);
-          return false;
-        }
-        
-        // إعادة المحاولة بعد تأخير
-        console.log(`إعادة المحاولة بعد ${RETRY_DELAY_MS}ms...`);
-        setRetryCount(attempt + 1);
-        
-        // انتظار ثم إعادة المحاولة
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
-        return initializeSupabase(attempt + 1);
-      }
-      
-      // نجاح الاتصال
-      console.log("تم الاتصال بـ Supabase بنجاح");
-      setSupabaseClient(client);
-      setAuth(client.auth);
-      setConnectionError(null);
-      setIsOffline(false);
-      return true;
-    } catch (error: any) {
-      console.error("خطأ غير متوقع في الاتصال:", error.message);
-      
-      // إذا وصلنا للحد الأقصى من المحاولات
-      if (attempt >= MAX_RETRY_ATTEMPTS - 1) {
-        setConnectionError(`خطأ غير متوقع: ${error.message}`);
-        setIsOffline(true);
-        setIsLoading(false);
-        return false;
-      }
-      
-      // إعادة المحاولة بعد تأخير
-      console.log(`إعادة المحاولة بعد ${RETRY_DELAY_MS}ms...`);
-      setRetryCount(attempt + 1);
-      
-      // انتظار ثم إعادة المحاولة
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
-      return initializeSupabase(attempt + 1);
-    }
-  }, []);
-
-  // دالة إعادة محاولة الاتصال
-  const retryConnection = useCallback(async (): Promise<boolean> => {
-    setIsLoading(true);
-    setConnectionError(null);
-    setIsOffline(false);
-    setRetryCount(0);
-    
-    const success = await initializeSupabase();
-    
-    if (success) {
-      setIsInitialized(false); // إعادة تعيين الحالة
-      // لا نقوم بتعيين setIsLoading(false) هنا لأن useEffect سيتولى ذلك
-    } else {
-      setIsLoading(false);
-    }
-    
-    return success;
-  }, [initializeSupabase]);
-  
   // تحسين عملية تهيئة المصادقة لتجنب التحديثات المتكررة
   useEffect(() => {
-    const setupAuth = async () => {
+    const initializeAuth = async () => {
       try {
-        // إذا كان هناك خطأ في الاتصال، لا نحاول تهيئة المصادقة
-        if (isOffline || connectionError) {
-          return;
-        }
-        
-        if (isInitialized || !supabaseClient) return;
+        if (isInitialized) return;
         
         setIsLoading(true);
+        setSupabaseClient(supabase);
+        setAuth(supabase.auth);
+
         console.log("تهيئة خدمة المصادقة...");
 
         // أولاً، إعداد الاستماع لأحداث تغيير حالة المصادقة
         const {
           data: { subscription },
-        } = supabaseClient.auth.onAuthStateChange((event, currentSession) => {
+        } = supabase.auth.onAuthStateChange((event, currentSession) => {
           console.log("تغيرت حالة المصادقة:", event);
           
           // تحديث حالة الجلسة والمستخدم بطريقة آمنة
@@ -183,13 +83,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
 
         // ثم، الحصول على الجلسة الحالية
-        const { data: initialSession, error: sessionError } = await supabaseClient.auth.getSession();
-        
-        if (sessionError) {
-          console.error("خطأ في الحصول على الجلسة:", sessionError.message);
-          // لا نتوقف هنا، نحاول المتابعة على أي حال
-        }
-        
+        const { data: initialSession } = await supabase.auth.getSession();
         console.log("بيانات الجلسة الأولية:", initialSession?.session ? "موجودة" : "غير موجودة");
         setSession(initialSession.session);
 
@@ -210,58 +104,22 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return () => {
           subscription.unsubscribe();
         };
-      } catch (error: any) {
-        console.error("خطأ في تهيئة المصادقة:", error.message);
+      } catch (error) {
+        console.error("خطأ في تهيئة المصادقة:", error);
         setIsLoading(false);
         setIsInitialized(true);
       }
     };
 
-    if (supabaseClient) {
-      setupAuth();
-    }
-  }, [supabaseClient, isInitialized, isOffline, connectionError]);
-
-  // محاولة الاتصال الأولية
-  useEffect(() => {
-    if (!isInitialized && !isOffline) {
-      initializeSupabase();
-    }
-  }, [initializeSupabase, isInitialized, isOffline]);
-  
-  // مراقبة حالة الاتصال بالإنترنت
-  useEffect(() => {
-    const handleOnline = () => {
-      console.log("تم استعادة الاتصال بالإنترنت");
-      setIsOffline(false);
-      if (connectionError) {
-        retryConnection();
-      }
-    };
-    
-    const handleOffline = () => {
-      console.log("انقطع الاتصال بالإنترنت");
-      setIsOffline(true);
-      setConnectionError("لا يوجد اتصال بالإنترنت. تحقق من اتصالك وحاول مرة أخرى.");
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [connectionError, retryConnection]);
+    initializeAuth();
+  }, [isInitialized]);
 
   // طريقة آمنة لجلب الملف الشخصي بدون تكرار لانهائي
   const fetchUserProfileSafely = async (userId: string): Promise<UserProfile | null> => {
     try {
-      if (!supabaseClient) return null;
-      
       console.log("جلب ملف المستخدم الشخصي بطريقة آمنة:", userId);
       
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
@@ -305,13 +163,11 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log("محاولة إنشاء ملف شخصي جديد للمستخدم:", userId);
     
     try {
-      if (!supabaseClient) return null;
-      
-      const { data: userData } = await supabaseClient.auth.getUser();
+      const { data: userData } = await supabase.auth.getUser();
       const userEmail = userData.user?.email || '';
       
       // التحقق أولاً من عدم وجود الملف الشخصي (تجنب الإدخالات المكررة)
-      const { data: existingProfile } = await supabaseClient
+      const { data: existingProfile } = await supabase
         .from('profiles')
         .select('id')
         .eq('id', userId)
@@ -323,7 +179,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return await fetchUserProfileSafely(userId);
       }
       
-      const { data: newProfile, error: insertError } = await supabaseClient
+      const { data: newProfile, error: insertError } = await supabase
         .from('profiles')
         .insert([
           { 
@@ -369,11 +225,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log("محاولة تسجيل الدخول:", email);
     
     try {
-      if (!supabaseClient) {
-        return { error: { message: "غير متصل بالخادم" }, user: null };
-      }
-      
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
@@ -399,9 +251,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
-      if (!supabaseClient) return;
-      
-      await supabaseClient.auth.signOut();
+      await supabase.auth.signOut();
       setUser(null);
       setSession(null);
       setUserProfile(null);
@@ -415,11 +265,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log("بدء عملية تسجيل مستخدم جديد:", email);
       
-      if (!supabaseClient) {
-        return { error: { message: "غير متصل بالخادم" }, user: null };
-      }
-      
-      const { data, error } = await supabaseClient.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -454,11 +300,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const forgotPassword = async (email: string) => {
     try {
-      if (!supabaseClient) {
-        return { error: { message: "غير متصل بالخادم" }, sent: false };
-      }
-      
-      const { data, error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
@@ -477,11 +319,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const resetPassword = async (newPassword: string) => {
     try {
-      if (!supabaseClient) {
-        return { error: { message: "غير متصل بالخادم" }, success: false };
-      }
-      
-      const { data, error } = await supabaseClient.auth.updateUser({
+      const { data, error } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
@@ -500,11 +338,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateUser = async (updates: any) => {
     try {
-      if (!supabaseClient) {
-        return { data: null, error: { message: "غير متصل بالخادم" } };
-      }
-      
-      const { data, error } = await supabaseClient.auth.updateUser(updates);
+      const { data, error } = await supabase.auth.updateUser(updates);
 
       if (error) {
         console.error("خطأ في تحديث معلومات المستخدم:", error.message);
@@ -526,8 +360,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     session,
     userProfile,
     isLoading,
-    isOffline,
-    connectionError,
     signIn,
     signOut,
     signUp,
@@ -535,8 +367,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     resetPassword,
     updateUser,
     fetchUserProfile,
-    refreshUserProfile,
-    retryConnection
+    refreshUserProfile
   };
 
   return (

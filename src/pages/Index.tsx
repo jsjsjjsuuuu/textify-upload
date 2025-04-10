@@ -4,7 +4,7 @@ import { ImageData } from '@/types/ImageData';
 import FileUploader from '@/components/FileUploader';
 import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
 import ProcessingIndicator from '@/components/ProcessingIndicator';
-import { useAuth } from '@/contexts/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Loader, AlertCircle, Upload, Database } from 'lucide-react';
@@ -15,7 +15,6 @@ import DashboardHeader from '@/components/DashboardHeader';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link } from 'react-router-dom';
 
 // دالة للتحقق من اكتمال الصورة
 const isImageComplete = (image: ImageData): boolean => {
@@ -78,7 +77,7 @@ const Index = () => {
           </Alert>
 
           <Button className="w-full rounded-xl" asChild>
-            <Link to="/login">تسجيل الدخول</Link>
+            <a href="/login">تسجيل الدخول</a>
           </Button>
         </div>
       </div>;
