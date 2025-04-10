@@ -1,12 +1,14 @@
+
 import { ImageData } from "@/types/ImageData";
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ImagePreview from "@/components/ImagePreview/ImagePreview";
-import { Trash2, Save, SendHorizonal, Filter, Loader, Image, ZoomIn, ZoomOut, RefreshCw } from "lucide-react";
+import { ImageViewer } from "@/components/ImagePreview";
+import { Trash2, Save, SendHorizonal, Filter, Loader, Image, ZoomIn, ZoomOut, RefreshCw, Maximize2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import DraggableImage from "@/components/ImagePreview/ImageViewer/DraggableImage";
+import ExtractedDataEditor from "@/components/ExtractedData/ExtractedDataEditor";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -36,10 +38,9 @@ const ImagePreviewContainer = ({
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const { toast } = useToast();
   
-  // حالة جديدة لتكبير الصورة
-  const [isZoomed, setIsZoomed] = useState(false);
+  // حالات جديدة لتكبير الصورة
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   
   // تعيين أول صورة كصورة نشطة تلقائيًا عند التحميل أو عند تغيير الصور
   useEffect(() => {
@@ -117,29 +118,23 @@ const ImagePreviewContainer = ({
   
   // وظائف التكبير/التصغير
   const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.2, 3));
+    setZoomLevel(prev => Math.min(prev + 0.25, 3));
   };
   
   const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+    setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
   };
   
   const handleResetZoom = () => {
     setZoomLevel(1);
   };
   
-  // تبديل حالة التكبير
-  const toggleZoom = () => {
-    setIsZoomed(!isZoomed);
-    setImageLoaded(false);
+  const handleZoomChange = (newZoom: number) => {
+    setZoomLevel(newZoom);
   };
   
-  const handleImageLoad = () => {
-    setImageLoaded(true);
-  };
-  
-  const handleImageError = () => {
-    setImageLoaded(false);
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
   };
 
   // وظيفة التنقل بين الصفحات
@@ -191,183 +186,113 @@ const ImagePreviewContainer = ({
     );
   }
   
-  // عرض الصور في التبويب المحدد
-  const renderImagesGrid = () => (
-    <div className="grid grid-cols-2 gap-4">
-      <AnimatePresence>
-        {paginatedImages().map((image) => (
-          <motion.div
-            key={image.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className={`relative overflow-hidden rounded-lg cursor-pointer border-2 transition-all ${
-              activeImage?.id === image.id 
-                ? "border-primary dark:border-primary shadow-md" 
-                : "border-transparent dark:border-transparent"
-            } ${
-              selectedImages.includes(image.id)
-                ? "ring-2 ring-blue-500 dark:ring-blue-400"
-                : ""
-            }`}
-            onClick={() => handleImageClick(image)}
-          >
-            {/* Checkbox للتحديد المتعدد */}
-            <div 
-              className="absolute top-2 right-2 z-10 w-5 h-5 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedImages(prev => 
-                  prev.includes(image.id) 
-                    ? prev.filter(id => id !== image.id)
-                    : [...prev, image.id]
-                );
-              }}
-            >
-              {selectedImages.includes(image.id) && (
-                <div className="w-3 h-3 bg-blue-500 rounded-sm" />
-              )}
-            </div>
-            
-            {/* حالة الصورة */}
-            <div className={`absolute top-2 left-2 z-10 px-1.5 py-0.5 text-xs rounded-full
-              ${image.status === "completed" && isImageComplete(image) ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
-              ${image.status === "pending" ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" : ""}
-              ${image.status === "error" || hasPhoneError(image) ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" : ""}
-              ${image.status === "processing" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" : ""}
-              ${image.status === "completed" && !isImageComplete(image) && !hasPhoneError(image) ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" : ""}
-            `}>
-              {image.status === "completed" && isImageComplete(image) && "مكتملة"}
-              {image.status === "pending" && "قيد الانتظار"}
-              {image.status === "error" && "فشل"}
-              {hasPhoneError(image) && "خطأ في رقم الهاتف"}
-              {image.status === "processing" && (
-                <span className="flex items-center">
-                  <Loader className="w-3 h-3 ml-1 animate-spin" />
-                  جاري المعالجة
-                </span>
-              )}
-              {image.status === "completed" && !isImageComplete(image) && !hasPhoneError(image) && "غير مكتملة"}
-            </div>
-            
-            {/* صورة مصغرة */}
-            <div className="h-28 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-              {image.previewUrl ? (
-                <img
-                  src={image.previewUrl}
-                  alt={`صورة ${image.number || ""}`}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // في حالة فشل تحميل الصورة، استبدالها بأيقونة
-                    (e.target as HTMLImageElement).style.display = "none";
-                    const parent = (e.target as HTMLImageElement).parentElement;
-                    if (parent) {
-                      const icon = document.createElement("div");
-                      icon.className = "flex items-center justify-center h-full w-full";
-                      icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><path d="M2 2l20 20"></path><path d="M9 9v0"></path><path d="M6.5 5h11l2 2"></path><path d="M5.5 17.5l1 1"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>';
-                      parent.appendChild(icon);
-                    }
-                  }}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full w-full">
-                  <Image className="w-8 h-8 text-gray-400" />
-                </div>
-              )}
-            </div>
-            
-            {/* معلومات الصورة */}
-            <div className="p-2 text-xs">
-              <p className="font-medium truncate">
-                {image.code || image.senderName || `صورة ${image.number || ""}`}
-              </p>
-              <p className="text-gray-500 dark:text-gray-400 truncate">
-                {image.file?.name || ""}
-              </p>
-            </div>
-          </motion.div>
-        ))}
-      </AnimatePresence>
+  // عرض قائمة الصور المصغرة
+  const renderImagesThumbnails = () => (
+    <div className="grid grid-cols-5 gap-2">
+      {paginatedImages().map((image) => (
+        <motion.div
+          key={image.id}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2 }}
+          className={`relative overflow-hidden rounded-md cursor-pointer border-2 transition-all ${
+            activeImage?.id === image.id 
+              ? "border-primary dark:border-primary shadow-md" 
+              : "border-transparent dark:border-transparent"
+          }`}
+          onClick={() => handleImageClick(image)}
+        >
+          <div className={`absolute top-0 left-0 w-full h-1
+            ${image.status === "completed" && isImageComplete(image) ? "bg-green-500" : ""}
+            ${image.status === "pending" ? "bg-amber-500" : ""}
+            ${image.status === "error" || hasPhoneError(image) ? "bg-red-500" : ""}
+            ${image.status === "processing" ? "bg-blue-500" : ""}
+            ${image.status === "completed" && !isImageComplete(image) && !hasPhoneError(image) ? "bg-purple-500" : ""}
+          `}></div>
+          
+          {/* صورة مصغرة */}
+          <div className="h-16 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+            {image.previewUrl ? (
+              <img
+                src={image.previewUrl}
+                alt={`صورة ${image.number || ""}`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full w-full">
+                <Image className="w-5 h-5 text-gray-400" />
+              </div>
+            )}
+          </div>
+        </motion.div>
+      ))}
     </div>
   );
   
-  // عرض الصورة النشطة والبيانات
-  const renderActiveImage = () => (
-    activeImage ? (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-          <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
-            <h3 className="text-lg font-medium">
-              عرض الصورة والبيانات
-            </h3>
-            <div className="flex items-center space-x-2 space-x-reverse">
-              {activeImage.previewUrl && (
-                <Button
-                  size="sm"
-                  variant={isZoomed ? "secondary" : "outline"}
-                  onClick={toggleZoom}
-                  className="ml-2"
-                >
-                  {isZoomed ? "عرض البيانات" : "تكبير الصورة"}
-                </Button>
-              )}
-              
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleDelete}
-                className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-              >
-                <Trash2 className="w-4 h-4 ml-1" />
-                حذف
-              </Button>
-              
-              {activeImage.status === "completed" && isImageComplete(activeImage) && !activeImage.submitted && !hasPhoneError(activeImage) && (
-                <Button
-                  size="sm"
-                  variant="default"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <SendHorizonal className="w-4 h-4 ml-1" />
-                  إرسال
-                </Button>
-              )}
-            </div>
-          </div>
+  // عرض أدوات الصفحات
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    
+    return (
+      <div className="flex justify-center mt-4">
+        <div className="flex items-center space-x-1 space-x-reverse">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            السابق
+          </Button>
           
-          {isZoomed ? (
-            <div className="h-[650px] bg-gray-100 dark:bg-gray-900 relative">
-              <DraggableImage
-                src={activeImage.previewUrl}
-                zoomLevel={zoomLevel}
-                onImageLoad={handleImageLoad}
-                onImageError={handleImageError}
-                imageLoaded={imageLoaded}
-              />
-            </div>
-          ) : (
-            <ImagePreview
-              image={activeImage}
-              onTextChange={onTextChange}
-            />
-          )}
+          <span className="px-3 py-1 text-sm">
+            صفحة {currentPage} من {totalPages}
+          </span>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            التالي
+          </Button>
         </div>
-      </motion.div>
-    ) : (
-      <div className="h-full flex items-center justify-center border-2 border-dashed rounded-lg p-8">
-        <p className="text-muted-foreground">
-          اختر صورة من اليسار لعرض التفاصيل
-        </p>
       </div>
-    )
-  );
+    );
+  };
+
+  // عرض أزرار الإجراءات للصورة النشطة
+  const renderImageActions = () => {
+    if (!activeImage) return null;
+    
+    return (
+      <div className="flex justify-end space-x-2 space-x-reverse mb-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleDelete}
+          className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-700"
+        >
+          <Trash2 className="w-4 h-4 ml-1" />
+          حذف
+        </Button>
+        
+        {activeImage.status === "completed" && isImageComplete(activeImage) && !activeImage.submitted && !hasPhoneError(activeImage) && (
+          <Button
+            size="sm"
+            variant="default"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {isSubmitting ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <SendHorizonal className="mr-2 h-4 w-4" />}
+            إرسال
+          </Button>
+        )}
+      </div>
+    );
+  };
 
   // حساب عدد الصور في كل حالة
   const countByStatus = {
@@ -379,190 +304,270 @@ const ImagePreviewContainer = ({
     processing: images.filter(img => img.status === "processing").length
   };
 
-  // عرض علامات التبويب وعرض الصور المعالجة
+  // تحديد المخطط الرئيسي وفقًا لوضع العرض
   return (
     <div className="container mx-auto">
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 space-y-4 md:space-y-0">
           <TabsList className="mb-2 md:mb-0">
-            <TabsTrigger value="all" className="relative">
-              الكل
-              <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 rounded-full">
-                {countByStatus.all}
-              </span>
+            <TabsTrigger value="all">
+              الكل <span className="mr-1 text-xs bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded-full">{countByStatus.all}</span>
             </TabsTrigger>
-            <TabsTrigger value="pending" className="relative">
-              قيد الانتظار
-              <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded-full">
-                {countByStatus.pending}
-              </span>
+            <TabsTrigger value="pending">
+              قيد الانتظار <span className="mr-1 text-xs bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded-full">{countByStatus.pending}</span>
             </TabsTrigger>
-            <TabsTrigger value="completed" className="relative">
-              مكتملة
-              <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
-                {countByStatus.completed}
-              </span>
+            <TabsTrigger value="completed">
+              مكتملة <span className="mr-1 text-xs bg-green-100 dark:bg-green-900 px-1.5 py-0.5 rounded-full">{countByStatus.completed}</span>
             </TabsTrigger>
-            <TabsTrigger value="incomplete" className="relative">
-              غير مكتملة
-              <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full">
-                {countByStatus.incomplete}
-              </span>
+            <TabsTrigger value="incomplete">
+              غير مكتملة <span className="mr-1 text-xs bg-purple-100 dark:bg-purple-900 px-1.5 py-0.5 rounded-full">{countByStatus.incomplete}</span>
             </TabsTrigger>
-            <TabsTrigger value="error" className="relative">
-              أخطاء
-              <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full">
-                {countByStatus.error}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="processing" className="relative">
-              قيد المعالجة
-              <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
-                {countByStatus.processing}
-              </span>
+            <TabsTrigger value="error">
+              أخطاء <span className="mr-1 text-xs bg-red-100 dark:bg-red-900 px-1.5 py-0.5 rounded-full">{countByStatus.error}</span>
             </TabsTrigger>
           </TabsList>
-          
-          <div className="flex items-center space-x-2 space-x-reverse">
-            {selectedImages.length > 0 ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => {
-                    // حذف الصور المحددة
-                    selectedImages.forEach(id => onDelete(id));
-                    setSelectedImages([]);
-                    toast({
-                      title: "تم الحذف",
-                      description: `تم حذف ${selectedImages.length} صور بنجاح`
-                    });
-                  }}
-                  className="ml-2"
-                >
-                  <Trash2 className="w-4 h-4 ml-1.5" />
-                  حذف المحدد ({selectedImages.length})
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelectedImages([])}
-                >
-                  إلغاء التحديد
-                </Button>
-              </>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  // تحديد جميع الصور الظاهرة حاليًا
-                  setSelectedImages(paginatedImages().map(img => img.id));
-                }}
-              >
-                <Filter className="w-4 h-4 ml-1.5" />
-                تحديد الكل
-              </Button>
-            )}
-          </div>
         </div>
 
-        {totalPages > 0 && (
-          <div className="flex justify-center mb-4">
-            <div className="flex items-center space-x-1 space-x-reverse">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => goToPage(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                السابق
-              </Button>
+        <TabsContent value="all" className="mt-4">
+          {/* عرض الصور المصغرة أعلى الصفحة */}
+          <div className="mb-6">
+            {renderImagesThumbnails()}
+            {renderPagination()}
+          </div>
+          
+          {/* عرض الصورة النشطة والبيانات بجانبها */}
+          {activeImage ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* عرض الصورة بحجم كبير - 70% من العرض */}
+              <div className="lg:col-span-8 h-[600px]">
+                <ImageViewer 
+                  selectedImage={activeImage}
+                  zoomLevel={zoomLevel}
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  onResetZoom={handleResetZoom}
+                  onZoomChange={handleZoomChange}
+                  formatDate={formatDate}
+                  isFullScreen={isFullScreen}
+                  onToggleFullScreen={toggleFullScreen}
+                />
+              </div>
               
-              <span className="px-3 py-1 text-sm">
-                صفحة {currentPage} من {totalPages}
-              </span>
+              {/* عرض البيانات - 30% من العرض */}
+              <div className="lg:col-span-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow">
+                  <div className="mb-4 flex justify-between items-center">
+                    <h2 className="text-xl font-semibold">عرض الصورة والبيانات</h2>
+                    {renderImageActions()}
+                  </div>
+                  
+                  {/* محتوى البيانات */}
+                  <div className="space-y-4">
+                    <ExtractedDataEditor
+                      image={activeImage}
+                      onTextChange={onTextChange}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="h-60 flex items-center justify-center border-2 border-dashed rounded-lg p-8">
+              <p className="text-muted-foreground">
+                اختر صورة لعرض التفاصيل
+              </p>
+            </div>
+          )}
+        </TabsContent>
+        
+        {/* نفس المحتوى لعلامات التبويب الأخرى - يمكن نسخه لكل تبويب */}
+        <TabsContent value="pending" className="mt-4">
+          <div className="mb-6">
+            {renderImagesThumbnails()}
+            {renderPagination()}
+          </div>
+          
+          {activeImage ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-8 h-[600px]">
+                <ImageViewer 
+                  selectedImage={activeImage}
+                  zoomLevel={zoomLevel}
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  onResetZoom={handleResetZoom}
+                  onZoomChange={handleZoomChange}
+                  formatDate={formatDate}
+                  isFullScreen={isFullScreen}
+                  onToggleFullScreen={toggleFullScreen}
+                />
+              </div>
               
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                التالي
-              </Button>
+              <div className="lg:col-span-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow">
+                  <div className="mb-4 flex justify-between items-center">
+                    <h2 className="text-xl font-semibold">عرض الصورة والبيانات</h2>
+                    {renderImageActions()}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <ExtractedDataEditor
+                      image={activeImage}
+                      onTextChange={onTextChange}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
-
-        <TabsContent value="all" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-            {/* عرض الصور والمعلومات */}
-            <div className="order-2 md:order-1">
-              {renderImagesGrid()}
+          ) : (
+            <div className="h-60 flex items-center justify-center border-2 border-dashed rounded-lg p-8">
+              <p className="text-muted-foreground">
+                اختر صورة لعرض التفاصيل
+              </p>
             </div>
-            
-            {/* عرض الصورة النشطة والبيانات المستخرجة */}
-            <div className="order-1 md:order-2 mb-6 md:mb-0">
-              {renderActiveImage()}
-            </div>
-          </div>
+          )}
         </TabsContent>
         
-        {/* نفس المحتوى لعلامات التبويب الأخرى */}
-        <TabsContent value="pending" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-            <div className="order-2 md:order-1">
-              {renderImagesGrid()}
-            </div>
-            <div className="order-1 md:order-2 mb-6 md:mb-0">
-              {renderActiveImage()}
-            </div>
+        {/* نسخة باقي التبويبات بنفس الهيكل */}
+        <TabsContent value="completed" className="mt-4">
+          <div className="mb-6">
+            {renderImagesThumbnails()}
+            {renderPagination()}
           </div>
+          
+          {activeImage ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-8 h-[600px]">
+                <ImageViewer 
+                  selectedImage={activeImage}
+                  zoomLevel={zoomLevel}
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  onResetZoom={handleResetZoom}
+                  onZoomChange={handleZoomChange}
+                  formatDate={formatDate}
+                  isFullScreen={isFullScreen}
+                  onToggleFullScreen={toggleFullScreen}
+                />
+              </div>
+              
+              <div className="lg:col-span-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow">
+                  <div className="mb-4 flex justify-between items-center">
+                    <h2 className="text-xl font-semibold">عرض الصورة والبيانات</h2>
+                    {renderImageActions()}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <ExtractedDataEditor
+                      image={activeImage}
+                      onTextChange={onTextChange}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="h-60 flex items-center justify-center border-2 border-dashed rounded-lg p-8">
+              <p className="text-muted-foreground">
+                اختر صورة لعرض التفاصيل
+              </p>
+            </div>
+          )}
         </TabsContent>
         
-        <TabsContent value="completed" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-            <div className="order-2 md:order-1">
-              {renderImagesGrid()}
-            </div>
-            <div className="order-1 md:order-2 mb-6 md:mb-0">
-              {renderActiveImage()}
-            </div>
+        <TabsContent value="incomplete" className="mt-4">
+          <div className="mb-6">
+            {renderImagesThumbnails()}
+            {renderPagination()}
           </div>
+          
+          {activeImage ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-8 h-[600px]">
+                <ImageViewer 
+                  selectedImage={activeImage}
+                  zoomLevel={zoomLevel}
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  onResetZoom={handleResetZoom}
+                  onZoomChange={handleZoomChange}
+                  formatDate={formatDate}
+                  isFullScreen={isFullScreen}
+                  onToggleFullScreen={toggleFullScreen}
+                />
+              </div>
+              
+              <div className="lg:col-span-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow">
+                  <div className="mb-4 flex justify-between items-center">
+                    <h2 className="text-xl font-semibold">عرض الصورة والبيانات</h2>
+                    {renderImageActions()}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <ExtractedDataEditor
+                      image={activeImage}
+                      onTextChange={onTextChange}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="h-60 flex items-center justify-center border-2 border-dashed rounded-lg p-8">
+              <p className="text-muted-foreground">
+                اختر صورة لعرض التفاصيل
+              </p>
+            </div>
+          )}
         </TabsContent>
         
-        <TabsContent value="incomplete" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-            <div className="order-2 md:order-1">
-              {renderImagesGrid()}
-            </div>
-            <div className="order-1 md:order-2 mb-6 md:mb-0">
-              {renderActiveImage()}
-            </div>
+        <TabsContent value="error" className="mt-4">
+          <div className="mb-6">
+            {renderImagesThumbnails()}
+            {renderPagination()}
           </div>
-        </TabsContent>
-        
-        <TabsContent value="error" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-            <div className="order-2 md:order-1">
-              {renderImagesGrid()}
+          
+          {activeImage ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-8 h-[600px]">
+                <ImageViewer 
+                  selectedImage={activeImage}
+                  zoomLevel={zoomLevel}
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  onResetZoom={handleResetZoom}
+                  onZoomChange={handleZoomChange}
+                  formatDate={formatDate}
+                  isFullScreen={isFullScreen}
+                  onToggleFullScreen={toggleFullScreen}
+                />
+              </div>
+              
+              <div className="lg:col-span-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow">
+                  <div className="mb-4 flex justify-between items-center">
+                    <h2 className="text-xl font-semibold">عرض الصورة والبيانات</h2>
+                    {renderImageActions()}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <ExtractedDataEditor
+                      image={activeImage}
+                      onTextChange={onTextChange}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="order-1 md:order-2 mb-6 md:mb-0">
-              {renderActiveImage()}
+          ) : (
+            <div className="h-60 flex items-center justify-center border-2 border-dashed rounded-lg p-8">
+              <p className="text-muted-foreground">
+                اختر صورة لعرض التفاصيل
+              </p>
             </div>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="processing" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-            <div className="order-2 md:order-1">
-              {renderImagesGrid()}
-            </div>
-            <div className="order-1 md:order-2 mb-6 md:mb-0">
-              {renderActiveImage()}
-            </div>
-          </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

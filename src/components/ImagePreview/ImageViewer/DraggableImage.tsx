@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 interface DraggableImageProps {
   src: string | null;
@@ -7,6 +8,7 @@ interface DraggableImageProps {
   onImageLoad?: () => void;
   onImageError?: () => void;
   imageLoaded?: boolean;
+  onZoomChange?: (newZoom: number) => void;
 }
 
 const DraggableImage = ({
@@ -14,12 +16,12 @@ const DraggableImage = ({
   zoomLevel,
   onImageLoad,
   onImageError,
-  imageLoaded
+  imageLoaded,
+  onZoomChange
 }: DraggableImageProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-  const [isZoomed, setIsZoomed] = useState(false);
   const [localZoomLevel, setLocalZoomLevel] = useState(zoomLevel);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -27,8 +29,6 @@ const DraggableImage = ({
   // استعادة الموقع عند تغيير مستوى التكبير
   useEffect(() => {
     setLocalZoomLevel(zoomLevel);
-    // عند تغيير مستوى التكبير، تعيين isZoomed بناءً على ما إذا كان مستوى التكبير أكبر من 1
-    setIsZoomed(zoomLevel > 1);
   }, [zoomLevel]);
 
   // إعادة تعيين الموقع عند تغيير الصورة
@@ -37,22 +37,33 @@ const DraggableImage = ({
     setIsDragging(false);
   }, [src]);
 
-  // وظيفة النقر على الصورة
-  const handleImageClick = useCallback(() => {
-    if (!isDragging) {
-      setIsZoomed(!isZoomed);
-      setPosition({ x: 0, y: 0 });
-      setLocalZoomLevel(isZoomed ? 1 : 1.5);
-    }
-  }, [isDragging, isZoomed]);
+  // وظائف التكبير والتصغير
+  const handleZoomIn = useCallback(() => {
+    const newZoom = Math.min(localZoomLevel + 0.25, 3);
+    setLocalZoomLevel(newZoom);
+    if (onZoomChange) onZoomChange(newZoom);
+  }, [localZoomLevel, onZoomChange]);
+
+  const handleZoomOut = useCallback(() => {
+    const newZoom = Math.max(localZoomLevel - 0.25, 0.5);
+    setLocalZoomLevel(newZoom);
+    if (onZoomChange) onZoomChange(newZoom);
+  }, [localZoomLevel, onZoomChange]);
+
+  const handleResetZoom = useCallback(() => {
+    setLocalZoomLevel(1);
+    setPosition({ x: 0, y: 0 });
+    if (onZoomChange) onZoomChange(1);
+  }, [onZoomChange]);
 
   // وظيفة النقر المزدوج على الصورة
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsZoomed(false);
-    setPosition({ x: 0, y: 0 });
-    setLocalZoomLevel(1);
-  }, []);
+  const handleDoubleClick = useCallback(() => {
+    if (localZoomLevel > 1) {
+      handleResetZoom();
+    } else {
+      handleZoomIn();
+    }
+  }, [localZoomLevel, handleZoomIn, handleResetZoom]);
 
   // معالجات سحب الماوس
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -104,7 +115,7 @@ const DraggableImage = ({
     setIsDragging(false);
   }, []);
 
-  // إظهار إشارة لإخراج المؤشر من الصورة
+  // إدارة اللمس للأجهزة المحمولة
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (localZoomLevel > 1 && e.touches.length === 1) {
       setIsDragging(true);
@@ -152,22 +163,48 @@ const DraggableImage = ({
   return (
     <div
       ref={imageContainerRef}
-      className={`relative w-full h-full overflow-hidden flex items-center justify-center ${localZoomLevel > 1 ? 'cursor-move' : 'cursor-pointer'}`}
-      onClick={handleImageClick}
-      onDoubleClick={handleDoubleClick}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      className="relative w-full h-full overflow-hidden flex items-center justify-center"
     >
+      {/* أزرار التكبير والتصغير */}
+      <div className="absolute top-3 left-3 z-50 flex space-x-2 rtl:space-x-reverse">
+        <button 
+          onClick={handleZoomIn}
+          className="w-9 h-9 bg-gray-900/80 hover:bg-gray-900 text-white rounded-full flex items-center justify-center border border-gray-700/50 shadow-lg"
+        >
+          <ZoomIn className="w-5 h-5" />
+        </button>
+        <button 
+          onClick={handleZoomOut}
+          className="w-9 h-9 bg-gray-900/80 hover:bg-gray-900 text-white rounded-full flex items-center justify-center border border-gray-700/50 shadow-lg"
+        >
+          <ZoomOut className="w-5 h-5" />
+        </button>
+        <button 
+          onClick={handleResetZoom}
+          className="w-9 h-9 bg-gray-900/80 hover:bg-gray-900 text-white rounded-full flex items-center justify-center border border-gray-700/50 shadow-lg"
+        >
+          <RotateCcw className="w-5 h-5" />
+        </button>
+      </div>
+      
+      {/* مستوى التكبير */}
+      <div className="absolute bottom-3 right-3 bg-black/70 text-white text-sm py-1 px-3 rounded-full shadow-lg">
+        {Math.round(localZoomLevel * 100)}%
+      </div>
+      
+      {/* رسالة السحب */}
+      {localZoomLevel > 1 && (
+        <div className="absolute bottom-3 left-3 bg-black/70 text-white text-sm py-1 px-3 rounded-full shadow-lg pointer-events-none">
+          اسحب الصورة للتنقل
+        </div>
+      )}
+      
+      {/* الصورة نفسها */}
       <img
         ref={imageRef}
         src={src}
         alt="صورة الوصل"
-        className={`max-h-full transition-all duration-200 ${localZoomLevel > 1 ? '' : 'hover:opacity-95'}`}
+        className={`max-h-full transition-all ${localZoomLevel > 1 ? 'cursor-move' : 'cursor-pointer'}`}
         style={{
           transform: `translate(${position.x}px, ${position.y}px) scale(${localZoomLevel})`,
           transformOrigin: 'center',
@@ -175,13 +212,16 @@ const DraggableImage = ({
         }}
         onLoad={onImageLoad}
         onError={onImageError}
+        onDoubleClick={handleDoubleClick}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         draggable={false}
       />
-      {isZoomed && (
-        <div className="absolute bottom-3 right-3 bg-black bg-opacity-60 text-white text-xs py-1 px-2 rounded-md pointer-events-none">
-          انقر مرتين للعودة
-        </div>
-      )}
     </div>
   );
 };
