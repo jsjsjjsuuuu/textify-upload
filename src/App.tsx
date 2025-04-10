@@ -1,47 +1,40 @@
-
-import React, { Suspense, useEffect } from 'react';
-import { BrowserRouter } from "react-router-dom";
-import { AppRoutes } from "@/routes";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "sonner";
-import { ThemeProvider } from "@/components/ui/theme-provider";
-import { AuthProvider } from "@/contexts/AuthContext";
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from './contexts/AuthContext';
+import Home from './pages/Home';
+import Dashboard from './pages/Dashboard';
+import Onboarding from './pages/Onboarding';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Reports from './pages/Reports';
+import Records from './pages/Records';
+import Settings from './pages/Settings';
+import { Toaster } from "@/components/ui/toaster"
+import ReceiptImageView from "@/pages/ReceiptyImageView";
+import ReceiptGallery from "@/pages/ReceiptGallery";
 
 function App() {
-  console.log("تحميل التطبيق الرئيسي App");
-  
-  // تسجيل نوع المتصفح ومعلومات أخرى يمكن أن تساعد في التصحيح
-  useEffect(() => {
-    console.log("معلومات المتصفح:", {
-      userAgent: navigator.userAgent,
-      platform: navigator.platform,
-      language: navigator.language,
-      cookiesEnabled: navigator.cookieEnabled,
-      screenWidth: window.innerWidth,
-      screenHeight: window.innerHeight,
-    });
-  }, []);
-  
   return (
-    <React.StrictMode>
-      <ThemeProvider defaultTheme="system" storageKey="app-theme">
-        <AuthProvider>
-          <BrowserRouter>
-            <Suspense fallback={
-              <div className="flex justify-center items-center h-screen bg-background">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              </div>
-            }>
-              <div className="min-h-screen bg-background transition-colors duration-300">
-                <AppRoutes />
-              </div>
-            </Suspense>
-            <Toaster />
-            <SonnerToaster position="top-center" closeButton />
-          </BrowserRouter>
-        </AuthProvider>
-      </ThemeProvider>
-    </React.StrictMode>
+    <AuthProvider>
+      <BrowserRouter>
+        <ThemeProvider defaultTheme="dark">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/records" element={<Records />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/receipt/:id" element={<ReceiptImageView />} />
+            <Route path="/receipts" element={<ReceiptGallery />} />
+          </Routes>
+          <Toaster />
+        </ThemeProvider>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
