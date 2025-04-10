@@ -210,18 +210,22 @@ export const useGeminiProcessing = () => {
           
           console.log("نتيجة استخراج Gemini:", { 
             success: result.success, 
-            textLength: result.text?.length || 0,
-            confidence: result.confidence,
-            hasData: !!result.data
+            dataDetails: result.data ? 'توجد بيانات' : 'لا توجد بيانات',
+            message: result.message
           });
           
-          if (result.success && (result.text || result.data)) {
+          if (result.success && result.data) {
+            // تصحيح: استخدام الحقول الصحيحة من result.data
+            const extractedText = result.data.extractedText || "";
+            const parsedData = result.data.parsedData || {};
+            const confidence = parsedData.confidence || 0;
+            
             // استخراج البيانات مع مستوى ثقة وطريقة المعالجة
             const resultWithData = updateImageWithExtractedData(
               image,
-              result.text || "",
-              result.data || {},
-              result.confidence || 0,
+              extractedText,
+              parsedData,
+              confidence,
               "gemini"
             );
             
