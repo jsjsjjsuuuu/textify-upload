@@ -1,78 +1,62 @@
 
-import React from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { useImageProcessing } from '@/hooks/useImageProcessing';
-import { useFetchRecords } from './useFetchRecords';
-import { FileText, User, Users } from "lucide-react";
-import RecordsList from './RecordsList';
-import LoadingState from './LoadingState';
+import React, { useState } from 'react';
+import { Card } from "@/components/ui/card";
+import { Database, FileText, Package } from "lucide-react";
 import CardHeader from './CardHeader';
-import TabBar from './TabBar';
-import { useAuth } from "@/contexts/AuthContext";
+import TabBar, { TabItem } from './TabBar';
+import RecordsList from './RecordsList';
+import useFetchRecords from './useFetchRecords';
 
-const RecentRecords = () => {
-  const { formatDate } = useImageProcessing();
-  const { user } = useAuth();
-  const { 
-    loading, 
-    records, 
-    selectedRecordType, 
-    hasMoreRecords, 
-    isLoadingMore,
-    handleRecordTypeChange, 
-    handleRefresh, 
-    handleLoadMore 
-  } = useFetchRecords();
-  
-  // إنشاء مصفوفة علامات التبويب
-  const tabs = [
-    {
-      id: "all",
-      label: "الكل",
-      icon: <FileText className="w-4 h-4 opacity-70" />,
-      count: records.length
+const RecentRecords: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const { data, isLoading, isError, refetch, filteredData, counts } = useFetchRecords(activeTab);
+
+  const tabs: TabItem[] = [
+    { 
+      id: "all", 
+      label: "الكل", 
+      icon: <Database className="h-4 w-4" />, 
+      count: counts.all 
     },
-    {
-      id: "mine",
-      label: "سجلاتي",
-      icon: <User className="w-4 h-4 opacity-70" />,
-      count: records.filter(record => record.user_id === user?.id).length
+    { 
+      id: "processing", 
+      label: "قيد المعالجة", 
+      icon: <FileText className="h-4 w-4" />, 
+      count: counts.processing 
     },
-    {
-      id: "others",
-      label: "سجلات الآخرين",
-      icon: <Users className="w-4 h-4 opacity-70" />,
-      count: records.filter(record => record.user_id !== user?.id).length
+    { 
+      id: "completed", 
+      label: "مكتملة", 
+      icon: <Package className="h-4 w-4" />, 
+      count: counts.completed 
     }
   ];
-  
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader onRefresh={handleRefresh} />
-        <LoadingState />
-      </Card>
-    );
-  }
-  
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
+  const handleRefresh = () => {
+    refetch();
+  };
+
   return (
-    <Card>
+    <Card className="mb-6">
       <CardHeader onRefresh={handleRefresh} />
-      <CardContent>
+      
+      <div className="px-6 pb-4">
         <TabBar 
-          tabs={tabs}
-          activeTab={selectedRecordType}
-          onTabChange={handleRecordTypeChange}
+          tabs={tabs} 
+          activeTab={activeTab} 
+          onTabChange={handleTabChange} 
         />
-        
-        <RecordsList 
-          records={records}
-          formatDate={formatDate}
-          hasMoreRecords={hasMoreRecords}
-          isLoadingMore={isLoadingMore}
-          onLoadMore={handleLoadMore}
-        />
-      </CardContent>
+      </div>
+      
+      <RecordsList 
+        records={filteredData}
+        isLoading={isLoading}
+        isError={isError}
+      />
     </Card>
   );
 };

@@ -1,115 +1,112 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { ImageData } from "@/types/ImageData";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState, useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { ImageData } from '@/types/ImageData';
+import { useToast } from '@/hooks/use-toast';
 
-interface FetchRecordsOptions {
-  recordsPerPage?: number;
-}
-
-export const useFetchRecords = (options: FetchRecordsOptions = {}) => {
-  const [loading, setLoading] = useState(true);
-  const [records, setRecords] = useState<ImageData[]>([]);
-  const [selectedRecordType, setSelectedRecordType] = useState<'all' | 'mine' | 'others'>('all');
-  const [hasMoreRecords, setHasMoreRecords] = useState(false);
-  const [page, setPage] = useState(1);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+const useFetchRecords = (activeTab: string) => {
+  const [data, setData] = useState<ImageData[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isError, setIsError] = useState<boolean>(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  
-  const recordsPerPage = options.recordsPerPage || 10;
 
-  const fetchRecords = useCallback(async (reset = false) => {
-    if (!user) return;
+  // فلترة السجلات حسب علامة التبويب النشطة
+  const filteredData = useMemo(() => {
+    if (activeTab === 'all') {
+      return data;
+    } else if (activeTab === 'processing') {
+      return data.filter(item => item.status === 'pending' || item.status === 'processing');
+    } else if (activeTab === 'completed') {
+      return data.filter(item => item.status === 'completed');
+    }
+    return data;
+  }, [data, activeTab]);
 
-    const newPage = reset ? 1 : page;
-    const loadingState = reset ? setLoading : setIsLoadingMore;
-    
+  // حساب عدد السجلات لكل تبويب
+  const counts = useMemo(() => ({
+    all: data.length,
+    processing: data.filter(item => item.status === 'pending' || item.status === 'processing').length,
+    completed: data.filter(item => item.status === 'completed').length,
+  }), [data]);
+
+  const fetchRecords = async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setIsError(false);
+
     try {
-      loadingState(true);
-      
-      let query = supabase
-        .from('images')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range((newPage - 1) * recordsPerPage, newPage * recordsPerPage - 1);
-      
-      if (selectedRecordType === 'mine') {
-        query = query.eq('user_id', user.id);
-      } else if (selectedRecordType === 'others' && user) {
-        query = query.neq('user_id', user.id);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        throw error;
-      }
-      
-      // تحويل البيانات إلى النوع المطلوب
-      const formattedData = data.map((record: any) => ({
-        ...record,
-        date: new Date(record.created_at),
-        id: record.id || record.image_id,
-        status: record.status || "completed",
-      })) as ImageData[];
-      
-      // التحقق مما إذا كانت هناك المزيد من السجلات
-      const { count } = await supabase
-        .from('images')
-        .select('id', { count: 'exact' });
-        
-      setHasMoreRecords((count || 0) > newPage * recordsPerPage);
-      
-      if (reset) {
-        setRecords(formattedData);
-        setPage(1);
-      } else {
-        setRecords(prev => [...prev, ...formattedData]);
-        setPage(newPage + 1);
-      }
+      // محاكاة الاتصال بالخادم واستجابته
+      // في التطبيق الفعلي، سيتم استبدال هذا بطلب API حقيقي
+      const mockResponse = await new Promise<ImageData[]>((resolve) => {
+        setTimeout(() => {
+          // بيانات وهمية للعرض
+          resolve([
+            {
+              id: '1',
+              code: 'A123',
+              senderName: 'محمد أحمد',
+              phoneNumber: '07701234567',
+              province: 'بغداد',
+              date: new Date(),
+              status: 'completed',
+              price: '50000'
+            },
+            {
+              id: '2',
+              code: 'B456',
+              senderName: 'علي حسين',
+              phoneNumber: '07712345678',
+              province: 'البصرة',
+              date: new Date(),
+              status: 'processing',
+              price: '35000'
+            },
+            {
+              id: '3',
+              code: 'C789',
+              senderName: 'زينب خالد',
+              phoneNumber: '07723456789',
+              province: 'أربيل',
+              date: new Date(),
+              status: 'completed',
+              price: '75000'
+            },
+          ]);
+        }, 1000);
+      });
+
+      setData(mockResponse);
     } catch (error) {
-      console.error('خطأ في جلب السجلات:', error);
+      console.error('Error fetching records:', error);
+      setIsError(true);
       toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء جلب السجلات",
+        title: "خطأ في جلب البيانات",
+        description: "حدث خطأ أثناء محاولة جلب السجلات الأخيرة",
         variant: "destructive",
       });
     } finally {
-      loadingState(false);
+      setIsLoading(false);
     }
-  }, [selectedRecordType, user, page, recordsPerPage, toast]);
-  
-  useEffect(() => {
-    if (user) {
-      fetchRecords(true);
-    }
-  }, [selectedRecordType, user, fetchRecords]);
-  
-  const handleRecordTypeChange = (value: string) => {
-    setSelectedRecordType(value as 'all' | 'mine' | 'others');
-  };
-  
-  const handleRefresh = () => {
-    fetchRecords(true);
-  };
-  
-  const handleLoadMore = () => {
-    fetchRecords();
   };
 
+  // جلب السجلات عند تحميل المكون أو تغيير المستخدم
+  useEffect(() => {
+    fetchRecords();
+  }, [user]);
+
   return {
-    loading,
-    records,
-    selectedRecordType,
-    hasMoreRecords,
-    isLoadingMore,
-    handleRecordTypeChange,
-    handleRefresh,
-    handleLoadMore,
-    fetchRecords,
-    user  // تصدير المستخدم لاستخدامه في المكون الرئيسي
+    data,
+    isLoading,
+    isError,
+    refetch: fetchRecords,
+    filteredData,
+    counts
   };
 };
+
+export default useFetchRecords;
