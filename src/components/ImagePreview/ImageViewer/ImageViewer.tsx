@@ -87,11 +87,11 @@ const ImageViewer = ({
   };
 
   return (
-    <div className="bg-gray-900 dark:bg-gray-900 rounded-lg border border-purple-500/40 shadow-xl overflow-hidden flex flex-col h-full">
+    <div className="bg-gradient-to-br from-gray-900 to-gray-950 dark:from-gray-900 dark:to-black rounded-lg border border-purple-600/40 shadow-xl overflow-hidden flex flex-col h-full">
       {!imgError ? (
         <div className="relative w-full h-full overflow-hidden flex items-center justify-center bg-gray-900 dark:bg-gray-900">
           {/* إطار الصورة مع بوردر بنفسجي */}
-          <div className="w-full h-full relative flex items-center justify-center border-4 border-purple-500/30 rounded-lg overflow-hidden">
+          <div className="w-full h-full relative flex items-center justify-center border-4 border-purple-700/30 rounded-lg overflow-hidden">
             <DraggableImage 
               src={getImageUrl()} 
               zoomLevel={zoomLevel}

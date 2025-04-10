@@ -47,10 +47,12 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      className="h-full"
     >
       <Card className="bg-white/95 dark:bg-gray-800/95 shadow-sm border-brand-beige dark:border-gray-700 hover:shadow-md transition-shadow">
         <CardContent className="p-4">
           <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-primary">البيانات المستخرجة</h2>
             <ExtractedDataActions 
               editMode={editMode}
               onEditToggle={handleEditToggle}
@@ -72,22 +74,25 @@ const ExtractedDataEditor = ({ image, onTextChange }: ExtractedDataEditorProps) 
             initial={false}
             animate={{ scale: editMode ? 1.01 : 1 }}
             transition={{ duration: 0.2 }}
-            className={`p-4 rounded-lg transition-colors ${editMode ? 'bg-secondary/50' : ''}`}
+            className={`p-3 rounded-lg transition-colors ${editMode ? 'bg-secondary/30 dark:bg-secondary/10' : ''}`}
           >
             <ExtractedDataFields
               tempData={tempData}
               editMode={editMode}
               onTempChange={handleTempChange}
-              hideConfidence={true} // إخفاء عرض نسبة الثقة بجانب كل حقل
+              hideConfidence={true}
             />
           </motion.div>
 
-          {/* إضافة قسم منفصل لزر الأتمتة ليكون أكثر بروزًا */}
-          <div className="mt-6 flex justify-center">
+          {/* زر الأتمتة */}
+          <div className="mt-4 flex justify-center">
             <AutomationButton image={image} />
           </div>
 
-          <RawTextViewer text={image.extractedText} />
+          {/* عرض النص الخام في قسم منفصل بعد تحسين التصميم */}
+          <div className="mt-4">
+            <RawTextViewer text={image.extractedText} />
+          </div>
         </CardContent>
       </Card>
     </motion.div>

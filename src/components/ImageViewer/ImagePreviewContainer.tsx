@@ -1,4 +1,3 @@
-
 import { ImageData } from "@/types/ImageData";
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -338,8 +337,8 @@ const ImagePreviewContainer = ({
           {/* عرض الصورة النشطة والبيانات بجانبها */}
           {activeImage ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* عرض الصورة بحجم كبير - 70% من العرض */}
-              <div className="lg:col-span-8 h-[600px]">
+              {/* عرض الصورة بحجم كبير - تعديل من 70% إلى 60% من العرض */}
+              <div className="lg:col-span-7 h-[600px]">
                 <ImageViewer 
                   selectedImage={activeImage}
                   zoomLevel={zoomLevel}
@@ -353,16 +352,16 @@ const ImagePreviewContainer = ({
                 />
               </div>
               
-              {/* عرض البيانات - 30% من العرض */}
-              <div className="lg:col-span-4">
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow">
+              {/* عرض البيانات - تعديل من 30% إلى 40% من العرض */}
+              <div className="lg:col-span-5">
+                <div className="bg-gray-50 dark:bg-gray-800/95 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow h-full">
                   <div className="mb-4 flex justify-between items-center">
-                    <h2 className="text-xl font-semibold">عرض الصورة والبيانات</h2>
+                    <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
                     {renderImageActions()}
                   </div>
                   
                   {/* محتوى البيانات */}
-                  <div className="space-y-4">
+                  <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
                     <ExtractedDataEditor
                       image={activeImage}
                       onTextChange={onTextChange}
@@ -380,7 +379,7 @@ const ImagePreviewContainer = ({
           )}
         </TabsContent>
         
-        {/* نفس المحتوى لعلامات التبويب الأخرى - يمكن نسخه لكل تبويب */}
+        {/* نفس التعديلات للتبويبات الأخرى */}
         <TabsContent value="pending" className="mt-4">
           <div className="mb-6">
             {renderImagesThumbnails()}
@@ -389,7 +388,7 @@ const ImagePreviewContainer = ({
           
           {activeImage ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-8 h-[600px]">
+              <div className="lg:col-span-7 h-[600px]">
                 <ImageViewer 
                   selectedImage={activeImage}
                   zoomLevel={zoomLevel}
@@ -403,14 +402,14 @@ const ImagePreviewContainer = ({
                 />
               </div>
               
-              <div className="lg:col-span-4">
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow">
+              <div className="lg:col-span-5">
+                <div className="bg-gray-50 dark:bg-gray-800/95 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow h-full">
                   <div className="mb-4 flex justify-between items-center">
-                    <h2 className="text-xl font-semibold">عرض الصورة والبيانات</h2>
+                    <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
                     {renderImageActions()}
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
                     <ExtractedDataEditor
                       image={activeImage}
                       onTextChange={onTextChange}
@@ -428,7 +427,6 @@ const ImagePreviewContainer = ({
           )}
         </TabsContent>
         
-        {/* نسخة باقي التبويبات بنفس الهيكل */}
         <TabsContent value="completed" className="mt-4">
           <div className="mb-6">
             {renderImagesThumbnails()}
@@ -437,7 +435,7 @@ const ImagePreviewContainer = ({
           
           {activeImage ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-8 h-[600px]">
+              <div className="lg:col-span-7 h-[600px]">
                 <ImageViewer 
                   selectedImage={activeImage}
                   zoomLevel={zoomLevel}
@@ -451,14 +449,14 @@ const ImagePreviewContainer = ({
                 />
               </div>
               
-              <div className="lg:col-span-4">
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow">
+              <div className="lg:col-span-5">
+                <div className="bg-gray-50 dark:bg-gray-800/95 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow h-full">
                   <div className="mb-4 flex justify-between items-center">
-                    <h2 className="text-xl font-semibold">عرض الصورة والبيانات</h2>
+                    <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
                     {renderImageActions()}
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
                     <ExtractedDataEditor
                       image={activeImage}
                       onTextChange={onTextChange}
@@ -484,7 +482,7 @@ const ImagePreviewContainer = ({
           
           {activeImage ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-8 h-[600px]">
+              <div className="lg:col-span-7 h-[600px]">
                 <ImageViewer 
                   selectedImage={activeImage}
                   zoomLevel={zoomLevel}
@@ -498,14 +496,14 @@ const ImagePreviewContainer = ({
                 />
               </div>
               
-              <div className="lg:col-span-4">
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow">
+              <div className="lg:col-span-5">
+                <div className="bg-gray-50 dark:bg-gray-800/95 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow h-full">
                   <div className="mb-4 flex justify-between items-center">
-                    <h2 className="text-xl font-semibold">عرض الصورة والبيانات</h2>
+                    <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
                     {renderImageActions()}
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
                     <ExtractedDataEditor
                       image={activeImage}
                       onTextChange={onTextChange}
@@ -531,7 +529,7 @@ const ImagePreviewContainer = ({
           
           {activeImage ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-8 h-[600px]">
+              <div className="lg:col-span-7 h-[600px]">
                 <ImageViewer 
                   selectedImage={activeImage}
                   zoomLevel={zoomLevel}
@@ -545,14 +543,14 @@ const ImagePreviewContainer = ({
                 />
               </div>
               
-              <div className="lg:col-span-4">
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow">
+              <div className="lg:col-span-5">
+                <div className="bg-gray-50 dark:bg-gray-800/95 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow h-full">
                   <div className="mb-4 flex justify-between items-center">
-                    <h2 className="text-xl font-semibold">عرض الصورة والبيانات</h2>
+                    <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
                     {renderImageActions()}
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
                     <ExtractedDataEditor
                       image={activeImage}
                       onTextChange={onTextChange}
