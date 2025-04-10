@@ -44,7 +44,10 @@ const useFetchRecords = (activeTab: string) => {
       // في التطبيق الفعلي، سيتم استبدال هذا بطلب API حقيقي
       const mockResponse = await new Promise<ImageData[]>((resolve) => {
         setTimeout(() => {
-          // بيانات وهمية للعرض
+          // إنشاء ملف وهمي للاستخدام في البيانات الوهمية
+          const createDummyFile = () => new File(["dummy content"], "image.jpg", { type: "image/jpeg" });
+          
+          // بيانات وهمية للعرض مع إضافة الخصائص المفقودة
           resolve([
             {
               id: '1',
@@ -54,7 +57,9 @@ const useFetchRecords = (activeTab: string) => {
               province: 'بغداد',
               date: new Date(),
               status: 'completed',
-              price: '50000'
+              price: '50000',
+              file: createDummyFile(),
+              previewUrl: 'https://via.placeholder.com/150',
             },
             {
               id: '2',
@@ -64,7 +69,9 @@ const useFetchRecords = (activeTab: string) => {
               province: 'البصرة',
               date: new Date(),
               status: 'processing',
-              price: '35000'
+              price: '35000',
+              file: createDummyFile(),
+              previewUrl: 'https://via.placeholder.com/150',
             },
             {
               id: '3',
@@ -74,7 +81,9 @@ const useFetchRecords = (activeTab: string) => {
               province: 'أربيل',
               date: new Date(),
               status: 'completed',
-              price: '75000'
+              price: '75000',
+              file: createDummyFile(),
+              previewUrl: 'https://via.placeholder.com/150',
             },
           ]);
         }, 1000);
