@@ -1,9 +1,22 @@
 
-import React, { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import {
+  UploadCloud,
+  Menu,
+  X,
+  User,
+  LogOut,
+  Database,
+  Users,
+  Settings,
+  Sun,
+  Moon,
+  Info,
+  FileText,
+  Wand2
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,147 +24,232 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Moon, Sun, UserCog, Database, Upload, LogOut } from 'lucide-react';
-import { useTheme } from 'next-themes';
+} from "@/components/ui/dropdown-menu";
+import { useTheme } from "@/components/ui/theme-provider";
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 
 const AppHeader = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const { setTheme, theme } = useTheme();
   const { user, userProfile, signOut } = useAuth();
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const location = useLocation();
   
-  // التحقق من تحميل الصفحة لتجنب مشاكل SSR
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  console.log("هل المستخدم مسؤول في AppHeader:", userProfile?.is_admin === true, "قيمة is_admin الأصلية:", userProfile?.is_admin);
   
-  // للتصحيح المباشر
-  useEffect(() => {
-    if (user && userProfile) {
-      console.log("معلومات المستخدم في AppHeader:", {
-        id: user.id,
-        email: user.email,
-        is_approved: userProfile?.is_approved,
-        is_admin: userProfile?.is_admin,
-        userProfileType: typeof userProfile?.is_admin
-      });
-    }
-  }, [user, userProfile]);
-  
+  // التصحيح المباشر
+  console.log("معلومات المستخدم في AppHeader:", {
+    id: user?.id, 
+    email: user?.email, 
+    is_approved: userProfile?.is_approved, 
+    is_admin: userProfile?.is_admin,
+    userProfileType: typeof userProfile?.is_admin
+  });
+
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const closeMenu = () => {
+    setIsOpen(false);
+  };
+
   const handleSignOut = async () => {
     await signOut();
-    navigate('/login');
   };
-  
-  // تحديد ما إذا كان المستخدم مسؤولاً بطريقة أكثر صرامة للتأكد من أن القيمة دائمًا منطقية (Boolean)
-  const isAdmin = userProfile?.is_admin === true;
-  console.log("هل المستخدم مسؤول في AppHeader:", isAdmin, "قيمة is_admin الأصلية:", userProfile?.is_admin);
-  
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-      <div className="container flex h-16 items-center justify-between px-4 md:px-6">
-        <Link to="/" className="flex items-center space-x-2 ml-6 mr-6 font-bold text-xl">
-          <span className="hidden md:inline">لوحة التحكم</span>
-        </Link>
-        
-        <nav className="flex items-center justify-center flex-1">
-          <div className="flex items-center space-x-1 md:space-x-4 rtl:space-x-reverse">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 items-center justify-between">
+        <div className="flex items-center gap-2">
+          {/* زر القائمة (للموبايل) */}
+          <Button
+            variant="ghost"
+            className="mr-2 px-0 text-base hover:bg-transparent focus:ring-0 md:hidden"
+            onClick={toggleMenu}
+          >
+            <Menu className="h-6 w-6" />
+            <span className="sr-only">القائمة</span>
+          </Button>
+
+          {/* شعار الموقع */}
+          <Link to="/" className="flex items-center space-x-2 space-x-reverse">
+            <Wand2 className="ml-2 h-6 w-6" />
+            <span className="font-bold text-xl">استخراج النصوص</span>
+          </Link>
+
+          {/* القائمة الرئيسية - سطح المكتب */}
+          <nav className="hidden md:flex items-center space-x-6 space-x-reverse mx-6">
+            <Link
+              to="/"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                isActive('/') ? "text-foreground" : "text-muted-foreground"
+              )}
+            >
+              <div className="flex items-center">
+                <Database className="ml-1.5 w-4 h-4" />
+                السجلات
+              </div>
+            </Link>
             <Link
               to="/upload"
-              className={`transition-colors hover:text-foreground/80 px-3 py-2 rounded-md ${pathname === "/upload" ? "text-foreground font-bold bg-primary/10" : "text-foreground/60"}`}
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                isActive('/upload') ? "text-foreground" : "text-muted-foreground"
+              )}
             >
-              <Upload className="h-4 w-4 inline-block ml-1" />
-              تحميل الصور
+              <div className="flex items-center">
+                <UploadCloud className="ml-1.5 w-4 h-4" />
+                تحميل الصور
+              </div>
             </Link>
-            <Link
-              to="/records"
-              className={`transition-colors hover:text-foreground/80 px-3 py-2 rounded-md ${
-                pathname === "/records" ? "text-foreground font-bold bg-primary/10" : "text-foreground/60"
-              }`}
-            >
-              <Database className="h-4 w-4 inline-block ml-1" />
-              السجلات
-            </Link>
-            
-            {/* إظهار رابط صفحة إدارة المستخدمين للمسؤولين فقط بشكل صريح */}
-            {isAdmin && (
+            {userProfile?.is_admin && (
               <Link
                 to="/admin/approvals"
-                className={`transition-colors hover:text-foreground/80 flex items-center px-3 py-2 rounded-md ${
-                  pathname === "/admin/approvals" ? "text-foreground font-bold bg-primary/10" : "text-foreground/60"
-                }`}
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  isActive('/admin/approvals') ? "text-foreground" : "text-muted-foreground"
+                )}
               >
-                <UserCog className="h-4 w-4 ml-1" />
-                إدارة المستخدمين
+                <div className="flex items-center">
+                  <Users className="ml-1.5 w-4 h-4" />
+                  إدارة المستخدمين
+                </div>
               </Link>
             )}
-          </div>
-        </nav>
-        
-        <div className="flex items-center space-x-4 rtl:space-x-reverse">
-          {/* زر تبديل السمة (الوضع المظلم/الفاتح) */}
-          {mounted && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="rounded-full" 
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            >
-              {theme === "dark" ? (
-                <Sun className="h-[1.2rem] w-[1.2rem]" />
-              ) : (
-                <Moon className="h-[1.2rem] w-[1.2rem]" />
-              )}
-              <span className="sr-only">تبديل السمة</span>
-            </Button>
-          )}
-          
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* التبديل بين المظهر الفاتح والداكن */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                <span className="sr-only">تبديل المظهر</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setTheme("light")}>
+                فاتح
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")}>
+                داكن
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("system")}>
+                تلقائي
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* قائمة المستخدم */}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
-                  <Avatar className="h-8 w-8 ring-2 ring-primary/10">
-                    <AvatarImage src={userProfile?.avatar_url || `https://avatar.iran.liara.run/public/${user?.email}`} alt={user?.email || "User Avatar"} />
-                    <AvatarFallback className="bg-primary/10 text-primary">{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
-                  </Avatar>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <User className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{userProfile?.full_name || user?.email}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-                    {isAdmin && (
-                      <span className="text-xs text-primary block mt-1 bg-primary/10 rounded-full px-2 py-0.5 w-fit">مسؤول</span>
-                    )}
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
-                  الملف الشخصي
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>الحساب</DropdownMenuLabel>
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="cursor-pointer">
+                    <User className="ml-2 h-4 w-4" />
+                    الملف الشخصي
+                  </Link>
                 </DropdownMenuItem>
-                {isAdmin && (
-                  <DropdownMenuItem onClick={() => navigate('/admin/approvals')} className="cursor-pointer">
-                    <UserCog className="h-4 w-4 ml-2" />
-                    إدارة المستخدمين
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-500 focus:text-red-500">
-                  <LogOut className="h-4 w-4 ml-2" />
+                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                  <LogOut className="ml-2 h-4 w-4" />
                   تسجيل الخروج
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Link to="/login">
-              <Button className="rounded-full">تسجيل الدخول</Button>
-            </Link>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/login">تسجيل الدخول</Link>
+            </Button>
           )}
         </div>
       </div>
+
+      {/* القائمة المتحركة للموبايل */}
+      <div
+        className={`fixed inset-0 top-16 z-50 grid h-[calc(100vh-4rem)] grid-flow-row auto-rows-max overflow-auto p-6 pb-32 shadow-md animate-in md:hidden ${
+          isOpen ? "slide-in-from-right" : "slide-out-to-right hidden"
+        } bg-background border-t`}
+      >
+        <div className="relative z-20 grid gap-6 rounded-md p-4">
+          <Link
+            to="/"
+            className="flex items-center space-x-2 space-x-reverse text-sm font-medium"
+            onClick={closeMenu}
+          >
+            <Database className="ml-1.5 w-5 h-5" />
+            السجلات
+          </Link>
+          <Link
+            to="/upload"
+            className="flex items-center space-x-2 space-x-reverse text-sm font-medium"
+            onClick={closeMenu}
+          >
+            <UploadCloud className="ml-1.5 w-5 h-5" />
+            تحميل الصور
+          </Link>
+          {userProfile?.is_admin && (
+            <Link
+              to="/admin/approvals"
+              className="flex items-center space-x-2 space-x-reverse text-sm font-medium"
+              onClick={closeMenu}
+            >
+              <Users className="ml-1.5 w-5 h-5" />
+              إدارة المستخدمين
+            </Link>
+          )}
+          <Link
+            to="/profile"
+            className="flex items-center space-x-2 space-x-reverse text-sm font-medium"
+            onClick={closeMenu}
+          >
+            <User className="ml-1.5 w-5 h-5" />
+            الملف الشخصي
+          </Link>
+          <Link
+            to="/services"
+            className="flex items-center space-x-2 space-x-reverse text-sm font-medium"
+            onClick={closeMenu}
+          >
+            <Info className="ml-1.5 w-5 h-5" />
+            حول الخدمة
+          </Link>
+          <Link
+            to="/policy"
+            className="flex items-center space-x-2 space-x-reverse text-sm font-medium"
+            onClick={closeMenu}
+          >
+            <FileText className="ml-1.5 w-5 h-5" />
+            سياسة الاستخدام
+          </Link>
+          <Button onClick={handleSignOut} variant="outline" className="justify-start">
+            <LogOut className="ml-2 h-5 w-5" />
+            تسجيل الخروج
+          </Button>
+        </div>
+      </div>
+      
+      {/* طبقة تغطي الشاشة عند فتح القائمة */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 top-16 z-40 bg-background/80 backdrop-blur-sm md:hidden"
+          onClick={closeMenu}
+        />
+      )}
     </header>
   );
 };
