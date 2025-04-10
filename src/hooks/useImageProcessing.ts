@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -276,6 +275,31 @@ export const useImageProcessing = () => {
     });
   };
 
+  // في هذا الجزء، نضيف وظيفة جديدة لمسح مفتاح API القديم من localStorage
+  const clearOldApiKey = useCallback(() => {
+    const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8"; // المفتاح القديم
+    const storedApiKey = localStorage.getItem("geminiApiKey");
+    
+    if (storedApiKey === oldApiKey) {
+      console.log("تم اكتشاف مفتاح API قديم. جاري المسح...");
+      localStorage.removeItem("geminiApiKey");
+      
+      // تعيين المفتاح الجديد
+      const newApiKey = "AIzaSyC4d53RxIXV4WIXWcNAN1X-9WPZbS4z7Q0";
+      localStorage.setItem("geminiApiKey", newApiKey);
+      
+      toast({
+        title: "تم تحديث مفتاح API",
+        description: "تم تحديث مفتاح Gemini API بنجاح",
+      });
+      
+      return true;
+    }
+    
+    return false;
+  }, [toast]);
+
+  // إضافة الوظيفة الجديدة إلى الكائن المُرجع
   return {
     // البيانات
     images,
@@ -305,6 +329,7 @@ export const useImageProcessing = () => {
     },
     // تصدير واجهة الدالة المبسطة
     loadUserImages,
-    setImages
+    setImages,
+    clearOldApiKey
   };
 };

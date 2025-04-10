@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { extractDataWithGemini, fileToBase64 } from "@/lib/gemini";
@@ -43,14 +44,25 @@ export const useGeminiProcessing = () => {
   }, []);
 
   useEffect(() => {
+    // مسح المفتاح القديم إذا كان موجودًا
+    const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8"; // المفتاح القديم
+    const storedApiKey = localStorage.getItem("geminiApiKey");
+    
+    // إذا كان المفتاح المخزن هو المفتاح القديم، قم بإزالته
+    if (storedApiKey === oldApiKey) {
+      console.log("تم اكتشاف مفتاح API قديم. جاري المسح...");
+      localStorage.removeItem("geminiApiKey");
+    }
+    
     const geminiApiKey = localStorage.getItem("geminiApiKey");
     
     // إعداد مفتاح API افتراضي إذا لم يكن موجودًا
     if (!geminiApiKey) {
-      const defaultApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
+      // استخدام المفتاح الجديد كمفتاح افتراضي
+      const defaultApiKey = "AIzaSyC4d53RxIXV4WIXWcNAN1X-9WPZbS4z7Q0";
       localStorage.setItem("geminiApiKey", defaultApiKey);
-      console.log("تم تعيين مفتاح Gemini API افتراضي:", defaultApiKey.substring(0, 5) + "...");
-      // اختبار الاتصال بالمفتاح الافتراضي
+      console.log("تم تعيين مفتاح Gemini API الجديد:", defaultApiKey.substring(0, 5) + "...");
+      // اختبار الاتصال بالمفتاح الجديد
       testGeminiApiConnection(defaultApiKey);
     } else {
       console.log("استخدام مفتاح Gemini API موجود بطول:", geminiApiKey.length);
@@ -113,7 +125,8 @@ export const useGeminiProcessing = () => {
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   const processWithGemini = async (file: File | Blob, image: ImageData): Promise<ImageData> => {
-    const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
+    // استخدام المفتاح الجديد كافتراضي
+    const geminiApiKey = localStorage.getItem("geminiApiKey") || "AIzaSyC4d53RxIXV4WIXWcNAN1X-9WPZbS4z7Q0";
     console.log("استخدام مفتاح Gemini API بطول:", geminiApiKey.length);
 
     // في بيئة المعاينة، نحاول استخدام Gemini مع تحذير المستخدم
@@ -186,151 +199,69 @@ export const useGeminiProcessing = () => {
             processedFile = blobToFile(file, "image.jpg");
           }
           
-          const extractionResult = await extractDataWithGemini({
+          // استدعاء وظيفة استخراج البيانات باستخدام Gemini
+          const result = await extractDataWithGemini({
             apiKey: geminiApiKey,
-            imageBase64,
+            imageBase64: imageBase64,
             enhancedExtraction: true,
-            maxRetries: 2,  // تقليل عدد المحاولات لتسريع الاستجابة
-            retryDelayMs: 3000,  // زيادة مدة الانتظار بين المحاولات
-            modelVersion: 'gemini-1.5-pro'  // استخدام النموذج الأكثر دقة
+            maxRetries: 2,
+            retryDelayMs: 3000
           });
           
-          console.log("نتيجة استخراج Gemini:", extractionResult);
+          console.log("نتيجة استخراج Gemini:", { 
+            success: result.success, 
+            textLength: result.text?.length || 0,
+            confidence: result.confidence,
+            hasData: !!result.data
+          });
           
-          if (extractionResult.success && extractionResult.data) {
-            const { parsedData, extractedText } = extractionResult.data;
+          if (result.success && (result.text || result.data)) {
+            // استخراج البيانات مع مستوى ثقة وطريقة المعالجة
+            const resultWithData = updateImageWithExtractedData(
+              image,
+              result.text || "",
+              result.data || {},
+              result.confidence || 0,
+              "gemini"
+            );
             
-            // تحقق من وجود بيانات تم استخراجها
-            if (parsedData && Object.keys(parsedData).length > 0) {
-              console.log("Gemini نجح في استخراج البيانات:", parsedData);
-              
-              // التحقق من البيانات المستخرجة
-              console.log("البيانات المستخرجة المفصلة:", {
-                code: parsedData.code,
-                senderName: parsedData.senderName,
-                phoneNumber: parsedData.phoneNumber,
-                province: parsedData.province,
-                price: parsedData.price,
-                companyName: parsedData.companyName
-              });
-              
-              // تحديث الصورة بالبيانات المستخرجة
-              const processedImage = updateImageWithExtractedData(
-                image,
-                extractedText || "",
-                parsedData || {},
-                parsedData.confidence ? parseInt(String(parsedData.confidence)) : 95,
-                "gemini"
-              );
-              
-              // تعيين الحالة استنادًا إلى وجود البيانات الرئيسية
-              let finalImage: ImageData = processedImage;
-              
-              if (finalImage.code || finalImage.senderName || finalImage.phoneNumber) {
-                finalImage = {
-                  ...finalImage,
-                  status: "completed" as const
-                };
-              } else {
-                finalImage = {
-                  ...finalImage,
-                  status: "pending" as const
-                };
-              }
-              
-              return finalImage;
-            } else {
-              console.log("Gemini أرجع بيانات فارغة");
-              
-              // إذا كان هناك نص مستخرج ولكن لا يوجد بيانات منظمة
-              if (extractedText && extractedText.length > 10) {
-                return {
-                  ...image,
-                  status: "pending" as const,
-                  extractedText: extractedText
-                };
-              } else {
-                return {
-                  ...image,
-                  status: "pending" as const,
-                  extractedText: "لم يتم استخراج نص. حاول مرة أخرى بصورة أوضح."
-                };
-              }
-            }
+            console.log("تم تحديث بيانات الصورة:", {
+              hasCode: !!resultWithData.code,
+              hasSenderName: !!resultWithData.senderName,
+              hasPhoneNumber: !!resultWithData.phoneNumber,
+              hasProvince: !!resultWithData.province,
+              hasPrice: !!resultWithData.price
+            });
+            
+            return resultWithData;
           } else {
-            console.log("فشل استخراج Gemini:", extractionResult.message);
-            
-            if (attempt < MAX_API_RETRIES - 1) {
-              console.log(`إعادة المحاولة ${attempt + 2}/${MAX_API_RETRIES} بعد ${API_RETRY_DELAY_MS}ms`);
-              await delay(API_RETRY_DELAY_MS);
-              continue;
-            }
-            
-            // إعادة الصورة مع حالة خطأ
-            return {
-              ...image,
-              status: "error" as const,
-              error: "فشل استخراج النص: " + extractionResult.message
-            };
+            throw new Error(result.message || "فشل في استخراج البيانات");
           }
-        } catch (apiError: any) {
-          console.error(`خطأ في استدعاء Gemini API (المحاولة ${attempt + 1}/${MAX_API_RETRIES}):`, apiError);
+        } catch (attemptError) {
+          console.error(`خطأ في محاولة Gemini رقم ${attempt + 1}:`, attemptError);
           
-          // التحقق من نوع الخطأ
-          const isRateLimitError = apiError.message?.includes('quota') || 
-                                  apiError.message?.includes('rate limit') || 
-                                  apiError.message?.includes('too many requests');
-          
-          if (isRateLimitError) {
-            // زيادة فترة الانتظار لأخطاء معدل الاستخدام
-            await delay(API_RETRY_DELAY_MS * 2);
-          } else {
-            await delay(API_RETRY_DELAY_MS);
+          // إذا كانت هذه المحاولة الأخيرة، إعادة رمي الخطأ
+          if (attempt === MAX_API_RETRIES - 1) {
+            throw attemptError;
           }
           
-          // استمرار في الحلقة للمحاولة التالية إذا لم نصل إلى الحد الأقصى
-          if (attempt < MAX_API_RETRIES - 1) {
-            continue;
-          }
-          
-          // أقصى عدد من المحاولات، إرجاع خطأ
-          throw apiError;
+          // الانتظار قبل المحاولة التالية
+          await delay(API_RETRY_DELAY_MS);
         }
       }
       
-      // إذا وصلنا إلى هنا، فقد استنفدنا جميع المحاولات
+      // لن يتم الوصول إلى هنا عادة لأن الحلقة إما ستنجح وتعيد النتيجة أو ترمي خطأ في المحاولة الأخيرة
+      throw new Error("فشلت جميع محاولات استخراج البيانات");
+    } catch (error) {
+      console.error("خطأ في معالجة Gemini:", error);
+      
       return {
         ...image,
         status: "error" as const,
-        error: "فشل استخراج النص بعد استنفاد جميع المحاولات"
-      };
-    } catch (geminiError: any) {
-      console.error("خطأ في معالجة Gemini:", geminiError);
-      
-      // تحسين رسالة الخطأ
-      let errorMessage = geminiError.message || 'خطأ غير معروف';
-      
-      if (errorMessage.includes('Failed to fetch')) {
-        errorMessage = 'فشل الاتصال بخادم Gemini. تأكد من اتصال الإنترنت الخاص بك والمحاولة مرة أخرى.';
-      } else if (errorMessage.includes('timed out') || errorMessage.includes('TimeoutError')) {
-        errorMessage = 'انتهت مهلة الاتصال بخادم Gemini. يرجى تحميل صورة أصغر حجمًا أو المحاولة مرة أخرى لاحقًا.';
-      } else if (errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
-        errorMessage = 'تم تجاوز حصة API. يرجى الانتظار بضع دقائق والمحاولة مرة أخرى.';
-      }
-      
-      // إعادة الصورة مع حالة خطأ
-      return {
-        ...image,
-        status: "error" as const,
-        error: "خطأ في المعالجة: " + errorMessage
+        extractedText: "حدث خطأ أثناء محاولة استخراج البيانات: " + (error instanceof Error ? error.message : String(error))
       };
     }
   };
 
-  // نقوم بإرجاع useGemini كقيمة ثابتة true لاستخدام Gemini دائمًا
-  return { 
-    useGemini: true, 
-    processWithGemini,
-    apiCallCount
-  };
+  return { processWithGemini };
 };
