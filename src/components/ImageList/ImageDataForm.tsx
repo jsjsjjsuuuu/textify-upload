@@ -114,10 +114,13 @@ const ImageDataForm = ({
         {/* اسم الشركة */}
         <div className="space-y-1">
           <label className="block text-xs font-medium flex justify-between">
-            <span>اسم الشركة:</span>
+            <span className="flex items-center">
+              اسم الشركة:
+              <span className="text-red-500 mr-0.5">*</span>
+            </span>
             <span className="text-muted-foreground">{image.confidence}</span>
           </label>
-          <Input value={image.companyName || ''} onChange={e => onTextChange(image.id, "companyName", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل اسم الشركة" />
+          <Input value={image.companyName || ''} onChange={e => onTextChange(image.id, "companyName", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل اسم الشركة" required />
         </div>
         
         {/* الكود */}
@@ -129,7 +132,7 @@ const ImageDataForm = ({
             </span>
             <span className="text-muted-foreground">{image.confidence}</span>
           </label>
-          <Input value={image.code || ''} onChange={e => onTextChange(image.id, "code", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل الكود" />
+          <Input value={image.code || ''} onChange={e => onTextChange(image.id, "code", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل الكود" required />
         </div>
         
         {/* اسم المرسل */}
@@ -141,7 +144,7 @@ const ImageDataForm = ({
             </span>
             <span className="text-muted-foreground">{image.confidence}</span>
           </label>
-          <Input value={image.senderName || ''} onChange={e => onTextChange(image.id, "senderName", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل اسم المرسل" />
+          <Input value={image.senderName || ''} onChange={e => onTextChange(image.id, "senderName", e.target.value)} className="rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm" placeholder="أدخل اسم المرسل" required />
         </div>
         
         {/* رقم الهاتف مع التحقق */}
@@ -165,6 +168,7 @@ const ImageDataForm = ({
               onChange={e => onTextChange(image.id, "phoneNumber", e.target.value)} 
               className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm ${image.phoneNumber && !isPhoneNumberValid ? "border-destructive focus-visible:ring-destructive" : ""}`} 
               placeholder="أدخل رقم الهاتف"
+              required
             />
             {image.phoneNumber && !isPhoneNumberValid && <p className="text-xs text-destructive">
                 يجب أن يكون رقم الهاتف 11 رقم بالضبط
@@ -181,7 +185,7 @@ const ImageDataForm = ({
             </span>
             <span className="text-muted-foreground">{image.confidence}</span>
           </label>
-          <Select value={image.province || ''} onValueChange={value => onTextChange(image.id, "province", value)} dir="rtl">
+          <Select value={image.province || ''} onValueChange={value => onTextChange(image.id, "province", value)} dir="rtl" required>
             <SelectTrigger className="bg-white dark:bg-gray-900 h-8 text-sm">
               <SelectValue placeholder="اختر المحافظة" />
             </SelectTrigger>
@@ -218,6 +222,7 @@ const ImageDataForm = ({
               onChange={e => handlePriceChange(e.target.value)} 
               className={`rtl-textarea bg-white dark:bg-gray-900 h-8 text-sm rounded-l-none ${!isPriceValid ? "border-destructive focus-visible:ring-destructive" : ""}`} 
               placeholder="أدخل السعر" 
+              required
             />
             <Button size="sm" className="h-8 px-2 rounded-r-none" onClick={handleFormatPrice} variant="outline">
               <Check className="h-3.5 w-3.5" />

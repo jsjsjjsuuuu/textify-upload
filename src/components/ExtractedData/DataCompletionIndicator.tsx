@@ -9,13 +9,11 @@ interface DataCompletionIndicatorProps {
 }
 
 const DataCompletionIndicator = ({ image }: DataCompletionIndicatorProps) => {
-  // الحقول الإلزامية
-  const requiredFields = ["code", "senderName", "province", "price"];
-  const optionalFields = ["phoneNumber", "companyName"];
-
+  // جميع الحقول أصبحت إلزامية الآن
+  const requiredFields = ["code", "senderName", "phoneNumber", "province", "price", "companyName"];
+  
   // التحقق من الحقول المطلوبة
   const filledRequiredFields = requiredFields.filter(field => Boolean(image[field as keyof ImageData])).length;
-  const filledOptionalFields = optionalFields.filter(field => Boolean(image[field as keyof ImageData])).length;
 
   // حساب نسبة الاكتمال
   const requiredPercentage = (filledRequiredFields / requiredFields.length) * 100;
@@ -70,7 +68,7 @@ const DataCompletionIndicator = ({ image }: DataCompletionIndicatorProps) => {
           <span className="mr-1">{statusMessage}</span>
         </div>
         <div className="text-xs text-muted-foreground">
-          {filledRequiredFields}/{requiredFields.length} (إلزامي) + {filledOptionalFields}/{optionalFields.length} (اختياري)
+          {filledRequiredFields}/{requiredFields.length} (الحقول الإلزامية)
         </div>
       </div>
       <Progress 
@@ -90,8 +88,10 @@ const DataCompletionIndicator = ({ image }: DataCompletionIndicatorProps) => {
           >
             {field === 'code' ? 'الكود' : 
              field === 'senderName' ? 'اسم المرسل' : 
+             field === 'phoneNumber' ? 'رقم الهاتف' :
              field === 'province' ? 'المحافظة' : 
-             field === 'price' ? 'السعر' : field}
+             field === 'price' ? 'السعر' : 
+             field === 'companyName' ? 'اسم الشركة' : field}
           </span>
         ))}
       </div>

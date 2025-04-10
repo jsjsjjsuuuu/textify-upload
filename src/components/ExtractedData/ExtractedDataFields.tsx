@@ -40,6 +40,7 @@ const ExtractedDataFields = ({
         confidence={confidence.code}
         isLoading={isLoading || loadingFields.includes('code')}
         className="mb-1"
+        isRequired={true}
       />
       <ExtractedDataField
         label="اسم الشركة:"
@@ -51,6 +52,7 @@ const ExtractedDataFields = ({
         confidence={confidence.companyName}
         isLoading={isLoading || loadingFields.includes('companyName')}
         className="mb-1"
+        isRequired={true}
       />
       <ExtractedDataField
         label="اسم المرسل:"
@@ -62,6 +64,7 @@ const ExtractedDataFields = ({
         confidence={confidence.senderName}
         isLoading={isLoading || loadingFields.includes('senderName')}
         className="mb-1"
+        isRequired={true}
       />
       <ExtractedDataField
         label="رقم الهاتف:"
@@ -73,6 +76,7 @@ const ExtractedDataFields = ({
         confidence={confidence.phoneNumber}
         isLoading={isLoading || loadingFields.includes('phoneNumber')}
         className="mb-1"
+        isRequired={true}
       />
       <ExtractedDataField
         label="المحافظة:"
@@ -84,6 +88,7 @@ const ExtractedDataFields = ({
         confidence={confidence.province}
         isLoading={isLoading || loadingFields.includes('province')}
         className="mb-1"
+        isRequired={true}
       />
       <ExtractedDataField
         label="السعر:"
@@ -95,6 +100,7 @@ const ExtractedDataFields = ({
         confidence={confidence.price}
         isLoading={isLoading || loadingFields.includes('price')}
         className="mb-1"
+        isRequired={true}
       />
     </div>
   );

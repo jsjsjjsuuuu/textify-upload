@@ -15,6 +15,7 @@ interface ExtractedDataFieldProps {
   hideConfidence?: boolean;
   confidence?: number;
   isLoading?: boolean;
+  isRequired?: boolean;
 }
 
 const ExtractedDataField = ({
@@ -26,15 +27,13 @@ const ExtractedDataField = ({
   className = "",
   hideConfidence = false,
   confidence,
-  isLoading = false
+  isLoading = false,
+  isRequired = false
 }: ExtractedDataFieldProps) => {
   const isTextArea = field === "address" || field === "notes";
   const [isEditing, setIsEditing] = useState(false);
   const [fieldValue, setFieldValue] = useState(value);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-
-  // تنسيق العرض
-  const isRequiredField = field === "code" || field === "senderName" || field === "phoneNumber" || field === "province" || field === "price";
 
   // تحديد لون البطاقة بناءً على نسبة الثقة
   const getBadgeVariant = (confidenceValue: number) => {
@@ -88,7 +87,8 @@ const ExtractedDataField = ({
         <div className="flex items-center justify-between">
           <label className="block text-sm font-medium flex items-center text-right w-full">
             {label}
-            {isRequiredField && <span className="text-red-500 mr-1">*</span>}
+            {/* إظهار علامة النجمة الحمراء لجميع الحقول لأنها أصبحت إلزامية */}
+            <span className="text-red-500 mr-1">*</span>
           </label>
           
           {!hideConfidence && confidence !== undefined && (
@@ -120,6 +120,7 @@ const ExtractedDataField = ({
               placeholder={`أدخل ${label.replace(':', '')}`}
               disabled={isLoading}
               dir="rtl"
+              required={isRequired}
             />
           ) : (
             <div className="relative">
@@ -134,6 +135,7 @@ const ExtractedDataField = ({
                 placeholder={`أدخل ${label.replace(':', '')}`}
                 disabled={isLoading}
                 dir="rtl"
+                required={isRequired}
               />
               {isLoading && (
                 <div className="absolute inset-y-0 right-2 flex items-center">
@@ -144,7 +146,7 @@ const ExtractedDataField = ({
           )
         ) : (
           <div 
-            className={`px-3 py-2 rounded-md border bg-white dark:bg-gray-800 text-sm ${isTextArea ? 'min-h-[4rem] whitespace-pre-wrap' : ''} text-right rtl cursor-text ${isLoading ? 'animate-pulse' : ''} ${editMode ? 'hover:border-primary hover:bg-gray-50 dark:hover:bg-gray-750' : ''}`}
+            className={`px-3 py-2 rounded-md border bg-white dark:bg-gray-800 text-sm ${isTextArea ? 'min-h-[4rem] whitespace-pre-wrap' : ''} text-right rtl cursor-text ${isLoading ? 'animate-pulse' : ''} ${editMode ? 'hover:border-primary hover:bg-gray-50 dark:hover:bg-gray-750' : ''} ${!value && isRequired ? 'border-red-300' : ''}`}
             onClick={handleClick} 
             dir="rtl"
           >
