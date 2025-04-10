@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -43,35 +44,29 @@ export const useUserManagement = () => {
         return;
       }
       
-      // محاولة جلب بيانات البريد الإلكتروني باستخدام دالة get_users_emails
-      let emailsData: { id: string; email: string; created_at: string }[] = [];
-      let emailsError = null;
+      // جلب بيانات المستخدمين من خلال الدالة المخصصة get_users_emails
+      const { data: authUsersData, error: authUsersError } = await supabase.rpc('get_users_emails');
       
-      try {
-        const response = await supabase.rpc('get_users_emails');
-        if (response.error) {
-          emailsError = response.error;
-          console.error('خطأ في جلب بيانات البريد الإلكتروني:', emailsError);
-        } else {
-          emailsData = response.data || [];
+      if (authUsersError) {
+        console.error('خطأ في جلب بيانات المستخدمين الأساسية:', authUsersError);
+        toast.error('خطأ في جلب بيانات المستخدمين');
+        
+        // في حالة فشل جلب البيانات من الدالة، نستمر باستخدام البيانات الموجودة في الملفات الشخصية فقط
+        if (!profilesData || profilesData.length === 0) {
+          setIsLoading(false);
+          return;
         }
-      } catch (error) {
-        emailsError = error;
-        console.error('استثناء أثناء جلب بيانات البريد الإلكتروني:', error);
       }
       
       // إنشاء كائن للبحث السريع عن البريد الإلكتروني وتاريخ الإنشاء حسب معرف المستخدم
       const authUsersMap: Record<string, { email: string, created_at: string }> = {};
-      
-      // التحقق من وجود بيانات البريد الإلكتروني قبل معالجتها
-      if (emailsData && Array.isArray(emailsData)) {
-        emailsData.forEach((user: any) => {
+      if (authUsersData && Array.isArray(authUsersData)) {
+        authUsersData.forEach((user: { id: string, email: string, created_at: string }) => {
           if (user && user.id) {
-            // التحقق من نوع البيانات وتحويلها إلى نص إذا لزم الأمر
-            const email = typeof user.email === 'string' ? user.email : String(user.email || '');
-            const created_at = user.created_at || new Date().toISOString();
-            
-            authUsersMap[user.id] = { email, created_at };
+            authUsersMap[user.id] = { 
+              email: user.email || '',
+              created_at: user.created_at || new Date().toISOString()
+            };
           }
         });
       }
@@ -87,19 +82,18 @@ export const useUserManagement = () => {
           ...profile,
           id: profile.id,
           email: userData.email,
-          is_admin: isAdmin,
+          is_admin: isAdmin, // التأكد من أن القيمة منطقية
           created_at: userData.created_at || profile.created_at,
         };
       });
       
-      console.log('معلومات المستخدمين بعد المعالجة:', usersWithCompleteData.length);
-      setUsers(usersWithCompleteData);
+      console.log('معلومات المستخدمين بعد المعالجة:', usersWithCompleteData.map(user => ({
+        id: user.id,
+        is_admin: user.is_admin,
+        is_admin_type: typeof user.is_admin
+      })));
       
-      // إذا كان هناك خطأ في جلب البريد الإلكتروني، عرض إشعار للمستخدم
-      if (emailsError) {
-        // تصحيح الخطأ - استخدام toast.warning بدلاً من الصيغة الخاطئة
-        toast.warning("بعض بيانات المستخدمين غير مكتملة، يرجى التحقق من قاعدة البيانات");
-      }
+      setUsers(usersWithCompleteData);
     } catch (error) {
       console.error('خطأ في جلب بيانات المستخدمين:', error);
       toast.error('حدث خطأ أثناء جلب بيانات المستخدمين');
