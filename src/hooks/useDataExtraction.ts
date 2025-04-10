@@ -68,9 +68,7 @@ export const useDataExtraction = (
         return; // منع الحفظ في حالة عدم صحة رقم الهاتف
       }
       
-      Object.entries(tempData).forEach(([field, value]) => {
-        onTextChange(image.id, field, value);
-      });
+      // تم إزالة تحديث البيانات هنا لأننا سنقوم بتحديثها مباشرة عند التعديل
       
       setIsLearningActive(true);
       handleCorrections(image.extractedText, originalData, tempData)
@@ -111,6 +109,7 @@ export const useDataExtraction = (
   };
 
   const handleTempChange = (field: string, value: string) => {
+    // تحديث البيانات المؤقتة أولاً
     setTempData(prev => {
       const newData = { ...prev, [field]: value };
       
@@ -120,6 +119,15 @@ export const useDataExtraction = (
       
       return newData;
     });
+    
+    // مباشرة تحديث البيانات الفعلية لتفعيل التعديل المباشر
+    let valueToUpdate = value;
+    if (field === 'province' && value) {
+      valueToUpdate = correctProvinceName(value);
+    }
+    
+    // تحديث البيانات الفعلية في الصورة
+    onTextChange(image.id, field, valueToUpdate);
   };
 
   const handleAutoExtract = () => {
@@ -156,6 +164,7 @@ export const useDataExtraction = (
       }
     }
 
+    // تحديث البيانات المؤقتة
     setTempData(prev => ({
       ...prev,
       code: extractedData.code || prev.code,
@@ -166,11 +175,10 @@ export const useDataExtraction = (
       companyName: extractedData.companyName || prev.companyName
     }));
 
-    if (!editMode) {
-      Object.entries(extractedData).forEach(([field, value]) => {
-        if (value) onTextChange(image.id, field, value);
-      });
-    }
+    // مباشرة تحديث البيانات الفعلية دون النظر إلى وضع التعديل
+    Object.entries(extractedData).forEach(([field, value]) => {
+      if (value) onTextChange(image.id, field, value);
+    });
   };
 
   return {

@@ -48,50 +48,25 @@ const ExtractedDataActions = ({
         transition={{ duration: 0.3 }}
         dir="rtl"
       >
-        {editMode ? (
-          <>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={onCancel} 
-              className="h-8 text-destructive hover:bg-destructive/10"
-            >
-              <X size={16} className="ml-1" />
-              إلغاء
-            </Button>
-            <Button 
-              size="sm" 
-              variant="default" 
-              onClick={onEditToggle} 
-              className="h-8 bg-brand-green hover:bg-brand-green/90"
-            >
-              <Check size={16} className="ml-1" />
-              حفظ
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={handleAutoExtract} 
-              disabled={!hasExtractedText} 
-              className="h-8 bg-gray-900 text-white hover:bg-gray-800 border-none"
-            >
-              <RefreshCw size={16} className="ml-1" />
-              إعادة استخراج
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={onEditToggle} 
-              className="h-8 bg-gray-900 text-white hover:bg-gray-800 border-none"
-            >
-              <Edit2 size={16} className="ml-1" />
-              تعديل
-            </Button>
-          </>
-        )}
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={handleAutoExtract} 
+          disabled={!hasExtractedText} 
+          className="h-8 bg-gray-900 text-white hover:bg-gray-800 border-none"
+        >
+          <RefreshCw size={16} className="ml-1" />
+          إعادة استخراج
+        </Button>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={handleCopy} 
+          className="h-8 bg-gray-900 text-white hover:bg-gray-800 border-none"
+        >
+          <Copy size={16} className="ml-1" />
+          نسخ البيانات
+        </Button>
       </motion.div>
     </div>
   );

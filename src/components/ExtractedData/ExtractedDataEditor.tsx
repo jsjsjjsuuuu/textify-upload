@@ -20,7 +20,8 @@ const ExtractedDataEditor = ({
   image,
   onTextChange
 }: ExtractedDataEditorProps) => {
-  const [editMode, setEditMode] = useState(true); // تغيير الوضع الافتراضي إلى وضع التعديل
+  // جعل وضع التعديل دائمًا مفعّل لتمكين التعديل المباشر عند النقر على الحقل
+  const [editMode, setEditMode] = useState(true);
   
   const {
     tempData,

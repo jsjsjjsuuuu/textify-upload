@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,9 @@ const ExtractedDataField = ({
   isLoading = false
 }: ExtractedDataFieldProps) => {
   const isTextArea = field === "address" || field === "notes";
+  const [isEditing, setIsEditing] = useState(false);
+  const [fieldValue, setFieldValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   // تنسيق العرض
   const isRequiredField = field === "code" || field === "senderName" || field === "phoneNumber" || field === "province" || field === "price";
@@ -39,6 +42,44 @@ const ExtractedDataField = ({
     if (confidenceValue >= 70) return "blue";
     if (confidenceValue >= 50) return "yellow";
     return "red";
+  };
+
+  // تحديث القيمة المحلية عند تغير القيمة من الخارج
+  useEffect(() => {
+    setFieldValue(value);
+  }, [value]);
+
+  // التركيز على الحقل عند تفعيل وضع التحرير
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+  // حفظ التغييرات عند مغادرة الحقل
+  const handleBlur = () => {
+    onChange(field, fieldValue);
+    setIsEditing(false);
+  };
+
+  // تحديث القيمة المحلية عند الكتابة
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFieldValue(e.target.value);
+  };
+
+  // تفعيل وضع التحرير عند النقر على الحقل
+  const handleClick = () => {
+    if (!isLoading && editMode) {
+      setIsEditing(true);
+    }
+  };
+
+  // حفظ التغييرات عند الضغط على Enter (للحقول النصية فقط)
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !isTextArea) {
+      onChange(field, fieldValue);
+      setIsEditing(false);
+    }
   };
   
   return (
@@ -68,11 +109,13 @@ const ExtractedDataField = ({
           )}
         </div>
         
-        {editMode ? (
+        {(editMode && isEditing) ? (
           isTextArea ? (
             <Textarea 
-              value={value} 
-              onChange={e => onChange(field, e.target.value)} 
+              ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+              value={fieldValue} 
+              onChange={handleChange} 
+              onBlur={handleBlur}
               className="w-full text-sm resize-none h-16 bg-white dark:bg-gray-800 text-right rtl"
               placeholder={`أدخل ${label.replace(':', '')}`}
               disabled={isLoading}
@@ -81,9 +124,12 @@ const ExtractedDataField = ({
           ) : (
             <div className="relative">
               <Input 
+                ref={inputRef as React.RefObject<HTMLInputElement>}
                 type="text" 
-                value={value} 
-                onChange={e => onChange(field, e.target.value)} 
+                value={fieldValue} 
+                onChange={handleChange} 
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
                 className={`w-full text-sm bg-white dark:bg-gray-800 text-right rtl ${isLoading ? 'pr-8' : ''}`}
                 placeholder={`أدخل ${label.replace(':', '')}`}
                 disabled={isLoading}
@@ -97,25 +143,18 @@ const ExtractedDataField = ({
             </div>
           )
         ) : (
-          isTextArea ? (
-            <div className={`px-3 py-2 rounded-md border bg-white dark:bg-gray-800 text-sm min-h-[4rem] whitespace-pre-wrap text-right rtl ${isLoading ? 'animate-pulse' : ''}`} dir="rtl">
-              {isLoading ? (
-                <div className="flex items-center h-full justify-center">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  <span className="text-muted-foreground mr-2">جاري الاستخراج...</span>
-                </div>
-              ) : value || <span className="text-muted-foreground italic">لا توجد بيانات</span>}
-            </div>
-          ) : (
-            <div className={`px-3 py-2 rounded-md border bg-white dark:bg-gray-800 text-sm text-right rtl ${isLoading ? 'animate-pulse' : ''}`} dir="rtl">
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  <span className="text-muted-foreground mr-2">جاري الاستخراج...</span>
-                </div>
-              ) : value || <span className="text-muted-foreground italic">لا توجد بيانات</span>}
-            </div>
-          )
+          <div 
+            className={`px-3 py-2 rounded-md border bg-white dark:bg-gray-800 text-sm ${isTextArea ? 'min-h-[4rem] whitespace-pre-wrap' : ''} text-right rtl cursor-text ${isLoading ? 'animate-pulse' : ''} ${editMode ? 'hover:border-primary hover:bg-gray-50 dark:hover:bg-gray-750' : ''}`}
+            onClick={handleClick} 
+            dir="rtl"
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <span className="text-muted-foreground mr-2">جاري الاستخراج...</span>
+              </div>
+            ) : fieldValue ? fieldValue : <span className="text-muted-foreground italic">لا توجد بيانات</span>}
+          </div>
         )}
       </div>
     </div>
