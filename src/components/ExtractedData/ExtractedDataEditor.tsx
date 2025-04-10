@@ -37,6 +37,7 @@ const ExtractedDataEditor = ({
 
   // تحديث البيانات المؤقتة عند تغيير الصورة
   useEffect(() => {
+    console.log("تغيير الصورة في ExtractedDataEditor، تحديث البيانات:", image.id);
     setTempData({
       code: image.code || "",
       senderName: image.senderName || "",
@@ -45,8 +46,14 @@ const ExtractedDataEditor = ({
       price: image.price || "",
       companyName: image.companyName || ""
     });
-  }, [image.id, setTempData]);
+  }, [image.id, image.code, image.senderName, image.phoneNumber, image.province, image.price, image.companyName, setTempData]);
   
+  // إشعار مكون ال DataCompletionIndicator بالتحديث عندما تتغير البيانات
+  const imageDataChanged = useMemo(() => ({
+    ...image,
+    timestamp: Date.now() // إضافة طابع زمني لضمان التحديث
+  }), [image]);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -68,7 +75,7 @@ const ExtractedDataEditor = ({
             />
           </div>
 
-          <DataCompletionIndicator image={image} />
+          <DataCompletionIndicator image={imageDataChanged} />
 
           <LearningNotifications 
             correctionsMade={correctionsMade} 

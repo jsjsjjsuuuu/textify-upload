@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -242,6 +243,7 @@ export const useFileUpload = ({
             
             // تعيين الصورة الحالية كصورة نشطة لعرض البيانات المستخرجة فوراً
             if (window && window.dispatchEvent) {
+              console.log("إطلاق حدث معالجة الصورة:", newImage.id);
               window.dispatchEvent(new CustomEvent('image-processed', { 
                 detail: { imageId: newImage.id } 
               }));
@@ -265,6 +267,7 @@ export const useFileUpload = ({
             
             // تعيين الصورة الحالية كصورة نشطة لعرض البيانات المستخرجة فوراً
             if (window && window.dispatchEvent) {
+              console.log("إطلاق حدث معالجة الصورة:", newImage.id);
               window.dispatchEvent(new CustomEvent('image-processed', { 
                 detail: { imageId: newImage.id } 
               }));

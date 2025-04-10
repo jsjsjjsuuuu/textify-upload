@@ -1,3 +1,4 @@
+
 import { ImageData } from "@/types/ImageData";
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -41,70 +42,6 @@ const ImagePreviewContainer = ({
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // الاستماع إلى حدث معالجة الصورة لتحديث الصورة النشطة
-  useEffect(() => {
-    const handleImageProcessed = (event: CustomEvent) => {
-      const { imageId } = event.detail;
-      const processedImage = images.find(img => img.id === imageId);
-      
-      if (processedImage) {
-        console.log("تم معالجة الصورة وتعيينها كصورة نشطة:", imageId);
-        setActiveImage(processedImage);
-        
-        // إذا كانت الصورة المعالجة في صفحة مختلفة، انتقل إلى الصفحة المناسبة
-        const filteredImages = filteredImages();
-        const imageIndex = filteredImages.findIndex(img => img.id === imageId);
-        if (imageIndex >= 0) {
-          const page = Math.floor(imageIndex / ITEMS_PER_PAGE) + 1;
-          if (page !== currentPage) {
-            setCurrentPage(page);
-          }
-        }
-      }
-    };
-
-    window.addEventListener('image-processed', handleImageProcessed as EventListener);
-    
-    return () => {
-      window.removeEventListener('image-processed', handleImageProcessed as EventListener);
-    };
-  }, [images]);
-
-  // تعيين أول صورة كصورة نشطة تلقائيًا عند التحميل أو عند تغيير الصور
-  useEffect(() => {
-    if (images.length > 0 && !activeImage) {
-      setActiveImage(images[0]);
-    } else if (images.length > 0 && activeImage) {
-      // تحديث الصورة النشطة إذا تغيرت بياناتها
-      const updatedActiveImage = images.find(img => img.id === activeImage.id);
-      if (updatedActiveImage && JSON.stringify(updatedActiveImage) !== JSON.stringify(activeImage)) {
-        setActiveImage(updatedActiveImage);
-      }
-      
-      // إذا تم حذف الصورة النشطة، حدد صورة أخرى
-      if (!updatedActiveImage) {
-        setActiveImage(images[0]);
-      }
-    } else if (images.length === 0) {
-      setActiveImage(null);
-    }
-  }, [images, activeImage]);
-
-  // التحقق مما إذا كانت الصورة مكتملة (لديها البيانات الإلزامية)
-  const isImageComplete = useCallback((image: ImageData): boolean => {
-    // التحقق من وجود البيانات الأساسية
-    const hasRequiredFields = Boolean(image.code) && Boolean(image.senderName) && Boolean(image.province) && Boolean(image.price);
-
-    // التحقق من صحة رقم الهاتف (إما فارغ أو صحيح بطول 11 رقم)
-    const hasValidPhone = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
-    return hasRequiredFields && hasValidPhone;
-  }, []);
-
-  // التحقق مما إذا كانت الصورة تحتوي على خطأ في رقم الهاتف
-  const hasPhoneError = useCallback((image: ImageData): boolean => {
-    return Boolean(image.phoneNumber) && image.phoneNumber.replace(/[^\d]/g, '').length !== 11;
-  }, []);
-
   // تصفية الصور حسب علامة التبويب النشطة
   const filteredImages = useCallback(() => {
     let result = [...images];
@@ -125,7 +62,71 @@ const ImagePreviewContainer = ({
       result = result.filter(img => img.status === "completed" && !isImageComplete(img) && !hasPhoneError(img));
     }
     return result;
-  }, [images, activeTab, isImageComplete, hasPhoneError]);
+  }, [images, activeTab]);
+
+  // الاستماع إلى حدث معالجة الصورة لتحديث الصورة النشطة
+  useEffect(() => {
+    const handleImageProcessed = (event: CustomEvent) => {
+      const { imageId } = event.detail;
+      const processedImage = images.find(img => img.id === imageId);
+      
+      if (processedImage) {
+        console.log("تم معالجة الصورة وتعيينها كصورة نشطة:", imageId);
+        setActiveImage(processedImage);
+        
+        // إذا كانت الصورة المعالجة في صفحة مختلفة، انتقل إلى الصفحة المناسبة
+        const filtered = filteredImages();
+        const imageIndex = filtered.findIndex(img => img.id === imageId);
+        if (imageIndex >= 0) {
+          const page = Math.floor(imageIndex / ITEMS_PER_PAGE) + 1;
+          if (page !== currentPage) {
+            setCurrentPage(page);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('image-processed', handleImageProcessed as EventListener);
+    
+    return () => {
+      window.removeEventListener('image-processed', handleImageProcessed as EventListener);
+    };
+  }, [images, currentPage, filteredImages]);
+
+  // التحقق مما إذا كانت الصورة مكتملة (لديها البيانات الإلزامية)
+  const isImageComplete = useCallback((image: ImageData): boolean => {
+    // التحقق من وجود البيانات الأساسية
+    const hasRequiredFields = Boolean(image.code) && Boolean(image.senderName) && Boolean(image.province) && Boolean(image.price);
+
+    // التحقق من صحة رقم الهاتف (إما فارغ أو صحيح بطول 11 رقم)
+    const hasValidPhone = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
+    return hasRequiredFields && hasValidPhone;
+  }, []);
+
+  // التحقق مما إذا كانت الصورة تحتوي على خطأ في رقم الهاتف
+  const hasPhoneError = useCallback((image: ImageData): boolean => {
+    return Boolean(image.phoneNumber) && image.phoneNumber.replace(/[^\d]/g, '').length !== 11;
+  }, []);
+
+  // تعيين أول صورة كصورة نشطة تلقائيًا عند التحميل أو عند تغيير الصور
+  useEffect(() => {
+    if (images.length > 0 && !activeImage) {
+      setActiveImage(images[0]);
+    } else if (images.length > 0 && activeImage) {
+      // تحديث الصورة النشطة إذا تغيرت بياناتها
+      const updatedActiveImage = images.find(img => img.id === activeImage.id);
+      if (updatedActiveImage && JSON.stringify(updatedActiveImage) !== JSON.stringify(activeImage)) {
+        setActiveImage(updatedActiveImage);
+      }
+      
+      // إذا تم حذف الصورة النشطة، حدد صورة أخرى
+      if (!updatedActiveImage) {
+        setActiveImage(images[0]);
+      }
+    } else if (images.length === 0) {
+      setActiveImage(null);
+    }
+  }, [images, activeImage]);
 
   // حساب عدد الصفحات
   const totalPages = Math.ceil(filteredImages().length / ITEMS_PER_PAGE);
