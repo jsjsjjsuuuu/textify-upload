@@ -182,6 +182,11 @@ const DraggableImage = ({
           انقر مرتين للعودة
         </div>
       )}
+      {localZoomLevel > 1 && (
+        <div className="absolute bottom-3 left-3 bg-black bg-opacity-60 text-white text-xs py-1 px-2 rounded-md pointer-events-none">
+          اسحب الصورة للتنقل
+        </div>
+      )}
     </div>
   );
 };
