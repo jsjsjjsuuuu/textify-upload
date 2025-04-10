@@ -1,4 +1,3 @@
-
 import { ImageData } from "@/types/ImageData";
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -132,7 +131,6 @@ const ImagePreviewContainer = ({
   // تبديل حالة التكبير
   const toggleZoom = () => {
     setIsZoomed(!isZoomed);
-    setZoomLevel(1); // إعادة ضبط مستوى التكبير عند التبديل
     setImageLoaded(false);
   };
   
@@ -315,7 +313,7 @@ const ImagePreviewContainer = ({
                   onClick={toggleZoom}
                   className="ml-2"
                 >
-                  {isZoomed ? "عرض البيانات فقط" : "تكبير الصورة"}
+                  {isZoomed ? "عرض البيانات" : "تكبير الصورة"}
                 </Button>
               )}
               
@@ -344,52 +342,22 @@ const ImagePreviewContainer = ({
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* الجزء الأيسر - الصورة المكبرة */}
-            <div className={`bg-gray-900 dark:bg-gray-900 border border-purple-500/30 dark:border-purple-500/30 rounded-lg shadow-lg p-0 flex flex-col relative overflow-hidden ${isZoomed ? 'col-span-1' : 'hidden md:block'}`}>
-              <div className="relative w-full h-[450px] overflow-hidden flex items-center justify-center bg-gray-900 dark:bg-gray-900 rounded-lg">
-                {/* أدوات التكبير */}
-                <div className="absolute top-2 left-2 z-10 flex space-x-2 rtl:space-x-reverse">
-                  <button onClick={handleZoomIn} className="w-8 h-8 bg-gray-900/70 hover:bg-gray-800/90 text-white rounded-full flex items-center justify-center border border-gray-700/50">
-                    <ZoomIn size={16} />
-                  </button>
-                  <button onClick={handleZoomOut} className="w-8 h-8 bg-gray-900/70 hover:bg-gray-800/90 text-white rounded-full flex items-center justify-center border border-gray-700/50">
-                    <ZoomOut size={16} />
-                  </button>
-                  <button onClick={handleResetZoom} className="w-8 h-8 bg-gray-900/70 hover:bg-gray-800/90 text-white rounded-full flex items-center justify-center border border-gray-700/50">
-                    <RefreshCw size={16} />
-                  </button>
-                </div>
-                
-                {/* إطار الصورة مع بوردر بنفسجي */}
-                <div className="w-full h-full max-w-[95%] max-h-[95%] relative flex items-center justify-center border-4 border-purple-500/30 rounded-lg overflow-hidden">
-                  <DraggableImage 
-                    src={activeImage.previewUrl} 
-                    zoomLevel={zoomLevel}
-                    onImageLoad={handleImageLoad}
-                    onImageError={handleImageError}
-                    imageLoaded={imageLoaded}
-                  />
-                  
-                  {/* نسبة التكبير */}
-                  <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs py-1 px-2 rounded-md">
-                    {Math.round(zoomLevel * 100)}%
-                  </div>
-                </div>
-                
-                {!imageLoaded && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm">
-                    <div className="w-10 h-10 border-4 border-t-purple-500 border-r-transparent border-b-purple-500 border-l-transparent rounded-full animate-spin"></div>
-                  </div>
-                )}
-              </div>
+          {isZoomed ? (
+            <div className="h-[650px] bg-gray-100 dark:bg-gray-900 relative">
+              <DraggableImage
+                src={activeImage.previewUrl}
+                zoomLevel={zoomLevel}
+                onImageLoad={handleImageLoad}
+                onImageError={handleImageError}
+                imageLoaded={imageLoaded}
+              />
             </div>
-            
-            {/* الجزء الأيمن - معلومات البيانات المستخرجة */}
-            <div className={isZoomed ? 'col-span-1' : 'col-span-1 md:col-span-2'}>
-              <ImagePreview image={activeImage} onTextChange={onTextChange} />
-            </div>
-          </div>
+          ) : (
+            <ImagePreview
+              image={activeImage}
+              onTextChange={onTextChange}
+            />
+          )}
         </div>
       </motion.div>
     ) : (

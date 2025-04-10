@@ -115,6 +115,9 @@ const ImageViewer = ({
               imageLoaded={imageLoaded}
             />
 
+            {/* النص أسفل الصورة */}
+            {imageLoaded && getDragInstructions()}
+            
             {/* نسبة التكبير */}
             <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs py-1 px-2 rounded-md">
               {Math.round(zoomLevel * 100)}%
