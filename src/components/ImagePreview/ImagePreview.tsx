@@ -45,7 +45,7 @@ const ImagePreview = ({ image, onTextChange }: ImagePreviewProps) => {
   const formattedExtractedText = image.extractedText?.trim()
     .replace(/\n\n+/g, "\n\n")
     .split("\n")
-    .map((line, i) => <div key={i}>{line || <br />}</div>);
+    .map((line, i) => <div key={i} dir="rtl" className="text-right">{line || <br />}</div>);
 
   return (
     <div className="p-4">
@@ -75,7 +75,7 @@ const ImagePreview = ({ image, onTextChange }: ImagePreviewProps) => {
             </div>
           </div>
           
-          <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md text-sm font-mono whitespace-pre-wrap overflow-auto max-h-[300px] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700">
+          <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md text-sm font-mono whitespace-pre-wrap overflow-auto max-h-[300px] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-right rtl" dir="rtl">
             {formattedExtractedText}
           </div>
         </TabsContent>
