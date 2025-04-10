@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageData } from "@/types/ImageData";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowDownWideNarrow, Loader2, RefreshCw } from "lucide-react";
+import { ArrowDownWideNarrow, FileText, User, Users, Loader2, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useImageProcessing } from '@/hooks/useImageProcessing';
@@ -103,6 +103,28 @@ const RecentRecords = () => {
     fetchRecords();
   };
   
+  // إنشاء مصفوفة علامات التبويب
+  const tabs = [
+    {
+      id: "all",
+      label: "الكل",
+      icon: <FileText className="w-4 h-4 opacity-70" />,
+      count: records.length
+    },
+    {
+      id: "mine",
+      label: "سجلاتي",
+      icon: <User className="w-4 h-4 opacity-70" />,
+      count: records.filter(record => record.user_id === user?.id).length
+    },
+    {
+      id: "others",
+      label: "سجلات الآخرين",
+      icon: <Users className="w-4 h-4 opacity-70" />,
+      count: records.filter(record => record.user_id !== user?.id).length
+    }
+  ];
+  
   if (loading) {
     return (
       <Card>
@@ -137,6 +159,7 @@ const RecentRecords = () => {
       </CardHeader>
       <CardContent>
         <TabBar 
+          tabs={tabs}
           activeTab={selectedRecordType}
           onTabChange={handleRecordTypeChange}
         />
