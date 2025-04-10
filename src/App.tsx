@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "./components/ui/theme-provider";
 import { AuthProvider } from './contexts/AuthContext';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
@@ -10,8 +11,8 @@ import Signup from './pages/Signup';
 import Reports from './pages/Reports';
 import Records from './pages/Records';
 import Settings from './pages/Settings';
-import { Toaster } from "@/components/ui/toaster"
-import ReceiptImageView from "@/pages/ReceiptyImageView";
+import { Toaster } from "@/components/ui/toaster";
+import ReceiptImageView from "@/pages/ReceiptImageView";
 import ReceiptGallery from "@/pages/ReceiptGallery";
 
 function App() {

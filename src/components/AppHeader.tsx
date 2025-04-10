@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import {
@@ -15,6 +16,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { UserAuthForm } from "@/components/auth/user-auth-form";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/ui/logo";
+import { Button } from "@/components/ui/button";
 
 interface NavLinkProps {
   to: string;
@@ -33,13 +35,13 @@ const NavLink: React.FC<NavLinkProps> = ({ to, children }) => {
 };
 
 const AppHeader = () => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
 
   return (
     <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-40 w-full border-b">
       <div className="container flex h-14 items-center">
         <div className="mr-4 hidden md:flex">
-          <Link href="/" className="flex items-center">
+          <Link to="/" className="flex items-center">
             <Logo className="h-8 w-8" />
             <span className="font-bold text-xl ml-2">ReceiptPro</span>
           </Link>
@@ -75,9 +77,9 @@ const AppHeader = () => {
         <div className="ml-auto flex items-center space-x-4 space-x-reverse">
           <ThemeToggle />
           {user ? (
-            <button onClick={logout} className="text-sm font-medium hover:underline">
+            <Button onClick={signOut} variant="ghost" className="text-sm font-medium hover:underline">
               تسجيل الخروج
-            </button>
+            </Button>
           ) : (
             <UserAuthForm />
           )}

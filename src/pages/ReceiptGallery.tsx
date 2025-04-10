@@ -22,7 +22,7 @@ const ReceiptGallery: React.FC = () => {
   const {
     loadUserImages,
     images,
-    isLoadingUserImages
+    isLoadingUserImages // اكتمال الواجهة لتتضمن isLoadingUserImages
   } = useImageProcessing();
   
   const [filteredImages, setFilteredImages] = useState<ImageData[]>([]);

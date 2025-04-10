@@ -197,14 +197,22 @@ export const useImageProcessing = () => {
     newImages.forEach(img => addImage(img));
   };
   
-  /**
-   * تحميل صور المستخدم - واجهة مبسطة تستخدم دالة الرجوع فقط
-   * @param callback - دالة الرجوع التي ستتلقى الصور المحملة
-   */
+  // إضافة isLoadingUserImages للتصدير
+  const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
+
+  // تعديل وظيفة loadUserImages لتعكس حالة التحميل
   const loadUserImages = (callback?: (images: ImageData[]) => void) => {
     if (user) {
+      setIsLoadingUserImages(true);
       // استدعاء دالة fetchUserImages من useImageDatabase مع تمرير معرف المستخدم ودالة الرجوع
-      return fetchUserImages(user.id, callback || setImages);
+      return fetchUserImages(user.id, (loadedImages) => {
+        setIsLoadingUserImages(false);
+        if (callback) {
+          callback(loadedImages);
+        } else {
+          setImages(loadedImages);
+        }
+      });
     }
   };
 
@@ -310,6 +318,7 @@ export const useImageProcessing = () => {
     isSubmitting,
     activeUploads,
     queueLength,
+    isLoadingUserImages, // إضافة حالة التحميل للتصدير
     // الدوال
     handleFileChange,
     handleTextChange,
