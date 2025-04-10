@@ -28,6 +28,7 @@ const DraggableImage = ({
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [imageUrl, setImageUrl] = useState<string | null>(image.previewUrl);
   const [retryCount, setRetryCount] = useState(image.retryCount || 0); // استخدام عداد المحاولات من الصورة
+  const [isZoomed, setIsZoomed] = useState(false);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const { toast } = useToast();
@@ -79,12 +80,39 @@ const DraggableImage = ({
   useEffect(() => {
     setPosition({ x: 0, y: 0 });
     setZoomLevel(1.5); // إعادة تعيين التكبير إلى 50%
+    setIsZoomed(false);
   }, [image.id]);
+
+  // وظيفة النقر على الصورة
+  const handleImageClick = (e: React.MouseEvent) => {
+    if (!isDragging) {
+      if (!isZoomed) {
+        // تكبير الصورة عند النقر عليها
+        setIsZoomed(true);
+        setZoomLevel(prev => prev * 1.5);
+      } else {
+        // عند النقر على الصورة المكبرة، قم بالتحديد فقط
+        onImageClick(image);
+      }
+    }
+    e.stopPropagation();
+  };
+  
+  // وظيفة النقر المزدوج على الصورة
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    // إعادة تعيين حجم الصورة عند النقر المزدوج
+    setIsZoomed(false);
+    setZoomLevel(1.5);
+    setPosition({ x: 0, y: 0 });
+    e.stopPropagation();
+    e.preventDefault();
+  };
 
   // Zoom control handlers
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
     setZoomLevel(prev => Math.min(prev + 0.2, 3));
+    if (!isZoomed) setIsZoomed(true);
   };
   
   const handleZoomOut = (e: React.MouseEvent) => {
@@ -96,22 +124,25 @@ const DraggableImage = ({
     e.stopPropagation();
     setZoomLevel(1.5); // إعادة تعيين إلى تكبير 50%
     setPosition({ x: 0, y: 0 });
+    setIsZoomed(false);
   };
 
   // Mouse drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsDragging(true);
-    setStartPos({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    });
-    e.preventDefault();
+    if (isZoomed) {
+      setIsDragging(true);
+      setStartPos({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y
+      });
+      e.preventDefault();
+    }
   };
   
   const handleMouseMove = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isDragging) {
+    if (isDragging && isZoomed) {
       const newX = e.clientX - startPos.x;
       const newY = e.clientY - startPos.y;
 
@@ -145,13 +176,6 @@ const DraggableImage = ({
   
   const handleMouseLeave = () => {
     setIsDragging(false);
-  };
-  
-  const handleImageClick = () => {
-    // Only trigger image click if not dragging
-    if (!isDragging) {
-      onImageClick(image);
-    }
   };
   
   const handleImageError = () => {
@@ -206,7 +230,7 @@ const DraggableImage = ({
   const isLoading = image.status === "processing";
 
   return (
-    <div className="p-3 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-sm relative overflow-hidden">
+    <div className="p-3 bg-white/95 dark:bg-gray-800/95 rounded-lg shadow-md border border-gray-100 dark:border-gray-700 relative overflow-hidden">
       {/* أدوات التكبير/التصغير */}
       <ZoomControls 
         onZoomIn={handleZoomIn} 
@@ -217,8 +241,9 @@ const DraggableImage = ({
       {/* حاوية الصورة الرئيسية */}
       <div 
         ref={imageContainerRef} 
-        className="relative w-full h-[420px] overflow-hidden bg-gray-100 dark:bg-gray-900 cursor-move flex items-center justify-center rounded-md" 
+        className={`relative w-full h-[320px] overflow-hidden flex items-center justify-center rounded-md ${isZoomed ? 'cursor-move bg-gray-800 dark:bg-gray-900' : 'cursor-pointer bg-gray-100 dark:bg-gray-800'}`}
         onClick={handleImageClick}
+        onDoubleClick={handleDoubleClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -226,20 +251,26 @@ const DraggableImage = ({
       >
         {/* الصورة قابلة للسحب */}
         {!imgError && imageUrl && (
-          <img
-            ref={imageRef}
-            src={imageUrl}
-            alt={`Image ${image.number || ''}`}
-            className={`transform ${isLoading ? 'opacity-40' : 'opacity-100'} transition-opacity duration-300`}
-            style={{
-              transform: `translate(${position.x}px, ${position.y}px) scale(${zoomLevel})`,
-              transformOrigin: 'center',
-              transition: isDragging ? 'none' : 'transform 0.2s ease-out',
-              maxWidth: 'none',
-              maxHeight: 'none'
-            }}
-            onError={handleImageError}
-          />
+          <>
+            <img
+              ref={imageRef}
+              src={imageUrl}
+              alt={`صورة ${image.number || ''}`}
+              className={`max-w-full max-h-full ${isLoading ? 'opacity-40' : 'opacity-100'} transition-all duration-300 ${isZoomed ? '' : 'hover:opacity-90'}`}
+              style={{
+                transform: `translate(${position.x}px, ${position.y}px) scale(${zoomLevel})`,
+                transformOrigin: 'center',
+                transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+              }}
+              onError={handleImageError}
+              draggable={false}
+            />
+            {isZoomed && (
+              <div className="absolute bottom-3 right-3 bg-black bg-opacity-70 text-white text-xs py-1 px-2 rounded-md pointer-events-none">
+                انقر مرتين للعودة
+              </div>
+            )}
+          </>
         )}
         
         {/* عرض خطأ الصورة مع إمكانية إعادة المحاولة */}
@@ -265,9 +296,22 @@ const DraggableImage = ({
       {/* معلومات الصورة في الأسفل */}
       <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between">
         <span>
-          {image.file.name} ({(image.file.size / 1024).toFixed(0)} كيلوبايت)
+          {image.file?.name ? `${image.file.name} (${(image.file.size / 1024).toFixed(0)} كيلوبايت)` : 'وصل'}
         </span>
         <span dir="ltr">{formatDate(new Date(image.date))}</span>
+      </div>
+      
+      {/* حالة الصورة */}
+      <div className={`absolute top-2 left-2 px-2 py-0.5 text-xs rounded-full 
+        ${image.status === "completed" ? "bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-200" : ""}
+        ${image.status === "pending" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200" : ""}
+        ${image.status === "error" ? "bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200" : ""}
+        ${image.status === "processing" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200" : ""}
+      `}>
+        {image.status === "completed" && "مكتملة"}
+        {image.status === "pending" && "قيد الانتظار"}
+        {image.status === "error" && "خطأ"}
+        {image.status === "processing" && "قيد المعالجة"}
       </div>
     </div>
   );

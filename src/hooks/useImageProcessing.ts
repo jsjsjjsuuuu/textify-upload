@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -47,6 +48,7 @@ export const useImageProcessing = () => {
   const [activeUploads, setActiveUploads] = useState(0);
   const [queueLength, setQueueLength] = useState(0);
   const [imageQueue, setImageQueue] = useState<File[]>([]);
+  const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
   
   // استيراد هوك قاعدة البيانات مع تمرير دالة updateImage
   const { loadUserImages: fetchUserImages, saveImageToDatabase, handleSubmitToApi: submitToApi, deleteImageFromDatabase, runCleanupNow } = useImageDatabase(updateImage);
@@ -57,10 +59,12 @@ export const useImageProcessing = () => {
   // تحميل الصور السابقة
   useEffect(() => {
     if (user) {
+      setIsLoadingUserImages(true);
       fetchUserImages(user.id, (loadedImages) => {
         // إضافة الصور المحملة للصور الحالية
         const updatedImages = [...loadedImages];
         setImages(updatedImages);
+        setIsLoadingUserImages(false);
       });
     }
   }, [user]);
@@ -203,8 +207,16 @@ export const useImageProcessing = () => {
    */
   const loadUserImages = (callback?: (images: ImageData[]) => void) => {
     if (user) {
+      setIsLoadingUserImages(true);
       // استدعاء دالة fetchUserImages من useImageDatabase مع تمرير معرف المستخدم ودالة الرجوع
-      return fetchUserImages(user.id, callback || setImages);
+      return fetchUserImages(user.id, (loadedImages) => {
+        if (callback) {
+          callback(loadedImages);
+        } else {
+          setImages(loadedImages);
+        }
+        setIsLoadingUserImages(false);
+      });
     }
   };
 
@@ -310,6 +322,7 @@ export const useImageProcessing = () => {
     isSubmitting,
     activeUploads,
     queueLength,
+    isLoadingUserImages,
     // الدوال
     handleFileChange,
     handleTextChange,
