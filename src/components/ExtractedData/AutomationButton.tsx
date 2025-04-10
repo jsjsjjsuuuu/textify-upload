@@ -52,6 +52,7 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
           className={`w-full ${status === "complete" 
             ? "bg-brand-green hover:bg-brand-green/90 text-white" 
             : "bg-gray-300 text-gray-600 dark:bg-gray-700 dark:text-gray-400"}`}
+          dir="rtl"
         >
           {status === "complete" ? (
             <>
@@ -73,7 +74,7 @@ const AutomationButton = ({ image }: AutomationButtonProps) => {
       </motion.div>
       
       {status !== "complete" && (
-        <p className="text-xs text-center text-muted-foreground">
+        <p className="text-xs text-center text-muted-foreground" dir="rtl">
           {status === "invalid" ? "تأكد من صحة رقم الهاتف أولاً" : "أكمل البيانات الأساسية أولاً"}
         </p>
       )}

@@ -52,6 +52,7 @@ const ExtractedDataEditor = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       className="h-full"
+      dir="rtl"
     >
       <Card className="bg-white/95 dark:bg-gray-800/95 shadow-sm border-brand-beige dark:border-gray-700 hover:shadow-md transition-shadow">
         <CardContent className="p-4">
