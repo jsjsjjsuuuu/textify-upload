@@ -41,55 +41,6 @@ const ImagePreviewContainer = ({
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // الاستماع إلى حدث معالجة الصورة لتحديث الصورة النشطة
-  useEffect(() => {
-    const handleImageProcessed = (event: CustomEvent) => {
-      const { imageId } = event.detail;
-      const processedImage = images.find(img => img.id === imageId);
-      
-      if (processedImage) {
-        console.log("تم معالجة الصورة وتعيينها كصورة نشطة:", imageId);
-        setActiveImage(processedImage);
-        
-        // إذا كانت الصورة المعالجة في صفحة مختلفة، انتقل إلى الصفحة المناسبة
-        const filteredImages = filteredImages();
-        const imageIndex = filteredImages.findIndex(img => img.id === imageId);
-        if (imageIndex >= 0) {
-          const page = Math.floor(imageIndex / ITEMS_PER_PAGE) + 1;
-          if (page !== currentPage) {
-            setCurrentPage(page);
-          }
-        }
-      }
-    };
-
-    window.addEventListener('image-processed', handleImageProcessed as EventListener);
-    
-    return () => {
-      window.removeEventListener('image-processed', handleImageProcessed as EventListener);
-    };
-  }, [images]);
-
-  // تعيين أول صورة كصورة نشطة تلقائيًا عند التحميل أو عند تغيير الصور
-  useEffect(() => {
-    if (images.length > 0 && !activeImage) {
-      setActiveImage(images[0]);
-    } else if (images.length > 0 && activeImage) {
-      // تحديث الصورة النشطة إذا تغيرت بياناتها
-      const updatedActiveImage = images.find(img => img.id === activeImage.id);
-      if (updatedActiveImage && JSON.stringify(updatedActiveImage) !== JSON.stringify(activeImage)) {
-        setActiveImage(updatedActiveImage);
-      }
-      
-      // إذا تم حذف الصورة النشطة، حدد صورة أخرى
-      if (!updatedActiveImage) {
-        setActiveImage(images[0]);
-      }
-    } else if (images.length === 0) {
-      setActiveImage(null);
-    }
-  }, [images, activeImage]);
-
   // التحقق مما إذا كانت الصورة مكتملة (لديها البيانات الإلزامية)
   const isImageComplete = useCallback((image: ImageData): boolean => {
     // التحقق من وجود البيانات الأساسية
@@ -126,6 +77,55 @@ const ImagePreviewContainer = ({
     }
     return result;
   }, [images, activeTab, isImageComplete, hasPhoneError]);
+
+  // الاستماع إلى حدث معالجة الصورة لتحديث الصورة النشطة
+  useEffect(() => {
+    const handleImageProcessed = (event: CustomEvent) => {
+      const { imageId } = event.detail;
+      const processedImage = images.find(img => img.id === imageId);
+      
+      if (processedImage) {
+        console.log("تم معالجة الصورة وتعيينها كصورة نشطة:", imageId);
+        setActiveImage(processedImage);
+        
+        // إذا كانت الصورة المعالجة في صفحة مختلفة، انتقل إلى الصفحة المناسبة
+        const imagesList = filteredImages();
+        const imageIndex = imagesList.findIndex(img => img.id === imageId);
+        if (imageIndex >= 0) {
+          const page = Math.floor(imageIndex / ITEMS_PER_PAGE) + 1;
+          if (page !== currentPage) {
+            setCurrentPage(page);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('image-processed', handleImageProcessed as EventListener);
+    
+    return () => {
+      window.removeEventListener('image-processed', handleImageProcessed as EventListener);
+    };
+  }, [images, currentPage, filteredImages]);
+
+  // تعيين أول صورة كصورة نشطة تلقائيًا عند التحميل أو عند تغيير الصور
+  useEffect(() => {
+    if (images.length > 0 && !activeImage) {
+      setActiveImage(images[0]);
+    } else if (images.length > 0 && activeImage) {
+      // تحديث الصورة النشطة إذا تغيرت بياناتها
+      const updatedActiveImage = images.find(img => img.id === activeImage.id);
+      if (updatedActiveImage && JSON.stringify(updatedActiveImage) !== JSON.stringify(activeImage)) {
+        setActiveImage(updatedActiveImage);
+      }
+      
+      // إذا تم حذف الصورة النشطة، حدد صورة أخرى
+      if (!updatedActiveImage) {
+        setActiveImage(images[0]);
+      }
+    } else if (images.length === 0) {
+      setActiveImage(null);
+    }
+  }, [images, activeImage]);
 
   // حساب عدد الصفحات
   const totalPages = Math.ceil(filteredImages().length / ITEMS_PER_PAGE);
