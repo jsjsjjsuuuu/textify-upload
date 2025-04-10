@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -138,7 +137,7 @@ const RecentRecords = () => {
       </CardHeader>
       <CardContent>
         <TabBar 
-          selectedTab={selectedRecordType}
+          activeTab={selectedRecordType}
           onTabChange={handleRecordTypeChange}
         />
         
