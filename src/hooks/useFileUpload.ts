@@ -30,6 +30,7 @@ export interface UseFileUploadProps {
   // إضافة الخصائص المفقودة
   processWithOcr?: (file: File, image: ImageData) => Promise<ImageData>;
   duplicateDetection?: DuplicateDetector;
+  processWithGemini?: (file: File | Blob, image: ImageData) => Promise<ImageData>;
 }
 
 // تحسين معالجة الصور لتتم بشكل متسلسل وبتتبع أفضل
@@ -48,7 +49,9 @@ export const useFileUpload = ({
   setProcessingProgress,
   saveProcessedImage,
   removeDuplicates,
-  processedImage
+  processedImage,
+  processWithOcr, // إضافة هذا الوسيط للسماح باستخدام OCR
+  processWithGemini // إضافة هذا الوسيط للسماح باستخدام Gemini
 }: UseFileUploadProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeUploads, setActiveUploads] = useState(0); 
@@ -61,7 +64,7 @@ export const useFileUpload = ({
   const { toast } = useToast();
   const { user } = useAuth();
   
-  const { processWithGemini } = useGeminiProcessing();
+  const { processWithGemini: geminiProcessor } = useGeminiProcessing();
   const { formatPhoneNumber, formatPrice } = useDataFormatting();
 
   // استعادة الصور المعالجة من التخزين المحلي عند بدء التشغيل
@@ -203,7 +206,7 @@ export const useFileUpload = ({
         };
         
         // التحقق من التكرارات باستخدام وظائف اكتشاف التكرار إذا كانت متاحة
-        const isDuplicate = processedImage?.isDuplicateImage?.(newImage, images) || false;
+        const isDuplicate = processedImage?.isDuplicateImage?.(newImage, images || []) || false;
         if (isDuplicate) {
           console.log(`تم اكتشاف تكرار للصورة: ${file.name}`);
           URL.revokeObjectURL(previewUrl);
@@ -218,13 +221,64 @@ export const useFileUpload = ({
         // إضافة الصورة إلى القائمة
         addImage(newImage);
         
-        // تسجيل الملف كمعالج حتى لو لم تنجح المعالجة
+        // معالجة الصورة مباشرة بعد إضافتها
+        try {
+          console.log(`بدء معالجة الصورة ${file.name}`);
+          
+          // ضمان تعيين حالة المعالجة
+          updateImage(newImage.id, { status: "processing" });
+          
+          // استخدام Gemini لمعالجة الصورة إذا كان متاحًا
+          if (processWithGemini || geminiProcessor) {
+            const processorToUse = processWithGemini || geminiProcessor;
+            const processedImage = await processorToUse(file, newImage);
+            console.log("تمت معالجة الصورة باستخدام Gemini:", processedImage.status);
+            
+            // تحديث الصورة بالنتائج
+            updateImage(newImage.id, { 
+              ...processedImage,
+              status: "completed",
+            });
+            
+            // حفظ الصورة المعالجة إذا كانت الوظيفة متاحة
+            if (saveProcessedImage) {
+              await saveProcessedImage(processedImage);
+            }
+          } 
+          // استخدام OCR إذا كان Gemini غير متاح
+          else if (processWithOcr) {
+            const processedImage = await processWithOcr(file, newImage);
+            console.log("تمت معالجة الصورة باستخدام OCR:", processedImage.status);
+            
+            // تحديث الصورة بالنتائج
+            updateImage(newImage.id, { 
+              ...processedImage,
+              status: "completed",
+            });
+            
+            // حفظ الصورة المعالجة إذا كانت الوظيفة متاحة
+            if (saveProcessedImage) {
+              await saveProcessedImage(processedImage);
+            }
+          } else {
+            console.warn("لم يتم توفير طريقة معالجة للصورة. سيتم تحديثها كصورة غير معالجة.");
+            updateImage(newImage.id, { status: "error", extractedText: "لم يتم توفير طريقة معالجة للصورة" });
+          }
+        } catch (processingError) {
+          console.error(`خطأ أثناء معالجة الصورة ${file.name}:`, processingError);
+          updateImage(newImage.id, { 
+            status: "error", 
+            extractedText: `حدث خطأ أثناء معالجة الصورة: ${processingError instanceof Error ? processingError.message : String(processingError)}` 
+          });
+        }
+        
+        // تسجيل الملف كمعالج
         markFileAsProcessed(file);
         
         // تسجيل وقت معالجة آخر صورة
         setLastProcessedImageTime(Date.now());
       } catch (error) {
-        console.error(`خطأ في معالجة الملف ${file.name}:`, error);
+        console.error(`خطأ في إضافة الملف ${file.name}:`, error);
       }
       
       // إضافة تأخير بين الصور لمنع الطلبات المتزامنة
@@ -254,7 +308,9 @@ export const useFileUpload = ({
     }
     
     // نحدث الإحصائيات في المخزن المحلي
-    saveToLocalStorage([...images]);
+    if (images) {
+      saveToLocalStorage(images);
+    }
     
     // فحص ما إذا كانت هناك صور أخرى في قائمة الانتظار
     if (processingQueue.length > 0) {
@@ -281,7 +337,12 @@ export const useFileUpload = ({
     isFileProcessed,
     markFileAsProcessed,
     processedImage,
-    toast
+    toast,
+    updateImage,
+    saveProcessedImage,
+    processWithOcr,
+    processWithGemini,
+    geminiProcessor
   ]);
   
   // وظيفة تنظيف التكرارات من الذاكرة المؤقتة

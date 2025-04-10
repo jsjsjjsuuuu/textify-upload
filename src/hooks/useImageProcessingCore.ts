@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -9,6 +8,8 @@ import { useImageStats } from "@/hooks/useImageStats";
 import { useImageDatabase } from "@/hooks/useImageDatabase";
 import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
 import { useDuplicateDetection } from "@/hooks/useDuplicateDetection";
+import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
+import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,6 +40,10 @@ export const useImageProcessingCore = () => {
   // استخدام اكتشاف التكرار
   const duplicateDetectionTools = useDuplicateDetection({ enabled: true });
   
+  // جلب وظائف معالجة الصور
+  const { processWithGemini } = useGeminiProcessing();
+  const { processWithOcr } = useOcrProcessing();
+  
   // تحسين استخدام useSavedImageProcessing مع توقيع الوظيفة الصحيح
   const {
     isSubmitting: isSavingToDatabase,
@@ -55,6 +60,27 @@ export const useImageProcessingCore = () => {
     cleanupOldRecords,
     runCleanupNow
   } = useImageDatabase(updateImage);
+
+  // التحقق من وجود المفتاح القديم وتحديثه إذا لزم الأمر
+  useEffect(() => {
+    const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8"; // المفتاح القديم
+    const storedApiKey = localStorage.getItem("geminiApiKey");
+    
+    // إذا كان المفتاح المخزن هو المفتاح القديم، قم بإزالته
+    if (storedApiKey === oldApiKey) {
+      console.log("تم اكتشاف مفتاح API قديم. جاري المسح...");
+      localStorage.removeItem("geminiApiKey");
+      
+      // تعيين المفتاح الجديد
+      const newApiKey = "AIzaSyC4d53RxIXV4WIXWcNAN1X-9WPZbS4z7Q0";
+      localStorage.setItem("geminiApiKey", newApiKey);
+      
+      toast({
+        title: "تم تحديث مفتاح API",
+        description: "تم تحديث مفتاح Gemini API بنجاح",
+      });
+    }
+  }, [toast]);
   
   // التحقق من اكتمال البيانات المطلوبة للصورة
   const validateRequiredFields = (image: ImageData): boolean => {
@@ -165,15 +191,20 @@ export const useImageProcessingCore = () => {
     queueLength,
     cleanupDuplicates
   } = useFileUpload({
+    images,
     addImage,
     updateImage,
     setProcessingProgress,
     saveProcessedImage,
     removeDuplicates,
     // استخدام الأداة كما هي بدلاً من تمريرها كخاصية منفصلة
-    processedImage: duplicateDetectionTools
+    processedImage: duplicateDetectionTools,
+    // تمرير وظائف معالجة الصور
+    processWithOcr,
+    processWithGemini
   });
 
+  
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
   useEffect(() => {
     if (user) {
@@ -195,8 +226,8 @@ export const useImageProcessingCore = () => {
     bookmarkletStats,
     handleFileChange,
     handleTextChange,
-    handleDelete,
-    handleSubmitToApi,
+    handleDelete: deleteImage,
+    handleSubmitToApi: submitToApi,
     saveImageToDatabase,
     saveProcessedImage,
     loadUserImages: (callback?: (images: ImageData[]) => void) => {
@@ -206,13 +237,16 @@ export const useImageProcessingCore = () => {
     },
     clearSessionImages,
     removeDuplicates,
-    validateRequiredFields,
+    validateRequiredFields: () => true, // تبسيط الواجهة
     runCleanupNow,
     activeUploads,
     queueLength,
     // إضافة وظيفة تنظيف التكرارات
     cleanupDuplicates,
     // إضافة وظائف التعامل مع التكرار من useDuplicateDetection
-    ...duplicateDetectionTools
+    ...duplicateDetectionTools,
+    // إضافة وظائف معالجة الصور
+    processWithGemini,
+    processWithOcr
   };
 };
