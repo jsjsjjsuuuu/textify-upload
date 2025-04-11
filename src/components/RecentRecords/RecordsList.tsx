@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 interface RecordsListProps {
   records: ImageData[];
   isLoading: boolean;
+  isError?: boolean; // إضافة خاصية isError اختيارية
   onItemClick?: (item: ImageData) => void;
   formatDate?: (date: Date) => string;
 }
@@ -17,6 +18,7 @@ interface RecordsListProps {
 const RecordsList: React.FC<RecordsListProps> = ({
   records,
   isLoading,
+  isError = false, // قيمة افتراضية false
   onItemClick,
   formatDate = (date) => date.toLocaleString()
 }) => {
@@ -38,6 +40,35 @@ const RecordsList: React.FC<RecordsListProps> = ({
       setShowUnhideButton(false);
     }
   };
+
+  // عرض رسالة خطأ إذا كان هناك خطأ
+  if (isError) {
+    return (
+      <div className="text-center py-8 space-y-4">
+        <p className="text-destructive">حدث خطأ أثناء تحميل السجلات</p>
+        {showUnhideButton && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleUnhideAllImages}
+            className="inline-flex items-center gap-1"
+          >
+            <Eye size={16} />
+            إظهار الصور المخفية في صفحة المعالجة
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // عرض رسالة إذا كان التحميل جارياً
+  if (isLoading) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">جاري تحميل السجلات...</p>
+      </div>
+    );
+  }
 
   if (records.length === 0) {
     return (
