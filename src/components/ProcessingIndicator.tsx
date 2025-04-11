@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Progress } from "@/components/ui/progress";
 import { Loader, CheckCircle2, Clock } from "lucide-react";
 import { motion } from "framer-motion";
@@ -18,10 +18,32 @@ const ProcessingIndicator = ({
   activeUploads,
   queueLength
 }: ProcessingIndicatorProps) => {
-  // تعديل الشرط: نعرض المؤشر فقط إذا كان هناك معالجة جارية
-  // تحسين شرط العرض لضمان اختفاء المؤشر عند اكتمال المعالجة حتى لو كانت isProcessing = true
-  // أي يجب أن تكون المعالجة جارية أو هناك ملفات نشطة أو التقدم أقل من 100%
-  const shouldShow = isProcessing && (activeUploads > 0 || processingProgress < 100);
+  // إضافة متغير حالة داخلي لتتبع عندما يجب إخفاء المؤشر
+  const [shouldHide, setShouldHide] = useState(false);
+  
+  // تحسين شرط العرض
+  const shouldShow = isProcessing && (activeUploads > 0 || processingProgress < 100) && !shouldHide;
+  
+  // إضافة تأخير للإخفاء بعد اكتمال المعالجة
+  useEffect(() => {
+    // إذا اكتملت المعالجة (100%) وليس هناك تحميلات نشطة
+    if (processingProgress >= 100 && activeUploads === 0 && isProcessing) {
+      // انتظر لحظة قبل الإخفاء للتأكد من أن المستخدم رأى التقدم 100%
+      const hideTimer = setTimeout(() => {
+        setShouldHide(true);
+      }, 1500);
+      
+      return () => clearTimeout(hideTimer);
+    } else if (isProcessing && (activeUploads > 0 || processingProgress < 100)) {
+      // إعادة تعيين حالة الإخفاء عندما تبدأ معالجة جديدة
+      setShouldHide(false);
+    }
+  }, [isProcessing, processingProgress, activeUploads]);
+
+  // عرض السجلات التشخيصية لمعرفة متى يجب إخفاء المؤشر
+  useEffect(() => {
+    console.log(`حالة مؤشر المعالجة: shouldShow=${shouldShow}, isProcessing=${isProcessing}, progress=${processingProgress}%, activeUploads=${activeUploads}, shouldHide=${shouldHide}`);
+  }, [shouldShow, isProcessing, processingProgress, activeUploads, shouldHide]);
   
   if (!shouldShow) return null;
 

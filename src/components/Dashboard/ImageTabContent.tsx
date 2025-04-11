@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { ImageData } from "@/types/ImageData";
-import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
+import ImagePreviewContainer from '@/components/ImagePreviewContainer';
 
 interface ImageTabContentProps {
   images: ImageData[];
