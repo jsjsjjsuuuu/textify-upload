@@ -58,7 +58,6 @@ const Index = () => {
           isProcessing={isProcessing}
           onClearSessionImages={clearSessionImages}
           onRetryProcessing={retryProcessing}
-          onPauseProcessing={pauseProcessing}
           onClearQueue={clearQueue}
           onRunCleanup={user ? () => runCleanup(user.id) : undefined}
         />
