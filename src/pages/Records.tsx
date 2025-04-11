@@ -1,8 +1,7 @@
-
 import React, { useEffect, useState } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader, Search, Filter, Download, Trash2 } from 'lucide-react';
+import { Loader, Search, Filter, Download, Trash2, Eye } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { ImageData } from '@/types/ImageData';
 import AppHeader from '@/components/AppHeader';
@@ -43,7 +42,9 @@ const Records = () => {
     handlePermanentDelete, // استخدام وظيفة الحذف الدائم
     handleTextChange,
     handleSubmitToApi,
-    isSubmitting
+    isSubmitting,
+    unhideAllImages, // استخدام وظيفة إعادة إظهار جميع الصور
+    hiddenImageIds
   } = useImageProcessing();
   
   const [filteredImages, setFilteredImages] = useState<ImageData[]>([]);
@@ -79,6 +80,15 @@ const Records = () => {
     }
   }, [user, loadUserImages, searchParams, dataLoaded]); // إضافة dataLoaded إلى مصفوفة التبعيات
 
+  // إعادة تحميل البيانات عند تغيير قائمة الصور المخفية
+  useEffect(() => {
+    if (dataLoaded && user) {
+      loadUserImages((loadedImages) => {
+        console.log(`تم إعادة تحميل ${loadedImages.length} صورة للمستخدم بعد تغيير الصور المخفية`);
+      });
+    }
+  }, [hiddenImageIds, dataLoaded, user, loadUserImages]);
+
   // تصفية الصور بناءً على معايير البحث
   useEffect(() => {
     let result = [...images];
@@ -89,7 +99,7 @@ const Records = () => {
       result = result.filter(img => 
         (img.code && img.code.toLowerCase().includes(term)) ||
         (img.senderName && img.senderName.toLowerCase().includes(term)) ||
-        (img.phoneNumber && img.phoneNumber.includes(term)) ||
+        (img.phoneNumber && img.phoneNumber.toLowerCase().includes(term)) ||
         (img.province && img.province.toLowerCase().includes(term))
       );
     }
@@ -117,6 +127,13 @@ const Records = () => {
     // إعادة تعيين الصفحة الحالية إلى 1 عند تغيير معايير التصفية
     setCurrentPage(1);
   }, [images, searchTerm, statusFilter]);
+
+  // معالجة الضغط على زر إظهار جميع الصور المخفية
+  const handleUnhideAllImages = () => {
+    unhideAllImages();
+    // إعادة تحميل البيانات
+    setDataLoaded(false);
+  };
 
   // التعامل مع النقر على صورة
   const handleImageClick = (image: ImageData) => {
@@ -281,6 +298,14 @@ const Records = () => {
             }}>
               <Filter className="h-4 w-4" />
             </Button>
+            
+            {/* زر إظهار جميع الصور المخفية */}
+            {hiddenImageIds?.length > 0 && (
+              <Button variant="outline" onClick={handleUnhideAllImages} className="whitespace-nowrap">
+                <Eye className="h-4 w-4 ml-2" />
+                إظهار الصور المخفية ({hiddenImageIds.length})
+              </Button>
+            )}
           </div>
         </div>
         
@@ -301,6 +326,9 @@ const Records = () => {
         {/* عرض عدد النتائج */}
         <div className="text-sm text-muted-foreground mb-4">
           تم العثور على {filteredImages.length} سجل
+          {hiddenImageIds?.length > 0 && (
+            <span className="mr-2">{hiddenImageIds.length} صورة مخفية</span>
+          )}
         </div>
         
         {/* عرض الصور والتفاصيل */}
@@ -350,7 +378,7 @@ const Records = () => {
                 }}
                 isSubmitting={!!isSubmitting[activeImage.id]}
                 isComplete={isImageComplete(activeImage)}
-                hasPhoneError={hasPhoneError(activeImage)}
+                hasPhoneError={hasPhoneError}
               />
             ) : (
               <Card className="p-8 text-center text-muted-foreground">

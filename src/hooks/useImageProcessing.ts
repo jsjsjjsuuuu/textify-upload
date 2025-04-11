@@ -31,7 +31,11 @@ export const useImageProcessing = () => {
     clearSessionImages,
     clearImages,
     handleTextChange,
-    setAllImages
+    setAllImages,
+    hiddenImageIds,
+    unhideImage,
+    unhideAllImages,
+    getHiddenImageIds
   } = useImageState();
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
@@ -65,12 +69,13 @@ export const useImageProcessing = () => {
     if (user) {
       setIsLoadingUserImages(true);
       fetchUserImages(user.id, (loadedImages) => {
-        // إضافة الصور المحملة للصور الحالية
-        setAllImages(loadedImages);
+        // تصفية الصور المخفية قبل إضافتها للعرض
+        const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
+        setAllImages(visibleImages);
         setIsLoadingUserImages(false);
       });
     }
-  }, [user]);
+  }, [user, hiddenImageIds]);
 
   // معالجة ملف واحد من القائمة
   const processNextFile = useCallback(async () => {
@@ -239,10 +244,12 @@ export const useImageProcessing = () => {
       setIsLoadingUserImages(true);
       // استدعاء دالة fetchUserImages من useImageDatabase مع تمرير معرف المستخدم ودالة الرجوع
       return fetchUserImages(user.id, (loadedImages) => {
+        // تصفية الصور المخفية قبل إضافتها للعرض
+        const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
         if (callback) {
-          callback(loadedImages);
+          callback(visibleImages);
         } else {
-          setImages(loadedImages);
+          setImages(visibleImages);
         }
         setIsLoadingUserImages(false);
       });
@@ -359,6 +366,7 @@ export const useImageProcessing = () => {
   return {
     // البيانات
     images,
+    hiddenImageIds,
     // الحالة
     isProcessing,
     processingProgress,
@@ -375,7 +383,11 @@ export const useImageProcessing = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     formatDate: formatDateFn,
-    // إضافة الدوال الجديدة
+    // إضافة الوظائف الجديدة للتحكم في الصور المخفية
+    unhideImage,
+    unhideAllImages,
+    getHiddenImageIds,
+    // إضافة الدوال الأخرى
     clearSessionImages,
     retryProcessing,
     clearQueue,
