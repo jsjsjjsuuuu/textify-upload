@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Check, Edit2, X, Copy, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";

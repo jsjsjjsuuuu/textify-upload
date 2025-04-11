@@ -67,9 +67,6 @@ const DataCompletionIndicator = ({ image }: DataCompletionIndicatorProps) => {
           {statusIcon}
           <span className="mr-1">{statusMessage}</span>
         </div>
-        <div className="text-xs text-muted-foreground">
-          {filledRequiredFields}/{requiredFields.length} (الحقول الإلزامية)
-        </div>
       </div>
       <Progress 
         value={requiredPercentage} 

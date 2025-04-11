@@ -1,47 +1,91 @@
 
 import { useState } from "react";
-interface RawTextViewerProps {
-  text: string;
-}
-const RawTextViewer = ({
-  text
-}: RawTextViewerProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  if (!text) {
-    return <div className="mt-4 pt-4 border-t">
-        <p className="text-xs text-gray-500">لم يتم استخراج أي نص بعد</p>
-      </div>;
-  }
-  const toggleExpand = () => {
-    setIsExpanded(!isExpanded);
-  };
+import { Copy, Check, ChevronsUpDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
-  // تنظيف النص للعرض بشكل أفضل
-  const cleanText = text.replace(/```json[\s\S]*```/g, "").trim();
-  const hasText = cleanText.length > 0;
-  
-  return (
-    <div className="mt-4 pt-4 border-t" dir="rtl">
-      <div className="flex justify-between items-center mb-2">
-        <h4 className="text-sm font-medium">النص الخام المستخرج:</h4>
-        <button 
-          onClick={toggleExpand} 
-          className="text-xs text-blue-500 hover:underline"
-        >
-          {isExpanded ? 'عرض أقل' : 'عرض المزيد'}
-        </button>
-      </div>
+interface RawTextViewerProps {
+  text?: string;
+}
+
+const RawTextViewer = ({ text }: RawTextViewerProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [hasCopied, setHasCopied] = useState(false);
+  const { toast } = useToast();
+
+  const copyToClipboard = () => {
+    if (text) {
+      navigator.clipboard.writeText(text);
+      setHasCopied(true);
       
-      <div className={`bg-gray-50 dark:bg-gray-800 rounded-md p-3 text-xs text-right overflow-hidden transition-all duration-200 ${isExpanded ? 'max-h-96 overflow-y-auto' : 'max-h-24'}`}>
-        {hasText ? (
-          <pre className="whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300" dir="rtl">
-            {cleanText}
-          </pre>
-        ) : (
-          <p className="text-gray-500 italic">لا يوجد نص خام مستخرج</p>
-        )}
+      toast({
+        title: "تم النسخ",
+        description: "تم نسخ النص إلى الحافظة"
+      });
+      
+      setTimeout(() => setHasCopied(false), 2000);
+    }
+  };
+  
+  if (!text) return null;
+
+  return (
+    <Collapsible
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      className="border rounded-md shadow-sm bg-white/80 dark:bg-gray-900/80"
+    >
+      <div className="flex items-center justify-between p-2">
+        <CollapsibleTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center w-full justify-between text-xs hover:bg-transparent hover:underline p-0 h-auto"
+          >
+            <span>النص المستخرج ({text.length} حرف)</span>
+            <ChevronsUpDown size={16} className="h-4 w-4 ml-1 shrink-0 opacity-50" />
+          </Button>
+        </CollapsibleTrigger>
+        
+        <Button 
+          variant="ghost" 
+          size="sm"
+          className="h-8 w-8 p-0"
+          onClick={copyToClipboard}
+        >
+          <AnimatePresence>
+            {hasCopied ? (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className="flex items-center justify-center"
+              >
+                <Check className="h-4 w-4 text-green-500" />
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className="flex items-center justify-center"
+              >
+                <Copy className="h-4 w-4" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Button>
       </div>
-    </div>
+
+      <CollapsibleContent className="px-4 pb-4">
+        <div className="text-xs font-mono whitespace-pre-wrap break-all bg-gray-50 dark:bg-gray-800 p-3 rounded border overflow-auto max-h-40" dir="ltr">
+          {text}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 };
+
 export default RawTextViewer;
