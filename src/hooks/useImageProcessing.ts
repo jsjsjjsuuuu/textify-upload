@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -149,9 +150,6 @@ export const useImageProcessing = () => {
         throw new Error("لم يتم استخراج أي نص من الصورة");
       }
 
-      // هنا كان يستخدم دالة استخراج البيانات التي لم تعد موجودة
-      // نستخدم بدلاً منها التحديث المباشر للصورة
-      
       // تحديث الصورة بالنص المستخرج والبيانات المحللة
       updateImage(id, { 
         extractedText,
@@ -180,8 +178,12 @@ export const useImageProcessing = () => {
 
   // إعادة تصدير بعض الدوال المفيدة
   const handleFileChange = (files: FileList | File[]) => {
-    fileUploadHandler(files);
+    // تصفير حالة المؤشرات أولا للتأكد من صحة العرض
     setProcessingProgress(0);
+    setActiveUploads(0);
+    
+    // إعداد المعالجة
+    fileUploadHandler(files);
     setIsProcessing(true);
     
     // تحديث عدد الملفات في قائمة الانتظار
@@ -280,19 +282,13 @@ export const useImageProcessing = () => {
     });
   };
   
-  const pauseProcessing = () => {
-    // إيقاف/استئناف المعالجة
-    setIsPaused(prev => !prev);
-    toast({
-      title: isPaused ? "استئناف" : "إيقاف مؤقت",
-      description: isPaused ? "تم استئناف معالجة الصور" : "تم إيقاف معالجة الصور مؤقتًا",
-    });
-  };
-  
   const clearQueue = () => {
     // إفراغ قائمة الانتظار
     setImageQueue([]);
     setQueueLength(0);
+    setActiveUploads(0);
+    setIsProcessing(false); // إيقاف المعالجة عند إفراغ القائمة
+    
     toast({
       title: "تم إفراغ القائمة",
       description: "تم إفراغ قائمة انتظار الصور",
@@ -326,6 +322,7 @@ export const useImageProcessing = () => {
   // تأكد من تحديث حالة المعالجة عندما تكتمل جميع الملفات
   useEffect(() => {
     if (processingProgress >= 100 && activeUploads === 0 && isProcessing) {
+      console.log("اكتملت معالجة جميع الصور. إخفاء مؤشر المعالجة...");
       // تأخير صغير قبل إخفاء مؤشر المعالجة للتأكد من أن المستخدم رأى 100%
       const timer = setTimeout(() => {
         setIsProcessing(false);
@@ -334,6 +331,11 @@ export const useImageProcessing = () => {
       return () => clearTimeout(timer);
     }
   }, [processingProgress, activeUploads, isProcessing]);
+
+  // إضافة رسائل تشخيص لمتابعة حالة المعالجة
+  useEffect(() => {
+    console.log(`حالة المعالجة: processing=${isProcessing}, progress=${processingProgress}%, activeUploads=${activeUploads}`);
+  }, [isProcessing, processingProgress, activeUploads]);
 
   // إضافة الوظيفة الجديدة إلى الكائن المُرجع
   return {
@@ -357,7 +359,6 @@ export const useImageProcessing = () => {
     // إضافة الدوال الجديدة
     clearSessionImages,
     retryProcessing,
-    pauseProcessing,
     clearQueue,
     runCleanup: (userId: string) => {
       if (userId) {

@@ -85,7 +85,7 @@ export const useFileUpload = ({
       localStorage.removeItem(PROCESSED_FILES_KEY);
     }
   }, []);
-  
+
   // دمج البيانات القديمة مع النظام الجديد
   const mergeOldStorageData = useCallback(() => {
     try {
@@ -165,6 +165,17 @@ export const useFileUpload = ({
   // وظيفة معالجة طابور الملفات بشكل متسلسل
   const processQueue = useCallback(async () => {
     if (processingQueue.length === 0 || queueProcessing) {
+      // إذا كانت القائمة فارغة، نتأكد من تصفير حالة المعالجة
+      if (processingQueue.length === 0) {
+        console.log("قائمة المعالجة فارغة. تصفير حالة المعالجة.");
+        setActiveUploads(0);
+        setProcessingProgress(100);
+        // سنقوم بتأخير إيقاف المعالجة لضمان أن المستخدم يرى أن العملية اكتملت
+        setTimeout(() => {
+          setIsProcessing(false);
+          setQueueProcessing(false);
+        }, 1500);
+      }
       return;
     }
     
@@ -182,6 +193,9 @@ export const useFileUpload = ({
       const file = processingQueue[i];
       const currentProgress = Math.round(((i + 1) / processingQueue.length) * 100);
       setProcessingProgress(currentProgress);
+      
+      // تحديث عدد الملفات النشطة بدقة
+      setActiveUploads(processingQueue.length - i);
       
       // التحقق مما إذا كان هذا الملف قد تمت معالجته بالفعل
       if (isFileProcessed(file)) {
@@ -303,13 +317,21 @@ export const useFileUpload = ({
       }
     }
     
+    // رسائل تشخيصية لمتابعة حالة المعالجة
+    console.log("انتهت حلقة معالجة الصور. عدد الملفات المعالجة:", processingQueue.length);
+    
     // الانتهاء من المعالجة
     setQueueProcessing(false);
-    setIsProcessing(false);
     setProcessingQueue([]);
     setCurrentProcessingIndex(-1);
     setActiveUploads(0); // تصفير عدد الملفات النشطة عند الانتهاء
     setProcessingProgress(100); // تعيين التقدم إلى 100% عند الانتهاء
+    
+    // انتظار للحظة قبل إيقاف المعالجة
+    setTimeout(() => {
+      console.log("إيقاف حالة المعالجة بعد الانتهاء من جميع الملفات");
+      setIsProcessing(false);
+    }, 1500);
     
     // إزالة التكرارات بعد الانتهاء من المعالجة
     console.log('إزالة التكرارات بعد الانتهاء من المعالجة...');
@@ -380,7 +402,15 @@ export const useFileUpload = ({
   // بدء المعالجة عندما يتغير الطابور
   useEffect(() => {
     if (processingQueue.length > 0 && !queueProcessing) {
+      console.log(`بدء معالجة ${processingQueue.length} ملفات في قائمة الانتظار`);
       processQueue();
+    } else if (processingQueue.length === 0 && queueProcessing) {
+      // التأكد من تحديث الحالة إذا تم إفراغ القائمة بينما المعالجة جارية
+      console.log("القائمة فارغة لكن المعالجة لا تزال جارية. إيقاف المعالجة...");
+      setQueueProcessing(false);
+      setIsProcessing(false);
+      setProcessingProgress(100);
+      setActiveUploads(0);
     }
   }, [processingQueue, queueProcessing, processQueue]);
 
@@ -398,6 +428,9 @@ export const useFileUpload = ({
         // تحديث عدد الملفات النشطة
         const remainingFiles = Math.max(0, processingQueue.length - currentProcessingIndex - 1);
         setActiveUploads(remainingFiles > 0 ? 1 : 0); // إما معالجة ملف واحد أو لا شيء
+        
+        // تشخيص حالة المعالجة
+        console.log(`تحديث حالة المعالجة: progress=${progress}%, remaining=${remainingFiles}, active=${remainingFiles > 0 ? 1 : 0}`);
       }
     }, PROGRESS_UPDATE_INTERVAL);
     
@@ -458,6 +491,9 @@ export const useFileUpload = ({
           description: `تتم معالجة ${newFiles.length} ملف`,
         });
       }
+      
+      // تشخيص
+      console.log(`تمت إضافة ${newFiles.length} ملف إلى قائمة المعالجة. الحالة: active=${newFiles.length}`);
     },
     [addImage, toast, isFileProcessed]
   );

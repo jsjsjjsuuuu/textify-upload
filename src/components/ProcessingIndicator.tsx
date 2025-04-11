@@ -18,13 +18,18 @@ const ProcessingIndicator = ({
   activeUploads,
   queueLength
 }: ProcessingIndicatorProps) => {
-  // تعديل الشرط: نعرض المؤشر فقط إذا كان هناك معالجة جارية وهناك صور نشطة في القائمة
-  if (!isProcessing || (processingProgress >= 100 && activeUploads === 0)) return null;
+  // تعديل الشرط: نعرض المؤشر فقط إذا كان هناك معالجة جارية
+  // تحسين شرط العرض لضمان اختفاء المؤشر عند اكتمال المعالجة حتى لو كانت isProcessing = true
+  // أي يجب أن تكون المعالجة جارية أو هناك ملفات نشطة أو التقدم أقل من 100%
+  const shouldShow = isProcessing && (activeUploads > 0 || processingProgress < 100);
+  
+  if (!shouldShow) return null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
       className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900 rounded-xl p-4 shadow-sm"
       dir="rtl"
     >
