@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { ImageData } from "@/types/ImageData";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,18 +100,66 @@ export const useImageDatabase = (updateImage: (id: string, update: Partial<Image
     }
   };
   
-  // حفظ صورة معالجة في قاعدة البيانات - تم تصحيح المعلمات
+  // حفظ صورة في قاعدة البيانات وStorage
   const saveImageToDatabase = async (image: ImageData) => {
     try {
       console.log("جاري حفظ الصورة في قاعدة البيانات:", image.id);
       
+      // التحقق من وجود previewUrl وملف صالح
+      if (!image.previewUrl || !image.file) {
+        console.error("بيانات الصورة غير كاملة، لا يمكن الحفظ");
+        return null;
+      }
+      
+      // التحقق مما إذا كان previewUrl هو URL عادي أو بيانات Base64
+      let storageUrl = image.previewUrl;
+      
+      // إذا كان previewUrl يبدأ بـ "data:"، فهذا يعني أنه بيانات مشفرة بـ Base64
+      // نحتاج إلى تحميله أولاً إلى التخزين
+      if (image.previewUrl.startsWith('data:')) {
+        console.log("تحميل الصورة إلى التخزين...");
+        
+        // تحويل البيانات المشفرة بـ Base64 إلى Blob
+        const res = await fetch(image.previewUrl);
+        const blob = await res.blob();
+        
+        // إنشاء مسار تخزين فريد للمستخدم
+        const storagePath = `images/${image.user_id || 'anonymous'}/${image.id}`;
+        
+        // تحميل الملف إلى التخزين
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(storagePath, blob, {
+            contentType: 'image/jpeg', // أو استخدم image.file.type
+            upsert: true
+          });
+        
+        if (uploadError) {
+          console.error("خطأ في تحميل الصورة إلى التخزين:", uploadError);
+          throw uploadError;
+        }
+        
+        // الحصول على URL العام للصورة
+        const { data: publicUrlData } = supabase.storage
+          .from('images')
+          .getPublicUrl(storagePath);
+        
+        storageUrl = publicUrlData.publicUrl;
+        
+        console.log("تم تحميل الصورة إلى التخزين:", storageUrl);
+        
+        // تحديث مسار التخزين في كائن الصورة
+        image.storage_path = storagePath;
+      }
+      
+      // حفظ بيانات الصورة في قاعدة البيانات
       const { data, error } = await supabase
         .from('images')
         .upsert([
           {
             id: image.id,
             file_name: image.file.name,
-            preview_url: image.previewUrl,
+            preview_url: storageUrl,
             extracted_text: image.extractedText,
             code: image.code,
             sender_name: image.senderName,
@@ -145,12 +194,12 @@ export const useImageDatabase = (updateImage: (id: string, update: Partial<Image
     }
   };
 
-  // إرسال البيانات إلى API
+  // إرسال البيانات إلى API وحفظها في قاعدة البيانات
   const handleSubmitToApi = async (id: string, image: ImageData, userId?: string) => {
     try {
       console.log(`محاولة إرسال البيانات إلى API للصورة: ${id}`);
 
-      // حفظ الصورة في قاعدة البيانات
+      // حفظ الصورة في قاعدة البيانات وفي التخزين
       await saveImageToDatabase(image);
       
       // تحديث حالة الإرسال في قاعدة البيانات
@@ -165,9 +214,27 @@ export const useImageDatabase = (updateImage: (id: string, update: Partial<Image
       }
       
       console.log(`تم تحديث حالة الإرسال للصورة: ${id}`);
+      
+      // تحديث كائن الصورة محليًا
+      updateImage(id, { 
+        submitted: true,
+        // تحديث previewUrl إذا تم تغييره أثناء الحفظ في التخزين
+        previewUrl: image.previewUrl
+      });
+      
+      toast({
+        title: "تم الإرسال بنجاح",
+        description: "تم إرسال البيانات وحفظ الصورة بنجاح",
+      });
+      
       return true;
     } catch (error) {
       console.error("خطأ في إرسال البيانات إلى API:", error);
+      toast({
+        title: "خطأ في الإرسال",
+        description: "تعذر إرسال البيانات إلى الخادم",
+        variant: "destructive"
+      });
       return false;
     }
   };
@@ -177,17 +244,48 @@ export const useImageDatabase = (updateImage: (id: string, update: Partial<Image
     try {
       console.log("جاري حذف الصورة من قاعدة البيانات:", id);
 
+      // الحصول على بيانات الصورة قبل الحذف لمعرفة مسار التخزين
+      const { data: imageData, error: fetchError } = await supabase
+        .from('images')
+        .select('storage_path')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) {
+        console.error("خطأ في جلب بيانات الصورة قبل الحذف:", fetchError);
+      }
+
+      // حذف الملف من التخزين إذا كان له مسار تخزين
+      if (imageData && imageData.storage_path) {
+        const { error: storageError } = await supabase.storage
+          .from('images')
+          .remove([imageData.storage_path]);
+
+        if (storageError) {
+          console.error("خطأ في حذف الصورة من التخزين:", storageError);
+        } else {
+          console.log("تم حذف الصورة من التخزين:", imageData.storage_path);
+        }
+      }
+
+      // حذف البيانات من جدول الصور
       const { error } = await supabase
         .from('images')
         .delete()
         .eq('id', id);
 
       if (error) {
-        console.error("خطأ في حذف الصورة:", error);
+        console.error("خطأ في حذف الصورة من قاعدة البيانات:", error);
         throw error;
       }
 
       console.log("تم حذف الصورة بنجاح من قاعدة البيانات:", id);
+      
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف الصورة بنجاح",
+      });
+      
       return true;
     } catch (error) {
       console.error("خطأ في حذف الصورة:", error);
