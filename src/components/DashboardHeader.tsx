@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { 
   Trash2, 
   RefreshCw, 
-  PauseCircle, 
-  PlayCircle,
   RotateCcw,
   Layout,
   BarChart3
@@ -16,7 +14,6 @@ interface DashboardHeaderProps {
   isProcessing: boolean;
   onClearSessionImages?: () => void;
   onRetryProcessing?: () => void;
-  onPauseProcessing?: () => void;
   onClearQueue?: () => void;
   onRunCleanup?: () => void;
 }
@@ -25,7 +22,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   isProcessing,
   onClearSessionImages,
   onRetryProcessing,
-  onPauseProcessing,
   onClearQueue,
   onRunCleanup
 }) => {
@@ -71,29 +67,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             </Button>
           )}
           
-          {isProcessing && onPauseProcessing && (
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={onPauseProcessing}
-            >
-              <PauseCircle className="h-4 w-4 ml-1" />
-              إيقاف المعالجة
-            </Button>
-          )}
-          
-          {isProcessing && onClearQueue && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={onClearQueue}
-              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4 ml-1" />
-              مسح قائمة الانتظار
-            </Button>
-          )}
-          
           {!isProcessing && onRetryProcessing && (
             <Button 
               variant="default" 
@@ -112,3 +85,4 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 };
 
 export default DashboardHeader;
+
