@@ -1,119 +1,45 @@
 
-import React, { useState } from "react";
-import RecordItem from "./RecordItem";
+import React from 'react';
+import { CardContent } from "@/components/ui/card";
 import { ImageData } from "@/types/ImageData";
-import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
-import { useImageProcessing } from "@/hooks/useImageProcessing";
-import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/utils/dateFormatter";
+import RecordItem from './RecordItem';
+import LoadingState from './LoadingState';
+import EmptyState from './EmptyState';
 
 interface RecordsListProps {
   records: ImageData[];
   isLoading: boolean;
-  isError?: boolean; // إضافة خاصية isError اختيارية
-  onItemClick?: (item: ImageData) => void;
-  formatDate?: (date: Date) => string;
+  isError: boolean;
 }
 
-const RecordsList: React.FC<RecordsListProps> = ({
-  records,
-  isLoading,
-  isError = false, // قيمة افتراضية false
-  onItemClick,
-  formatDate = (date) => date.toLocaleString()
-}) => {
-  const { hiddenImages, unhideAllImages } = useImageProcessing();
-  const { toast } = useToast();
-  const [showUnhideButton, setShowUnhideButton] = useState(false);
-
-  // التحقق مما إذا كانت هناك صور مخفية عند تحميل المكون
-  React.useEffect(() => {
-    setShowUnhideButton(hiddenImages && hiddenImages.length > 0);
-  }, [hiddenImages]);
-
-  const handleUnhideAllImages = () => {
-    if (unhideAllImages()) {
-      toast({
-        title: "تم إعادة إظهار الصور",
-        description: "تم إعادة إظهار جميع الصور المخفية في صفحة المعالجة",
-      });
-      setShowUnhideButton(false);
-    }
-  };
-
-  // عرض رسالة خطأ إذا كان هناك خطأ
-  if (isError) {
-    return (
-      <div className="text-center py-8 space-y-4">
-        <p className="text-destructive">حدث خطأ أثناء تحميل السجلات</p>
-        {showUnhideButton && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleUnhideAllImages}
-            className="inline-flex items-center gap-1"
-          >
-            <Eye size={16} />
-            إظهار الصور المخفية في صفحة المعالجة
-          </Button>
-        )}
-      </div>
-    );
+const RecordsList: React.FC<RecordsListProps> = ({ records, isLoading, isError }) => {
+  if (isLoading) {
+    return <LoadingState />;
   }
 
-  // عرض رسالة إذا كان التحميل جارياً
-  if (isLoading) {
+  if (isError) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">جاري تحميل السجلات...</p>
-      </div>
+      <CardContent className="text-center py-8 text-muted-foreground">
+        حدث خطأ في جلب البيانات. يرجى المحاولة مرة أخرى.
+      </CardContent>
     );
   }
 
   if (records.length === 0) {
-    return (
-      <div className="text-center py-8 space-y-4">
-        <p className="text-muted-foreground">لا توجد سجلات حاليًا</p>
-        {showUnhideButton && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleUnhideAllImages}
-            className="inline-flex items-center gap-1"
-          >
-            <Eye size={16} />
-            إظهار الصور المخفية في صفحة المعالجة
-          </Button>
-        )}
-      </div>
-    );
+    return <EmptyState />;
   }
 
   return (
-    <div className="space-y-4">
-      {showUnhideButton && (
-        <div className="flex justify-end mb-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleUnhideAllImages}
-            className="inline-flex items-center gap-1"
-          >
-            <Eye size={16} />
-            إظهار الصور المخفية ({hiddenImages.length})
-          </Button>
-        </div>
-      )}
-      
+    <CardContent className="space-y-4">
       {records.map((record) => (
         <RecordItem 
-          key={record.id} 
-          record={record} 
-          onClick={() => onItemClick?.(record)}
+          key={record.id}
+          record={record}
           formatDate={formatDate}
         />
       ))}
-    </div>
+    </CardContent>
   );
 };
 

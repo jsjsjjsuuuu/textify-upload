@@ -6,14 +6,12 @@ import { ImageData } from "@/types/ImageData";
 interface RecordItemProps {
   record: ImageData;
   formatDate: (date: Date) => string;
-  onClick?: () => void; // إضافة خاصية onClick اختيارية
 }
 
-const RecordItem = ({ record, formatDate, onClick }: RecordItemProps) => {
+const RecordItem = ({ record, formatDate }: RecordItemProps) => {
   return (
     <div 
       className="p-4 bg-muted/40 rounded-lg flex flex-col md:flex-row justify-between gap-4"
-      onClick={onClick} // تطبيق الحدث عند النقر إذا تم تمريره
     >
       <div>
         <h4 className="font-medium">
