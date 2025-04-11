@@ -34,6 +34,7 @@ export const useImageState = () => {
 
   // حذف صورة من العرض فقط (دون حذفها من قاعدة البيانات)
   const deleteImage = useCallback((id: string, removeFromDatabase: boolean = false) => {
+    // حذف الصورة من العرض المحلي فقط
     setImages(prev => prev.filter(img => img.id !== id));
     setSessionImages(prev => prev.filter(img => img.id !== id));
     

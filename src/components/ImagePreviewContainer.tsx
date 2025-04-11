@@ -1,4 +1,3 @@
-
 import { ImageData } from "@/types/ImageData";
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -293,9 +292,10 @@ const ImagePreviewContainer = ({
           size="sm" 
           onClick={handleDelete} 
           className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-700"
+          title="سيتم إزالة الصورة من العرض فقط دون حذفها من قاعدة البيانات"
         >
           <Trash2 className="w-4 h-4 ml-1" />
-          حذف
+          إزالة من العرض
         </Button>
         
         {activeImage.status === "completed" && isImageComplete(activeImage) && !activeImage.submitted && !hasPhoneError(activeImage) && (

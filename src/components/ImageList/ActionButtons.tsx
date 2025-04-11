@@ -43,6 +43,7 @@ const ActionButtons = ({
         size="sm" 
         onClick={() => onDelete(imageId)} 
         className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 text-xs border-destructive/20 hover:border-destructive/30"
+        title="سيتم إزالة الصورة من العرض فقط دون حذفها من قاعدة البيانات"
       >
         <Trash size={14} className="ml-1 opacity-70" />
         حذف

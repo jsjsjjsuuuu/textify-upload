@@ -173,6 +173,7 @@ const ImageDetailsPanel: React.FC<ImageDetailsPanelProps> = ({
           variant="outline" 
           onClick={() => onDelete(image.id)}
           className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20 hover:border-destructive/30"
+          title="سيتم إزالة الصورة من العرض فقط دون حذفها من قاعدة البيانات"
         >
           <Trash2 size={16} className="mr-2" />
           إزالة من العرض
