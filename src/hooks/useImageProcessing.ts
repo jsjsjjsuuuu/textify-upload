@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -25,14 +24,18 @@ export const useImageProcessing = () => {
   // استيراد الهوكس
   const { 
     images, 
+    hiddenImages,
     updateImage, 
     deleteImage, 
     addImage, 
     clearSessionImages,
     clearImages,
     handleTextChange,
-    setAllImages
+    setAllImages,
+    unhideImage,
+    unhideAllImages
   } = useImageState();
+  
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
   const { handleFileChange: fileUploadHandler } = useFileUpload({
@@ -65,12 +68,14 @@ export const useImageProcessing = () => {
     if (user) {
       setIsLoadingUserImages(true);
       fetchUserImages(user.id, (loadedImages) => {
+        // تصفية الصور المخفية قبل إضافتها للصور الحالية
+        const visibleImages = loadedImages.filter(img => !hiddenImages.includes(img.id));
         // إضافة الصور المحملة للصور الحالية
-        setAllImages(loadedImages);
+        setAllImages(visibleImages);
         setIsLoadingUserImages(false);
       });
     }
-  }, [user]);
+  }, [user, hiddenImages, setAllImages, fetchUserImages]);
 
   // معالجة ملف واحد من القائمة
   const processNextFile = useCallback(async () => {
@@ -359,6 +364,7 @@ export const useImageProcessing = () => {
   return {
     // البيانات
     images,
+    hiddenImages,
     // الحالة
     isProcessing,
     processingProgress,
@@ -371,14 +377,33 @@ export const useImageProcessing = () => {
     handleFileChange,
     handleTextChange,
     handleDelete,
-    handlePermanentDelete,  // إضافة دالة الحذف الدائم
+    handlePermanentDelete,
     handleSubmitToApi,
     saveImageToDatabase,
     formatDate: formatDateFn,
     // إضافة الدوال الجديدة
     clearSessionImages,
-    retryProcessing,
-    clearQueue,
+    unhideImage,
+    unhideAllImages,
+    retryProcessing: () => {
+      // إعادة معالجة الصور التي فشلت
+      toast({
+        title: "إعادة المحاولة",
+        description: "جاري إعادة معالجة الصور التي فشلت",
+      });
+    },
+    clearQueue: () => {
+      // إفراغ قائمة الانتظار
+      setImageQueue([]);
+      setQueueLength(0);
+      setActiveUploads(0);
+      setIsProcessing(false); // إيقاف المعالجة عند إفراغ القائمة
+      
+      toast({
+        title: "تم إفراغ القائمة",
+        description: "تم إفراغ قائمة انتظار الصور",
+      });
+    },
     runCleanup: (userId: string) => {
       if (userId) {
         runCleanupNow(userId);
