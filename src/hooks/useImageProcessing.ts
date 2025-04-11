@@ -193,15 +193,33 @@ export const useImageProcessing = () => {
     }
   };
 
+  // تعديل وظيفة حذف الصورة للتفريق بين الإزالة من العرض والحذف الفعلي
   const handleDelete = async (id: string) => {
     try {
-      if (user) {
-        await deleteImageFromDatabase(id);
-      }
-      deleteImage(id);
-      return true;
+      // حذف من العرض الحالي فقط (دون حذفها من قاعدة البيانات)
+      return deleteImage(id, false);
     } catch (error) {
       console.error("Error deleting image:", error);
+      return false;
+    }
+  };
+  
+  // إضافة وظيفة حذف الصورة نهائيًا من قاعدة البيانات
+  const handlePermanentDelete = async (id: string) => {
+    try {
+      if (user) {
+        // الحذف من قاعدة البيانات
+        await deleteImageFromDatabase(id);
+      }
+      // ثم الحذف من العرض المحلي
+      return deleteImage(id, true);
+    } catch (error) {
+      console.error("Error permanently deleting image:", error);
+      toast({
+        title: "خطأ في الحذف",
+        description: "حدث خطأ أثناء محاولة حذف الصورة",
+        variant: "destructive"
+      });
       return false;
     }
   };
@@ -353,6 +371,7 @@ export const useImageProcessing = () => {
     handleFileChange,
     handleTextChange,
     handleDelete,
+    handlePermanentDelete,  // إضافة دالة الحذف الدائم
     handleSubmitToApi,
     saveImageToDatabase,
     formatDate: formatDateFn,

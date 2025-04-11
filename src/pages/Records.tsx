@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,7 +40,7 @@ const Records = () => {
   const {
     loadUserImages,
     images,
-    handleDelete,
+    handlePermanentDelete, // استخدام وظيفة الحذف الدائم
     handleTextChange,
     handleSubmitToApi,
     isSubmitting
@@ -145,7 +146,7 @@ const Records = () => {
   const handleDeleteSelected = async () => {
     if (selectedImages.length === 0) return;
     
-    const confirmed = window.confirm(`هل أنت متأكد من حذف ${selectedImages.length} صورة؟`);
+    const confirmed = window.confirm(`هل أنت متأكد من حذف ${selectedImages.length} صورة نهائيًا من قاعدة البيانات؟`);
     if (!confirmed) return;
     
     let successCount = 0;
@@ -153,7 +154,7 @@ const Records = () => {
     
     for (const id of selectedImages) {
       try {
-        const success = await handleDelete(id);
+        const success = await handlePermanentDelete(id);
         if (success) {
           successCount++;
         } else {
@@ -292,7 +293,7 @@ const Records = () => {
             </Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
               <Trash2 className="h-4 w-4 mr-2" />
-              حذف ({selectedImages.length})
+              حذف نهائي ({selectedImages.length})
             </Button>
           </div>
         )}
@@ -344,7 +345,7 @@ const Records = () => {
                 onTextChange={(id, field, value) => handleTextChange(id, field, value)}
                 onSubmit={() => handleSubmitToApi(activeImage.id)}
                 onDelete={() => {
-                  handleDelete(activeImage.id);
+                  handlePermanentDelete(activeImage.id); // استخدام الحذف الدائم
                   setActiveImage(null);
                 }}
                 isSubmitting={!!isSubmitting[activeImage.id]}

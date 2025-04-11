@@ -32,11 +32,20 @@ export const useImageState = () => {
     updateImage(id, { [field]: value } as any);
   }, [updateImage]);
 
-  // حذف صورة
-  const deleteImage = useCallback((id: string) => {
+  // حذف صورة من العرض فقط (دون حذفها من قاعدة البيانات)
+  const deleteImage = useCallback((id: string, removeFromDatabase: boolean = false) => {
     setImages(prev => prev.filter(img => img.id !== id));
     setSessionImages(prev => prev.filter(img => img.id !== id));
-  }, []);
+    
+    if (!removeFromDatabase) {
+      toast({
+        title: "تمت الإزالة من العرض",
+        description: "تم إزالة الصورة من العرض الحالي، لكنها لا تزال مخزنة في السجلات",
+      });
+    }
+    
+    return true;
+  }, [toast]);
 
   // مسح جميع الصور
   const clearImages = useCallback(() => {
