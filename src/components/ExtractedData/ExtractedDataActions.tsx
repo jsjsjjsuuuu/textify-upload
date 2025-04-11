@@ -41,7 +41,7 @@ const ExtractedDataActions = ({
   return (
     <div className="flex justify-between items-center mb-4">
       <motion.div 
-        className="flex gap-2" 
+        className="hidden" 
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.3 }}
