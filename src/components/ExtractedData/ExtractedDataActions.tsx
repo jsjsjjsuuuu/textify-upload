@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Check, Edit2, X, Copy, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
@@ -39,13 +40,12 @@ const ExtractedDataActions = ({
   };
   
   return (
-    <div className="flex justify-between items-center mb-4">
+    <div className="flex justify-between items-center mb-4" dir="rtl">
       <motion.div 
         className="hidden" 
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.3 }}
-        dir="rtl"
       >
         <Button 
           size="sm" 

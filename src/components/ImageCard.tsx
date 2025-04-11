@@ -33,7 +33,7 @@ const ImageCard = ({
   console.log("ImageCard rendering with data:", image);
 
   return (
-    <Card className="p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-transparent border-none backdrop-blur-sm">
+    <Card className="p-4 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow bg-transparent border-none backdrop-blur-sm" dir="rtl">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col md:flex-row gap-4">
           <div 

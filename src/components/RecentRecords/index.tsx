@@ -41,7 +41,7 @@ const RecentRecords: React.FC = () => {
   };
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-6" dir="rtl">
       <CardHeader onRefresh={handleRefresh} />
       
       <div className="px-6 pb-4">

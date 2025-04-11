@@ -86,7 +86,6 @@ const ExtractedDataEditor = ({
             initial={false} 
             animate={{ scale: editMode ? 1.01 : 1 }}
             transition={{ duration: 0.2 }}
-            className=""
           >
             <ExtractedDataFields 
               tempData={tempData} 

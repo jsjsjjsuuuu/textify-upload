@@ -61,7 +61,7 @@ const DataCompletionIndicator = ({ image }: DataCompletionIndicatorProps) => {
   }
 
   return (
-    <div className="mb-4">
+    <div className="mb-4" dir="rtl">
       <div className="flex justify-between items-center mb-2">
         <div className="text-xs text-muted-foreground flex items-center">
           {statusIcon}

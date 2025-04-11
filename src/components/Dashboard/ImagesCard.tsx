@@ -32,7 +32,7 @@ const ImagesCard: React.FC<ImagesCardProps> = ({
   imageStats
 }) => {
   return (
-    <Card>
+    <Card dir="rtl">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle>الصور المعالجة</CardTitle>
         <ImageStats stats={imageStats} />

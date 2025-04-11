@@ -15,7 +15,7 @@ interface ImageStatsProps {
 
 const ImageStats: React.FC<ImageStatsProps> = ({ stats }) => {
   return (
-    <div className="flex gap-2 flex-wrap">
+    <div className="flex gap-2 flex-wrap" dir="rtl">
       <Badge variant="outline" className="bg-slate-100">الكل {stats.all}</Badge>
       <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">قيد الانتظار {stats.pending}</Badge>
       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">مكتملة {stats.completed}</Badge>

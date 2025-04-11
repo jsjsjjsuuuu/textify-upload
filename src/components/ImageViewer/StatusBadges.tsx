@@ -21,7 +21,7 @@ const StatusBadges: React.FC<StatusBadgesProps> = ({
   onFilterChange
 }) => {
   return (
-    <div className="flex flex-wrap gap-2 mb-4">
+    <div className="flex flex-wrap gap-2 mb-4" dir="rtl">
       <Badge 
         variant={activeFilter === "all" ? "default" : "outline"} 
         className="cursor-pointer border-2 text-sm px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800"

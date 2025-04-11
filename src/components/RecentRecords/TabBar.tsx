@@ -17,7 +17,7 @@ export interface TabBarProps {
 
 const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabChange }) => {
   return (
-    <Tabs value={activeTab} onValueChange={onTabChange}>
+    <Tabs value={activeTab} onValueChange={onTabChange} dir="rtl">
       <TabsList className="flex space-x-1">
         {tabs.map((tab) => (
           <TabsTrigger key={tab.id} value={tab.id} className="flex items-center">

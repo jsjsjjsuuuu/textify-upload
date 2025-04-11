@@ -29,7 +29,7 @@ const ExtractedDataFields = ({
   loadingFields = []
 }: ExtractedDataFieldsProps) => {
   return (
-    <div className="grid grid-cols-1 gap-3 dir-rtl">
+    <div className="grid grid-cols-1 gap-3">
       <ExtractedDataField
         label="الكود:"
         field="code"

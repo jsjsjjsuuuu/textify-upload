@@ -12,7 +12,7 @@ const RawTextViewer = ({ text }: RawTextViewerProps) => {
   if (!text) return null;
 
   return (
-    <div>
+    <div dir="rtl">
       <button 
         onClick={() => setIsVisible(!isVisible)} 
         className="text-xs text-muted-foreground hover:underline mb-2 block"
@@ -26,7 +26,6 @@ const RawTextViewer = ({ text }: RawTextViewerProps) => {
           animate={{ opacity: 1, height: 'auto' }}
           transition={{ duration: 0.3 }}
           className="text-xs font-mono whitespace-pre-wrap break-all bg-gray-50 dark:bg-gray-800 p-3 rounded border overflow-auto max-h-40" 
-          dir="ltr"
         >
           {text}
         </motion.div>

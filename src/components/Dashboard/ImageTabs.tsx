@@ -46,7 +46,7 @@ const ImageTabs: React.FC<ImageTabsProps> = ({
   imageStats
 }) => {
   return (
-    <Tabs defaultValue="all" className="w-full">
+    <Tabs defaultValue="all" className="w-full" dir="rtl">
       <TabsList className="mb-4 w-full justify-start">
         <TabsTrigger value="all">الكل</TabsTrigger>
         <TabsTrigger value="pending">قيد الانتظار</TabsTrigger>
