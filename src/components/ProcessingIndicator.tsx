@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from 'react';
 import { Progress } from "@/components/ui/progress";
-import { Loader, CheckCircle2 } from "lucide-react";
+import { Loader, CheckCircle2, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 
