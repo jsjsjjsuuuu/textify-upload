@@ -373,12 +373,12 @@ const Records = () => {
                 onTextChange={(id, field, value) => handleTextChange(id, field, value)}
                 onSubmit={() => handleSubmitToApi(activeImage.id)}
                 onDelete={() => {
-                  handlePermanentDelete(activeImage.id); // استخدام الحذف الدائم
+                  handlePermanentDelete(activeImage.id);
                   setActiveImage(null);
                 }}
                 isSubmitting={!!isSubmitting[activeImage.id]}
                 isComplete={isImageComplete(activeImage)}
-                hasPhoneError={hasPhoneError(activeImage)} {/* تمرير نتيجة الدالة بدلاً من الدالة نفسها */}
+                hasPhoneError={hasPhoneError(activeImage)}
               />
             ) : (
               <Card className="p-8 text-center text-muted-foreground">
