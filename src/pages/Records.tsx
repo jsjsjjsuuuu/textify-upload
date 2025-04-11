@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
@@ -379,7 +378,7 @@ const Records = () => {
                 }}
                 isSubmitting={!!isSubmitting[activeImage.id]}
                 isComplete={isImageComplete(activeImage)}
-                hasPhoneError={hasPhoneError(activeImage)}  {/* هنا تم تصحيح الخطأ - تمرير نتيجة الدالة بدلاً من الدالة نفسها */}
+                hasPhoneError={hasPhoneError(activeImage)} {/* تمرير نتيجة الدالة بدلاً من الدالة نفسها */}
               />
             ) : (
               <Card className="p-8 text-center text-muted-foreground">
@@ -394,4 +393,3 @@ const Records = () => {
 };
 
 export default Records;
-
