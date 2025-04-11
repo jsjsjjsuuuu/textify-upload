@@ -18,13 +18,15 @@ const ProcessingIndicator = ({
   activeUploads,
   queueLength
 }: ProcessingIndicatorProps) => {
-  if (!isProcessing) return null;
+  // تعديل الشرط: نعرض المؤشر فقط إذا كان هناك معالجة جارية وهناك صور نشطة في القائمة
+  if (!isProcessing || (processingProgress >= 100 && activeUploads === 0)) return null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900 rounded-xl p-4 shadow-sm"
+      dir="rtl"
     >
       <div className="flex flex-wrap justify-between items-center">
         <div className="flex items-center">

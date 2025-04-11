@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -309,6 +308,8 @@ export const useFileUpload = ({
     setIsProcessing(false);
     setProcessingQueue([]);
     setCurrentProcessingIndex(-1);
+    setActiveUploads(0); // تصفير عدد الملفات النشطة عند الانتهاء
+    setProcessingProgress(100); // تعيين التقدم إلى 100% عند الانتهاء
     
     // إزالة التكرارات بعد الانتهاء من المعالجة
     console.log('إزالة التكرارات بعد الانتهاء من المعالجة...');
@@ -393,6 +394,10 @@ export const useFileUpload = ({
       if (currentProcessingIndex >= 0) {
         const progress = Math.round(((currentProcessingIndex + 1) / processingQueue.length) * 100);
         setProcessingProgress(progress);
+        
+        // تحديث عدد الملفات النشطة
+        const remainingFiles = Math.max(0, processingQueue.length - currentProcessingIndex - 1);
+        setActiveUploads(remainingFiles > 0 ? 1 : 0); // إما معالجة ملف واحد أو لا شيء
       }
     }, PROGRESS_UPDATE_INTERVAL);
     

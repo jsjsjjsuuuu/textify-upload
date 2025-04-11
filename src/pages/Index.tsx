@@ -27,7 +27,6 @@ const Index = () => {
     queueLength,
     clearSessionImages,
     retryProcessing,
-    pauseProcessing,
     clearQueue,
     runCleanup
   } = useImageProcessing();
@@ -50,7 +49,7 @@ const Index = () => {
   }
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir="rtl">
       <AppHeader />
       
       <div className="container mx-auto py-6 px-4">

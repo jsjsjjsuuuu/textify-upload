@@ -75,7 +75,7 @@ export const useImageProcessing = () => {
   const processNextFile = useCallback(async () => {
     if (imageQueue.length === 0 || isPaused) {
       // تم الانتهاء من معالجة الصور أو تم إيقاف المعالجة مؤقتًا
-      setIsProcessing(false);
+      setIsProcessing(false); // تحديث الحالة لإظهار أن المعالجة انتهت
       setProcessingProgress(100);
       setActiveUploads(0);
       return;
@@ -183,6 +183,12 @@ export const useImageProcessing = () => {
     fileUploadHandler(files);
     setProcessingProgress(0);
     setIsProcessing(true);
+    
+    // تحديث عدد الملفات في قائمة الانتظار
+    if (files.length > 0) {
+      setQueueLength(files.length);
+      setActiveUploads(Math.min(files.length, 1)); // نبدأ بمعالجة ملف واحد فقط
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -316,6 +322,18 @@ export const useImageProcessing = () => {
     
     return false;
   }, [toast]);
+
+  // تأكد من تحديث حالة المعالجة عندما تكتمل جميع الملفات
+  useEffect(() => {
+    if (processingProgress >= 100 && activeUploads === 0 && isProcessing) {
+      // تأخير صغير قبل إخفاء مؤشر المعالجة للتأكد من أن المستخدم رأى 100%
+      const timer = setTimeout(() => {
+        setIsProcessing(false);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [processingProgress, activeUploads, isProcessing]);
 
   // إضافة الوظيفة الجديدة إلى الكائن المُرجع
   return {
