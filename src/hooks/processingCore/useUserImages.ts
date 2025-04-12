@@ -1,6 +1,6 @@
 
 import { useCallback, useState } from "react";
-import { ImageData } from "@/types/ImageData";
+import type { ImageData } from "@/types/ImageData";
 
 interface UserImagesProps {
   loadUserImages: (userId: string, callback?: (images: ImageData[]) => void) => Promise<void>;

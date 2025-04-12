@@ -1,5 +1,5 @@
 
-import { ImageData } from "@/types/ImageData";
+import type { ImageData } from "@/types/ImageData";
 import CryptoJS from 'crypto-js';
 
 /**

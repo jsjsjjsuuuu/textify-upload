@@ -8,6 +8,7 @@ import { useImageDatabase } from "../useImageDatabase";
 import { useDuplicateDetection } from "../useDuplicateDetection";
 import { useFileProcessing } from "./useFileProcessing";
 import { useApiKeyManagement } from "../processingCore/useApiKeyManagement";
+import type { ImageData } from "@/types/ImageData"; // استيراد النوع بشكل صريح
 
 export const useImageProcessing = () => {
   // إعادة تصدير دالة formatDate لاستخدامها في المكونات
@@ -113,7 +114,7 @@ export const useImageProcessing = () => {
   // وظيفة تحميل صور المستخدم
   const loadUserImages = (callback?: (images: ImageData[]) => void) => {
     if (user) {
-      return fetchUserImages(user.id, (loadedImages) => {
+      return fetchUserImages(user.id, (loadedImages: ImageData[]) => {
         // تصفية الصور المخفية قبل إضافتها للعرض
         const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
         if (callback) {

@@ -3,7 +3,8 @@ import { User } from "@supabase/supabase-js";
 // تصحيح إعادة التصدير باستخدام export type
 import type { BookmarkletItem, BookmarkletExportData } from "@/utils/bookmarklet/types";
 
-export interface ImageData {
+// تغيير اسم الواجهة لتجنب التعارض مع ImageData المدمج
+export interface CustomImageData {
   id: string;
   file: File;
   previewUrl: string;
@@ -34,6 +35,9 @@ export interface ImageData {
   apiKeyError?: boolean;
   userId?: string; // للتوافق مع الكود الموجود، مع أن user_id هو الاسم المفضل
 }
+
+// نحدد ImageData كمرادف لـ CustomImageData للحفاظ على التوافق مع الكود الموجود
+export type ImageData = CustomImageData;
 
 // إعادة تصدير الواجهات من ملف types.ts لضمان التوافق
 export type { BookmarkletItem, BookmarkletExportData };

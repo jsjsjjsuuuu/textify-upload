@@ -1,5 +1,5 @@
 
-import { ImageData } from "@/types/ImageData";
+import type { ImageData } from "@/types/ImageData";
 
 /**
  * التحقق من تطابق اثنين من الصور بمعايير أكثر دقة

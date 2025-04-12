@@ -1,5 +1,5 @@
 
-import { ImageData } from "@/types/ImageData";
+import type { ImageData } from "@/types/ImageData";
 import { createImageHash } from "./imageHasher";
 
 /**

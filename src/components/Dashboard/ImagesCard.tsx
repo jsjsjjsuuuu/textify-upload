@@ -1,13 +1,12 @@
 
 import React from 'react';
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { ImageData } from "@/types/ImageData";
-import ImageStats from './ImageStats';
-import ImageTabs from './ImageTabs';
+import { Card, CardContent } from "@/components/ui/card";
+import ImageTabs from "./ImageTabs";
+import type { ImageData } from "@/types/ImageData";
 
 interface ImagesCardProps {
   images: ImageData[];
-  isSubmitting: Record<string, boolean>;
+  isSubmitting: boolean | Record<string, boolean>;
   onTextChange: (id: string, field: string, value: string) => void;
   onDelete: (id: string) => Promise<boolean>;
   onSubmit: (id: string) => Promise<boolean>;
@@ -31,13 +30,13 @@ const ImagesCard: React.FC<ImagesCardProps> = ({
   formatDate,
   imageStats
 }) => {
+  if (images.length === 0) {
+    return null;
+  }
+
   return (
-    <Card dir="rtl">
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <CardTitle>الصور المعالجة</CardTitle>
-        <ImageStats stats={imageStats} />
-      </CardHeader>
-      <CardContent>
+    <Card className="shadow-md">
+      <CardContent className="pt-4 px-2 md:px-4">
         <ImageTabs
           images={images}
           isSubmitting={isSubmitting}

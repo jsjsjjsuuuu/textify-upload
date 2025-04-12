@@ -1,7 +1,7 @@
 
 import { useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { ImageData } from "@/types/ImageData";
+import type { ImageData } from "@/types/ImageData";
 
 export const useFormValidation = () => {
   const { toast } = useToast();

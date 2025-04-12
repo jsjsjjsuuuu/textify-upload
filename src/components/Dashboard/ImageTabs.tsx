@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { ImageData } from "@/types/ImageData";
+import type { ImageData } from "@/types/ImageData";
 import ImageTabContent from './ImageTabContent';
 
 interface ImageTabsProps {
   images: ImageData[];
-  isSubmitting: Record<string, boolean>;
+  isSubmitting: boolean | Record<string, boolean>;
   onTextChange: (id: string, field: string, value: string) => void;
   onDelete: (id: string) => Promise<boolean>;
   onSubmit: (id: string) => Promise<boolean>;
@@ -34,7 +34,7 @@ const ImageTabs: React.FC<ImageTabsProps> = ({
   return (
     <ImageTabContent
       images={images}
-      isSubmitting={Object.values(isSubmitting).some(Boolean)}
+      isSubmitting={typeof isSubmitting === 'boolean' ? isSubmitting : Object.values(isSubmitting).some(Boolean)}
       onTextChange={onTextChange}
       onDelete={onDelete}
       onSubmit={onSubmit}

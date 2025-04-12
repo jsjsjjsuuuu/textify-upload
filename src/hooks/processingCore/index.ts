@@ -13,6 +13,7 @@ import { useFormValidation } from "./useFormValidation";
 import { useImageSubmission } from "./useImageSubmission";
 import { useImageDeletion } from "./useImageDeletion";
 import { useUserImages } from "./useUserImages";
+import type { ImageData } from "@/types/ImageData"; // استيراد النوع بشكل صريح
 
 export const useImageProcessingCore = () => {
   const { user } = useAuth();
@@ -104,7 +105,7 @@ export const useImageProcessingCore = () => {
   useEffect(() => {
     if (user) {
       console.log("تم تسجيل الدخول، جاري جلب صور المستخدم:", user.id);
-      loadUserImages(user.id, (loadedImages) => {
+      loadUserImages(user.id, (loadedImages: ImageData[]) => {
         // تطبيق فلتر الصور المخفية على الصور المحملة
         const filteredImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
         setAllImages(filteredImages);
