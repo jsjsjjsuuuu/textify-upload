@@ -34,7 +34,8 @@ export const useImageProcessing = () => {
     hiddenImageIds,
     unhideImage,
     unhideAllImages,
-    getHiddenImageIds
+    getHiddenImageIds,
+    hideImage // تأكد من استدعاء hideImage من useImageState
   } = useImageState();
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
@@ -392,6 +393,8 @@ export const useImageProcessing = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     formatDate: formatDateFn,
+    // تأكد من تصدير وظيفة hideImage هنا
+    hideImage,
     // إضافة الوظائف الجديدة للتحكم في الصور المخفية
     unhideImage,
     unhideAllImages,
