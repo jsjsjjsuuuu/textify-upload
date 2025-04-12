@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -28,7 +27,9 @@ export const useImageProcessingCore = () => {
     setAllImages,
     addDatabaseImages,
     clearSessionImages,
-    removeDuplicates
+    removeDuplicates,
+    hiddenImageIds,
+    hideImage // استخدام وظيفة إخفاء الصورة
   } = useImageState();
   
   const {
@@ -38,7 +39,7 @@ export const useImageProcessingCore = () => {
     setBookmarkletStats
   } = useImageStats();
   
-  // استخدام اكتشاف التكرار - تم إزالة وسيط { enabled: true } لأن الدالة الآن تقبل وسيط options
+  // استخدام اكتشاف التكرار
   const duplicateDetectionTools = useDuplicateDetection({ enabled: true });
   
   // جلب وظائف معالجة الصور
@@ -143,6 +144,9 @@ export const useImageProcessingCore = () => {
         // تسجيل الصورة كمعالجة لتجنب إعادة المعالجة
         duplicateDetectionTools.markImageAsProcessed(image);
         
+        // إخفاء الصورة من العرض بعد الإرسال الناجح
+        hideImage(id);
+        
         // إعادة تحميل الصور من قاعدة البيانات للتأكد من التزامن
         if (user) {
           loadUserImages(user.id, setAllImages);
@@ -229,12 +233,14 @@ export const useImageProcessingCore = () => {
     isSubmitting,
     isLoadingUserImages,
     bookmarkletStats,
+    hiddenImageIds, // إضافة معرّفات الصور المخفية للواجهة
     handleFileChange,
     handleTextChange,
     handleDelete: deleteImage,
-    handleSubmitToApi: submitToApi,
+    handleSubmitToApi,
     saveImageToDatabase,
     saveProcessedImage,
+    hideImage, // إضافة وظيفة إخفاء الصورة للواجهة
     loadUserImages: (callback?: (images: ImageData[]) => void) => {
       if (user) {
         loadUserImages(user.id, callback || setAllImages);
@@ -242,15 +248,12 @@ export const useImageProcessingCore = () => {
     },
     clearSessionImages,
     removeDuplicates,
-    validateRequiredFields: () => true, // تبسيط الواجهة
+    validateRequiredFields: () => true,
     runCleanupNow,
     activeUploads,
     queueLength,
-    // إضافة وظيفة تنظيف التكرارات
     cleanupDuplicates,
-    // إضافة وظائف التعامل مع التكرار من useDuplicateDetection
     ...duplicateDetectionTools,
-    // إضافة وظائف معالجة الصور
     processWithGemini,
     processWithOcr
   };

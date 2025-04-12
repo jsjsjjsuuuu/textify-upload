@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "./use-toast";
@@ -53,6 +52,19 @@ export const useImageState = () => {
   const handleTextChange = useCallback((id: string, field: string, value: string) => {
     updateImage(id, { [field]: value } as any);
   }, [updateImage]);
+
+  // إخفاء صورة من العرض فقط (دون حذفها من قاعدة البيانات)
+  const hideImage = useCallback((id: string) => {
+    // إضافة الصورة إلى قائمة الصور المخفية
+    setHiddenImageIds(prev => [...prev, id]);
+    
+    toast({
+      title: "تم حفظ البيانات",
+      description: "تم إرسال البيانات وحفظها في قاعدة البيانات، وإزالة الصورة من العرض الحالي",
+    });
+    
+    return true;
+  }, [toast]);
 
   // حذف صورة من العرض فقط (دون حذفها من قاعدة البيانات)
   const deleteImage = useCallback((id: string, removeFromDatabase: boolean = false) => {
@@ -182,6 +194,7 @@ export const useImageState = () => {
     addImage,
     updateImage,
     deleteImage,
+    hideImage,
     clearImages,
     clearSessionImages,
     setAllImages,
