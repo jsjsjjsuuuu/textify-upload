@@ -5,10 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
-  isSubmitting?: boolean | Record<string, boolean>;  // تحديث النوع ليشمل Record<string, boolean>
+  isSubmitting?: boolean;
   onTextChange: (id: string, field: string, value: string) => void;
-  onDelete: (id: string) => Promise<boolean>;  // تحديث النوع إلى Promise<boolean>
-  onSubmit: (id: string) => Promise<boolean>;  // تحديث النوع إلى Promise<boolean>
+  onDelete: (id: string) => void;
+  onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
   showOnlySession?: boolean;
 }
@@ -31,27 +31,6 @@ const ImagePreviewContainer = ({
     );
   }, []);
 
-  // إنشاء دوال وسيطة لتحويل النوع من void إلى Promise<boolean>
-  const handleDelete = async (id: string) => {
-    try {
-      onDelete(id);
-      return true;
-    } catch (error) {
-      console.error("خطأ عند حذف الصورة:", error);
-      return false;
-    }
-  };
-
-  const handleSubmit = async (id: string) => {
-    try {
-      onSubmit(id);
-      return true;
-    } catch (error) {
-      console.error("خطأ عند إرسال الصورة:", error);
-      return false;
-    }
-  };
-
   // إرجاع المكون الرئيسي من المسار الصحيح
   const ViewerContainer = React.lazy(() => import("../ImageViewer/ImagePreviewContainer"));
   
@@ -61,8 +40,8 @@ const ImagePreviewContainer = ({
         images={images}
         isSubmitting={isSubmitting}
         onTextChange={onTextChange}
-        onDelete={handleDelete}  // استخدام الدالة الوسيطة
-        onSubmit={handleSubmit}  // استخدام الدالة الوسيطة
+        onDelete={onDelete}
+        onSubmit={onSubmit}
         formatDate={formatDate}
         showOnlySession={showOnlySession}
       />

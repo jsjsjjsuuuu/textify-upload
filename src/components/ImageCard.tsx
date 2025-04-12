@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,10 +9,10 @@ import { ExtractedDataEditor } from "@/components/ExtractedData";
 interface ImageCardProps {
   image: ImageData;
   isSubmitting: boolean;
-  onImageClick: (image: ImageData) => void;  // تأكيد أن هذه الخاصية مطلوبة
+  onImageClick: (image: ImageData) => void;
   onTextChange: (id: string, field: string, value: string) => void;
-  onDelete: (id: string) => Promise<boolean>;  // تأكيد النوع كـ Promise<boolean>
-  onSubmit: (id: string) => Promise<boolean>;  // تأكيد النوع كـ Promise<boolean>
+  onDelete: (id: string) => void;
+  onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
 }
 
@@ -155,9 +156,7 @@ const ImageCard = ({
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={async () => {
-              await onDelete(image.id);
-            }} 
+            onClick={() => onDelete(image.id)} 
             className="h-8 w-8 text-destructive hover:bg-destructive/10"
           >
             <Trash size={16} />
@@ -177,9 +176,7 @@ const ImageCard = ({
             size="icon" 
             className="h-8 w-8 text-brand-green hover:bg-brand-green/10" 
             disabled={image.status !== "completed" || isSubmitting || image.submitted || (image.phoneNumber && !isPhoneNumberValid)} 
-            onClick={async () => {
-              await onSubmit(image.id);
-            }}
+            onClick={() => onSubmit(image.id)}
           >
             <Send size={16} />
           </Button>

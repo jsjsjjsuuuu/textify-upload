@@ -26,11 +26,8 @@ export const useUserImages = ({
     setIsLoadingUserImages(true);
     // استدعاء دالة loadUserImages مع تمرير معرف المستخدم ودالة الرجوع
     return loadUserImages(userId, (loadedImages) => {
-      // تصفية الصور المخفية قبل إضافتها للعرض - تحسين التعليق لتوضيح أهمية هذه الخطوة
-      console.log(`تصفية الصور المخفية: قبل التصفية ${loadedImages.length} صورة، عدد الصور المخفية ${hiddenImageIds.length}`);
+      // تصفية الصور المخفية قبل إضافتها للعرض
       const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
-      console.log(`تصفية الصور المخفية: بعد التصفية ${visibleImages.length} صورة`);
-      
       if (callback) {
         callback(visibleImages);
       } else {

@@ -1,14 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ImageData } from "@/types/ImageData";
-import ImagePreviewContainer from '@/components/ImageViewer/ImagePreviewContainer';
+import ImagePreviewContainer from '@/components/ImagePreviewContainer';
 import StatusBadges from '@/components/ImageViewer/StatusBadges';
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 
 interface ImageTabContentProps {
   images: ImageData[];
-  isSubmitting: boolean | Record<string, boolean>;  // تحديث نوع البيانات ليكون متوافقًا
+  isSubmitting: boolean;
   onTextChange: (id: string, field: string, value: string) => void;
   onDelete: (id: string) => Promise<boolean>;
   onSubmit: (id: string) => Promise<boolean>;
@@ -25,25 +25,6 @@ const ImageTabContent: React.FC<ImageTabContentProps> = ({
 }) => {
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [hasHiddenIds, setHasHiddenIds] = useState(false);
-  
-  // محاولة قراءة الصور المخفية من localStorage لغرض التشخيص فقط
-  useEffect(() => {
-    const HIDDEN_IMAGES_STORAGE_KEY = 'hiddenImageIds';
-    try {
-      const storedHiddenImages = localStorage.getItem(HIDDEN_IMAGES_STORAGE_KEY);
-      if (storedHiddenImages) {
-        const hiddenIds = JSON.parse(storedHiddenImages);
-        console.log("ImageTabContent: هناك صور مخفية:", hiddenIds.length);
-        setHasHiddenIds(hiddenIds.length > 0);
-      } else {
-        console.log("ImageTabContent: لا توجد صور مخفية");
-        setHasHiddenIds(false);
-      }
-    } catch (error) {
-      console.error("خطأ في قراءة الصور المخفية:", error);
-    }
-  }, []);
   
   // حساب عدد الصور في كل تصنيف
   const imageCounts = {
@@ -79,20 +60,8 @@ const ImageTabContent: React.FC<ImageTabContentProps> = ({
     );
   });
 
-  // تسجيل معلومات تشخيصية
-  useEffect(() => {
-    console.log(`ImageTabContent: نوع isSubmitting: ${typeof isSubmitting}, عدد الصور: ${images.length}`);
-  }, [isSubmitting, images]);
-
   return (
     <div>
-      {hasHiddenIds && (
-        <div className="bg-amber-50 text-amber-800 p-3 mb-4 rounded-md border border-amber-200 text-sm">
-          <p className="font-semibold">ملاحظة:</p>
-          <p>هناك صور مخفية. يمكنك إعادة إظهارها من الإعدادات إذا كنت تريد ذلك.</p>
-        </div>
-      )}
-      
       {/* شريط التصفية والبحث الموحد */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         {/* حقل البحث */}
@@ -119,7 +88,7 @@ const ImageTabContent: React.FC<ImageTabContentProps> = ({
       {/* عرض الصور المصفاة */}
       <ImagePreviewContainer
         images={filteredImages}
-        isSubmitting={isSubmitting}  // استخدام isSubmitting مباشرة دون تحويل
+        isSubmitting={isSubmitting}
         onTextChange={onTextChange}
         onDelete={onDelete}
         onSubmit={onSubmit}

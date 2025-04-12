@@ -34,29 +34,12 @@ const ImagesCard: React.FC<ImagesCardProps> = ({
     return null;
   }
 
-  // تسجيل معلومات تشخيص حول نوع isSubmitting
-  React.useEffect(() => {
-    console.log(`ImagesCard: نوع isSubmitting: ${typeof isSubmitting}`);
-    if (typeof isSubmitting === 'boolean') {
-      console.log('ImagesCard: تم تمرير isSubmitting كقيمة منطقية');
-    } else if (typeof isSubmitting === 'object') {
-      console.log('ImagesCard: تم تمرير isSubmitting كسجل (object)');
-    } else {
-      console.log('ImagesCard: نوع isSubmitting غير معروف');
-    }
-  }, [isSubmitting]);
-
-  // تحويل isSubmitting إلى المحتوى المناسب إذا كان قيمة منطقية
-  const normalizedIsSubmitting = typeof isSubmitting === 'boolean' 
-    ? {} // تحويله إلى كائن فارغ كسجل فارغ بدلاً من قيمة منطقية
-    : isSubmitting || {};
-
   return (
     <Card className="shadow-md">
       <CardContent className="pt-4 px-2 md:px-4">
         <ImageTabs
           images={images}
-          isSubmitting={normalizedIsSubmitting}
+          isSubmitting={isSubmitting}
           onTextChange={onTextChange}
           onDelete={onDelete}
           onSubmit={onSubmit}

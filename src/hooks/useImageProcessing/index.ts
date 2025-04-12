@@ -99,12 +99,7 @@ export const useImageProcessing = () => {
         
         // إخفاء الصورة بعد الإرسال - استدعاء مباشر لوظيفة hideImage
         console.log("إخفاء الصورة بعد الإرسال الناجح:", id);
-        if (typeof hideImage === 'function') {
-          hideImage(id);
-          console.log("تم إخفاء الصورة بنجاح");
-        } else {
-          console.error("خطأ: وظيفة hideImage غير معرّفة أو ليست دالة", typeof hideImage);
-        }
+        hideImage(id);
         
         return true;
       }
@@ -119,15 +114,9 @@ export const useImageProcessing = () => {
   // وظيفة تحميل صور المستخدم
   const loadUserImages = (callback?: (images: ImageData[]) => void) => {
     if (user) {
-      console.log("تحميل صور المستخدم مع تصفية الصور المخفية...");
-      console.log("عدد الصور المخفية:", hiddenImageIds.length);
-      
       return fetchUserImages(user.id, (loadedImages: ImageData[]) => {
-        console.log("تم تحميل الصور - عدد الصور قبل التصفية:", loadedImages.length);
         // تصفية الصور المخفية قبل إضافتها للعرض
         const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
-        console.log("تم تصفية الصور - عدد الصور بعد التصفية:", visibleImages.length);
-        
         if (callback) {
           callback(visibleImages);
         } else {
@@ -165,7 +154,7 @@ export const useImageProcessing = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     formatDate: formatDateFn,
-    hideImage,  // تصدير وظيفة hideImage بشكل واضح
+    hideImage,
     unhideImage,
     unhideAllImages,
     getHiddenImageIds,
@@ -177,7 +166,7 @@ export const useImageProcessing = () => {
         runCleanupNow(userId);
       }
     },
-    loadUserImages,  // تصدير وظيفة loadUserImages المحسنة
+    loadUserImages,
     setImages: setAllImages,
     clearOldApiKey,
     checkDuplicateImage: isDuplicateImage
