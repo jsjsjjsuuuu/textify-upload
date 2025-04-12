@@ -1,0 +1,52 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نظام معالجة الصور الذكي</title>
+  <meta name="description" content="منصة متكاملة لمعالجة الصور واستخراج البيانات منها" />
+  <!-- تحسينات الأداء -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/src/styles/base.css">
+  <link rel="stylesheet" href="/src/styles/optimized.css">
+  <!-- ضبط الخطوط للتحميل الأمثل -->
+  <link rel="preload" as="font" href="/fonts/main-font.woff2" type="font/woff2" crossorigin>
+  
+  <!-- ضبط القطع الخاصة بالحفظ المسبق -->
+  <link rel="preload" href="/assets/logo.svg" as="image">
+  <!-- منع التحميل المسبق للروابط --> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+</head>
+
+<body class="theme-transition">
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+  
+  <!-- تحسينات تحميل الصفحة -->
+  <script>
+    // تمكين التخزين المؤقت للعمال
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('ServiceWorker التسجيل ناجح:', registration.scope);
+          })
+          .catch(error => {
+            console.error('فشل تسجيل ServiceWorker:', error);
+          });
+      });
+    }
+
+    // قياس الأداء
+    let perfData = window.performance.timing;
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        let loadTime = perfData.loadEventEnd - perfData.navigationStart;
+        console.log('وقت تحميل الصفحة:', loadTime + 'ms');
+      }, 0);
+    });
+  </script>
+</body>
+</html>

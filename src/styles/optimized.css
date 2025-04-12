@@ -1,0 +1,88 @@
+
+/* تحسينات خاصة بالأداء */
+
+/* تحسين الانتقالات للأداء */
+.performance-transitions * {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform, filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  will-change: transform, opacity;
+}
+
+/* تحسين التمرير السلس */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* تأثير التحميل البطيء */
+.lazy-fade-in {
+  animation: lazyFadeIn 0.3s ease-in-out forwards;
+}
+
+@keyframes lazyFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* تحسين تخطيطات GPU */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* تحسين تقليل المحتوى المقدم خارج الشاشة */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 1000px; /* قيمة تقريبية للمحتوى */
+}
+
+/* تحسينات للمحتوى المعقد */
+.low-demand-animations {
+  animation-timeline: scroll();
+  animation-range: entry 10% cover 30%;
+}
+
+/* تحسين عناصر الواجهة مع الكثير من الظلال والتدرجات */
+.optimized-ui-element {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background-image: none; /* استخدم لون خلفية بدلاً من تدرجات حيثما أمكن */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* تحسين الصور */
+.thumbnail-placeholder {
+  background-color: #0a0f1e;
+  position: relative;
+  overflow: hidden;
+}
+
+.thumbnail-placeholder::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, 
+    rgba(255,255,255,0) 25%, 
+    rgba(255,255,255,0.05) 50%, 
+    rgba(255,255,255,0) 75%);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
