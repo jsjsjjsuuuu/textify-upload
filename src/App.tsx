@@ -20,6 +20,9 @@ function App() {
       screenWidth: window.innerWidth,
       screenHeight: window.innerHeight,
     });
+    
+    // إضافة فئة للجسم لتطبيق النمط الداكن عالميًا
+    document.body.classList.add('dark');
   }, []);
   
   return (

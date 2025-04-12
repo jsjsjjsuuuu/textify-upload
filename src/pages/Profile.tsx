@@ -25,7 +25,7 @@ const Profile = () => {
   useEffect(() => {
     // ننفذ تحديث بيانات المستخدم من Supabase
     refreshUserProfile();
-  }, []);
+  }, [refreshUserProfile]);
   
   const handleSignOut = async () => {
     await signOut();

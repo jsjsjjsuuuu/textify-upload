@@ -1,10 +1,10 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Info } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const AutomationPage = () => {
@@ -24,7 +24,7 @@ const AutomationPage = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            className="gap-2 bg-[#131b31] text-white/90 hover:bg-[#1a253f] border-0"
+            className="gap-2 bg-[#0a0f1e] text-white/90 hover:bg-[#111b33] border-0"
             onClick={handleBack}
           >
             <ArrowLeft className="w-4 h-4" />
@@ -46,7 +46,7 @@ const AutomationPage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6 space-y-6">
-                <Alert className="bg-[#131b31] border-blue-500/20 text-white/90">
+                <Alert className="bg-[#0a0f1e] border-blue-500/20 text-white/90">
                   <Info className="h-5 w-5 text-blue-400" />
                   <AlertTitle className="text-lg font-medium text-blue-300">هذه صفحة تجريبية</AlertTitle>
                   <AlertDescription className="text-white/80 text-base mt-2">
@@ -68,7 +68,7 @@ const AutomationPage = () => {
         </div>
       </div>
       
-      <footer className="border-t border-[#1e2a47] py-8 mt-auto bg-[#0f1628]/95">
+      <footer className="border-t border-[#1e2a47] py-8 mt-auto bg-[#0a0f1e]/95">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-white/60 text-base">

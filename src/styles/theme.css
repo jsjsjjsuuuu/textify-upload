@@ -6,25 +6,25 @@
 @layer base {
   :root {
     /* توحيد جميع ألوان الخلفية لتكون من نفس تدرج اللون الداكن */
-    --background: 222 47% 6%; /* خلفية أكثر قتامة وموحدة */
+    --background: 222 47% 5%; /* خلفية أكثر قتامة وموحدة */
     --foreground: 0 0% 100%;
 
-    --card: 222 47% 8%; /* تعديل درجة الألوان */
+    --card: 222 47% 7%; /* تعديل درجة الألوان */
     --card-foreground: 0 0% 100%;
 
-    --popover: 222 47% 8%;
+    --popover: 222 47% 7%;
     --popover-foreground: 0 0% 100%;
 
     --primary: 210 100% 66%;
-    --primary-foreground: 222 47% 6%;
+    --primary-foreground: 222 47% 5%;
 
-    --secondary: 222 47% 13%;
+    --secondary: 222 47% 12%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 222 47% 13%;
+    --muted: 222 47% 12%;
     --muted-foreground: 220 10% 75%;
 
-    --accent: 222 47% 13%;
+    --accent: 222 47% 12%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 50.6%;
@@ -37,16 +37,16 @@
     /* توحيد ألوان النظام */
     --color-1: 210 100% 66%;
     --color-2: 0 84% 60%;
-    --color-3: 222 47% 13%;
+    --color-3: 222 47% 12%;
     --color-4: 220 10% 96%;
-    --color-5: 222 47% 8%;
+    --color-5: 222 47% 7%;
 
     /* توحيد ألوان الشريط الجانبي */
-    --sidebar-background: 222 47% 8%;
+    --sidebar-background: 222 47% 7%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 210 100% 66%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 47% 13%;
+    --sidebar-primary-foreground: 222 47% 5%;
+    --sidebar-accent: 222 47% 12%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 222 47% 15%;
     --sidebar-ring: 210 100% 66%;
@@ -71,11 +71,11 @@
 
   /* تأثير زجاجي موحد وأكثر جاذبية */
   .glass-morphism {
-    @apply backdrop-blur-xl bg-[#0f1628]/95 border-0 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.4)];
+    @apply backdrop-blur-xl bg-[#0a0f1e]/95 border-0 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.4)];
   }
   
   .neo-blur {
-    @apply backdrop-blur-2xl bg-[#0f1628]/95 border-0;
+    @apply backdrop-blur-2xl bg-[#0a0f1e]/95 border-0;
   }
   
   /* تدرج نصي موحد */
@@ -94,12 +94,12 @@
   
   /* تأثيرات الخلفية العامة للتطبيق */
   .app-background {
-    @apply bg-[#090e1c] min-h-screen;
+    @apply bg-[#070b17] min-h-screen;
   }
   
   /* تصميم الصفحة المقعر (على شكل طبق) */
   .dish-container {
-    @apply bg-[#0f1628]/95 rounded-2xl shadow-[0_10px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-md relative overflow-hidden;
+    @apply bg-[#0a0f1e]/95 rounded-2xl shadow-[0_10px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-md relative overflow-hidden;
   }
   
   /* تأثيرات التوهج للطبق */

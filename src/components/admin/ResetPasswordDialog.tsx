@@ -28,7 +28,7 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="dish-container relative overflow-hidden">
+      <DialogContent className="dish-container relative overflow-hidden bg-[#0a0f1e]/95">
         {/* تأثيرات توهج خلفية الطبق */}
         <div className="dish-glow-top"></div>
         <div className="dish-glow-bottom"></div>

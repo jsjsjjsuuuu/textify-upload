@@ -1,13 +1,11 @@
-
 import { ImageData } from "@/types/ImageData";
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ImagePreview from "@/components/ImagePreview/ImagePreview";
 import { ImageViewer } from "@/components/ImagePreview";
-import { Trash2, Save, SendHorizonal, Filter, Loader, Image, ZoomIn, ZoomOut, RefreshCw, Maximize2 } from "lucide-react";
+import { Trash2, Loader, Image, ZoomIn, ZoomOut, RefreshCw, Maximize2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import ExtractedDataEditor from "@/components/ExtractedData/ExtractedDataEditor";
 
 interface ImagePreviewContainerProps {
@@ -200,7 +198,7 @@ const ImagePreviewContainer = ({
 
   // إظهار رسالة إذا لم تكن هناك صور
   if (images.length === 0) {
-    return <div className="text-center p-10 border-2 border-dashed rounded-xl">
+    return <div className="text-center p-10 border-2 border-dashed rounded-xl border-white/10 bg-[#0a0f1e]/50">
         <h3 className="text-lg font-semibold mb-2">لا توجد صور</h3>
         <p className="text-muted-foreground">قم بتحميل صور ليتم معالجتها واستخراج البيانات منها</p>
       </div>;
@@ -226,7 +224,7 @@ const ImagePreviewContainer = ({
           `}></div>
           
           {/* صورة مصغرة */}
-          <div className="h-16 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+          <div className="h-16 overflow-hidden flex items-center justify-center bg-[#0a0f1e]/80">
             {image.previewUrl ? <img src={image.previewUrl} alt={`صورة ${image.number || ""}`} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full w-full">
                 <Image className="w-5 h-5 text-gray-400" />
               </div>}
@@ -234,7 +232,7 @@ const ImagePreviewContainer = ({
         </motion.div>)}
     </div>;
 
-  // عرض أدوات الصفحات
+  // وظيفة التنقل بين الصفحات
   const renderPagination = () => {
     if (totalPages <= 1) return null;
     return <div className="flex justify-center mt-4">
@@ -284,21 +282,21 @@ const ImagePreviewContainer = ({
   return <div className="container mx-auto">
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 space-y-4 md:space-y-0">
-          <TabsList className="mb-2 md:mb-0">
+          <TabsList className="mb-2 md:mb-0 bg-[#0a0f1e]/80">
             <TabsTrigger value="all">
-              الكل <span className="mr-1 text-xs bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded-full">{countByStatus.all}</span>
+              الكل <span className="mr-1 text-xs bg-gray-200 dark:bg-[#161d33] px-1.5 py-0.5 rounded-full">{countByStatus.all}</span>
             </TabsTrigger>
             <TabsTrigger value="pending">
-              قيد الانتظار <span className="mr-1 text-xs bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded-full">{countByStatus.pending}</span>
+              قيد الانتظار <span className="mr-1 text-xs bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.pending}</span>
             </TabsTrigger>
             <TabsTrigger value="completed">
-              مكتملة <span className="mr-1 text-xs bg-green-100 dark:bg-green-900 px-1.5 py-0.5 rounded-full">{countByStatus.completed}</span>
+              مكتملة <span className="mr-1 text-xs bg-green-100 dark:bg-green-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.completed}</span>
             </TabsTrigger>
             <TabsTrigger value="incomplete">
-              غير مكتملة <span className="mr-1 text-xs bg-purple-100 dark:bg-purple-900 px-1.5 py-0.5 rounded-full">{countByStatus.incomplete}</span>
+              غير مكتملة <span className="mr-1 text-xs bg-purple-100 dark:bg-purple-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.incomplete}</span>
             </TabsTrigger>
             <TabsTrigger value="error">
-              أخطاء <span className="mr-1 text-xs bg-red-100 dark:bg-red-900 px-1.5 py-0.5 rounded-full">{countByStatus.error}</span>
+              أخطاء <span className="mr-1 text-xs bg-red-100 dark:bg-red-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.error}</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -319,19 +317,25 @@ const ImagePreviewContainer = ({
               
               {/* عرض البيانات - تعديل من 30% إلى 40% من العرض */}
               <div className="lg:col-span-5">
-                <div className="bg-gray-50 dark:bg-gray-800/95 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow h-full">
-                  <div className="mb-4 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">البيانات المستخرجــة</h2>
-                    {renderImageActions()}
-                  </div>
-                  
-                  {/* محتوى البيانات */}
-                  <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
-                    <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+                <div className="dish-container bg-[#0a0f1e]/95 p-4 rounded-lg border border-white/5 h-full">
+                  <div className="dish-glow-top"></div>
+                  <div className="dish-glow-bottom"></div>
+                  <div className="dish-reflection"></div>
+                  <div className="dish-inner-shadow"></div>
+                  <div className="relative z-10">
+                    <div className="mb-4 flex justify-between items-center">
+                      <h2 className="text-lg font-semibold">البيانات المستخرجــة</h2>
+                      {renderImageActions()}
+                    </div>
+                    
+                    {/* محتوى البيانات */}
+                    <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
+                      <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div> : <div className="h-60 flex items-center justify-center border-2 border-dashed rounded-lg p-8">
+            </div> : <div className="h-60 flex items-center justify-center border-2 border-dashed border-white/10 rounded-lg p-8 bg-[#0a0f1e]/50">
               <p className="text-muted-foreground">
                 اختر صورة لعرض التفاصيل
               </p>
@@ -340,119 +344,166 @@ const ImagePreviewContainer = ({
         
         {/* نفس التعديلات للتبويبات الأخرى */}
         <TabsContent value="pending" className="mt-4">
+          {/* عرض الصور المصغرة أعلى الصفحة */}
           <div className="mb-6">
             {renderImagesThumbnails()}
             {renderPagination()}
           </div>
           
+          {/* عرض الصورة النشطة والبيانات بجانبها */}
           {activeImage ? <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* عرض الصورة بحجم كبير - تعديل من 70% إلى 60% من العرض */}
               <div className="lg:col-span-7 h-[600px]">
                 <ImageViewer selectedImage={activeImage} zoomLevel={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetZoom={handleResetZoom} onZoomChange={handleZoomChange} formatDate={formatDate} isFullScreen={isFullScreen} onToggleFullScreen={toggleFullScreen} />
               </div>
               
+              {/* عرض البيانات - تعديل من 30% إلى 40% من العرض */}
               <div className="lg:col-span-5">
-                <div className="bg-gray-50 dark:bg-gray-800/95 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow h-full">
-                  <div className="mb-4 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
-                    {renderImageActions()}
-                  </div>
-                  
-                  <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
-                    <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+                <div className="dish-container bg-[#0a0f1e]/95 p-4 rounded-lg border border-white/5 h-full">
+                  <div className="dish-glow-top"></div>
+                  <div className="dish-glow-bottom"></div>
+                  <div className="dish-reflection"></div>
+                  <div className="dish-inner-shadow"></div>
+                  <div className="relative z-10">
+                    <div className="mb-4 flex justify-between items-center">
+                      <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
+                      {renderImageActions()}
+                    </div>
+                    
+                    {/* محتوى البيانات */}
+                    <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
+                      <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div> : <div className="h-60 flex items-center justify-center border-2 border-dashed rounded-lg p-8">
+            </div> : <div className="h-60 flex items-center justify-center border-2 border-dashed border-white/10 rounded-lg p-8 bg-[#0a0f1e]/50">
               <p className="text-muted-foreground">
                 اختر صورة لعرض التفاصيل
               </p>
             </div>}
         </TabsContent>
         
+        {/* نفس التعديلات للتبويبات الأخرى */}
         <TabsContent value="completed" className="mt-4">
+          {/* عرض الصور المصغرة أعلى الصفحة */}
           <div className="mb-6">
             {renderImagesThumbnails()}
             {renderPagination()}
           </div>
           
+          {/* عرض الصورة النشطة والبيانات بجانبها */}
           {activeImage ? <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* عرض الصورة بحجم كبير - تعديل من 70% إلى 60% من العرض */}
               <div className="lg:col-span-7 h-[600px]">
                 <ImageViewer selectedImage={activeImage} zoomLevel={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetZoom={handleResetZoom} onZoomChange={handleZoomChange} formatDate={formatDate} isFullScreen={isFullScreen} onToggleFullScreen={toggleFullScreen} />
               </div>
               
+              {/* عرض البيانات - تعديل من 30% إلى 40% من العرض */}
               <div className="lg:col-span-5">
-                <div className="bg-gray-50 dark:bg-gray-800/95 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow h-full">
-                  <div className="mb-4 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
-                    {renderImageActions()}
-                  </div>
-                  
-                  <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
-                    <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+                <div className="dish-container bg-[#0a0f1e]/95 p-4 rounded-lg border border-white/5 h-full">
+                  <div className="dish-glow-top"></div>
+                  <div className="dish-glow-bottom"></div>
+                  <div className="dish-reflection"></div>
+                  <div className="dish-inner-shadow"></div>
+                  <div className="relative z-10">
+                    <div className="mb-4 flex justify-between items-center">
+                      <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
+                      {renderImageActions()}
+                    </div>
+                    
+                    {/* محتوى البيانات */}
+                    <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
+                      <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div> : <div className="h-60 flex items-center justify-center border-2 border-dashed rounded-lg p-8">
+            </div> : <div className="h-60 flex items-center justify-center border-2 border-dashed border-white/10 rounded-lg p-8 bg-[#0a0f1e]/50">
               <p className="text-muted-foreground">
                 اختر صورة لعرض التفاصيل
               </p>
             </div>}
         </TabsContent>
         
+        {/* نفس التعديلات للتبويبات الأخرى */}
         <TabsContent value="incomplete" className="mt-4">
+          {/* عرض الصور المصغرة أعلى الصفحة */}
           <div className="mb-6">
             {renderImagesThumbnails()}
             {renderPagination()}
           </div>
           
+          {/* عرض الصورة النشطة والبيانات بجانبها */}
           {activeImage ? <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* عرض الصورة بحجم كبير - تعديل من 70% إلى 60% من العرض */}
               <div className="lg:col-span-7 h-[600px]">
                 <ImageViewer selectedImage={activeImage} zoomLevel={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetZoom={handleResetZoom} onZoomChange={handleZoomChange} formatDate={formatDate} isFullScreen={isFullScreen} onToggleFullScreen={toggleFullScreen} />
               </div>
               
+              {/* عرض البيانات - تعديل من 30% إلى 40% من العرض */}
               <div className="lg:col-span-5">
-                <div className="bg-gray-50 dark:bg-gray-800/95 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow h-full">
-                  <div className="mb-4 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
-                    {renderImageActions()}
-                  </div>
-                  
-                  <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
-                    <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+                <div className="dish-container bg-[#0a0f1e]/95 p-4 rounded-lg border border-white/5 h-full">
+                  <div className="dish-glow-top"></div>
+                  <div className="dish-glow-bottom"></div>
+                  <div className="dish-reflection"></div>
+                  <div className="dish-inner-shadow"></div>
+                  <div className="relative z-10">
+                    <div className="mb-4 flex justify-between items-center">
+                      <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
+                      {renderImageActions()}
+                    </div>
+                    
+                    {/* محتوى البيانات */}
+                    <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
+                      <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div> : <div className="h-60 flex items-center justify-center border-2 border-dashed rounded-lg p-8">
+            </div> : <div className="h-60 flex items-center justify-center border-2 border-dashed border-white/10 rounded-lg p-8 bg-[#0a0f1e]/50">
               <p className="text-muted-foreground">
                 اختر صورة لعرض التفاصيل
               </p>
             </div>}
         </TabsContent>
         
+        {/* نفس التعديلات للتبويبات الأخرى */}
         <TabsContent value="error" className="mt-4">
+          {/* عرض الصور المصغرة أعلى الصفحة */}
           <div className="mb-6">
             {renderImagesThumbnails()}
             {renderPagination()}
           </div>
           
+          {/* عرض الصورة النشطة والبيانات بجانبها */}
           {activeImage ? <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* عرض الصورة بحجم كبير - تعديل من 70% إلى 60% من العرض */}
               <div className="lg:col-span-7 h-[600px]">
                 <ImageViewer selectedImage={activeImage} zoomLevel={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetZoom={handleResetZoom} onZoomChange={handleZoomChange} formatDate={formatDate} isFullScreen={isFullScreen} onToggleFullScreen={toggleFullScreen} />
               </div>
               
+              {/* عرض البيانات - تعديل من 30% إلى 40% من العرض */}
               <div className="lg:col-span-5">
-                <div className="bg-gray-50 dark:bg-gray-800/95 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow h-full">
-                  <div className="mb-4 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
-                    {renderImageActions()}
-                  </div>
-                  
-                  <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
-                    <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+                <div className="dish-container bg-[#0a0f1e]/95 p-4 rounded-lg border border-white/5 h-full">
+                  <div className="dish-glow-top"></div>
+                  <div className="dish-glow-bottom"></div>
+                  <div className="dish-reflection"></div>
+                  <div className="dish-inner-shadow"></div>
+                  <div className="relative z-10">
+                    <div className="mb-4 flex justify-between items-center">
+                      <h2 className="text-lg font-semibold">عرض الصورة والبيانات</h2>
+                      {renderImageActions()}
+                    </div>
+                    
+                    {/* محتوى البيانات */}
+                    <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
+                      <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div> : <div className="h-60 flex items-center justify-center border-2 border-dashed rounded-lg p-8">
+            </div> : <div className="h-60 flex items-center justify-center border-2 border-dashed border-white/10 rounded-lg p-8 bg-[#0a0f1e]/50">
               <p className="text-muted-foreground">
                 اختر صورة لعرض التفاصيل
               </p>

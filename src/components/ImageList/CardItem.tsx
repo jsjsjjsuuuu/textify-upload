@@ -65,11 +65,11 @@ const CardItem = ({
         <BatchArrow isFirst={isFirstInBatch} isLast={isLastInBatch} />
       )}
       
-      <Card className="overflow-hidden bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow border-border/60 dark:border-gray-700/60 rounded-xl">
+      <Card className="overflow-hidden bg-[#0a0f1e]/95 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow border-border/60 rounded-xl">
         <CardContent className="p-0">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-0">
             {/* صورة العنصر (55% العرض) */}
-            <div className="md:col-span-7 border-b md:border-b-0 md:border-l border-border/30 dark:border-gray-700/30">
+            <div className="md:col-span-7 border-b md:border-b-0 md:border-l border-border/30">
               <DraggableImage 
                 image={image} 
                 onImageClick={onImageClick} 
@@ -86,7 +86,7 @@ const CardItem = ({
             </div>
           </div>
           
-          <div className="px-4 pb-4 border-t border-border/30 dark:border-gray-700/30 mt-2">
+          <div className="px-4 pb-4 border-t border-border/30 mt-2">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="w-full sm:w-auto">
                 <AutomationButton image={image} />
