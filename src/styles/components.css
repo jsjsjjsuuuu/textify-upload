@@ -100,7 +100,7 @@
     @apply from-brand-coral/15 via-brand-beige/10 to-brand-green/10;
   }
   
-  /* تنسيقات نظام المهام الزجاجي - تحسين وزيادة تأثير الزجاج */
+  /* تنسيقات نظام المهام الزجاجي */
   .task-system-bg {
     @apply bg-gradient-to-br from-[#0d1220] to-[#141b2d] min-h-[30rem];
   }
@@ -118,29 +118,29 @@
     @apply w-8 h-8 flex items-center justify-center rounded-full;
   }
   
-  /* أنماط محسنة لتصميم المورفي الزجاجي */
+  /* أنماط جديدة لتصميم المورفي الزجاجي */
   .glass-morphism {
-    @apply bg-[#171e2e]/40 backdrop-blur-xl border border-[#222e45]/40 
-           shadow-[0_8px_32px_rgba(0,0,0,0.37)] rounded-xl;
+    @apply bg-[#171e2e]/50 backdrop-blur-md border border-[#222e45]/50 
+           shadow-[0_4px_20px_rgba(0,0,0,0.3)] rounded-xl;
   }
   
   .glass-card {
-    @apply bg-[#171e2e]/30 backdrop-blur-2xl border border-[#222e45]/40 
-           shadow-[0_4px_25px_rgba(0,0,0,0.3)] rounded-xl transition-all duration-300;
+    @apply bg-[#171e2e]/40 backdrop-blur-md border border-[#222e45]/50 
+           shadow-[0_4px_15px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-300;
   }
   
   .glass-card:hover {
-    @apply bg-[#1e263a]/50 border-indigo-500/40 shadow-[0_8px_32px_rgba(79,70,229,0.15)];
+    @apply bg-[#1e263a]/60 border-indigo-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.4)];
   }
   
   .glass-button {
-    @apply rounded-xl bg-[#232a3c]/60 backdrop-blur-xl border border-indigo-500/30
-           hover:bg-indigo-600/50 hover:border-indigo-500/60 transition-all duration-300 
-           text-white shadow-[0_4px_12px_rgba(0,0,0,0.25)] hover:shadow-[0_6px_16px_rgba(79,70,229,0.25)];
+    @apply rounded-xl bg-[#232a3c]/70 backdrop-blur-md border border-indigo-500/30
+           hover:bg-indigo-600/50 hover:border-indigo-500/50 transition-all duration-300 
+           text-white shadow-md hover:shadow-lg;
   }
   
   .active-tab {
-    @apply bg-indigo-600/70 border-indigo-500/60 shadow-[0_4px_15px_rgba(79,70,229,0.3)];
+    @apply bg-indigo-600/70 border-indigo-500/60;
   }
   
   .task-status-pending {
@@ -173,8 +173,7 @@
   
   .task-item {
     @apply flex justify-between items-center p-4 my-3
-           bg-[#171e2e]/50 backdrop-blur-xl border border-[#222e45]/40 
-           rounded-xl transition-all hover:bg-[#1e263a]/70 shadow-[0_4px_20px_rgba(0,0,0,0.25)] 
-           hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:border-indigo-500/30;
+           bg-[#171e2e]/70 backdrop-blur-md border border-[#222e45]/50 
+           rounded-xl transition-all hover:bg-[#1e263a]/80 shadow-sm hover:shadow-md;
   }
 }
