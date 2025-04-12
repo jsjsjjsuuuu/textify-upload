@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
-import { Card } from "@/components/ui/card";
-import { Database, FileText, Package, LayoutGrid, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { LayoutGrid, Clock, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import CardHeader from './CardHeader';
 import TabBar, { TabItem } from './TabBar';
 import RecordsList from './RecordsList';
 import useFetchRecords from './useFetchRecords';
+import { Button } from "@/components/ui/button";
 
 const RecentRecords: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -37,6 +37,12 @@ const RecentRecords: React.FC = () => {
       count: counts.completed 
     },
     { 
+      id: "incomplete", 
+      label: "غير مكتملة", 
+      icon: <XCircle className="h-4 w-4" />, 
+      count: counts.incomplete || 0 
+    },
+    { 
       id: "error", 
       label: "أخطاء", 
       icon: <AlertCircle className="h-4 w-4" />, 
@@ -62,20 +68,23 @@ const RecentRecords: React.FC = () => {
         onTabChange={handleTabChange}
       />
       
-      <div className="task-card p-4 mb-6 mt-6">
+      <div className="glass-card p-4 mb-6 mt-6">
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-2 text-white">
             <LayoutGrid className="text-indigo-400" size={20} />
             <span className="font-medium">{tabs.find(tab => tab.id === activeTab)?.label || "الكل"}</span>
-            <span className="bg-slate-700/80 px-3 py-1 rounded-full text-xs">
-              {activeTab === 'all' ? counts.all : activeTab === 'processing' ? counts.processing : 
-               activeTab === 'completed' ? counts.completed : activeTab === 'pending' ? counts.pending : 
+            <span className="count-badge">
+              {activeTab === 'all' ? counts.all : 
+               activeTab === 'processing' ? counts.processing : 
+               activeTab === 'completed' ? counts.completed : 
+               activeTab === 'pending' ? counts.pending : 
+               activeTab === 'incomplete' ? counts.incomplete || 0 :
                activeTab === 'error' ? counts.error : 0} عناصر
             </span>
           </div>
-          <button className="bg-indigo-600 hover:bg-indigo-700 transition-colors rounded-lg p-2 text-white">
+          <Button className="glass-button h-9 w-9 p-0">
             <LayoutGrid size={18} />
-          </button>
+          </Button>
         </div>
       </div>
       

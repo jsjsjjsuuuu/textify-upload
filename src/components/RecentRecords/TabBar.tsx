@@ -21,20 +21,20 @@ const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabChange }) => {
         <button
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
-          className={`task-card flex items-center justify-between p-4 ${
-            activeTab === tab.id ? 'bg-indigo-600/30 border-indigo-400/50' : ''
+          className={`glass-card flex items-center justify-between p-4 ${
+            activeTab === tab.id ? 'active-tab' : ''
           }`}
         >
           <div className="flex items-center gap-2">
             <div className={`task-icon-wrapper ${
-              activeTab === tab.id ? 'text-indigo-400' : 'text-slate-400'
+              activeTab === tab.id ? 'text-indigo-300' : 'text-slate-400'
             }`}>
               {tab.icon}
             </div>
             <span className="text-white text-sm">{tab.label}</span>
           </div>
           <div className={`task-count-badge ${
-            activeTab === tab.id ? 'bg-indigo-600' : 'bg-slate-800'
+            activeTab === tab.id ? 'bg-indigo-600' : 'bg-[#232a3c]'
           }`}>
             {tab.count}
           </div>

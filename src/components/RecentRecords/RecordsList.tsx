@@ -1,8 +1,6 @@
 
 import React from 'react';
-import { CardContent } from "@/components/ui/card";
 import { ImageData } from "@/types/ImageData";
-import { formatDate } from "@/utils/dateFormatter";
 import RecordItem from './RecordItem';
 import LoadingState from './LoadingState';
 import EmptyState from './EmptyState';
@@ -20,7 +18,7 @@ const RecordsList: React.FC<RecordsListProps> = ({ records, isLoading, isError }
 
   if (isError) {
     return (
-      <div className="text-center py-8 text-slate-400 bg-slate-800/50 backdrop-blur-md rounded-xl border border-slate-700/50">
+      <div className="glass-morphism text-center py-8 text-slate-400">
         حدث خطأ في جلب البيانات. يرجى المحاولة مرة أخرى.
       </div>
     );
@@ -31,12 +29,11 @@ const RecordsList: React.FC<RecordsListProps> = ({ records, isLoading, isError }
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {records.map((record) => (
         <RecordItem 
           key={record.id}
           record={record}
-          formatDate={formatDate}
         />
       ))}
     </div>
