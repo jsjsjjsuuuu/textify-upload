@@ -29,7 +29,8 @@ const Index = () => {
     clearQueue,
     runCleanup,
     hideImage,
-    hiddenImageIds
+    hiddenImageIds,
+    loadUserImages  // إضافة استدعاء مباشر لـ loadUserImages
   } = useImageProcessing();
 
   const {
@@ -38,6 +39,14 @@ const Index = () => {
   } = useAuth();
 
   const { imageStats } = useImageStatsCalculator(images);
+
+  // إضافة استدعاء لإعادة تحميل الصور عند فتح الصفحة وتأكد من تصفيتها
+  useEffect(() => {
+    console.log("تحميل الصور في صفحة Index مع تصفية الصور المخفية");
+    if (user && typeof loadUserImages === 'function') {
+      loadUserImages();
+    }
+  }, [user, loadUserImages, hiddenImageIds]);
 
   // تسجيل معلومات التشخيص
   useEffect(() => {
@@ -90,7 +99,7 @@ const Index = () => {
             <div className="mt-6">
               <ImagesCard
                 images={images}
-                isSubmitting={false} // تصحيح: تغيير من boolean إلى Record<string, boolean>
+                isSubmitting={{}}  // تصحيح: تغيير من boolean إلى Record<string, boolean>
                 onTextChange={handleTextChange}
                 onDelete={handleDelete}
                 onSubmit={handleSubmitToApi}

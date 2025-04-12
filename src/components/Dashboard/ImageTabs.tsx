@@ -29,12 +29,28 @@ const ImageTabs: React.FC<ImageTabsProps> = ({
   formatDate,
   imageStats
 }) => {
-  // وحدنا واجهة التصفية، فلا نحتاج إلى هذا المكون الإضافي
+  // تحويل isSubmitting إلى شكل متوافق في كل الأحوال
+  // إذا كان isSubmitting قيمة منطقية، نقوم بتحويلها إلى كائن
+  // وإذا كان كائنًا، نتركه كما هو
+  const normalizedIsSubmitting = React.useMemo(() => {
+    if (typeof isSubmitting === 'boolean') {
+      console.log("ImageTabs: تحويل isSubmitting من قيمة منطقية إلى كائن");
+      return isSubmitting ? { all: true } : {};
+    }
+    return isSubmitting || {};
+  }, [isSubmitting]);
+  
+  // تسجيل معلومات تشخيص
+  React.useEffect(() => {
+    console.log(`ImageTabs: نوع isSubmitting الأصلي: ${typeof isSubmitting}`);
+    console.log("ImageTabs: isSubmitting بعد التحويل:", normalizedIsSubmitting);
+  }, [isSubmitting, normalizedIsSubmitting]);
+
   // إرجاع مكون ImageTabContent مباشرة دون تبويبات إضافية
   return (
     <ImageTabContent
       images={images}
-      isSubmitting={typeof isSubmitting === 'boolean' ? isSubmitting : Object.values(isSubmitting).some(Boolean)}
+      isSubmitting={normalizedIsSubmitting}
       onTextChange={onTextChange}
       onDelete={onDelete}
       onSubmit={onSubmit}
