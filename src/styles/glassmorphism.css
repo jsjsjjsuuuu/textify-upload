@@ -1,0 +1,97 @@
+
+/* 
+ * تصميم عناصر واجهة المستخدم الزجاجي (Glassmorphism)
+ * للاستخدام مع صفحات الإدارة
+ */
+
+@layer utilities {
+  /* تأثيرات زجاجية عامة */
+  .glassmorphism {
+    @apply bg-slate-900/30 backdrop-blur-lg border border-slate-700/30 shadow-lg;
+  }
+  
+  /* عناصر الفلاتر */
+  .glass-filter-btn {
+    @apply bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-lg p-4 
+    transition-all hover:bg-slate-700/40 hover:shadow-lg hover:border-slate-600/50 text-right;
+  }
+  
+  .glass-filter-btn.active {
+    @apply bg-indigo-600/30 border-indigo-500/50 shadow-md shadow-indigo-600/20;
+  }
+  
+  .status-count {
+    @apply h-7 w-7 rounded-md flex items-center justify-center bg-slate-700/50 
+    text-slate-300 text-sm ml-2;
+  }
+  
+  .status-count.active {
+    @apply bg-indigo-600/60 text-white;
+  }
+  
+  /* شريط الأدوات */
+  .glassmorphism-toolbar {
+    @apply bg-slate-800/40 backdrop-blur-md border border-slate-700/50;
+  }
+  
+  /* أزرار التبديل بين أنواع العرض */
+  .glass-view-btn {
+    @apply p-2 rounded-lg bg-slate-700/30 hover:bg-slate-600/40 transition-all;
+  }
+  
+  .glass-view-btn.active {
+    @apply bg-indigo-600/40 text-white;
+  }
+  
+  /* شارة عدد العناصر */
+  .glassmorphism-badge {
+    @apply px-4 py-1.5 rounded-md bg-slate-700/50 text-slate-200 text-sm;
+  }
+  
+  /* عنصر فارغ */
+  .glassmorphism-empty {
+    @apply bg-slate-800/20 backdrop-blur-md border border-slate-700/30 rounded-lg text-slate-400;
+  }
+  
+  /* عنصر السجل */
+  .glassmorphism-record-item {
+    @apply bg-slate-800/30 backdrop-blur-md border border-slate-700/40 shadow-lg p-5 rounded-lg 
+    transition-all hover:bg-slate-800/50 hover:border-slate-600/50 hover:shadow-xl;
+  }
+  
+  /* عنوان السجل */
+  .record-title {
+    @apply text-slate-100 font-bold text-lg text-right mb-1;
+  }
+  
+  /* تاريخ السجل */
+  .record-date {
+    @apply text-slate-400 text-sm text-right;
+  }
+  
+  /* شارة الحالة */
+  .status-badge {
+    @apply px-5 py-2 rounded-md text-sm font-medium;
+  }
+  
+  .green-badge {
+    @apply bg-emerald-600/30 border border-emerald-500/30 text-emerald-400;
+  }
+  
+  /* زر إكمال المهمة */
+  .complete-button {
+    @apply p-2 rounded-full bg-emerald-600/20 text-emerald-400 
+    hover:bg-emerald-600/40 transition-all;
+  }
+}
+
+/* تنسيقات للشاشات الصغيرة */
+@media (max-width: 768px) {
+  .glass-filter-btn {
+    @apply p-3;
+  }
+  
+  .record-title {
+    @apply text-base;
+  }
+}

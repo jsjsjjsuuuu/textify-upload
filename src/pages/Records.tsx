@@ -1,392 +1,246 @@
-import React, { useEffect, useState } from 'react';
-import { useImageProcessing } from '@/hooks/useImageProcessing';
+
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader, Search, Filter, Download, Trash2, Eye } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
-import { ImageData } from '@/types/ImageData';
-import AppHeader from '@/components/AppHeader';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Pagination } from '@/components/ui/pagination';
 import { formatDate } from '@/utils/dateFormatter';
+import AppHeader from '@/components/AppHeader';
+import { Check, Clock, AlertTriangle, Grid, LayoutGrid, CheckCircle2 } from 'lucide-react';
+import { useImageProcessing } from '@/hooks/useImageProcessing';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import ImageCardContainer from '@/components/ImageViewer/ImageCardContainer';
-import ImageDetailsPanel from '@/components/ImageViewer/ImageDetailsPanel';
+import { ImageData } from '@/types/ImageData';
 
 const Records = () => {
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user } = useAuth();
+  const { images, loadUserImages } = useImageProcessing();
   const { toast } = useToast();
-  
-  const [searchParams, setSearchParams] = useSearchParams();
-  const {
-    loadUserImages,
-    images,
-    handlePermanentDelete, // استخدام وظيفة الحذف الدائم
-    handleTextChange,
-    handleSubmitToApi,
-    isSubmitting,
-    unhideAllImages, // استخدام وظيفة إعادة إظهار جميع الصور
-    hiddenImageIds
-  } = useImageProcessing();
-  
+  const [view, setView] = useState<'grid' | 'list'>('list');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filteredImages, setFilteredImages] = useState<ImageData[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [activeImage, setActiveImage] = useState<ImageData | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataLoaded, setDataLoaded] = useState(false); // إضافة حالة جديدة لتتبع ما إذا تم تحميل البيانات بالفعل
-  const itemsPerPage = 20;
-  
-  // تحميل صور المستخدم عند تحميل الصفحة - مع تحسين لمنع التحميل المتكرر
-  useEffect(() => {
-    if (user && !dataLoaded) {
-      setIsLoading(true);
-      
-      // استخدام loadUserImages مع دالة رجوع فقط - تم تصحيح طريقة الاستدعاء هنا
-      loadUserImages((loadedImages) => {
-        console.log(`تم تحميل ${loadedImages.length} صورة للمستخدم`);
-        setIsLoading(false);
-        setDataLoaded(true); // تعيين حالة التحميل إلى "تم" لمنع إعادة التحميل
-        
-        // التحقق من وجود معرف في عنوان URL
-        const idParam = searchParams.get('id');
-        if (idParam) {
-          const selectedImage = loadedImages.find(img => img.id === idParam);
-          if (selectedImage) {
-            setActiveImage(selectedImage);
-          }
-        }
-      });
-    }
-  }, [user, loadUserImages, searchParams, dataLoaded]); // إضافة dataLoaded إلى مصفوفة التبعيات
 
-  // إعادة تحميل البيانات عند تغيير قائمة الصور المخفية
-  useEffect(() => {
-    if (dataLoaded && user) {
-      loadUserImages((loadedImages) => {
-        console.log(`تم إعادة تحميل ${loadedImages.length} صورة للمستخدم بعد تغيير الصور المخفية`);
-      });
-    }
-  }, [hiddenImageIds, dataLoaded, user, loadUserImages]);
+  // إحصائيات السجلات
+  const [stats, setStats] = useState({
+    all: 0,
+    processing: 0,
+    pending: 0,
+    completed: 0,
+    incomplete: 0,
+    error: 0
+  });
 
-  // تصفية الصور بناءً على معايير البحث
+  // تحميل بيانات الصور عند تحميل الصفحة
   useEffect(() => {
-    let result = [...images];
+    if (user) {
+      loadUserImages();
+    }
+  }, [user, loadUserImages]);
+
+  // حساب إحصائيات السجلات
+  useEffect(() => {
+    const calcStats = {
+      all: images.length,
+      processing: images.filter(img => img.status === 'processing').length,
+      pending: images.filter(img => img.status === 'pending').length,
+      completed: images.filter(img => img.status === 'completed' && img.submitted).length,
+      incomplete: images.filter(img => 
+        img.status === 'completed' && 
+        !img.submitted && 
+        (!img.code || !img.senderName || !img.province || !img.price)
+      ).length,
+      error: images.filter(img => img.status === 'error').length
+    };
+    setStats(calcStats);
+  }, [images]);
+
+  // تصفية السجلات حسب الحالة
+  useEffect(() => {
+    let filtered = [...images];
     
-    // تطبيق البحث النصي
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(img => 
-        (img.code && img.code.toLowerCase().includes(term)) ||
-        (img.senderName && img.senderName.toLowerCase().includes(term)) ||
-        (img.phoneNumber && img.phoneNumber.toLowerCase().includes(term)) ||
-        (img.province && img.province.toLowerCase().includes(term))
+    if (filterStatus === 'processing') {
+      filtered = filtered.filter(img => img.status === 'processing');
+    } else if (filterStatus === 'pending') {
+      filtered = filtered.filter(img => img.status === 'pending');
+    } else if (filterStatus === 'completed') {
+      filtered = filtered.filter(img => img.status === 'completed' && img.submitted);
+    } else if (filterStatus === 'incomplete') {
+      filtered = filtered.filter(img => 
+        img.status === 'completed' && 
+        !img.submitted && 
+        (!img.code || !img.senderName || !img.province || !img.price)
       );
+    } else if (filterStatus === 'error') {
+      filtered = filtered.filter(img => img.status === 'error');
     }
     
-    // تطبيق تصفية الحالة
-    if (statusFilter !== 'all') {
-      if (statusFilter === 'completed') {
-        result = result.filter(img => img.status === 'completed');
-      } else if (statusFilter === 'pending') {
-        result = result.filter(img => img.status === 'pending');
-      } else if (statusFilter === 'error') {
-        result = result.filter(img => img.status === 'error');
-      } else if (statusFilter === 'submitted') {
-        result = result.filter(img => img.submitted === true);
-      } else if (statusFilter === 'not_submitted') {
-        result = result.filter(img => img.submitted !== true);
-      }
-    }
+    // ترتيب حسب التاريخ (الأحدث أولاً)
+    filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
-    // ترتيب النتائج (الأحدث أولاً)
-    result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    setFilteredImages(result);
-    
-    // إعادة تعيين الصفحة الحالية إلى 1 عند تغيير معايير التصفية
-    setCurrentPage(1);
-  }, [images, searchTerm, statusFilter]);
+    setFilteredImages(filtered);
+  }, [images, filterStatus]);
 
-  // معالجة الضغط على زر إظهار جميع الصور المخفية
-  const handleUnhideAllImages = () => {
-    unhideAllImages();
-    // إعادة تحميل البيانات
-    setDataLoaded(false);
+  // التبديل بين العرض الشبكي والقائمة
+  const toggleView = (viewType: 'grid' | 'list') => {
+    setView(viewType);
   };
 
-  // التعامل مع النقر على صورة
-  const handleImageClick = (image: ImageData) => {
-    setActiveImage(image);
-    // تحديث عنوان URL
-    setSearchParams({ id: image.id });
+  // تغيير فلتر الحالة
+  const handleStatusFilter = (status: string) => {
+    setFilterStatus(status);
   };
-
-  // التحقق من اكتمال بيانات الصورة
-  const isImageComplete = (image: ImageData) => {
-    return !!(
-      image.code && 
-      image.senderName && 
-      image.phoneNumber && 
-      image.province && 
-      image.price &&
-      image.phoneNumber.replace(/[^\d]/g, '').length === 11
-    );
-  };
-
-  // التحقق من وجود خطأ في رقم الهاتف
-  const hasPhoneError = (image: ImageData) => {
-    return !!image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, '').length !== 11;
-  };
-
-  // حذف الصور المحددة
-  const handleDeleteSelected = async () => {
-    if (selectedImages.length === 0) return;
-    
-    const confirmed = window.confirm(`هل أنت متأكد من حذف ${selectedImages.length} صورة نهائيًا من قاعدة البيانات؟`);
-    if (!confirmed) return;
-    
-    let successCount = 0;
-    let errorCount = 0;
-    
-    for (const id of selectedImages) {
-      try {
-        const success = await handlePermanentDelete(id);
-        if (success) {
-          successCount++;
-        } else {
-          errorCount++;
-        }
-      } catch (error) {
-        console.error(`خطأ في حذف الصورة ${id}:`, error);
-        errorCount++;
-      }
-    }
-    
-    // إعادة تعيين قائمة الصور المحددة
-    setSelectedImages([]);
-    
-    // إظهار رسالة نجاح
-    toast({
-      title: "تم الحذف",
-      description: `تم حذف ${successCount} صورة بنجاح${errorCount > 0 ? ` (فشل حذف ${errorCount} صورة)` : ''}`,
-    });
-    
-    // إعادة تحميل الصور - إعادة تعيين حالة التحميل فقط لتشغيل useEffect من جديد
-    setDataLoaded(false);
-  };
-
-  // تصدير الصور المحددة
-  const handleExportSelected = () => {
-    if (selectedImages.length === 0) return;
-    
-    const selectedData = images.filter(img => selectedImages.includes(img.id));
-    const exportData = selectedData.map(img => ({
-      code: img.code || '',
-      senderName: img.senderName || '',
-      phoneNumber: img.phoneNumber || '',
-      province: img.province || '',
-      price: img.price || '',
-      companyName: img.companyName || '',
-      date: formatDate(img.date)
-    }));
-    
-    // تحويل البيانات إلى JSON
-    const jsonData = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    // إنشاء رابط تنزيل
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `exported_records_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    
-    // تنظيف
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 100);
-    
-    toast({
-      title: "تم التصدير",
-      description: `تم تصدير ${selectedImages.length} سجل بنجاح`,
-    });
-  };
-
-  // حساب الصفحات
-  const totalPages = Math.ceil(filteredImages.length / itemsPerPage);
-  const currentImages = filteredImages.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // عرض حالة التحميل
-  if (isAuthLoading || isLoading) {
-    return <div className="flex justify-center items-center h-screen">
-      <Loader className="w-8 h-8 animate-spin" />
-      <span className="mr-2">جاري تحميل البيانات...</span>
-    </div>;
-  }
-
-  // التحقق من وجود مستخدم
-  if (!user) {
-    return <div className="p-8 text-center">
-      <h2 className="text-xl mb-4">يجب تسجيل الدخول لعرض السجلات</h2>
-      <a href="/login" className="text-blue-500 hover:underline">تسجيل الدخول</a>
-    </div>;
-  }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#0e1320] text-white">
       <AppHeader />
       
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">سجلات الصور</h1>
-        
-        {/* أدوات البحث والتصفية */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="بحث عن كود، اسم، رقم هاتف..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="جميع الحالات" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الحالات</SelectItem>
-                <SelectItem value="completed">مكتملة</SelectItem>
-                <SelectItem value="pending">قيد الانتظار</SelectItem>
-                <SelectItem value="error">خطأ</SelectItem>
-                <SelectItem value="submitted">تم إرسالها</SelectItem>
-                <SelectItem value="not_submitted">لم يتم إرسالها</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Button variant="outline" size="icon" onClick={() => {
-              setSearchTerm('');
-              setStatusFilter('all');
-            }}>
-              <Filter className="h-4 w-4" />
-            </Button>
-            
-            {/* زر إظهار جميع الصور المخفية */}
-            {hiddenImageIds?.length > 0 && (
-              <Button variant="outline" onClick={handleUnhideAllImages} className="whitespace-nowrap">
-                <Eye className="h-4 w-4 ml-2" />
-                إظهار الصور المخفية ({hiddenImageIds.length})
-              </Button>
-            )}
+      <div className="container mx-auto p-4 pt-8">
+        {/* رأس الصفحة والتاريخ */}
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">نظام إدارة المهام</h1>
+          <div className="text-slate-300">
+            {new Date().toLocaleDateString('ar-SA', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}
           </div>
         </div>
         
-        {/* أزرار الإجراءات */}
-        {selectedImages.length > 0 && (
-          <div className="flex gap-2 mb-4">
-            <Button variant="outline" size="sm" onClick={handleExportSelected}>
-              <Download className="h-4 w-4 mr-2" />
-              تصدير ({selectedImages.length})
-            </Button>
-            <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              حذف نهائي ({selectedImages.length})
-            </Button>
+        {/* فلاتر الحالة */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          <button 
+            onClick={() => handleStatusFilter('all')}
+            className={`glass-filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <span className="text-xl">الكل</span>
+              <div className="flex">
+                <span className={`status-count ${filterStatus === 'all' ? 'active' : ''}`}>{stats.all}</span>
+                <Grid className="w-5 h-5 ml-2" />
+              </div>
+            </div>
+          </button>
+          
+          <button 
+            onClick={() => handleStatusFilter('pending')}
+            className={`glass-filter-btn ${filterStatus === 'pending' ? 'active' : ''}`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <span>قيد الانتظار</span>
+              <div className="flex">
+                <span className={`status-count ${filterStatus === 'pending' ? 'active' : ''}`}>{stats.pending}</span>
+                <Clock className="w-5 h-5 ml-2" />
+              </div>
+            </div>
+          </button>
+          
+          <button 
+            onClick={() => handleStatusFilter('processing')}
+            className={`glass-filter-btn ${filterStatus === 'processing' ? 'active' : ''}`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <span>قيد المعالجة</span>
+              <div className="flex">
+                <span className={`status-count ${filterStatus === 'processing' ? 'active' : ''}`}>{stats.processing}</span>
+                <Clock className="w-5 h-5 ml-2 animate-spin" />
+              </div>
+            </div>
+          </button>
+          
+          <button 
+            onClick={() => handleStatusFilter('error')}
+            className={`glass-filter-btn ${filterStatus === 'error' ? 'active' : ''}`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <span>أخطاء</span>
+              <div className="flex">
+                <span className={`status-count ${filterStatus === 'error' ? 'active' : ''}`}>{stats.error}</span>
+                <AlertTriangle className="w-5 h-5 ml-2" />
+              </div>
+            </div>
+          </button>
+          
+          <button 
+            onClick={() => handleStatusFilter('incomplete')}
+            className={`glass-filter-btn ${filterStatus === 'incomplete' ? 'active' : ''}`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <span>غير مكتملة</span>
+              <div className="flex">
+                <span className={`status-count ${filterStatus === 'incomplete' ? 'active' : ''}`}>{stats.incomplete}</span>
+                <AlertTriangle className="w-5 h-5 ml-2" />
+              </div>
+            </div>
+          </button>
+          
+          <button 
+            onClick={() => handleStatusFilter('completed')}
+            className={`glass-filter-btn ${filterStatus === 'completed' ? 'active' : ''}`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <span>مكتملة</span>
+              <div className="flex">
+                <span className={`status-count ${filterStatus === 'completed' ? 'active' : ''}`}>{stats.completed}</span>
+                <Check className="w-5 h-5 ml-2" />
+              </div>
+            </div>
+          </button>
+        </div>
+        
+        {/* شريط الأدوات وعدد العناصر */}
+        <div className="flex justify-between items-center mb-6 glassmorphism-toolbar p-3 rounded-lg">
+          <div className="flex gap-2">
+            <button 
+              onClick={() => toggleView('list')}
+              className={`glass-view-btn ${view === 'list' ? 'active' : ''}`}
+              aria-label="عرض القائمة"
+            >
+              <LayoutGrid className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => toggleView('grid')}
+              className={`glass-view-btn ${view === 'grid' ? 'active' : ''}`}
+              aria-label="عرض الشبكة"
+            >
+              <Grid className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="glassmorphism-badge">
+            عناصر {filteredImages.length}
+          </div>
+        </div>
+        
+        {/* قائمة السجلات */}
+        {filteredImages.length === 0 ? (
+          <div className="glassmorphism-empty text-center p-12">
+            لا توجد مهام متاحة بهذه المعايير
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredImages.map((record) => (
+              <div key={record.id} className="glassmorphism-record-item">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="status-badge green-badge">
+                      <span>مكتمل</span>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="record-title">
+                      مهمة #{record.code || record.id.substring(0, 4)}
+                    </h3>
+                    <p className="record-date">
+                      تم الانتهاء بتاريخ {formatDate(record.date)}
+                    </p>
+                  </div>
+                  <div>
+                    <button className="complete-button">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-        
-        {/* عرض عدد النتائج */}
-        <div className="text-sm text-muted-foreground mb-4">
-          تم العثور على {filteredImages.length} سجل
-          {hiddenImageIds?.length > 0 && (
-            <span className="mr-2">{hiddenImageIds.length} صورة مخفية</span>
-          )}
-        </div>
-        
-        {/* عرض الصور والتفاصيل */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <Card className="p-4">
-              <h2 className="text-lg font-semibold mb-4">الصور</h2>
-              
-              {currentImages.length === 0 ? (
-                <div className="text-center p-8 text-muted-foreground">
-                  لا توجد نتائج مطابقة لمعايير البحث
-                </div>
-              ) : (
-                <ImageCardContainer
-                  images={currentImages}
-                  activeImage={activeImage}
-                  selectedImages={selectedImages}
-                  handleImageClick={handleImageClick}
-                  setSelectedImages={setSelectedImages}
-                  isImageComplete={isImageComplete}
-                  hasPhoneError={hasPhoneError}
-                />
-              )}
-              
-              {/* ترقيم الصفحات */}
-              {totalPages > 1 && (
-                <div className="mt-4 flex justify-center">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                </div>
-              )}
-            </Card>
-          </div>
-          
-          <div className="lg:col-span-2">
-            {activeImage ? (
-              <ImageDetailsPanel
-                image={activeImage}
-                onTextChange={(id, field, value) => handleTextChange(id, field, value)}
-                onSubmit={() => handleSubmitToApi(activeImage.id)}
-                onDelete={() => {
-                  handlePermanentDelete(activeImage.id);
-                  setActiveImage(null);
-                }}
-                isSubmitting={!!isSubmitting[activeImage.id]}
-                isComplete={isImageComplete(activeImage)}
-                hasPhoneError={hasPhoneError(activeImage)}
-              />
-            ) : (
-              <Card className="p-8 text-center text-muted-foreground">
-                <p>اختر صورة من القائمة لعرض التفاصيل</p>
-              </Card>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );

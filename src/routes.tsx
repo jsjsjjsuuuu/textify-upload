@@ -1,76 +1,96 @@
 
-import React from 'react';
-import { Route, Routes, Navigate } from 'react-router-dom';
-import Index from './pages/Index';
-import NotFound from './pages/NotFound';
-import ServicePage from './pages/PolicyPage';
-import PolicyPage from './pages/PolicyPage';
-import AutomationPage from './pages/AutomationPage';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Profile from './pages/Profile';
-import Records from './pages/Records';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import AdminApproval from './pages/AdminApproval';
-import ProtectedRoute from './components/ProtectedRoute';
+import { Navigate } from "react-router-dom";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Records from "./pages/Records";
+import Profile from "./pages/Profile";
+import ApiSettings from "./pages/ApiSettings";
+import ServerSettings from "./pages/ServerSettings";
+import ServerAutomation from "./pages/ServerAutomation";
+import Bookmarklet from "./pages/Bookmarklet";
+import PolicyPage from "./pages/PolicyPage";
+import ServicePage from "./pages/ServicePage";
+import AdminApproval from "./pages/AdminApproval";
 
-/**
- * تكوين مسارات التطبيق
- * يمكن استيراد هذا المكون واستخدامه في App.tsx
- */
-export const AppRoutes = () => {
-  console.log("تحميل المسارات...");
-  
-  return (
-    <Routes>
-      {/* صفحات المصادقة */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      
-      {/* الصفحات المحمية */}
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Records />
-        </ProtectedRoute>
-      } />
-      <Route path="/upload" element={
-        <ProtectedRoute>
-          <Index />
-        </ProtectedRoute>
-      } />
-      <Route path="/profile" element={
-        <ProtectedRoute>
-          <Profile />
-        </ProtectedRoute>
-      } />
-      
-      {/* صفحة إدارة المستخدمين - للمسؤولين فقط مع تعطيل requireApproval للمسؤولين */}
-      <Route path="/admin/approvals" element={
-        <ProtectedRoute adminOnly={true} requireApproval={false} redirectTo="/">
-          <AdminApproval />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/records" element={
-        <ProtectedRoute>
-          <Navigate to="/" replace />
-        </ProtectedRoute>
-      } />
-      <Route path="/automation/:imageId" element={
-        <ProtectedRoute>
-          <AutomationPage />
-        </ProtectedRoute>
-      } />
-      
-      {/* الصفحات العامة */}
-      <Route path="/services" element={<ServicePage />} />
-      <Route path="/policy" element={<PolicyPage />} />
-      
-      {/* صفحة 404 والتحويلات */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
-};
+// تكوين المسارات للتطبيق
+const routes = [
+  {
+    path: "/",
+    element: <Index />,
+  },
+  {
+    path: "/login",
+    element: <Login />,
+  },
+  {
+    path: "/register",
+    element: <Register />,
+  },
+  {
+    path: "/forgotten-password",
+    element: <ForgotPassword />,
+  },
+  {
+    path: "/reset-password",
+    element: <ResetPassword />,
+  },
+  {
+    path: "/upload",
+    element: <ProtectedRoute element={<Index />} />,
+  },
+  {
+    path: "/records",
+    element: <ProtectedRoute element={<Records />} />,
+  },
+  {
+    path: "/profile",
+    element: <ProtectedRoute element={<Profile />} />,
+  },
+  {
+    path: "/api-settings",
+    element: <ProtectedRoute element={<ApiSettings />} />,
+  },
+  {
+    path: "/server-settings",
+    element: <ProtectedRoute element={<ServerSettings />} />,
+  },
+  {
+    path: "/server-automation",
+    element: <ProtectedRoute element={<ServerAutomation />} />,
+  },
+  {
+    path: "/bookmarklet",
+    element: <ProtectedRoute element={<Bookmarklet />} />,
+  },
+  {
+    path: "/privacy",
+    element: <PolicyPage />,
+  },
+  {
+    path: "/service",
+    element: <ServicePage />,
+  },
+  {
+    path: "/admin",
+    element: <ProtectedRoute element={<AdminApproval />} />,
+  },
+  {
+    path: "/tasks",
+    element: <ProtectedRoute element={<Records />} />,
+  },
+  {
+    path: "404",
+    element: <NotFound />,
+  },
+  {
+    path: "*",
+    element: <Navigate to="/404" replace />,
+  },
+];
+
+export default routes;
