@@ -1,7 +1,6 @@
 
 import React, { Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx'
 
 // إضافة كود لتحسين أداء الصفحة
@@ -35,10 +34,8 @@ function EnableOptimizations() {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Suspense fallback={<div className="flex items-center justify-center h-screen">جاري تحميل التطبيق...</div>}>
-      <BrowserRouter>
-        <EnableOptimizations />
-        <App />
-      </BrowserRouter>
+      <EnableOptimizations />
+      <App />
     </Suspense>
   </React.StrictMode>
 )
