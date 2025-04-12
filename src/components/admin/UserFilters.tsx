@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Search, Filter, SortAsc } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -22,49 +22,42 @@ const UserFilters: React.FC<UserFiltersProps> = ({
   onStatusFilterChange
 }) => {
   return (
-    <div className="flex flex-col md:flex-row gap-4 mb-6">
-      <div className="w-full md:w-1/2 lg:w-1/3 relative">
-        <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
+    <div className="admin-filters">
+      <div className="admin-search">
+        <Search className="absolute right-4 top-3 h-4 w-4 text-blue-200/50" />
+        <input
+          type="text"
           placeholder="البحث بالاسم أو البريد الإلكتروني..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-3 pr-9"
+          className="admin-search-input"
         />
       </div>
       
       <div className="w-full md:w-1/4">
-        <Select 
+        <select 
           value={filterPlan} 
-          onValueChange={onPlanFilterChange}
+          onChange={(e) => onPlanFilterChange(e.target.value)}
+          className="admin-select"
         >
-          <SelectTrigger>
-            <SelectValue placeholder="فلترة حسب الباقة" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">جميع الباقات</SelectItem>
-            <SelectItem value="standard">الباقة العادية</SelectItem>
-            <SelectItem value="vip">الباقة VIP</SelectItem>
-            <SelectItem value="pro">الباقة المتميزة PRO</SelectItem>
-          </SelectContent>
-        </Select>
+          <option value="all">جميع الباقات</option>
+          <option value="standard">الباقة العادية</option>
+          <option value="vip">الباقة VIP</option>
+          <option value="pro">الباقة المتميزة PRO</option>
+        </select>
       </div>
       
       <div className="w-full md:w-1/4">
-        <Select 
+        <select 
           value={filterStatus} 
-          onValueChange={onStatusFilterChange}
+          onChange={(e) => onStatusFilterChange(e.target.value)}
+          className="admin-select"
         >
-          <SelectTrigger>
-            <SelectValue placeholder="فلترة حسب الحالة" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">جميع الحالات</SelectItem>
-            <SelectItem value="active">نشط</SelectItem>
-            <SelectItem value="suspended">موقوف</SelectItem>
-            <SelectItem value="expired">منتهي</SelectItem>
-          </SelectContent>
-        </Select>
+          <option value="all">جميع الحالات</option>
+          <option value="active">نشط</option>
+          <option value="suspended">موقوف</option>
+          <option value="expired">منتهي</option>
+        </select>
       </div>
     </div>
   );

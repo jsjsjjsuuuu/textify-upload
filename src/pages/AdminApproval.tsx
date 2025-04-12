@@ -1,9 +1,9 @@
+
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, User, CheckCircle, Clock, Search, Filter, PlusCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 // استيراد المكونات المستخرجة
@@ -110,33 +110,35 @@ const AdminApproval = () => {
   const filteredUsers = getFilteredUsers();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="admin-container">
       <AppHeader />
+      
       <div className="container py-6">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <CardTitle className="text-2xl">إدارة المستخدمين</CardTitle>
-                <CardDescription>
-                  إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={fetchUsers} 
-                  disabled={isLoading}
-                  className="flex items-center gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  تحديث
-                </Button>
-              </div>
+        <div className="admin-card">
+          <div className="admin-header">
+            <div>
+              <h1 className="admin-title">نظام إدارة المستخدمين</h1>
+              <p className="admin-subtitle">إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات</p>
             </div>
-          </CardHeader>
-          <CardContent>
+            <div className="flex items-center gap-2">
+              <Button 
+                className="admin-button admin-button-secondary"
+                onClick={fetchUsers} 
+                disabled={isLoading}
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                تحديث
+              </Button>
+              <Button 
+                className="admin-button admin-button-primary"
+              >
+                <PlusCircle className="h-4 w-4" />
+                إضافة مستخدم
+              </Button>
+            </div>
+          </div>
+          
+          <div className="admin-content">
             {/* أدوات البحث والتصفية */}
             <UserFilters 
               searchQuery={searchQuery}
@@ -180,8 +182,55 @@ const AdminApproval = () => {
                 />
               )}
             </UserTabsFilter>
-          </CardContent>
-        </Card>
+            
+            {/* إحصائيات المستخدمين */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="admin-stat-card">
+                <div>
+                  <h3 className="text-sm text-blue-200/70">المستخدمون</h3>
+                  <p className="text-2xl font-bold">{userCounts.total}</p>
+                </div>
+                <div className="rounded-full p-3 bg-blue-600/20">
+                  <User className="h-6 w-6 text-blue-300" />
+                </div>
+              </div>
+              
+              <div className="admin-stat-card">
+                <div>
+                  <h3 className="text-sm text-blue-200/70">معتمدون</h3>
+                  <p className="text-2xl font-bold">{userCounts.approved}</p>
+                </div>
+                <div className="rounded-full p-3 bg-emerald-500/20">
+                  <CheckCircle className="h-6 w-6 text-emerald-300" />
+                </div>
+              </div>
+              
+              <div className="admin-stat-card">
+                <div>
+                  <h3 className="text-sm text-blue-200/70">في الانتظار</h3>
+                  <p className="text-2xl font-bold">{userCounts.pending}</p>
+                </div>
+                <div className="rounded-full p-3 bg-amber-500/20">
+                  <Clock className="h-6 w-6 text-amber-300" />
+                </div>
+              </div>
+              
+              <div className="admin-stat-card col-span-1 md:col-span-2">
+                <div className="w-full">
+                  <h3 className="text-sm text-blue-200/70 mb-2">نشاط المستخدمين</h3>
+                  <div className="w-full bg-[#1a2544] rounded-full h-2">
+                    <div className="bg-gradient-to-r from-blue-600 to-emerald-500 h-2 rounded-full" style={{ width: `${(userCounts.approved / Math.max(userCounts.total, 1)) * 100}%` }}></div>
+                  </div>
+                  <div className="flex justify-between text-xs mt-2">
+                    <span className="text-blue-200/70">{Math.round((userCounts.approved / Math.max(userCounts.total, 1)) * 100)}% معتمد</span>
+                    <span className="text-blue-200/70">{Math.round((userCounts.pending / Math.max(userCounts.total, 1)) * 100)}% قيد الانتظار</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
       </div>
       
       {/* مربع حوار تأكيد إعادة تعيين كلمة المرور */}

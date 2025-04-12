@@ -1,15 +1,10 @@
 
 import React, { useState } from 'react';
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { Lock, Eye, EyeOff, CalendarIcon, RefreshCw, Save, Mail, AlertCircle, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { Lock, Eye, EyeOff, CalendarIcon, RefreshCw, Save, Mail, AlertCircle } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 import { UserProfile } from '@/types/UserProfile';
 
@@ -93,196 +88,215 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
   };
 
   return (
-    <div className="bg-muted/20 p-4 rounded-lg">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div className="rounded-xl bg-[#1a2544]/30 border border-[#2a325a]/30 p-6 backdrop-blur-md">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
-          <Label htmlFor="edit-name">الاسم الكامل</Label>
-          <Input 
+          <label htmlFor="edit-name" className="admin-form-label">الاسم الكامل</label>
+          <input 
             id="edit-name"
+            type="text"
             value={userData?.full_name || ''} 
             onChange={(e) => onUserDataChange('full_name', e.target.value)}
+            className="admin-form-input"
           />
         </div>
+        
         <div>
-          <Label htmlFor="edit-email">البريد الإلكتروني</Label>
+          <label htmlFor="edit-email" className="admin-form-label">البريد الإلكتروني</label>
           {isEditingEmail ? (
             <div className="flex gap-2">
-              <Input 
+              <input 
                 id="edit-email-new"
+                type="email"
                 value={newEmail} 
                 onChange={(e) => setNewEmail(e.target.value)}
                 placeholder="البريد الإلكتروني الجديد"
+                className="admin-form-input"
               />
-              <Button 
-                variant="outline" 
+              <button 
+                className="admin-button admin-button-primary"
                 onClick={handleEmailChangeSubmit} 
                 disabled={!newEmail}
-                size="sm"
-                className="whitespace-nowrap"
               >
-                <Mail className="h-4 w-4 mr-1" />
+                <Mail className="h-4 w-4" />
                 تغيير
-              </Button>
-              <Button 
-                variant="ghost" 
+              </button>
+              <button 
+                className="admin-button admin-button-secondary"
                 onClick={() => setIsEditingEmail(false)}
-                size="sm"
               >
+                <X className="h-4 w-4" />
                 إلغاء
-              </Button>
+              </button>
             </div>
           ) : (
             <div className="flex gap-2 items-center">
-              <Input 
+              <input 
                 id="edit-email"
+                type="email"
                 value={userData?.email || ''} 
                 disabled
+                className="admin-form-input bg-[#1a2544]/70 text-blue-200/70"
               />
-              <Button 
-                variant="outline" 
+              <button 
+                className="admin-button admin-button-outline"
                 onClick={() => setIsEditingEmail(true)}
-                size="sm"
-                className="whitespace-nowrap"
               >
-                <Mail className="h-4 w-4 mr-1" />
+                <Mail className="h-4 w-4" />
                 تعديل
-              </Button>
+              </button>
             </div>
           )}
         </div>
+        
         <div>
-          <Label htmlFor="edit-plan">نوع الباقة</Label>
-          <Select 
+          <label htmlFor="edit-plan" className="admin-form-label">نوع الباقة</label>
+          <select 
+            id="edit-plan"
             value={userData?.subscription_plan || 'standard'} 
-            onValueChange={(value) => onUserDataChange('subscription_plan', value)}
+            onChange={(e) => onUserDataChange('subscription_plan', e.target.value)}
+            className="admin-select"
           >
-            <SelectTrigger id="edit-plan" className="w-full">
-              <SelectValue placeholder="اختر الباقة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="standard">الباقة العادية</SelectItem>
-              <SelectItem value="vip">الباقة VIP</SelectItem>
-              <SelectItem value="pro">الباقة المتميزة PRO</SelectItem>
-            </SelectContent>
-          </Select>
+            <option value="standard">الباقة العادية</option>
+            <option value="vip">الباقة VIP</option>
+            <option value="pro">الباقة المتميزة PRO</option>
+          </select>
         </div>
+        
         <div>
-          <Label htmlFor="edit-status">حالة الحساب</Label>
-          <Select 
+          <label htmlFor="edit-status" className="admin-form-label">حالة الحساب</label>
+          <select 
+            id="edit-status"
             value={userData?.account_status || 'active'} 
-            onValueChange={(value) => onUserDataChange('account_status', value)}
+            onChange={(e) => onUserDataChange('account_status', e.target.value)}
+            className="admin-select"
           >
-            <SelectTrigger id="edit-status" className="w-full">
-              <SelectValue placeholder="اختر الحالة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">نشط</SelectItem>
-              <SelectItem value="suspended">موقوف</SelectItem>
-              <SelectItem value="expired">منتهي</SelectItem>
-            </SelectContent>
-          </Select>
+            <option value="active">نشط</option>
+            <option value="suspended">موقوف</option>
+            <option value="expired">منتهي</option>
+          </select>
         </div>
+        
         <div>
-          <Label htmlFor="edit-approved">معتمد</Label>
-          <div className="flex items-center space-x-2 mt-2 justify-end">
-            <Label htmlFor="edit-approved-switch">
-              {userData?.is_approved ? 'معتمد' : 'غير معتمد'}
-            </Label>
-            <Switch
-              id="edit-approved-switch"
-              checked={userData?.is_approved || false}
-              onCheckedChange={(checked) => onUserDataChange('is_approved', checked)}
-            />
+          <label htmlFor="edit-approved" className="admin-form-label">حالة الاعتماد</label>
+          <div className="flex items-center gap-3 mt-2">
+            <button
+              type="button" 
+              onClick={() => onUserDataChange('is_approved', true)}
+              className={`admin-button flex-1 ${userData?.is_approved ? 'admin-button-success' : 'admin-button-outline'}`}
+            >
+              <CheckCircle className="h-4 w-4" />
+              معتمد
+            </button>
+            
+            <button
+              type="button" 
+              onClick={() => onUserDataChange('is_approved', false)}
+              className={`admin-button flex-1 ${!userData?.is_approved ? 'admin-button-danger' : 'admin-button-outline'}`}
+            >
+              <XCircle className="h-4 w-4" />
+              غير معتمد
+            </button>
           </div>
         </div>
+        
         <div>
-          <Label htmlFor="edit-end-date">تاريخ انتهاء الاشتراك</Label>
+          <label htmlFor="edit-end-date" className="admin-form-label">تاريخ انتهاء الاشتراك</label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-start text-right font-normal mt-1"
+              <button
                 id="edit-end-date"
+                type="button"
+                className="admin-form-input flex items-center justify-between"
               >
-                <CalendarIcon className="ml-2 h-4 w-4" />
                 {selectedDate ? format(selectedDate, 'PPP', { locale: arSA }) : 'اختر تاريخًا'}
-              </Button>
+                <CalendarIcon className="h-4 w-4 opacity-50" />
+              </button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
+            <PopoverContent className="w-auto p-0 bg-[#1a2544] border border-[#2a325a]/50">
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={onDateSelect}
                 initialFocus
+                className="bg-[#1a2544]"
               />
             </PopoverContent>
           </Popover>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 mt-6">
-        <div className="flex-1">
-          <Label htmlFor="new-password">تعيين كلمة مرور جديدة (اختياري)</Label>
-          <div className="relative">
-            <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="new-password"
-              type={showPassword ? "text" : "password"}
-              placeholder="كلمة المرور الجديدة"
-              className={`pr-10 ${passwordError ? 'border-red-500' : ''}`}
-              value={newPassword}
-              onChange={handlePasswordChange}
-            />
-            <button
-              type="button"
-              className="absolute left-3 top-3 text-muted-foreground"
-              onClick={onShowPasswordToggle}
-              tabIndex={-1}
+      <div className="border-t border-[#2a325a]/30 pt-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2">
+            <label htmlFor="new-password" className="admin-form-label">تعيين كلمة مرور جديدة (اختياري)</label>
+            <div className="relative">
+              <Lock className="absolute right-4 top-3 h-4 w-4 text-blue-200/50" />
+              <input
+                id="new-password"
+                type={showPassword ? "text" : "password"}
+                placeholder="كلمة المرور الجديدة"
+                className={`admin-form-input pr-10 ${passwordError ? 'border-red-500' : ''}`}
+                value={newPassword}
+                onChange={handlePasswordChange}
+              />
+              <button
+                type="button"
+                className="absolute left-4 top-3 text-blue-200/50"
+                onClick={onShowPasswordToggle}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {passwordError && (
+              <div className="flex items-center gap-1 mt-1 text-red-400 text-sm">
+                <AlertCircle className="h-3.5 w-3.5" />
+                <span>{passwordError}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-end">
+            <button 
+              className="admin-button admin-button-danger w-full"
+              onClick={handlePasswordReset}
+              disabled={!newPassword || !!passwordError}
             >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
+              <Lock className="h-4 w-4" />
+              تغيير كلمة المرور
             </button>
           </div>
-          {passwordError && (
-            <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
-              <AlertCircle className="h-3.5 w-3.5" />
-              <span>{passwordError}</span>
-            </div>
-          )}
-        </div>
-        <div className="flex-none self-end">
-          <Button 
-            variant="outline" 
-            className="w-full md:w-auto text-red-600 hover:text-red-700 hover:bg-red-50"
-            onClick={handlePasswordReset}
-            disabled={!newPassword || !!passwordError}
-          >
-            <Lock className="h-4 w-4 mr-1" />
-            تغيير كلمة المرور
-          </Button>
         </div>
       </div>
       
-      <div className="flex justify-end gap-2 mt-6">
-        <Button variant="outline" onClick={onCancel}>
+      <div className="flex justify-end gap-3 mt-6">
+        <button 
+          className="admin-button admin-button-secondary"
+          onClick={onCancel}
+        >
+          <X className="h-4 w-4" />
           إلغاء
-        </Button>
-        <Button onClick={onSave} disabled={isProcessing}>
+        </button>
+        <button 
+          className="admin-button admin-button-primary"
+          onClick={onSave} 
+          disabled={isProcessing}
+        >
           {isProcessing ? (
             <>
-              <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+              <RefreshCw className="h-4 w-4 animate-spin" />
               جاري الحفظ...
             </>
           ) : (
             <>
-              <Save className="mr-1 h-4 w-4" />
+              <Save className="h-4 w-4" />
               حفظ التغييرات
             </>
           )}
-        </Button>
+        </button>
       </div>
     </div>
   );

@@ -1,79 +1,68 @@
 
+import React from "react";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { AlertCircle, RefreshCw, AlertTriangle } from "lucide-react";
+import { Loader2, Shield, AlertTriangle } from "lucide-react";
 
 interface ResetPasswordDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
   onCancel: () => void;
+  onConfirm: () => void;
   isProcessing: boolean;
 }
 
 const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
   isOpen,
   onOpenChange,
-  onConfirm,
   onCancel,
-  isProcessing
+  onConfirm,
+  isProcessing,
 }) => {
-  // إغلاق مربع الحوار تلقائيًا بعد المعالجة
-  const handleConfirm = () => {
-    // تسجيل بيانات التصحيح
-    console.log('تأكيد إعادة تعيين كلمة المرور من مربع الحوار');
-    onConfirm();
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <div className="flex items-center gap-2 text-amber-600">
-            <AlertTriangle className="h-5 w-5" />
-            <DialogTitle>تأكيد إعادة تعيين كلمة المرور</DialogTitle>
+    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="admin-card bg-[#111936]/90 border-[#2a325a]/60">
+        <AlertDialogHeader>
+          <div className="flex items-center gap-3 text-red-400">
+            <Shield className="h-6 w-6" />
+            <AlertDialogTitle>تأكيد إعادة تعيين كلمة المرور</AlertDialogTitle>
           </div>
-          <DialogDescription className="mt-2">
-            <div className="flex flex-col gap-2">
-              <p>هل أنت متأكد من رغبتك في إعادة تعيين كلمة مرور هذا المستخدم؟</p>
-              <div className="bg-amber-50 p-3 rounded-md border border-amber-200 mt-2">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0 text-amber-600" />
-                  <p className="text-sm text-amber-800">
-                    <strong>تنبيه هام:</strong> هذا الإجراء لا يمكن التراجع عنه. سيتم استبدال كلمة المرور الحالية للمستخدم بالكلمة الجديدة التي أدخلتها.
-                  </p>
-                </div>
-              </div>
+          <AlertDialogDescription className="text-blue-200/70 mt-2">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <span>
+                هل أنت متأكد من أنك تريد إعادة تعيين كلمة المرور لهذا المستخدم؟ هذا الإجراء لا يمكن التراجع عنه وسيتم استخدام كلمة المرور الجديدة التي قمت بإدخالها.
+              </span>
             </div>
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
-          <Button variant="outline" onClick={onCancel} disabled={isProcessing}>
-            إلغاء
-          </Button>
-          <Button 
-            variant="destructive" 
-            onClick={handleConfirm}
-            disabled={isProcessing}
-            className="gap-2"
-          >
-            {isProcessing ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                جاري المعالجة...
-              </>
-            ) : 'تأكيد إعادة التعيين'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <div className="flex justify-end gap-3 w-full">
+            <button 
+              className="admin-button admin-button-secondary"
+              onClick={onCancel}
+              disabled={isProcessing}
+            >
+              إلغاء
+            </button>
+            <button 
+              className="admin-button admin-button-danger"
+              onClick={onConfirm}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  جاري إعادة التعيين...
+                </>
+              ) : (
+                "تأكيد إعادة التعيين"
+              )}
+            </button>
+          </div>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };
 
