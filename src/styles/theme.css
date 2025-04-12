@@ -5,53 +5,6 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 220 20% 20%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 220 20% 20%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 20%;
-
-    --primary: 220 70% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 10% 96%;
-    --secondary-foreground: 220 20% 20%;
-
-    --muted: 220 10% 96%;
-    --muted-foreground: 220 5% 45%;
-
-    --accent: 220 10% 96%;
-    --accent-foreground: 220 20% 20%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 10% 90%;
-    --input: 220 10% 90%;
-    --ring: 220 70% 50%;
-
-    --radius: 0.75rem;
-
-    --color-1: 220 70% 50%;
-    --color-2: 0 84% 60%;
-    --color-3: 220 20% 20%;
-    --color-4: 220 10% 96%;
-    --color-5: 0 0% 100%;
-
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 20% 20%;
-    --sidebar-primary: 220 70% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 10% 96%;
-    --sidebar-accent-foreground: 220 20% 20%;
-    --sidebar-border: 220 10% 90%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
     --background: 220 20% 10%;
     --foreground: 0 0% 100%;
 
@@ -94,6 +47,8 @@
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 220 20% 25%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --radius: 1rem;
   }
 }
 
@@ -108,5 +63,25 @@
   
   .dark-transition {
     @apply transition-colors duration-300 ease-in-out;
+  }
+
+  .glass-morphism {
+    @apply backdrop-blur-xl bg-white/5 border border-white/10 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.3)];
+  }
+  
+  .neo-blur {
+    @apply backdrop-blur-2xl bg-black/40 border border-white/10;
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-br from-white via-white/90 to-white/70 bg-clip-text text-transparent;
+  }
+  
+  .text-gradient-primary {
+    @apply bg-gradient-to-br from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent;
+  }
+  
+  .content-spacing {
+    @apply py-10 px-6 md:px-10 lg:px-12;
   }
 }

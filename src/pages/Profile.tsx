@@ -33,14 +33,17 @@ const Profile = () => {
   };
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#0d1123]">
       <AppHeader />
       
-      <main className="container mx-auto p-6 max-w-6xl">
+      <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-indigo-500/30 via-purple-500/30 to-pink-500/20 w-[40rem] h-[40rem] fixed top-[-20rem] right-[-20rem] z-[-1]"></div>
+      <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 w-[50rem] h-[50rem] fixed bottom-[-25rem] left-[-20rem] z-[-1]"></div>
+      
+      <main className="container mx-auto p-6 max-w-6xl content-spacing">
         {isLoading ? (
           <ProfileSkeleton />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <ProfileCard 
               userData={userData}
               stats={stats}

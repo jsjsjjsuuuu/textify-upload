@@ -24,20 +24,22 @@ function App() {
   
   return (
     <React.StrictMode>
-      <ThemeProvider defaultTheme="system" storageKey="app-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="app-theme">
         <AuthProvider>
           <BrowserRouter>
             <Suspense fallback={
-              <div className="flex justify-center items-center h-screen bg-background">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <div className="flex justify-center items-center h-screen bg-[#0d1123] backdrop-blur-lg">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
               </div>
             }>
-              <div className="min-h-screen bg-background transition-colors duration-300">
+              <div className="min-h-screen bg-[#0d1123] transition-colors duration-300">
+                <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-indigo-500/30 via-purple-500/30 to-pink-500/20 w-[40rem] h-[40rem] fixed top-[-20rem] right-[-20rem] z-[-1]"></div>
+                <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 w-[50rem] h-[50rem] fixed bottom-[-25rem] left-[-20rem] z-[-1]"></div>
                 <AppRoutes />
               </div>
             </Suspense>
             <Toaster />
-            <SonnerToaster position="top-center" closeButton />
+            <SonnerToaster position="top-center" closeButton theme="dark" />
           </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>
