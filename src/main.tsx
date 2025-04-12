@@ -44,11 +44,18 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 )
 
 // قياس الأداء الحيوي
-// @ts-ignore بعض المتصفحات لا تدعم تتبع الأداء بعد
-import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-  getCLS(reportWebVitals);
-  getFID(reportWebVitals);
-  getFCP(reportWebVitals);
-  getLCP(reportWebVitals);
-  getTTFB(reportWebVitals);
-});
+// نستخدم استيراد ديناميكي مؤجل لمكتبة web-vitals
+// حتى لا يؤثر على أداء التحميل الأولي للتطبيق
+if (typeof window !== 'undefined') {
+  import('web-vitals')
+    .then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
+      getCLS(reportWebVitals);
+      getFID(reportWebVitals);
+      getFCP(reportWebVitals);
+      getLCP(reportWebVitals);
+      getTTFB(reportWebVitals);
+    })
+    .catch(error => {
+      console.warn('فشل تحميل مكتبة web-vitals:', error);
+    });
+}
