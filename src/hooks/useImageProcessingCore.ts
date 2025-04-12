@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -37,7 +38,7 @@ export const useImageProcessingCore = () => {
     setBookmarkletStats
   } = useImageStats();
   
-  // استخدام اكتشاف التكرار
+  // استخدام اكتشاف التكرار - تم إزالة وسيط { enabled: true } لأن الدالة الآن تقبل وسيط options
   const duplicateDetectionTools = useDuplicateDetection({ enabled: true });
   
   // جلب وظائف معالجة الصور
@@ -198,7 +199,11 @@ export const useImageProcessingCore = () => {
     saveProcessedImage,
     removeDuplicates,
     // استخدام الأداة كما هي بدلاً من تمريرها كخاصية منفصلة
-    processedImage: duplicateDetectionTools,
+    processedImage: {
+      // تحويل وظيفة checkDuplicateImage المتزامنة إلى isDuplicateImage
+      isDuplicateImage: duplicateDetectionTools.checkDuplicateImage,
+      markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
+    },
     // تمرير وظائف معالجة الصور
     processWithOcr,
     processWithGemini

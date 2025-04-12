@@ -11,10 +11,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { compressImage, enhanceImageForOCR } from "@/utils/imageCompression";
 import { enhancePhoneNumber, formatIraqiPhoneNumber } from "@/utils/phoneNumberUtils";
 
-// إضافة الخصائص الناقصة إلى الواجهة
+// إضافة الخصائص الناقصة إلى الواجهة وتعديل تعريف isDuplicateImage ليكون غير متزامن
 export interface DuplicateDetector {
-  isDuplicateImage?: (image: ImageData, images: ImageData[]) => boolean;
-  markImageAsProcessed?: (image: ImageData) => boolean;
+  isDuplicateImage?: (image: ImageData, images: ImageData[]) => Promise<boolean> | boolean;
+  markImageAsProcessed?: (image: ImageData) => void;
   isFullyProcessed?: (image: ImageData) => boolean;
   addToProcessedCache?: (image: ImageData) => void;
 }

@@ -8,7 +8,12 @@ import { supabase } from '@/integrations/supabase/client';
 // للتقليل من عدد الاستعلامات إلى قاعدة البيانات
 const LOCAL_STORAGE_KEY_DUPLICATES = 'processed_image_signatures';
 
-export function useDuplicateDetection() {
+interface DuplicateDetectionOptions {
+  enabled?: boolean;
+}
+
+export function useDuplicateDetection(options?: DuplicateDetectionOptions) {
+  const { enabled = true } = options || {};
   const { toast } = useToast();
   const cachedSignaturesRef = useRef<Map<string, boolean>>(new Map());
 
@@ -69,14 +74,16 @@ export function useDuplicateDetection() {
    * التحقق من وجود الصورة في الذاكرة المؤقتة المحلية
    */
   const isImageInLocalCache = useCallback((image: ImageData | File): boolean => {
+    if (!enabled) return false;
     const signature = createImageSignature(image);
     return cachedSignaturesRef.current.has(signature);
-  }, [createImageSignature]);
+  }, [createImageSignature, enabled]);
 
   /**
    * التحقق من وجود الصورة في قاعدة البيانات
    */
   const checkImageInDatabase = useCallback(async (image: ImageData): Promise<boolean> => {
+    if (!enabled) return false;
     try {
       // إذا كانت الصورة تحتوي على معرف
       if (image.id) {
@@ -129,12 +136,13 @@ export function useDuplicateDetection() {
       console.error('خطأ في التحقق من قاعدة البيانات:', error);
       return false;
     }
-  }, []);
+  }, [enabled]);
 
   /**
    * التحقق من وجود الصورة في القائمة المحلية
    */
   const isImageInLocalList = useCallback((image: ImageData, imagesList: ImageData[]): boolean => {
+    if (!enabled) return false;
     // تخطي المقارنة إذا كانت القائمة فارغة
     if (!imagesList || imagesList.length === 0) return false;
     
@@ -165,13 +173,18 @@ export function useDuplicateDetection() {
     }
     
     return false;
-  }, []);
+  }, [enabled]);
 
   /**
    * الدالة الرئيسية للتحقق من التكرار
    * تتحقق أولاً من الذاكرة المؤقتة المحلية، ثم القائمة المحلية، ثم قاعدة البيانات
+   * تم تعديل توقيع الدالة لتتوافق مع واجهة DuplicateDetector
    */
-  const isDuplicateImage = useCallback(async (image: ImageData, imagesList: ImageData[] = []): Promise<boolean> => {
+  const isDuplicateImage = useCallback((image: ImageData, imagesList: ImageData[] = []): boolean => {
+    // للتوافق مع واجهة DuplicateDetector، نجعل الدالة ترجع قيمة منطقية مباشرة
+    // ونقوم بالتحقق فقط من الذاكرة المؤقتة المحلية والقائمة المحلية (عمليات غير متزامنة)
+    if (!enabled) return false;
+  
     // التحقق أولاً من الذاكرة المؤقتة المحلية (أسرع طريقة)
     if (isImageInLocalCache(image)) {
       console.log('الصورة موجودة في الذاكرة المؤقتة المحلية');
@@ -187,6 +200,27 @@ export function useDuplicateDetection() {
       return true;
     }
     
+    // نتائج سلبية: الصورة غير موجودة في التخزين المحلي أو القائمة المحلية
+    return false;
+  }, [
+    enabled,
+    isImageInLocalCache, 
+    isImageInLocalList, 
+    saveSignatureToCache, 
+    createImageSignature
+  ]);
+
+  /**
+   * وظيفة متزامنة للتحقق من التكرار الشامل بما في ذلك قاعدة البيانات
+   */
+  const checkDuplicateImage = useCallback(async (image: ImageData, imagesList: ImageData[] = []): Promise<boolean> => {
+    if (!enabled) return false;
+    
+    // التحقق أولاً من الذاكرة المحلية والقائمة المحلية (مثل isDuplicateImage)
+    if (isDuplicateImage(image, imagesList)) {
+      return true;
+    }
+    
     // التحقق من قاعدة البيانات (أبطأ طريقة لأنها تتطلب اتصالًا بالخادم)
     const existsInDatabase = await checkImageInDatabase(image);
     
@@ -199,10 +233,10 @@ export function useDuplicateDetection() {
     // الصورة غير موجودة في أي مكان
     return false;
   }, [
-    isImageInLocalCache, 
-    isImageInLocalList, 
-    checkImageInDatabase, 
-    saveSignatureToCache, 
+    enabled,
+    isDuplicateImage,
+    checkImageInDatabase,
+    saveSignatureToCache,
     createImageSignature
   ]);
 
@@ -210,9 +244,10 @@ export function useDuplicateDetection() {
    * تسجيل الصورة كمعالجة (لمنع معالجتها مرة أخرى)
    */
   const markImageAsProcessed = useCallback((image: ImageData | File): void => {
+    if (!enabled) return;
     const signature = createImageSignature(image);
     saveSignatureToCache(signature);
-  }, [createImageSignature, saveSignatureToCache]);
+  }, [createImageSignature, saveSignatureToCache, enabled]);
 
   /**
    * مسح ذاكرة التخزين المؤقت
@@ -229,6 +264,7 @@ export function useDuplicateDetection() {
 
   return {
     isDuplicateImage,
+    checkDuplicateImage,
     markImageAsProcessed,
     clearCache,
     createImageSignature

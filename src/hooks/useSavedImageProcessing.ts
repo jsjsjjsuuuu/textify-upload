@@ -18,6 +18,7 @@ export const useSavedImageProcessing = (
   const { user } = useAuth();
   
   const { saveImageToDatabase, loadUserImages } = useImageDatabase(updateImage);
+  // تم إزالة وسيط { enabled: true } لأن الدالة الآن تقبل وسيط options كاختياري
   const duplicateDetection = useDuplicateDetection({ enabled: true });
   
   // وظيفة مساعدة للتسجيل في نظام التخزين الموحد
