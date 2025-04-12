@@ -10,6 +10,7 @@ interface ImagePreviewContainerProps {
   onDelete: (id: string) => Promise<boolean>;
   onSubmit: (id: string) => Promise<boolean>;
   formatDate: (date: Date) => string;
+  showOnlySession?: boolean;
 }
 
 const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
@@ -18,7 +19,8 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
   onTextChange,
   onDelete,
   onSubmit,
-  formatDate
+  formatDate,
+  showOnlySession = false
 }) => {
   // تحويل isSubmitting إلى شكل متوافق في كل الأحوال
   const normalizedIsSubmitting = React.useMemo(() => {
@@ -33,6 +35,12 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
     console.log(`ImagePreviewContainer: عدد الصور: ${images.length}`);
     console.log(`ImagePreviewContainer: نوع isSubmitting: ${typeof isSubmitting}`);
   }, [images.length, isSubmitting]);
+
+  // إضافة دالة onImageClick المفقودة
+  const handleImageClick = (image: ImageData) => {
+    console.log("تم النقر على الصورة:", image.id);
+    // هذه الدالة فارغة ولكن متوقعة من قبل ImageCard
+  };
 
   if (images.length === 0) {
     return (
@@ -54,6 +62,7 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
           onDelete={onDelete}
           onSubmit={onSubmit}
           formatDate={formatDate}
+          onImageClick={handleImageClick} // إضافة خاصية onImageClick المفقودة
         />
       ))}
     </div>
