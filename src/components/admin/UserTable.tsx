@@ -88,16 +88,16 @@ const UserTable: React.FC<UserTableProps> = ({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center py-24">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500"></div>
       </div>
     );
   }
   
   if (users.length === 0) {
     return (
-      <div className="text-center py-16 bg-[#1a2544]/20 rounded-xl">
-        <p className="text-blue-200/70">لا توجد نتائج مطابقة للبحث أو الفلتر المحدد</p>
+      <div className="text-center py-20 bg-[#1a2544]/30 rounded-xl border border-[#2a325a]/20">
+        <p className="text-blue-200/70 text-lg">لا توجد نتائج مطابقة للبحث أو الفلتر المحدد</p>
       </div>
     );
   }
@@ -121,7 +121,7 @@ const UserTable: React.FC<UserTableProps> = ({
           {users.map((user) => (
             <tr key={user.id} className="admin-table-row">
               <td className="admin-table-cell">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <div className="admin-avatar">
                     {user.full_name ? (
                       <span>{user.full_name.charAt(0)}</span>
@@ -129,7 +129,7 @@ const UserTable: React.FC<UserTableProps> = ({
                       <span>{user.email.charAt(0).toUpperCase()}</span>
                     )}
                   </div>
-                  <span>{user.full_name || 'بدون اسم'}</span>
+                  <span className="text-lg font-medium">{user.full_name || 'بدون اسم'}</span>
                 </div>
               </td>
               <td className="admin-table-cell">{user.email}</td>
@@ -145,35 +145,35 @@ const UserTable: React.FC<UserTableProps> = ({
               </td>
               <td className="admin-table-cell">
                 {user.subscription_end_date ? (
-                  <div className="flex items-center gap-1 text-sm text-blue-200/70">
-                    <Clock className="h-3.5 w-3.5" />
+                  <div className="flex items-center gap-2 text-base text-blue-200/70">
+                    <Clock className="h-4 w-4" />
                     {formatDate(user.subscription_end_date)}
                   </div>
                 ) : (
-                  <span className="text-sm text-blue-200/50">غير محدد</span>
+                  <span className="text-base text-blue-200/50">غير محدد</span>
                 )}
               </td>
               <td className="admin-table-cell">
                 {user.is_approved ? (
                   <span className="admin-badge admin-badge-green">
-                    <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                    <CheckCircle className="h-4 w-4 mr-1.5" />
                     معتمد
                   </span>
                 ) : (
                   <span className="admin-badge admin-badge-red">
-                    <XCircle className="h-3.5 w-3.5 mr-1" />
+                    <XCircle className="h-4 w-4 mr-1.5" />
                     غير معتمد
                   </span>
                 )}
               </td>
               <td className="admin-table-cell">
-                <div className="flex items-center gap-1 text-sm text-blue-200/70">
-                  <CalendarIcon className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-2 text-base text-blue-200/70">
+                  <CalendarIcon className="h-4 w-4" />
                   {user.created_at ? formatDate(user.created_at) : 'غير متوفر'}
                 </div>
               </td>
               <td className="admin-table-cell">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <button 
                     className="admin-button admin-button-icon admin-button-outline"
                     onClick={() => onEdit(user)}

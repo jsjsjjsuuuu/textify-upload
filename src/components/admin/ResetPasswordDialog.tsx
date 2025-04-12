@@ -21,15 +21,15 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
 }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="admin-card bg-[#111936]/90 border-[#2a325a]/60">
+      <AlertDialogContent className="admin-card bg-[#111936]/95 border-[#2a325a]/40">
         <AlertDialogHeader>
           <div className="flex items-center gap-3 text-red-400">
-            <Shield className="h-6 w-6" />
-            <AlertDialogTitle>تأكيد إعادة تعيين كلمة المرور</AlertDialogTitle>
+            <Shield className="h-7 w-7" />
+            <AlertDialogTitle className="text-xl">تأكيد إعادة تعيين كلمة المرور</AlertDialogTitle>
           </div>
-          <AlertDialogDescription className="text-blue-200/70 mt-2">
+          <AlertDialogDescription className="text-blue-200/70 mt-4 text-base">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <AlertTriangle className="h-6 w-6 text-amber-400 flex-shrink-0 mt-0.5" />
               <span>
                 هل أنت متأكد من أنك تريد إعادة تعيين كلمة المرور لهذا المستخدم؟ هذا الإجراء لا يمكن التراجع عنه وسيتم استخدام كلمة المرور الجديدة التي قمت بإدخالها.
               </span>
@@ -37,7 +37,7 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <div className="flex justify-end gap-3 w-full">
+          <div className="flex justify-end gap-4 w-full">
             <button 
               className="admin-button admin-button-secondary"
               onClick={onCancel}
@@ -52,7 +52,7 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
             >
               {isProcessing ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                   جاري إعادة التعيين...
                 </>
               ) : (

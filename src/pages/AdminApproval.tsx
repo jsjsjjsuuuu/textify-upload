@@ -75,7 +75,7 @@ const AdminApproval = () => {
     }
   }, [user, userProfile, fetchAttempted]);
 
-  // التعامل مع تأكيد إعادة تعيين كلمة المرور - محسن مع مزيد من السجلات
+  // التعامل مع تأكيد إعادة تعيين كلمة المرور
   const handleConfirmReset = () => {
     if (userToReset && newPassword) {
       // طباعة سجل تصحيح لمساعدة في تشخيص المشكلة
@@ -113,26 +113,26 @@ const AdminApproval = () => {
     <div className="admin-container">
       <AppHeader />
       
-      <div className="container py-6">
+      <div className="container py-12 max-w-7xl">
         <div className="admin-card">
           <div className="admin-header">
             <div>
-              <h1 className="admin-title">نظام إدارة المستخدمين</h1>
-              <p className="admin-subtitle">إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات</p>
+              <h1 className="admin-title text-2xl md:text-3xl">نظام إدارة المستخدمين</h1>
+              <p className="admin-subtitle mt-2">إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Button 
                 className="admin-button admin-button-secondary"
                 onClick={fetchUsers} 
                 disabled={isLoading}
               >
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
                 تحديث
               </Button>
               <Button 
                 className="admin-button admin-button-primary"
               >
-                <PlusCircle className="h-4 w-4" />
+                <PlusCircle className="h-5 w-5" />
                 إضافة مستخدم
               </Button>
             </div>
@@ -184,44 +184,44 @@ const AdminApproval = () => {
             </UserTabsFilter>
             
             {/* إحصائيات المستخدمين */}
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
               <div className="admin-stat-card">
                 <div>
-                  <h3 className="text-sm text-blue-200/70">المستخدمون</h3>
-                  <p className="text-2xl font-bold">{userCounts.total}</p>
+                  <h3 className="text-base text-blue-200/70 mb-1">المستخدمون</h3>
+                  <p className="text-3xl font-bold">{userCounts.total}</p>
                 </div>
-                <div className="rounded-full p-3 bg-blue-600/20">
-                  <User className="h-6 w-6 text-blue-300" />
+                <div className="rounded-full p-4 bg-blue-600/20">
+                  <User className="h-7 w-7 text-blue-300" />
                 </div>
               </div>
               
               <div className="admin-stat-card">
                 <div>
-                  <h3 className="text-sm text-blue-200/70">معتمدون</h3>
-                  <p className="text-2xl font-bold">{userCounts.approved}</p>
+                  <h3 className="text-base text-blue-200/70 mb-1">معتمدون</h3>
+                  <p className="text-3xl font-bold">{userCounts.approved}</p>
                 </div>
-                <div className="rounded-full p-3 bg-emerald-500/20">
-                  <CheckCircle className="h-6 w-6 text-emerald-300" />
+                <div className="rounded-full p-4 bg-emerald-500/20">
+                  <CheckCircle className="h-7 w-7 text-emerald-300" />
                 </div>
               </div>
               
               <div className="admin-stat-card">
                 <div>
-                  <h3 className="text-sm text-blue-200/70">في الانتظار</h3>
-                  <p className="text-2xl font-bold">{userCounts.pending}</p>
+                  <h3 className="text-base text-blue-200/70 mb-1">في الانتظار</h3>
+                  <p className="text-3xl font-bold">{userCounts.pending}</p>
                 </div>
-                <div className="rounded-full p-3 bg-amber-500/20">
-                  <Clock className="h-6 w-6 text-amber-300" />
+                <div className="rounded-full p-4 bg-amber-500/20">
+                  <Clock className="h-7 w-7 text-amber-300" />
                 </div>
               </div>
               
               <div className="admin-stat-card col-span-1 md:col-span-2">
                 <div className="w-full">
-                  <h3 className="text-sm text-blue-200/70 mb-2">نشاط المستخدمين</h3>
-                  <div className="w-full bg-[#1a2544] rounded-full h-2">
-                    <div className="bg-gradient-to-r from-blue-600 to-emerald-500 h-2 rounded-full" style={{ width: `${(userCounts.approved / Math.max(userCounts.total, 1)) * 100}%` }}></div>
+                  <h3 className="text-base text-blue-200/70 mb-3">نشاط المستخدمين</h3>
+                  <div className="w-full bg-[#1a2544] rounded-full h-2.5">
+                    <div className="bg-gradient-to-r from-blue-600 to-emerald-500 h-2.5 rounded-full" style={{ width: `${(userCounts.approved / Math.max(userCounts.total, 1)) * 100}%` }}></div>
                   </div>
-                  <div className="flex justify-between text-xs mt-2">
+                  <div className="flex justify-between text-sm mt-3">
                     <span className="text-blue-200/70">{Math.round((userCounts.approved / Math.max(userCounts.total, 1)) * 100)}% معتمد</span>
                     <span className="text-blue-200/70">{Math.round((userCounts.pending / Math.max(userCounts.total, 1)) * 100)}% قيد الانتظار</span>
                   </div>

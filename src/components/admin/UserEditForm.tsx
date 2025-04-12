@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff, CalendarIcon, RefreshCw, Save, Mail, AlertCircle, X, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -87,8 +88,8 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
   };
 
   return (
-    <div className="rounded-xl bg-[#1a2544]/30 border border-[#2a325a]/30 p-6 backdrop-blur-md">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div className="rounded-xl bg-[#1a2544]/60 border border-[#2a325a]/30 p-8 backdrop-blur-md">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
         <div>
           <label htmlFor="edit-name" className="admin-form-label">الاسم الكامل</label>
           <input 
@@ -103,7 +104,7 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
         <div>
           <label htmlFor="edit-email" className="admin-form-label">البريد الإلكتروني</label>
           {isEditingEmail ? (
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <input 
                 id="edit-email-new"
                 type="email"
@@ -117,31 +118,31 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
                 onClick={handleEmailChangeSubmit} 
                 disabled={!newEmail}
               >
-                <Mail className="h-4 w-4" />
+                <Mail className="h-5 w-5" />
                 تغيير
               </button>
               <button 
                 className="admin-button admin-button-secondary"
                 onClick={() => setIsEditingEmail(false)}
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
                 إلغاء
               </button>
             </div>
           ) : (
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-3 items-center">
               <input 
                 id="edit-email"
                 type="email"
                 value={userData?.email || ''} 
                 disabled
-                className="admin-form-input bg-[#1a2544]/70 text-blue-200/70"
+                className="admin-form-input bg-[#1a2544]/90 text-blue-200/80"
               />
               <button 
                 className="admin-button admin-button-outline"
                 onClick={() => setIsEditingEmail(true)}
               >
-                <Mail className="h-4 w-4" />
+                <Mail className="h-5 w-5" />
                 تعديل
               </button>
             </div>
@@ -178,13 +179,13 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
         
         <div>
           <label htmlFor="edit-approved" className="admin-form-label">حالة الاعتماد</label>
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-4 mt-2">
             <button
               type="button" 
               onClick={() => onUserDataChange('is_approved', true)}
               className={`admin-button flex-1 ${userData?.is_approved ? 'admin-button-success' : 'admin-button-outline'}`}
             >
-              <CheckCircle className="h-4 w-4" />
+              <CheckCircle className="h-5 w-5" />
               معتمد
             </button>
             
@@ -193,7 +194,7 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
               onClick={() => onUserDataChange('is_approved', false)}
               className={`admin-button flex-1 ${!userData?.is_approved ? 'admin-button-danger' : 'admin-button-outline'}`}
             >
-              <XCircle className="h-4 w-4" />
+              <XCircle className="h-5 w-5" />
               غير معتمد
             </button>
           </div>
@@ -209,7 +210,7 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
                 className="admin-form-input flex items-center justify-between"
               >
                 {selectedDate ? format(selectedDate, 'PPP', { locale: arSA }) : 'اختر تاريخًا'}
-                <CalendarIcon className="h-4 w-4 opacity-50" />
+                <CalendarIcon className="h-5 w-5 opacity-60" />
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 bg-[#1a2544] border border-[#2a325a]/50">
@@ -225,35 +226,35 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
         </div>
       </div>
 
-      <div className="border-t border-[#2a325a]/30 pt-6 mt-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="border-t border-[#2a325a]/30 pt-8 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-2">
             <label htmlFor="new-password" className="admin-form-label">تعيين كلمة مرور جديدة (اختياري)</label>
             <div className="relative">
-              <Lock className="absolute right-4 top-3 h-4 w-4 text-blue-200/50" />
+              <Lock className="absolute right-5 top-3.5 h-5 w-5 text-blue-200/60" />
               <input
                 id="new-password"
                 type={showPassword ? "text" : "password"}
                 placeholder="كلمة المرور الجديدة"
-                className={`admin-form-input pr-10 ${passwordError ? 'border-red-500' : ''}`}
+                className={`admin-form-input pr-12 ${passwordError ? 'border-red-500' : ''}`}
                 value={newPassword}
                 onChange={handlePasswordChange}
               />
               <button
                 type="button"
-                className="absolute left-4 top-3 text-blue-200/50"
+                className="absolute left-5 top-3.5 text-blue-200/60"
                 onClick={onShowPasswordToggle}
               >
                 {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
+                  <EyeOff className="h-5 w-5" />
                 ) : (
-                  <Eye className="h-4 w-4" />
+                  <Eye className="h-5 w-5" />
                 )}
               </button>
             </div>
             {passwordError && (
-              <div className="flex items-center gap-1 mt-1 text-red-400 text-sm">
-                <AlertCircle className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-1.5 mt-2 text-red-400 text-sm">
+                <AlertCircle className="h-4 w-4" />
                 <span>{passwordError}</span>
               </div>
             )}
@@ -264,19 +265,19 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
               onClick={handlePasswordReset}
               disabled={!newPassword || !!passwordError}
             >
-              <Lock className="h-4 w-4" />
+              <Lock className="h-5 w-5" />
               تغيير كلمة المرور
             </button>
           </div>
         </div>
       </div>
       
-      <div className="flex justify-end gap-3 mt-6">
+      <div className="flex justify-end gap-4 mt-8">
         <button 
           className="admin-button admin-button-secondary"
           onClick={onCancel}
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
           إلغاء
         </button>
         <button 
@@ -286,12 +287,12 @@ const UserEditForm: React.FC<UserEditFormProps> = ({
         >
           {isProcessing ? (
             <>
-              <RefreshCw className="h-4 w-4 animate-spin" />
+              <RefreshCw className="h-5 w-5 animate-spin" />
               جاري الحفظ...
             </>
           ) : (
             <>
-              <Save className="h-4 w-4" />
+              <Save className="h-5 w-5" />
               حفظ التغييرات
             </>
           )}

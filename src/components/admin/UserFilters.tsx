@@ -24,7 +24,7 @@ const UserFilters: React.FC<UserFiltersProps> = ({
   return (
     <div className="admin-filters">
       <div className="admin-search">
-        <Search className="absolute right-4 top-3 h-4 w-4 text-blue-200/50" />
+        <Search className="absolute right-5 top-3.5 h-5 w-5 text-blue-200/60" />
         <input
           type="text"
           placeholder="البحث بالاسم أو البريد الإلكتروني..."

@@ -41,17 +41,17 @@
     text-align: right;
   }
 
-  /* New Admin UI Styles */
+  /* New Admin UI Styles - Updated Theme */
   .admin-container {
-    @apply min-h-screen bg-[#0a1025] bg-opacity-95 text-white;
+    @apply min-h-screen bg-[#0d1123] bg-opacity-95 text-white;
   }
   
   .admin-card {
-    @apply rounded-2xl border border-[#2a325a]/30 bg-[#111936]/70 backdrop-blur-xl shadow-lg overflow-hidden;
+    @apply rounded-2xl border border-[#2a325a]/20 bg-[#111936]/90 backdrop-blur-xl shadow-lg overflow-hidden;
   }
   
   .admin-header {
-    @apply flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-6 border-b border-[#2a325a]/30 bg-[#111936]/80;
+    @apply flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-8 border-b border-[#2a325a]/20 bg-[#111936]/95;
   }
   
   .admin-title {
@@ -59,15 +59,15 @@
   }
   
   .admin-subtitle {
-    @apply text-sm text-blue-200/70;
+    @apply text-base text-blue-200/70;
   }
   
   .admin-content {
-    @apply p-6;
+    @apply p-8;
   }
   
   .admin-filters {
-    @apply flex flex-col md:flex-row gap-4 mb-6;
+    @apply flex flex-col md:flex-row gap-5 mb-8;
   }
   
   .admin-search {
@@ -75,31 +75,31 @@
   }
   
   .admin-search-input {
-    @apply w-full bg-[#1a2544]/50 border border-[#2a325a]/50 rounded-xl py-2.5 pr-10 pl-4 text-white placeholder:text-blue-200/40 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20;
+    @apply w-full bg-[#1a2544]/80 border border-[#2a325a]/30 rounded-xl py-3 pr-10 pl-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 text-base;
   }
   
   .admin-select {
-    @apply w-full bg-[#1a2544]/50 border border-[#2a325a]/50 rounded-xl py-2 px-4 text-white cursor-pointer focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20;
+    @apply w-full bg-[#1a2544]/80 border border-[#2a325a]/30 rounded-xl py-3 px-5 text-white cursor-pointer focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 text-base;
   }
   
   .admin-tabs {
-    @apply flex mb-6 bg-[#1a2544]/30 rounded-xl p-1 border border-[#2a325a]/30;
+    @apply flex mb-8 bg-[#1a2544]/80 rounded-xl p-1.5 border border-[#2a325a]/20;
   }
   
   .admin-tab {
-    @apply flex-1 text-center py-2.5 rounded-lg transition-all duration-200 text-sm font-medium;
+    @apply flex-1 text-center py-3 rounded-lg transition-all duration-200 text-base font-medium;
   }
   
   .admin-tab-inactive {
-    @apply text-blue-200/70 hover:text-blue-200;
+    @apply text-blue-200/80 hover:text-blue-200;
   }
   
   .admin-tab-active {
-    @apply bg-blue-600 text-white shadow-lg;
+    @apply bg-blue-600/90 text-white shadow-lg;
   }
   
   .admin-stat-card {
-    @apply flex items-center justify-between p-4 rounded-xl border border-[#2a325a]/30 bg-[#1a2544]/40 backdrop-blur-md;
+    @apply flex items-center justify-between p-6 rounded-xl border border-[#2a325a]/20 bg-[#1a2544]/60 backdrop-blur-md;
   }
   
   .admin-table {
@@ -107,15 +107,15 @@
   }
   
   .admin-table-header {
-    @apply bg-[#1a2544]/70 backdrop-blur-md;
+    @apply bg-[#1a2544]/90 backdrop-blur-md;
   }
   
   .admin-table-header th {
-    @apply py-4 px-4 text-left text-sm font-medium text-blue-200/70 border-b border-[#2a325a]/30;
+    @apply py-5 px-6 text-left text-base font-medium text-blue-200/80 border-b border-[#2a325a]/20;
   }
   
   .admin-table-row {
-    @apply border-b border-[#2a325a]/20 transition-colors hover:bg-[#1a2544]/30;
+    @apply border-b border-[#2a325a]/10 transition-colors hover:bg-[#1a2544]/50;
   }
   
   .admin-table-row:last-child {
@@ -123,15 +123,15 @@
   }
   
   .admin-table-cell {
-    @apply py-4 px-4 text-sm;
+    @apply py-5 px-6 text-base;
   }
   
   .admin-avatar {
-    @apply h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium text-sm overflow-hidden border-2 border-[#2a325a]/50;
+    @apply h-12 w-12 rounded-full bg-blue-600/80 flex items-center justify-center text-white font-bold text-base overflow-hidden border-2 border-[#2a325a]/30;
   }
   
   .admin-badge {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium;
   }
   
   .admin-badge-green {
@@ -155,67 +155,67 @@
   }
   
   .admin-badge-count {
-    @apply flex items-center justify-center min-w-[2rem] h-8 rounded-xl text-sm font-medium;
+    @apply flex items-center justify-center min-w-[2.5rem] h-8 rounded-xl text-sm font-medium;
   }
   
   .admin-badge-all {
-    @apply bg-blue-600 text-white;
+    @apply bg-blue-600/80 text-white;
   }
   
   .admin-badge-approved {
-    @apply bg-emerald-500/30 text-emerald-300;
+    @apply bg-emerald-500/40 text-emerald-300;
   }
   
   .admin-badge-pending {
-    @apply bg-amber-500/30 text-amber-300;
+    @apply bg-amber-500/40 text-amber-300;
   }
   
   .admin-badge-error {
-    @apply bg-red-500/30 text-red-300;
+    @apply bg-red-500/40 text-red-300;
   }
   
   .admin-badge-processing {
-    @apply bg-blue-500/30 text-blue-300;
+    @apply bg-blue-500/40 text-blue-300;
   }
   
   .admin-button {
-    @apply px-4 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 font-medium text-sm;
+    @apply px-5 py-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 font-medium text-base;
   }
   
   .admin-button-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg;
+    @apply bg-blue-600/90 hover:bg-blue-700 text-white shadow-md hover:shadow-lg;
   }
   
   .admin-button-secondary {
-    @apply bg-[#1a2544]/50 hover:bg-[#1a2544]/70 text-white border border-[#2a325a]/50;
+    @apply bg-[#1a2544]/70 hover:bg-[#1a2544]/90 text-white border border-[#2a325a]/40;
   }
   
   .admin-button-outline {
-    @apply bg-transparent hover:bg-[#1a2544]/30 text-blue-300 border border-[#2a325a]/50;
+    @apply bg-transparent hover:bg-[#1a2544]/50 text-blue-300 border border-[#2a325a]/40;
   }
   
   .admin-button-danger {
-    @apply bg-transparent hover:bg-red-500/10 text-red-400 border border-red-500/30;
+    @apply bg-transparent hover:bg-red-500/20 text-red-400 border border-red-500/40;
   }
   
   .admin-button-success {
-    @apply bg-transparent hover:bg-emerald-500/10 text-emerald-400 border border-emerald-500/30;
+    @apply bg-transparent hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/40;
   }
   
   .admin-button-icon {
-    @apply p-2 rounded-lg;
+    @apply p-2.5 rounded-lg;
   }
   
   .admin-form-group {
-    @apply mb-4;
+    @apply mb-5;
   }
   
   .admin-form-label {
-    @apply block text-sm font-medium text-blue-200/70 mb-1;
+    @apply block text-base font-medium text-blue-200/80 mb-2;
   }
   
   .admin-form-input {
-    @apply w-full bg-[#1a2544]/50 border border-[#2a325a]/50 rounded-xl py-2.5 px-4 text-white placeholder:text-blue-200/40 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20;
+    @apply w-full bg-[#1a2544]/80 border border-[#2a325a]/30 rounded-xl py-3 px-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 text-base;
   }
 
   .design-element {
