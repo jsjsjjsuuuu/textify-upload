@@ -135,7 +135,7 @@ const useFetchRecords = (activeTab: string) => {
           phoneNumber: '07745678901',
           province: 'كركوك',
           date: new Date(Date.now() - 86400000 * 7), // قبل 7 أيام
-          status: 'unknown', // حالة غير معروفة
+          status: 'pending', // تم تغييرها من 'unknown' إلى 'pending'
           price: '45000',
           file: createDummyFile(),
           previewUrl: 'https://via.placeholder.com/150',
@@ -174,3 +174,4 @@ const useFetchRecords = (activeTab: string) => {
 };
 
 export default useFetchRecords;
+

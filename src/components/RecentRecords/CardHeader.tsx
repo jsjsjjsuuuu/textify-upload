@@ -44,8 +44,6 @@ const CardHeader = ({ onRefresh }: CardHeaderProps) => {
             size="icon" 
             onClick={onRefresh}
             className="glass-button h-9 w-9 p-0"
-            whileHover={{ rotate: 180 }}
-            transition={{ duration: 0.5 }}
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -56,3 +54,4 @@ const CardHeader = ({ onRefresh }: CardHeaderProps) => {
 };
 
 export default CardHeader;
+
