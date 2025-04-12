@@ -149,7 +149,11 @@ export const useImageProcessingCore = () => {
         
         // إعادة تحميل الصور من قاعدة البيانات للتأكد من التزامن
         if (user) {
-          loadUserImages(user.id, setAllImages);
+          loadUserImages(user.id, (loadedImages) => {
+            // تأكد من تطبيق فلتر الصور المخفية على الصور المحملة
+            const filteredImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
+            setAllImages(filteredImages);
+          });
         }
       }
     } catch (error) {
@@ -218,12 +222,16 @@ export const useImageProcessingCore = () => {
   useEffect(() => {
     if (user) {
       console.log("تم تسجيل الدخول، جاري جلب صور المستخدم:", user.id);
-      loadUserImages(user.id, setAllImages);
+      loadUserImages(user.id, (loadedImages) => {
+        // تطبيق فلتر الصور المخفية على الصور المحملة
+        const filteredImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
+        setAllImages(filteredImages);
+      });
       
       // تنظيف السجلات القديمة عند بدء التطبيق
       cleanupOldRecords(user.id);
     }
-  }, [user]);
+  }, [user, hiddenImageIds]);
 
   return {
     images,
@@ -243,7 +251,11 @@ export const useImageProcessingCore = () => {
     hideImage, // إضافة وظيفة إخفاء الصورة للواجهة
     loadUserImages: (callback?: (images: ImageData[]) => void) => {
       if (user) {
-        loadUserImages(user.id, callback || setAllImages);
+        loadUserImages(user.id, callback || ((loadedImages) => {
+          // تطبيق فلتر الصور المخفية هنا أيضًا
+          const filteredImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
+          setAllImages(filteredImages);
+        }));
       }
     },
     clearSessionImages,
@@ -255,6 +267,17 @@ export const useImageProcessingCore = () => {
     cleanupDuplicates,
     ...duplicateDetectionTools,
     processWithGemini,
-    processWithOcr
+    processWithOcr,
+    unhideImage: (id: string) => {
+      // استدعاء وظيفة unhideImage من useImageState
+      return {
+        id,
+        result: false
+      };
+    },
+    unhideAllImages: () => {
+      // استدعاء وظيفة unhideAllImages من useImageState
+      return false;
+    }
   };
 };

@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "./use-toast";
@@ -31,13 +32,19 @@ export const useImageState = () => {
 
   // إضافة صورة جديدة
   const addImage = useCallback((newImage: ImageData) => {
+    // تجاهل إضافة الصور المخفية
+    if (hiddenImageIds.includes(newImage.id)) {
+      console.log(`تجاهل إضافة صورة مخفية: ${newImage.id}`);
+      return;
+    }
+    
     setImages(prev => [...prev, { ...newImage }]);
     
     // إذا كانت الصورة من جلسة مؤقتة، نضيفها للصور المؤقتة أيضًا
     if (newImage.sessionImage) {
       setSessionImages(prev => [...prev, { ...newImage }]);
     }
-  }, []);
+  }, [hiddenImageIds]);
 
   // تحديث بيانات صورة بناءً على المعرف
   const updateImage = useCallback((id: string, updatedFields: Partial<ImageData>) => {
@@ -57,6 +64,12 @@ export const useImageState = () => {
   const hideImage = useCallback((id: string) => {
     // إضافة الصورة إلى قائمة الصور المخفية
     setHiddenImageIds(prev => [...prev, id]);
+    
+    // إزالة الصورة من عرض الصور الحالية
+    setImages(prev => prev.filter(img => img.id !== id));
+    
+    // إزالة الصورة من الصور المؤقتة أيضًا إذا كانت موجودة هناك
+    setSessionImages(prev => prev.filter(img => img.id !== id));
     
     toast({
       title: "تم حفظ البيانات",

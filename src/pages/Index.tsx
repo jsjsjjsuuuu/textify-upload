@@ -28,7 +28,9 @@ const Index = () => {
     clearSessionImages,
     retryProcessing,
     clearQueue,
-    runCleanup
+    runCleanup,
+    hideImage, // إضافة وظيفة إخفاء الصورة للواجهة
+    hiddenImageIds // إضافة معرّفات الصور المخفية
   } = useImageProcessing();
 
   const {
