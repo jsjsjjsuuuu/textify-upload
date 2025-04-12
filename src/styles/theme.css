@@ -5,56 +5,60 @@
 
 @layer base {
   :root {
-    --background: 220 33% 9%;
+    /* توحيد جميع ألوان الخلفية لتكون من نفس تدرج اللون الداكن */
+    --background: 222 47% 6%; /* خلفية أكثر قتامة وموحدة */
     --foreground: 0 0% 100%;
 
-    --card: 222 47% 11%;
+    --card: 222 47% 8%; /* تعديل درجة الألوان */
     --card-foreground: 0 0% 100%;
 
-    --popover: 222 47% 11%;
+    --popover: 222 47% 8%;
     --popover-foreground: 0 0% 100%;
 
     --primary: 210 100% 66%;
-    --primary-foreground: 220 33% 9%;
+    --primary-foreground: 222 47% 6%;
 
-    --secondary: 222 47% 16%;
+    --secondary: 222 47% 13%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 222 47% 16%;
+    --muted: 222 47% 13%;
     --muted-foreground: 220 10% 75%;
 
-    --accent: 222 47% 16%;
+    --accent: 222 47% 13%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 50.6%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 222 47% 20%;
-    --input: 222 47% 20%;
+    --border: 222 47% 15%;
+    --input: 222 47% 15%;
     --ring: 210 100% 66%;
 
+    /* توحيد ألوان النظام */
     --color-1: 210 100% 66%;
     --color-2: 0 84% 60%;
-    --color-3: 220 20% 20%;
+    --color-3: 222 47% 13%;
     --color-4: 220 10% 96%;
-    --color-5: 222 47% 11%;
+    --color-5: 222 47% 8%;
 
-    --sidebar-background: 222 47% 11%;
+    /* توحيد ألوان الشريط الجانبي */
+    --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 210 100% 66%;
-    --sidebar-primary-foreground: 220 33% 9%;
-    --sidebar-accent: 222 47% 16%;
+    --sidebar-primary-foreground: 222 47% 6%;
+    --sidebar-accent: 222 47% 13%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 222 47% 20%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-border: 222 47% 15%;
+    --sidebar-ring: 210 100% 66%;
 
     --radius: 1rem;
   }
 }
 
 @layer utilities {
+  /* تحسين تأثير الزجاج لجعله أكثر تناسقًا مع الثيم الداكن */
   .glass-card {
-    @apply bg-card/80 backdrop-blur-sm border-0 shadow-sm;
+    @apply bg-card/90 backdrop-blur-sm border-0 shadow-lg;
   }
   
   .text-balance {
@@ -65,14 +69,16 @@
     @apply transition-colors duration-300 ease-in-out;
   }
 
+  /* تأثير زجاجي موحد وأكثر جاذبية */
   .glass-morphism {
-    @apply backdrop-blur-xl bg-[#131b31]/95 border-0 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.3)];
+    @apply backdrop-blur-xl bg-[#0f1628]/95 border-0 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.4)];
   }
   
   .neo-blur {
-    @apply backdrop-blur-2xl bg-[#131b31]/95 border-0;
+    @apply backdrop-blur-2xl bg-[#0f1628]/95 border-0;
   }
   
+  /* تدرج نصي موحد */
   .text-gradient {
     @apply bg-gradient-to-br from-white via-white/90 to-white/70 bg-clip-text text-transparent;
   }
@@ -81,7 +87,46 @@
     @apply bg-gradient-to-br from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent;
   }
   
+  /* تباعد محتوى موحد */
   .content-spacing {
     @apply py-12 px-7 md:px-12 lg:px-14;
+  }
+  
+  /* تأثيرات الخلفية العامة للتطبيق */
+  .app-background {
+    @apply bg-[#090e1c] min-h-screen;
+  }
+  
+  /* تصميم الصفحة المقعر (على شكل طبق) */
+  .dish-container {
+    @apply bg-[#0f1628]/95 rounded-2xl shadow-[0_10px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-md relative overflow-hidden;
+  }
+  
+  /* تأثيرات التوهج للطبق */
+  .dish-glow-top {
+    @apply absolute inset-0 -top-10 bg-gradient-to-t from-blue-500/10 via-transparent to-transparent blur-2xl opacity-50;
+  }
+  
+  .dish-glow-bottom {
+    @apply absolute inset-0 -bottom-10 bg-gradient-to-b from-blue-500/10 via-transparent to-transparent blur-2xl opacity-50;
+  }
+  
+  /* تأثير الانعكاس الضوئي على الطبق */
+  .dish-reflection {
+    @apply absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-white/5 to-transparent opacity-50;
+  }
+  
+  /* ظل داخلي للطبق */
+  .dish-inner-shadow {
+    @apply absolute inset-0 shadow-inner pointer-events-none;
+  }
+  
+  /* أزرار وعناصر تحكم متناسقة مع الثيم */
+  .theme-button {
+    @apply bg-secondary hover:bg-secondary/80 text-white transition-all duration-300 shadow-md hover:shadow-lg;
+  }
+  
+  .theme-button-primary {
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300 shadow-md hover:shadow-lg;
   }
 }

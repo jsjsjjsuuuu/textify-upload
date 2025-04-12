@@ -18,7 +18,7 @@ type ThemeProviderState = {
 }
 
 const initialState: ThemeProviderState = {
-  theme: "system",
+  theme: "dark",
   setTheme: () => null,
 }
 
@@ -26,7 +26,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
+  defaultTheme = "dark", // تم تعديل القيمة الافتراضية إلى الوضع الداكن دائمًا
   storageKey = "vite-ui-theme",
   ...props
 }: ThemeProviderProps) {
@@ -39,18 +39,19 @@ export function ThemeProvider({
 
     root.classList.remove("light", "dark")
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light"
-
-      root.classList.add(systemTheme)
-      return
-    }
-
-    root.classList.add(theme)
-  }, [theme])
+    // تحديد الوضع الداكن دائمًا بغض النظر عن وضع النظام
+    root.classList.add("dark");
+    
+    // تطبيق تأثيرات انتقالية إلى العناصر
+    document.documentElement.classList.add('theme-transition');
+    
+    return () => {
+      // إزالة تأثيرات الانتقال بعد اكتمال التحويل
+      setTimeout(() => {
+        document.documentElement.classList.remove('theme-transition');
+      }, 300);
+    };
+  }, [theme]);
 
   const value = {
     theme,

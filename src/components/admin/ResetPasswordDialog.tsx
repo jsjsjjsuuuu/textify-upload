@@ -28,16 +28,16 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0e1529] border-0 text-white/90 rounded-xl shadow-2xl relative overflow-hidden">
-        {/* تأثير توهج خلفية الطبق */}
-        <div className="absolute inset-0 -bottom-10 bg-gradient-to-b from-amber-500/10 via-transparent to-transparent blur-2xl opacity-50"></div>
-        <div className="absolute inset-0 -top-10 bg-gradient-to-t from-amber-500/10 via-transparent to-transparent blur-2xl opacity-50"></div>
+      <DialogContent className="dish-container relative overflow-hidden">
+        {/* تأثيرات توهج خلفية الطبق */}
+        <div className="dish-glow-top"></div>
+        <div className="dish-glow-bottom"></div>
         
         {/* ظل داخلي */}
-        <div className="absolute inset-0 shadow-inner pointer-events-none"></div>
+        <div className="dish-inner-shadow"></div>
         
         {/* تأثير انعكاس أعلى الطبق */}
-        <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-white/5 to-transparent opacity-50"></div>
+        <div className="dish-reflection"></div>
         
         <DialogHeader className="relative z-10">
           <DialogTitle className="text-xl font-medium flex items-center gap-2">

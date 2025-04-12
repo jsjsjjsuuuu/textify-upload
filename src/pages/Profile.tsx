@@ -33,31 +33,50 @@ const Profile = () => {
   };
   
   return (
-    <div className="min-h-screen bg-[#0a0f1d]">
+    <div className="min-h-screen app-background">
       <AppHeader />
       
-      <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/10 w-[40rem] h-[40rem] fixed top-[-20rem] right-[-20rem] z-[-1]"></div>
-      <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 w-[50rem] h-[50rem] fixed bottom-[-25rem] left-[-20rem] z-[-1]"></div>
+      {/* تأثيرات الخلفية الموحدة */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute -top-40 -right-40 w-[50rem] h-[50rem] rounded-full opacity-10 blur-3xl bg-gradient-to-br from-blue-500/20 via-indigo-500/10 to-purple-500/5"></div>
+        <div className="absolute -bottom-40 -left-40 w-[50rem] h-[50rem] rounded-full opacity-10 blur-3xl bg-gradient-to-tr from-blue-500/10 via-indigo-500/10 to-purple-500/5"></div>
+      </div>
       
       <main className="container mx-auto p-6 max-w-6xl content-spacing">
         {isLoading ? (
           <ProfileSkeleton />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <ProfileCard 
-              userData={userData}
-              stats={stats}
-              uploadingAvatar={uploadingAvatar}
-              handleAvatarUpload={handleAvatarUpload}
-              handleSignOut={handleSignOut}
-            />
+            <div className="dish-container">
+              <div className="dish-glow-top"></div>
+              <div className="dish-glow-bottom"></div>
+              <div className="dish-reflection"></div>
+              <div className="dish-inner-shadow"></div>
+              <div className="relative z-10 p-6">
+                <ProfileCard 
+                  userData={userData}
+                  stats={stats}
+                  uploadingAvatar={uploadingAvatar}
+                  handleAvatarUpload={handleAvatarUpload}
+                  handleSignOut={handleSignOut}
+                />
+              </div>
+            </div>
 
-            <ProfileEditCard 
-              userData={userData}
-              isUpdating={isUpdating}
-              handleInputChange={handleInputChange}
-              handleUpdateProfile={handleUpdateProfile}
-            />
+            <div className="md:col-span-2 dish-container">
+              <div className="dish-glow-top"></div>
+              <div className="dish-glow-bottom"></div>
+              <div className="dish-reflection"></div>
+              <div className="dish-inner-shadow"></div>
+              <div className="relative z-10 p-6">
+                <ProfileEditCard 
+                  userData={userData}
+                  isUpdating={isUpdating}
+                  handleInputChange={handleInputChange}
+                  handleUpdateProfile={handleUpdateProfile}
+                />
+              </div>
+            </div>
           </div>
         )}
       </main>

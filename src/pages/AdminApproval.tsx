@@ -110,20 +110,20 @@ const AdminApproval = () => {
   const filteredUsers = getFilteredUsers();
 
   return (
-    <div className="min-h-screen bg-[#0a0f1d]">
+    <div className="min-h-screen app-background">
       <AppHeader />
       
       <div className="container py-12 mx-auto max-w-7xl px-4">
-        <div className="rounded-2xl bg-[#0e1529]/95 overflow-hidden shadow-[0_10px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-md relative">
+        <div className="dish-container relative">
           {/* تأثير توهج خلفية الطبق */}
-          <div className="absolute inset-0 -bottom-10 bg-gradient-to-b from-blue-500/10 via-transparent to-transparent blur-2xl opacity-50"></div>
-          <div className="absolute inset-0 -top-10 bg-gradient-to-t from-blue-500/10 via-transparent to-transparent blur-2xl opacity-50"></div>
+          <div className="dish-glow-top"></div>
+          <div className="dish-glow-bottom"></div>
           
           {/* ظل داخلي */}
-          <div className="absolute inset-0 shadow-inner pointer-events-none"></div>
+          <div className="dish-inner-shadow"></div>
           
           {/* تأثير انعكاس أعلى الطبق */}
-          <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-white/5 to-transparent opacity-50"></div>
+          <div className="dish-reflection"></div>
           
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-8 border-b border-[#1e2a47]/30 relative z-10">
             <div>
@@ -141,7 +141,7 @@ const AdminApproval = () => {
                 تحديث
               </Button>
               <Button 
-                className="bg-primary hover:bg-primary/90 text-black font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+                className="theme-button-primary shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <PlusCircle className="h-5 w-5 mr-2" />
                 إضافة مستخدم

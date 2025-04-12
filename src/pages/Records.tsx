@@ -244,7 +244,7 @@ const Records = () => {
 
   // عرض حالة التحميل
   if (isAuthLoading || isLoading) {
-    return <div className="flex justify-center items-center h-screen">
+    return <div className="flex justify-center items-center h-screen app-background">
       <Loader className="w-8 h-8 animate-spin" />
       <span className="mr-2">جاري تحميل البيانات...</span>
     </div>;
@@ -252,138 +252,168 @@ const Records = () => {
 
   // التحقق من وجود مستخدم
   if (!user) {
-    return <div className="p-8 text-center">
+    return <div className="p-8 text-center app-background">
       <h2 className="text-xl mb-4">يجب تسجيل الدخول لعرض السجلات</h2>
       <a href="/login" className="text-blue-500 hover:underline">تسجيل الدخول</a>
     </div>;
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen app-background">
       <AppHeader />
       
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">سجلات الصور</h1>
-        
-        {/* أدوات البحث والتصفية */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="بحث عن كود، اسم، رقم هاتف..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="جميع الحالات" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الحالات</SelectItem>
-                <SelectItem value="completed">مكتملة</SelectItem>
-                <SelectItem value="pending">قيد الانتظار</SelectItem>
-                <SelectItem value="error">خطأ</SelectItem>
-                <SelectItem value="submitted">تم إرسالها</SelectItem>
-                <SelectItem value="not_submitted">لم يتم إرسالها</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* تطبيق تأثير الطبق على العنوان والأدوات */}
+        <div className="dish-container mb-6">
+          <div className="dish-glow-top"></div>
+          <div className="dish-glow-bottom"></div>
+          <div className="dish-reflection"></div>
+          <div className="dish-inner-shadow"></div>
+          <div className="relative z-10 p-6">
+            <h1 className="text-2xl font-bold mb-6 text-gradient">سجلات الصور</h1>
             
-            <Button variant="outline" size="icon" onClick={() => {
-              setSearchTerm('');
-              setStatusFilter('all');
-            }}>
-              <Filter className="h-4 w-4" />
-            </Button>
+            {/* أدوات البحث والتصفية */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <div className="relative flex-grow">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="بحث عن كود، اسم، رقم هاتف..."
+                  className="pl-10 bg-[#131b31] border-0"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[180px] bg-[#131b31] border-0">
+                    <SelectValue placeholder="جميع الحالات" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#131b31] border border-[#1e2a47]">
+                    <SelectItem value="all">جميع الحالات</SelectItem>
+                    <SelectItem value="completed">مكتملة</SelectItem>
+                    <SelectItem value="pending">قيد الانتظار</SelectItem>
+                    <SelectItem value="error">خطأ</SelectItem>
+                    <SelectItem value="submitted">تم إرسالها</SelectItem>
+                    <SelectItem value="not_submitted">لم يتم إرسالها</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Button variant="outline" size="icon" onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('all');
+                }} className="bg-[#131b31] border-0">
+                  <Filter className="h-4 w-4" />
+                </Button>
+                
+                {/* زر إظهار جميع الصور المخفية */}
+                {hiddenImageIds?.length > 0 && (
+                  <Button variant="outline" onClick={handleUnhideAllImages} className="whitespace-nowrap bg-[#131b31] border-0">
+                    <Eye className="h-4 w-4 ml-2" />
+                    إظهار الصور المخفية ({hiddenImageIds.length})
+                  </Button>
+                )}
+              </div>
+            </div>
             
-            {/* زر إظهار جميع الصور المخفية */}
-            {hiddenImageIds?.length > 0 && (
-              <Button variant="outline" onClick={handleUnhideAllImages} className="whitespace-nowrap">
-                <Eye className="h-4 w-4 ml-2" />
-                إظهار الصور المخفية ({hiddenImageIds.length})
-              </Button>
+            {/* أزرار الإجراءات */}
+            {selectedImages.length > 0 && (
+              <div className="flex gap-2 mb-4">
+                <Button variant="outline" size="sm" className="bg-[#131b31] border-0" onClick={handleExportSelected}>
+                  <Download className="h-4 w-4 mr-2" />
+                  تصدير ({selectedImages.length})
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  حذف نهائي ({selectedImages.length})
+                </Button>
+              </div>
             )}
+            
+            {/* عرض عدد النتائج */}
+            <div className="text-sm text-muted-foreground mb-4">
+              تم العثور على {filteredImages.length} سجل
+              {hiddenImageIds?.length > 0 && (
+                <span className="mr-2">{hiddenImageIds.length} صورة مخفية</span>
+              )}
+            </div>
           </div>
-        </div>
-        
-        {/* أزرار الإجراءات */}
-        {selectedImages.length > 0 && (
-          <div className="flex gap-2 mb-4">
-            <Button variant="outline" size="sm" onClick={handleExportSelected}>
-              <Download className="h-4 w-4 mr-2" />
-              تصدير ({selectedImages.length})
-            </Button>
-            <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              حذف نهائي ({selectedImages.length})
-            </Button>
-          </div>
-        )}
-        
-        {/* عرض عدد النتائج */}
-        <div className="text-sm text-muted-foreground mb-4">
-          تم العثور على {filteredImages.length} سجل
-          {hiddenImageIds?.length > 0 && (
-            <span className="mr-2">{hiddenImageIds.length} صورة مخفية</span>
-          )}
         </div>
         
         {/* عرض الصور والتفاصيل */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
-            <Card className="p-4">
-              <h2 className="text-lg font-semibold mb-4">الصور</h2>
-              
-              {currentImages.length === 0 ? (
-                <div className="text-center p-8 text-muted-foreground">
-                  لا توجد نتائج مطابقة لمعايير البحث
-                </div>
-              ) : (
-                <ImageCardContainer
-                  images={currentImages}
-                  activeImage={activeImage}
-                  selectedImages={selectedImages}
-                  handleImageClick={handleImageClick}
-                  setSelectedImages={setSelectedImages}
-                  isImageComplete={isImageComplete}
-                  hasPhoneError={hasPhoneError}
-                />
-              )}
-              
-              {/* ترقيم الصفحات */}
-              {totalPages > 1 && (
-                <div className="mt-4 flex justify-center">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
+            {/* تطبيق تأثير الطبق على قائمة الصور */}
+            <div className="dish-container">
+              <div className="dish-glow-top"></div>
+              <div className="dish-glow-bottom"></div>
+              <div className="dish-reflection"></div>
+              <div className="dish-inner-shadow"></div>
+              <div className="relative z-10 p-6">
+                <h2 className="text-lg font-semibold mb-4 text-gradient">الصور</h2>
+                
+                {currentImages.length === 0 ? (
+                  <div className="text-center p-8 text-muted-foreground">
+                    لا توجد نتائج مطابقة لمعايير البحث
+                  </div>
+                ) : (
+                  <ImageCardContainer
+                    images={currentImages}
+                    activeImage={activeImage}
+                    selectedImages={selectedImages}
+                    handleImageClick={handleImageClick}
+                    setSelectedImages={setSelectedImages}
+                    isImageComplete={isImageComplete}
+                    hasPhoneError={hasPhoneError}
                   />
-                </div>
-              )}
-            </Card>
+                )}
+                
+                {/* ترقيم الصفحات */}
+                {totalPages > 1 && (
+                  <div className="mt-4 flex justify-center">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           
           <div className="lg:col-span-2">
             {activeImage ? (
-              <ImageDetailsPanel
-                image={activeImage}
-                onTextChange={(id, field, value) => handleTextChange(id, field, value)}
-                onSubmit={() => handleSubmitToApi(activeImage.id)}
-                onDelete={() => {
-                  handlePermanentDelete(activeImage.id);
-                  setActiveImage(null);
-                }}
-                isSubmitting={!!isSubmitting[activeImage.id]}
-                isComplete={isImageComplete(activeImage)}
-                hasPhoneError={hasPhoneError(activeImage)}
-              />
+              <div className="dish-container">
+                <div className="dish-glow-top"></div>
+                <div className="dish-glow-bottom"></div>
+                <div className="dish-reflection"></div>
+                <div className="dish-inner-shadow"></div>
+                <div className="relative z-10 p-6">
+                  <ImageDetailsPanel
+                    image={activeImage}
+                    onTextChange={(id, field, value) => handleTextChange(id, field, value)}
+                    onSubmit={() => handleSubmitToApi(activeImage.id)}
+                    onDelete={() => {
+                      handlePermanentDelete(activeImage.id);
+                      setActiveImage(null);
+                    }}
+                    isSubmitting={!!isSubmitting[activeImage.id]}
+                    isComplete={isImageComplete(activeImage)}
+                    hasPhoneError={hasPhoneError(activeImage)}
+                  />
+                </div>
+              </div>
             ) : (
-              <Card className="p-8 text-center text-muted-foreground">
-                <p>اختر صورة من القائمة لعرض التفاصيل</p>
-              </Card>
+              <div className="dish-container">
+                <div className="dish-glow-top"></div>
+                <div className="dish-glow-bottom"></div>
+                <div className="dish-reflection"></div>
+                <div className="dish-inner-shadow"></div>
+                <div className="relative z-10 p-8 text-center text-muted-foreground">
+                  <p>اختر صورة من القائمة لعرض التفاصيل</p>
+                </div>
+              </div>
             )}
           </div>
         </div>
