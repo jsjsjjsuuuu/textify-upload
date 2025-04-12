@@ -29,7 +29,7 @@ const Index = () => {
     retryProcessing,
     clearQueue,
     runCleanup,
-    hideImage, // التأكد من استيراد هذه الوظيفة بشكل صحيح
+    hideImage,
     hiddenImageIds
   } = useImageProcessing();
 
@@ -42,12 +42,14 @@ const Index = () => {
 
   // تسجيل معلومات التشخيص
   useEffect(() => {
+    console.log("قائمة معرّفات الصور المخفية:", hiddenImageIds);
+    
     if (typeof hideImage === 'function') {
       console.log("تم تحميل وظيفة hideImage بنجاح");
     } else {
       console.error("خطأ: وظيفة hideImage غير معرّفة أو ليست دالة", typeof hideImage);
     }
-  }, [hideImage]);
+  }, [hideImage, hiddenImageIds]);
 
   // عرض رسالة التحميل أثناء التحقق من المستخدم
   if (isAuthLoading) {

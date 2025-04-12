@@ -73,6 +73,10 @@ export const useImageState = () => {
     
     // إضافة الصورة إلى قائمة الصور المخفية
     setHiddenImageIds(prev => {
+      // تأكد من عدم إضافة معرف مكرر
+      if (prev.includes(id)) {
+        return prev;
+      }
       const newHiddenIds = [...prev, id];
       console.log("معرّفات الصور المخفية الجديدة:", newHiddenIds);
       return newHiddenIds;
@@ -100,7 +104,13 @@ export const useImageState = () => {
   const deleteImage = useCallback((id: string, removeFromDatabase: boolean = false) => {
     if (!removeFromDatabase) {
       // إضافة الصورة إلى قائمة الصور المخفية
-      setHiddenImageIds(prev => [...prev, id]);
+      setHiddenImageIds(prev => {
+        // تأكد من عدم إضافة معرف مكرر
+        if (prev.includes(id)) {
+          return prev;
+        }
+        return [...prev, id];
+      });
       
       toast({
         title: "تمت الإزالة من العرض",

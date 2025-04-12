@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -261,7 +260,7 @@ export const useImageProcessing = () => {
     }
   };
 
-  // مواجهة مبسطة للتقديم مع تسجيل الصورة كمعالجة بعد الإرسال
+  // تعديل وظيفة handleSubmitToApi للتأكد من إخفاء الصورة بعد الإرسال الناجح
   const handleSubmitToApi = useCallback(async (id: string) => {
     try {
       console.log("بدء عملية الإرسال للصورة:", id);
@@ -295,13 +294,11 @@ export const useImageProcessing = () => {
           description: "تم إرسال البيانات بنجاح إلى API"
         });
         
-        // إخفاء الصورة بعد الإرسال
+        // إخفاء الصورة بعد الإرسال - استدعاء مباشر لوظيفة hideImage
         console.log("إخفاء الصورة بعد الإرسال الناجح:", id);
-        if (typeof hideImage === 'function') {
-          hideImage(id);
-        } else {
-          console.error("وظيفة hideImage غير معرفة!", typeof hideImage);
-        }
+        hideImage(id);
+        
+        return true;
       }
       
       return result;

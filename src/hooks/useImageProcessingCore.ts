@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -30,7 +29,7 @@ export const useImageProcessingCore = () => {
     clearSessionImages,
     removeDuplicates,
     hiddenImageIds,
-    hideImage, // تأكد أن هذه الوظيفة مستخرجة من useImageState بشكل صحيح
+    hideImage, 
     unhideImage,
     unhideAllImages
   } = useImageState();
@@ -150,13 +149,9 @@ export const useImageProcessingCore = () => {
           description: "تم إرسال البيانات وحفظها بنجاح",
         });
         
-        // إخفاء الصورة من العرض بعد الإرسال الناجح - تأكد من أن الدالة موجودة
-        if (typeof hideImage === 'function') {
-          console.log("جاري إخفاء الصورة:", id);
-          hideImage(id);
-        } else {
-          console.error("وظيفة hideImage غير معرفة!", typeof hideImage);
-        }
+        // تأكد من وجود وظيفة hideImage قبل استدعائها
+        console.log("جاري إخفاء الصورة بعد الإرسال الناجح:", id);
+        hideImage(id); // استدعاء مباشر لوظيفة hideImage
         
         return true;
       } else {
@@ -241,6 +236,7 @@ export const useImageProcessingCore = () => {
     }
   }, [user, hiddenImageIds]);
 
+  // تصدير الوظائف المتاحة
   return {
     images,
     sessionImages,
@@ -256,7 +252,7 @@ export const useImageProcessingCore = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     saveProcessedImage,
-    hideImage, // تأكد من تصدير وظيفة hideImage للاستخدام الخارجي
+    hideImage, // تصدير وظيفة hideImage بشكل صريح
     loadUserImages: (callback?: (images: ImageData[]) => void) => {
       if (user) {
         loadUserImages(user.id, callback || ((loadedImages) => {
