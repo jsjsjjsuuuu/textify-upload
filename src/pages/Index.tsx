@@ -99,7 +99,7 @@ const Index = () => {
             <div className="mt-6">
               <ImagesCard
                 images={images}
-                isSubmitting={{}}  // تصحيح: تغيير من boolean إلى Record<string, boolean>
+                isSubmitting={{}}  // تمرير كائن فارغ من نوع Record<string, boolean>
                 onTextChange={handleTextChange}
                 onDelete={handleDelete}
                 onSubmit={handleSubmitToApi}

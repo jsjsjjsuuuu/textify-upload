@@ -8,7 +8,7 @@ import { Search } from "lucide-react";
 
 interface ImageTabContentProps {
   images: ImageData[];
-  isSubmitting: boolean | Record<string, boolean>;
+  isSubmitting: boolean | Record<string, boolean>;  // تحديث نوع البيانات ليكون متوافقًا
   onTextChange: (id: string, field: string, value: string) => void;
   onDelete: (id: string) => Promise<boolean>;
   onSubmit: (id: string) => Promise<boolean>;
@@ -119,7 +119,7 @@ const ImageTabContent: React.FC<ImageTabContentProps> = ({
       {/* عرض الصور المصفاة */}
       <ImagePreviewContainer
         images={filteredImages}
-        isSubmitting={isSubmitting}
+        isSubmitting={isSubmitting}  // استخدام isSubmitting مباشرة دون تحويل
         onTextChange={onTextChange}
         onDelete={onDelete}
         onSubmit={onSubmit}
