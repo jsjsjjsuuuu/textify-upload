@@ -1,8 +1,15 @@
 
-import React from "react";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Loader2, Shield, AlertTriangle } from "lucide-react";
+import React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, Loader } from 'lucide-react';
 
 interface ResetPasswordDialogProps {
   isOpen: boolean;
@@ -17,52 +24,50 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
   onOpenChange,
   onCancel,
   onConfirm,
-  isProcessing,
+  isProcessing
 }) => {
   return (
-    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="admin-card bg-[#111936]/95 border-[#2a325a]/40">
-        <AlertDialogHeader>
-          <div className="flex items-center gap-3 text-red-400">
-            <Shield className="h-7 w-7" />
-            <AlertDialogTitle className="text-xl">تأكيد إعادة تعيين كلمة المرور</AlertDialogTitle>
-          </div>
-          <AlertDialogDescription className="text-blue-200/70 mt-4 text-base">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-6 w-6 text-amber-400 flex-shrink-0 mt-0.5" />
-              <span>
-                هل أنت متأكد من أنك تريد إعادة تعيين كلمة المرور لهذا المستخدم؟ هذا الإجراء لا يمكن التراجع عنه وسيتم استخدام كلمة المرور الجديدة التي قمت بإدخالها.
-              </span>
-            </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <div className="flex justify-end gap-4 w-full">
-            <button 
-              className="admin-button admin-button-secondary"
-              onClick={onCancel}
-              disabled={isProcessing}
-            >
-              إلغاء
-            </button>
-            <button 
-              className="admin-button admin-button-danger"
-              onClick={onConfirm}
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  جاري إعادة التعيين...
-                </>
-              ) : (
-                "تأكيد إعادة التعيين"
-              )}
-            </button>
-          </div>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-[#0e1529] border-0 text-white/90 rounded-xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-medium flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-400" />
+            تأكيد إعادة تعيين كلمة المرور
+          </DialogTitle>
+          <DialogDescription className="text-white/70 text-base mt-2">
+            هل أنت متأكد من رغبتك في تغيير كلمة المرور للمستخدم؟
+            <br />
+            <span className="text-amber-400 mt-2 block">لا يمكن التراجع عن هذا الإجراء.</span>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex flex-row justify-end gap-3 mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            className="bg-transparent hover:bg-white/10 text-white/90 border border-white/20"
+            disabled={isProcessing}
+          >
+            إلغاء
+          </Button>
+          <Button 
+            type="button" 
+            onClick={onConfirm}
+            className="bg-amber-500 hover:bg-amber-600 text-white"
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <>
+                <Loader className="h-4 w-4 mr-2 animate-spin" />
+                جاري التنفيذ...
+              </>
+            ) : (
+              'تأكيد إعادة التعيين'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

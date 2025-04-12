@@ -16,7 +16,7 @@ const AutomationPage = () => {
   };
   
   return (
-    <div className="min-h-screen bg-[#0d1123] flex flex-col">
+    <div className="min-h-screen bg-[#0a0f1d] flex flex-col">
       <AppHeader />
       
       <div className="container mx-auto p-4 flex-1 content-spacing">
@@ -24,7 +24,7 @@ const AutomationPage = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            className="gap-2 glass-morphism text-white/90 hover:bg-white/10"
+            className="gap-2 bg-[#131b31] text-white/90 hover:bg-[#1a253f] border-0"
             onClick={handleBack}
           >
             <ArrowLeft className="w-4 h-4" />
@@ -33,15 +33,15 @@ const AutomationPage = () => {
         </div>
         
         <div className="max-w-3xl mx-auto">
-          <Card className="glass-morphism border-white/10">
-            <CardHeader className="border-b border-white/10">
+          <Card className="bg-[#0e1529]/95 border-0 rounded-xl">
+            <CardHeader className="border-b border-[#1e2a47]">
               <CardTitle className="text-gradient text-2xl">الأتمتة</CardTitle>
               <CardDescription className="text-white/70 text-lg">
                 إعداد وتشغيل الأتمتة للمعرف: {imageId}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
-              <Alert className="neo-blur border-blue-500/20 text-white/90">
+              <Alert className="bg-[#131b31] border-blue-500/20 text-white/90">
                 <Info className="h-5 w-5 text-blue-400" />
                 <AlertTitle className="text-lg font-medium text-blue-300">هذه صفحة تجريبية</AlertTitle>
                 <AlertDescription className="text-white/80 text-base mt-2">
@@ -52,7 +52,7 @@ const AutomationPage = () => {
               <div className="flex justify-center pt-4">
                 <Button 
                   onClick={handleBack}
-                  className="glass-button bg-indigo-600/80 hover:bg-indigo-600 px-6 py-3 text-base"
+                  className="bg-primary hover:bg-primary/90 px-6 py-3 text-base text-black font-medium"
                 >
                   العودة إلى الرئيسية
                 </Button>
@@ -62,7 +62,7 @@ const AutomationPage = () => {
         </div>
       </div>
       
-      <footer className="border-t border-white/10 py-8 mt-auto backdrop-blur-md bg-black/20">
+      <footer className="border-t border-[#1e2a47] py-8 mt-auto bg-[#0e1529]/95">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-white/60 text-base">

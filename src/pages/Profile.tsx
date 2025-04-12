@@ -33,11 +33,11 @@ const Profile = () => {
   };
   
   return (
-    <div className="min-h-screen bg-[#0d1123]">
+    <div className="min-h-screen bg-[#0a0f1d]">
       <AppHeader />
       
-      <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-indigo-500/30 via-purple-500/30 to-pink-500/20 w-[40rem] h-[40rem] fixed top-[-20rem] right-[-20rem] z-[-1]"></div>
-      <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 w-[50rem] h-[50rem] fixed bottom-[-25rem] left-[-20rem] z-[-1]"></div>
+      <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/10 w-[40rem] h-[40rem] fixed top-[-20rem] right-[-20rem] z-[-1]"></div>
+      <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 w-[50rem] h-[50rem] fixed bottom-[-25rem] left-[-20rem] z-[-1]"></div>
       
       <main className="container mx-auto p-6 max-w-6xl content-spacing">
         {isLoading ? (

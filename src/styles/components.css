@@ -1,57 +1,50 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  .design-element {
-    @apply absolute pointer-events-none opacity-30;
+  /* تنسيقات أسلوب أبل للجداول */
+  .apple-table {
+    @apply w-full border-collapse;
   }
   
-  .upload-zone {
-    @apply border-2 border-dashed border-brand-coral/30 rounded-xl p-8 text-center transition-all;
+  .apple-table th {
+    @apply text-left py-4 px-6 border-b border-border font-medium text-foreground;
   }
   
-  .upload-zone:hover, .upload-zone.active {
-    @apply border-brand-coral/60 bg-brand-coral/5;
+  .apple-table td {
+    @apply py-4 px-6 border-b border-border text-foreground;
   }
   
-  .image-preview-card {
-    @apply relative rounded-xl overflow-hidden bg-white dark:bg-card shadow-lg transition-all hover:shadow-xl;
-  }
-  
-  .floating-element {
-    @apply absolute animate-float;
-  }
-  
-  .rtl-table {
-    direction: rtl;
-    text-align: right;
-  }
-  
-  .rtl-table th {
-    @apply font-bold text-brand-brown dark:text-brand-beige py-3 px-4;
-  }
-  
-  .rtl-table td {
-    @apply py-3 px-4 border-t border-muted;
-  }
-  
-  .rtl-textarea {
-    direction: rtl;
-    text-align: right;
+  .apple-table tr:hover {
+    @apply bg-muted/20;
   }
 
-  /* New Admin UI Styles - Updated Theme */
+  /* تنسيقات جداول ألوان داكنة */
+  .dark .apple-table th {
+    @apply text-white/80 border-border;
+  }
+  
+  .dark .apple-table td {
+    @apply text-white/70 border-border;
+  }
+  
+  .dark .apple-table tr:hover {
+    @apply bg-muted/30;
+  }
+  
+  /* نظام إدارة المستخدمين - التصميم الزجاجي المحسن */
   .admin-container {
-    @apply min-h-screen bg-[#0d1123] bg-opacity-95 text-white;
+    @apply min-h-screen bg-[#0a0f1d] text-white;
   }
   
   .admin-card {
-    @apply rounded-2xl border border-[#2a325a]/20 bg-[#111936]/90 backdrop-blur-xl shadow-lg overflow-hidden;
+    @apply rounded-2xl bg-[#0e1529]/95 shadow-lg overflow-hidden;
   }
   
   .admin-header {
-    @apply flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-8 border-b border-[#2a325a]/20 bg-[#111936]/95;
+    @apply flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-8 border-b border-[#1e2a47];
   }
   
   .admin-title {
@@ -75,31 +68,31 @@
   }
   
   .admin-search-input {
-    @apply w-full bg-[#1a2544]/80 border border-[#2a325a]/30 rounded-xl py-3 pr-10 pl-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 text-base;
+    @apply w-full bg-[#131b31] rounded-xl py-3 pr-10 pl-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
   }
   
   .admin-select {
-    @apply w-full bg-[#1a2544]/80 border border-[#2a325a]/30 rounded-xl py-3 px-5 text-white cursor-pointer focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 text-base;
+    @apply w-full bg-[#131b31] rounded-xl py-3 px-5 text-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
   }
   
   .admin-tabs {
-    @apply flex mb-8 bg-[#1a2544]/80 rounded-xl p-1.5 border border-[#2a325a]/20;
+    @apply flex mb-8 rounded-xl overflow-hidden;
   }
   
   .admin-tab {
-    @apply flex-1 text-center py-3 rounded-lg transition-all duration-200 text-base font-medium;
+    @apply flex-1 text-center py-4 transition-all duration-200 text-base font-medium;
   }
   
   .admin-tab-inactive {
-    @apply text-blue-200/80 hover:text-blue-200;
+    @apply bg-[#131b31] hover:bg-[#1a253f] text-white/70;
   }
   
   .admin-tab-active {
-    @apply bg-blue-600/90 text-white shadow-lg;
+    @apply bg-primary text-white;
   }
   
   .admin-stat-card {
-    @apply flex items-center justify-between p-6 rounded-xl border border-[#2a325a]/20 bg-[#1a2544]/60 backdrop-blur-md;
+    @apply flex items-center justify-between p-6 rounded-xl bg-[#131b31];
   }
   
   .admin-table {
@@ -107,15 +100,15 @@
   }
   
   .admin-table-header {
-    @apply bg-[#1a2544]/90 backdrop-blur-md;
+    @apply bg-[#131b31];
   }
   
   .admin-table-header th {
-    @apply py-5 px-6 text-left text-base font-medium text-blue-200/80 border-b border-[#2a325a]/20;
+    @apply py-5 px-6 text-left text-base font-medium text-blue-200/80 border-b border-[#1e2a47];
   }
   
   .admin-table-row {
-    @apply border-b border-[#2a325a]/10 transition-colors hover:bg-[#1a2544]/50;
+    @apply border-b border-[#1e2a47] transition-colors hover:bg-[#131b31];
   }
   
   .admin-table-row:last-child {
@@ -127,7 +120,7 @@
   }
   
   .admin-avatar {
-    @apply h-12 w-12 rounded-full bg-blue-600/80 flex items-center justify-center text-white font-bold text-base overflow-hidden border-2 border-[#2a325a]/30;
+    @apply h-12 w-12 rounded-full bg-blue-600/80 flex items-center justify-center text-white font-bold text-base overflow-hidden;
   }
   
   .admin-badge {
@@ -135,23 +128,23 @@
   }
   
   .admin-badge-green {
-    @apply bg-emerald-500/20 text-emerald-300 border border-emerald-500/30;
+    @apply bg-emerald-500/20 text-emerald-300;
   }
   
   .admin-badge-blue {
-    @apply bg-blue-500/20 text-blue-300 border border-blue-500/30;
+    @apply bg-blue-500/20 text-blue-300;
   }
   
   .admin-badge-red {
-    @apply bg-red-500/20 text-red-300 border border-red-500/30;
+    @apply bg-red-500/20 text-red-300;
   }
   
   .admin-badge-yellow {
-    @apply bg-amber-500/20 text-amber-300 border border-amber-500/30;
+    @apply bg-amber-500/20 text-amber-300;
   }
   
   .admin-badge-purple {
-    @apply bg-purple-500/20 text-purple-300 border border-purple-500/30;
+    @apply bg-purple-500/20 text-purple-300;
   }
   
   .admin-badge-count {
@@ -159,23 +152,23 @@
   }
   
   .admin-badge-all {
-    @apply bg-blue-600/80 text-white;
+    @apply bg-white/20 text-white;
   }
   
   .admin-badge-approved {
-    @apply bg-emerald-500/40 text-emerald-300;
+    @apply bg-emerald-500/30 text-emerald-300;
   }
   
   .admin-badge-pending {
-    @apply bg-amber-500/40 text-amber-300;
+    @apply bg-amber-500/30 text-amber-300;
   }
   
   .admin-badge-error {
-    @apply bg-red-500/40 text-red-300;
+    @apply bg-red-500/30 text-red-300;
   }
   
   .admin-badge-processing {
-    @apply bg-blue-500/40 text-blue-300;
+    @apply bg-blue-500/30 text-blue-300;
   }
   
   .admin-button {
@@ -183,23 +176,23 @@
   }
   
   .admin-button-primary {
-    @apply bg-blue-600/90 hover:bg-blue-700 text-white shadow-md hover:shadow-lg;
+    @apply bg-primary hover:bg-primary/90 text-black;
   }
   
   .admin-button-secondary {
-    @apply bg-[#1a2544]/70 hover:bg-[#1a2544]/90 text-white border border-[#2a325a]/40;
+    @apply bg-[#131b31] hover:bg-[#1a253f] text-white;
   }
   
   .admin-button-outline {
-    @apply bg-transparent hover:bg-[#1a2544]/50 text-blue-300 border border-[#2a325a]/40;
+    @apply bg-transparent hover:bg-[#1a253f] text-blue-300;
   }
   
   .admin-button-danger {
-    @apply bg-transparent hover:bg-red-500/20 text-red-400 border border-red-500/40;
+    @apply bg-transparent hover:bg-red-500/20 text-red-400;
   }
   
   .admin-button-success {
-    @apply bg-transparent hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/40;
+    @apply bg-transparent hover:bg-emerald-500/20 text-emerald-400;
   }
   
   .admin-button-icon {
@@ -215,172 +208,67 @@
   }
   
   .admin-form-input {
-    @apply w-full bg-[#1a2544]/80 border border-[#2a325a]/30 rounded-xl py-3 px-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 text-base;
-  }
-
-  .design-element {
-    @apply absolute pointer-events-none opacity-30;
+    @apply w-full bg-[#131b31] rounded-xl py-3 px-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
   }
   
-  .upload-zone {
-    @apply border-2 border-dashed border-brand-coral/30 rounded-xl p-8 text-center transition-all;
-  }
-  
-  .upload-zone:hover, .upload-zone.active {
-    @apply border-brand-coral/60 bg-brand-coral/5;
-  }
-  
-  .image-preview-card {
-    @apply relative rounded-xl overflow-hidden bg-white dark:bg-card shadow-lg transition-all hover:shadow-xl;
-  }
-  
-  .floating-element {
-    @apply absolute animate-float;
-  }
-  
-  .rtl-table {
-    direction: rtl;
-    text-align: right;
-  }
-  
-  .rtl-table th {
-    @apply font-bold text-brand-brown dark:text-brand-beige py-3 px-4;
-  }
-  
-  .rtl-table td {
-    @apply py-3 px-4 border-t border-muted;
-  }
-  
-  .rtl-textarea {
-    direction: rtl;
-    text-align: right;
-  }
-
-  /* تنسيقات أسلوب أبل للجداول */
-  .apple-table {
-    @apply w-full border-collapse;
-  }
-  
-  .apple-table th {
-    @apply text-left py-4 px-6 border-b border-border font-medium text-foreground;
-  }
-  
-  .apple-table td {
-    @apply py-4 px-6 border-b border-border text-foreground;
-  }
-  
-  .apple-table tr:hover {
-    @apply bg-muted/20;
-  }
-
-  /* تنسيقات ألونر داكن */
-  .dark .image-preview-card {
-    @apply bg-card border border-border;
-  }
-  
-  .dark .upload-zone:hover, .dark .upload-zone.active {
-    @apply border-brand-coral/50 bg-brand-coral/10;
-  }
-
-  /* تنسيقات جداول ألوان داكنة */
-  .dark .apple-table th {
-    @apply text-white/80 border-border;
-  }
-  
-  .dark .apple-table td {
-    @apply text-white/70 border-border;
-  }
-  
-  .dark .apple-table tr:hover {
-    @apply bg-muted/30;
-  }
-
-  /* Modern card styles */
-  .modern-card {
-    @apply rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-white to-brand-beige/10 backdrop-blur-sm border border-brand-beige/20 transition-all duration-300 hover:shadow-xl;
-  }
-
-  .dark .modern-card {
-    @apply bg-gradient-to-br from-card to-brand-brown/10 border-brand-brown/20;
-  }
-  
-  /* Elegant upload container styles */
-  .elegant-upload {
-    @apply bg-gradient-to-r from-brand-coral/20 via-brand-beige/30 to-brand-green/20 
-           backdrop-blur-sm rounded-3xl shadow-xl shadow-brand-coral/15 hover:shadow-2xl transition-all duration-300;
-  }
-  
-  .dark .elegant-upload {
-    @apply from-brand-coral/15 via-brand-beige/10 to-brand-green/10;
-  }
-  
-  /* تنسيقات نظام المهام الزجاجي - محدثة بألوان جديدة */
+  /* ترتيب جديد لأنماط نظام المهام الزجاجي */
   .task-system-bg {
-    @apply bg-gradient-to-br from-[#0d1220] to-[#141b2d] min-h-[30rem];
+    @apply bg-gradient-to-br from-[#0a0f1d] to-[#0e1529] min-h-[30rem];
   }
   
   /* تصميم زجاجي محسن للبطاقات */
   .glass-morphism {
-    @apply bg-[#171e2e]/50 backdrop-blur-md border border-[#222e45]/50 
-           shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-xl;
+    @apply bg-[#0e1529]/95 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-xl;
   }
   
   .glass-card {
-    @apply bg-[#171e2e]/40 backdrop-blur-md border border-[#222e45]/50 
-           shadow-[0_4px_15px_rgba(0,0,0,0.3)] rounded-xl transition-all duration-300;
+    @apply bg-[#131b31] backdrop-blur-md shadow-[0_4px_15px_rgba(0,0,0,0.3)] rounded-xl transition-all duration-300;
   }
   
   .glass-card:hover {
-    @apply bg-[#1e263a]/60 border-indigo-500/30 shadow-[0_8px_32px_rgba(0,0,0,0.5)];
+    @apply bg-[#1a253f] shadow-[0_8px_32px_rgba(0,0,0,0.5)];
   }
   
   /* أزرار زجاجية جديدة */
   .glass-button {
-    @apply rounded-xl bg-[#232a3c]/70 backdrop-blur-md border border-indigo-500/30
-           hover:bg-indigo-600/50 hover:border-indigo-500/50 transition-all duration-300 
-           text-white shadow-md hover:shadow-lg px-4 py-2;
+    @apply rounded-xl bg-[#131b31] backdrop-blur-md hover:bg-primary hover:text-black transition-all duration-300 
+           text-white px-4 py-2;
   }
   
   .active-tab {
-    @apply bg-indigo-600/70 border-indigo-500/60 shadow-[0_0_15px_rgba(99,102,241,0.5)];
+    @apply bg-primary shadow-[0_0_15px_rgba(99,102,241,0.5)];
   }
   
   /* حالات المهام مع تأثير الزجاج */
   .task-status-pending {
-    @apply bg-amber-600/20 text-amber-400 border border-amber-600/30 backdrop-blur-md;
+    @apply bg-amber-600/20 text-amber-400;
   }
   
   .task-status-processing {
-    @apply bg-blue-600/20 text-blue-400 border border-blue-600/30 backdrop-blur-md;
+    @apply bg-blue-600/20 text-blue-400;
   }
   
   .task-status-completed {
-    @apply bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 backdrop-blur-md;
+    @apply bg-emerald-600/20 text-emerald-400;
   }
   
   .task-status-error {
-    @apply bg-red-600/20 text-red-400 border border-red-600/30 backdrop-blur-md;
-  }
-  
-  .task-status-incomplete {
-    @apply bg-rose-600/20 text-rose-400 border border-rose-600/30 backdrop-blur-md;
+    @apply bg-red-600/20 text-red-400;
   }
   
   .count-badge {
-    @apply bg-[#232a3c]/80 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm;
+    @apply bg-[#131b31] text-white text-xs px-3 py-1 rounded-full;
   }
   
   .count-badge-active {
-    @apply bg-indigo-600/80 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)];
+    @apply bg-primary text-black shadow-[0_0_10px_rgba(99,102,241,0.5)];
   }
   
   /* عنصر المهمة المحسن */
   .task-item {
     @apply flex justify-between items-center p-4 my-2
-           bg-[#171e2e]/60 backdrop-blur-md border border-[#222e45]/50 
-           rounded-xl transition-all hover:bg-[#1e263a]/70 
-           shadow-[0_4px_15px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.3)]
-           hover:border-indigo-500/30;
+           bg-[#131b31] rounded-xl transition-all hover:bg-[#1a253f] 
+           shadow-[0_4px_15px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.3)];
   }
   
   /* أيقونات مع تأثير التوهج */
@@ -409,17 +297,13 @@
     @apply bg-red-500;
   }
   
-  .glow-icon.rose:after {
-    @apply bg-rose-500;
-  }
-  
   /* لبنات التصميم للخلفية الزجاجية */
   .glass-bg-element {
     @apply absolute rounded-full opacity-20 blur-3xl bg-gradient-to-r;
   }
   
   .loading-skeleton {
-    @apply animate-pulse bg-[#232a3c]/60 rounded-xl;
+    @apply animate-pulse bg-[#131b31] rounded-xl;
   }
   
   /* تأثيرات التحويل والتدرج */
@@ -428,62 +312,10 @@
   }
   
   .gradient-border {
-    @apply relative border border-transparent bg-gradient-to-r p-[1px] from-indigo-500/30 to-purple-500/30 rounded-xl;
+    @apply relative p-[1px] bg-gradient-to-r from-indigo-500/30 to-purple-500/30 rounded-xl;
   }
   
   .gradient-border-content {
-    @apply bg-[#171e2e]/80 backdrop-blur-md rounded-xl h-full w-full;
-  }
-  
-  /* أنماط أخرى */
-  .task-card {
-    @apply bg-[#171e2e]/50 backdrop-blur-md border border-[#222e45]/50 rounded-xl 
-           transition-all hover:bg-[#1e263a]/70 shadow-lg hover:shadow-xl;
-  }
-  
-  .task-count-badge {
-    @apply min-w-8 h-8 flex items-center justify-center rounded-md text-white text-sm backdrop-blur-sm;
-  }
-  
-  .task-icon-wrapper {
-    @apply w-8 h-8 flex items-center justify-center rounded-full;
-  }
-  
-  .empty-state-container {
-    @apply glass-morphism flex flex-col items-center justify-center p-12 text-center;
-  }
-  
-  .empty-state-icon {
-    @apply h-16 w-16 mb-6 text-indigo-300 opacity-70;
-  }
-  
-  .empty-state-text {
-    @apply gradient-text text-xl font-medium;
-  }
-  
-  .loading-container {
-    @apply glass-morphism flex justify-center items-center py-16;
-  }
-  
-  .loading-spinner {
-    @apply h-16 w-16 animate-spin text-indigo-400;
-  }
-  
-  /* تنسيقات القائمة الرئيسية */
-  .glassmorphism-menu {
-    @apply bg-gradient-to-br from-[#171e2e]/70 to-[#1a2035]/60 backdrop-blur-md
-           border border-indigo-500/20 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]
-           p-5 overflow-hidden;
-  }
-  
-  /* عناوين مع تأثيرات زجاجية */
-  .glass-heading {
-    @apply relative font-bold text-2xl mb-6 gradient-text inline-block;
-  }
-  
-  .glass-heading:after {
-    content: '';
-    @apply absolute bottom-0 left-0 h-[2px] w-full 
-           bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full opacity-70;
+    @apply bg-[#131b31] rounded-xl h-full w-full;
   }
 }

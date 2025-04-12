@@ -110,35 +110,36 @@ const AdminApproval = () => {
   const filteredUsers = getFilteredUsers();
 
   return (
-    <div className="admin-container">
+    <div className="min-h-screen bg-[#0a0f1d]">
       <AppHeader />
       
-      <div className="container py-12 max-w-7xl">
-        <div className="admin-card">
-          <div className="admin-header">
+      <div className="container py-12 mx-auto max-w-7xl px-4">
+        <div className="rounded-2xl bg-[#0e1529]/95 overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-8 border-b border-[#1e2a47]">
             <div>
-              <h1 className="admin-title text-2xl md:text-3xl">نظام إدارة المستخدمين</h1>
-              <p className="admin-subtitle mt-2">إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات</p>
+              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">نظام إدارة المستخدمين</h1>
+              <p className="text-base text-blue-200/70 mt-2">إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات</p>
             </div>
             <div className="flex items-center gap-3">
               <Button 
-                className="admin-button admin-button-secondary"
+                variant="outline"
+                className="bg-[#131b31] hover:bg-[#1a253f] text-white border-0"
                 onClick={fetchUsers} 
                 disabled={isLoading}
               >
-                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''} mr-2`} />
                 تحديث
               </Button>
               <Button 
-                className="admin-button admin-button-primary"
+                className="bg-primary hover:bg-primary/90 text-black font-medium"
               >
-                <PlusCircle className="h-5 w-5" />
+                <PlusCircle className="h-5 w-5 mr-2" />
                 إضافة مستخدم
               </Button>
             </div>
           </div>
           
-          <div className="admin-content">
+          <div className="p-8">
             {/* أدوات البحث والتصفية */}
             <UserFilters 
               searchQuery={searchQuery}
@@ -185,7 +186,7 @@ const AdminApproval = () => {
             
             {/* إحصائيات المستخدمين */}
             <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
-              <div className="admin-stat-card">
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31]">
                 <div>
                   <h3 className="text-base text-blue-200/70 mb-1">المستخدمون</h3>
                   <p className="text-3xl font-bold">{userCounts.total}</p>
@@ -195,7 +196,7 @@ const AdminApproval = () => {
                 </div>
               </div>
               
-              <div className="admin-stat-card">
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31]">
                 <div>
                   <h3 className="text-base text-blue-200/70 mb-1">معتمدون</h3>
                   <p className="text-3xl font-bold">{userCounts.approved}</p>
@@ -205,7 +206,7 @@ const AdminApproval = () => {
                 </div>
               </div>
               
-              <div className="admin-stat-card">
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31]">
                 <div>
                   <h3 className="text-base text-blue-200/70 mb-1">في الانتظار</h3>
                   <p className="text-3xl font-bold">{userCounts.pending}</p>
@@ -215,7 +216,7 @@ const AdminApproval = () => {
                 </div>
               </div>
               
-              <div className="admin-stat-card col-span-1 md:col-span-2">
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] col-span-1 md:col-span-2">
                 <div className="w-full">
                   <h3 className="text-base text-blue-200/70 mb-3">نشاط المستخدمين</h3>
                   <div className="w-full bg-[#1a2544] rounded-full h-2.5">
