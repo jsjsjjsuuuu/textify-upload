@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -9,8 +8,8 @@ import { useFileUpload } from "./useFileUpload";
 import { formatDate } from "@/utils/dateFormatter";
 import { useImageDatabase } from "./useImageDatabase";
 import { useToast } from "./use-toast";
+// إضافة استيراد useDuplicateDetection
 import { useDuplicateDetection } from "./useDuplicateDetection";
-import { useDataExtraction } from "./useDataExtraction";
 import { useSavedImageProcessing } from "./useSavedImageProcessing";
 import { useImageState } from "./useImageState";
 
@@ -62,8 +61,8 @@ export const useImageProcessing = () => {
   const { loadUserImages: fetchUserImages, saveImageToDatabase, handleSubmitToApi: submitToApi, deleteImageFromDatabase, runCleanupNow } = useImageDatabase(updateImage);
   
   // هوك كشف التكرارات
-  const { isDuplicateImage } = useDuplicateDetection();
-
+  const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection();
+  
   // تحميل الصور السابقة
   useEffect(() => {
     if (user) {
@@ -77,7 +76,7 @@ export const useImageProcessing = () => {
     }
   }, [user, hiddenImageIds]);
 
-  // معالجة ملف واحد من القائمة
+  // معالجة ملف واحد من القائمة مع التحقق من التكرار
   const processNextFile = useCallback(async () => {
     if (imageQueue.length === 0 || isPaused) {
       // تم الانتهاء من معالجة الصور أو تم إيقاف المعالجة مؤقتًا
@@ -92,7 +91,7 @@ export const useImageProcessing = () => {
     setImageQueue((prevQueue) => prevQueue.slice(1)); // إزالة الملف من القائمة
     setActiveUploads(1); // تحديث عدد الملفات قيد المعالجة
 
-    // تحقق من التكرار - تعديل التوقيع بإضافة وسيط ثانٍ فارغ
+    // تهيئة كائن الصورة للتحقق من التكرار
     const imageObj: ImageData = {
       id: uuidv4(),
       file,
@@ -103,20 +102,23 @@ export const useImageProcessing = () => {
       batch_id: uuidv4()
     };
     
-    if (isDuplicateImage(imageObj, [])) {
-      console.log("تم اكتشاف ملف مكرر:", file.name);
-      toast({
-        title: "ملف مكرر",
-        description: `تم تجاهل "${file.name}" لأنه موجود بالفعل`,
-        variant: "destructive"
-      });
-      
-      // المعالجة التالية
-      processNextFile();
-      return;
-    }
-
     try {
+      // التحقق من التكرار باستخدام الهوك الجديد
+      const isDuplicate = await isDuplicateImage(imageObj, images);
+      
+      if (isDuplicate) {
+        console.log("تم اكتشاف ملف مكرر:", file.name);
+        toast({
+          title: "ملف مكرر",
+          description: `تم تجاهل "${file.name}" لأنه موجود بالفعل`,
+          variant: "destructive"
+        });
+        
+        // المعالجة التالية
+        processNextFile();
+        return;
+      }
+
       // إنشاء معرّف فريد للصورة
       const id = uuidv4();
       const batchId = uuidv4(); // يمكن استخدامه لتجميع الصور المرتبطة
@@ -146,8 +148,6 @@ export const useImageProcessing = () => {
       let storagePath = null;
       if (user) {
         storagePath = `images/${user.id}/${id}-${file.name}`;
-        // سنستخدم uploadService لتحميل الملفات
-        // لا يمكننا استدعاء uploadImage مباشرة
       }
 
       // التعرف على النص باستخدام OCR
@@ -167,6 +167,9 @@ export const useImageProcessing = () => {
         const updatedImageData = images.find((img) => img.id === id);
         if (updatedImageData) {
           await saveImageToDatabase(updatedImageData);
+          
+          // تسجيل الصورة كمعالجة بعد الحفظ في قاعدة البيانات
+          markImageAsProcessed(updatedImageData);
         }
       }
     } catch (error) {
@@ -179,7 +182,7 @@ export const useImageProcessing = () => {
       // معالجة الملف التالي
       processNextFile();
     }
-  }, [imageQueue, isPaused, user, images, addImage, updateImage, toast, processWithOcr, isDuplicateImage, queueLength, saveImageToDatabase]);
+  }, [imageQueue, isPaused, user, images, addImage, updateImage, toast, processWithOcr, isDuplicateImage, queueLength, saveImageToDatabase, markImageAsProcessed]);
 
   // إعادة تصدير بعض الدوال المفيدة
   const handleFileChange = (files: FileList | File[]) => {
@@ -256,7 +259,7 @@ export const useImageProcessing = () => {
     }
   };
 
-  // مواجهة مبسطة للتقديم
+  // مواجهة مبسطة للتقديم مع تسجيل الصورة كمعالجة بعد الإرسال
   const handleSubmitToApi = useCallback(async (id: string) => {
     try {
       // تحديث حالة التقديم
@@ -275,6 +278,12 @@ export const useImageProcessing = () => {
       // تحديث حالة الصورة إذا كان الإرسال ناجحًا
       if (result) {
         updateImage(id, { submitted: true });
+        
+        // تسجيل الصورة كمعالجة بعد الإرسال الناجح
+        const submittedImage = images.find(img => img.id === id);
+        if (submittedImage) {
+          markImageAsProcessed(submittedImage);
+        }
         
         // عرض رسالة نجاح للمستخدم
         toast({
@@ -296,7 +305,7 @@ export const useImageProcessing = () => {
       // إعادة تعيين حالة التقديم
       setIsSubmitting(prev => ({ ...prev, [id]: false }));
     }
-  }, [images, submitToApi, toast, updateImage, user?.id]);
+  }, [images, submitToApi, toast, updateImage, user?.id, markImageAsProcessed]);
 
   // تنفيذ الوظائف الناقصة
   const retryProcessing = () => {
@@ -379,7 +388,7 @@ export const useImageProcessing = () => {
     handleFileChange,
     handleTextChange,
     handleDelete,
-    handlePermanentDelete,  // إضافة دالة الحذف الدائم
+    handlePermanentDelete,
     handleSubmitToApi,
     saveImageToDatabase,
     formatDate: formatDateFn,
@@ -399,6 +408,8 @@ export const useImageProcessing = () => {
     // تصدير واجهة الدالة المبسطة
     loadUserImages,
     setImages: setAllImages,
-    clearOldApiKey
+    clearOldApiKey,
+    // إضافة دالة لتحقق من وجود الصورة مسبقاً
+    checkDuplicateImage: isDuplicateImage
   };
 };
