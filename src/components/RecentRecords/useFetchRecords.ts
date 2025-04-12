@@ -19,6 +19,10 @@ const useFetchRecords = (activeTab: string) => {
       return data.filter(item => item.status === 'pending' || item.status === 'processing');
     } else if (activeTab === 'completed') {
       return data.filter(item => item.status === 'completed');
+    } else if (activeTab === 'pending') {
+      return data.filter(item => item.status === 'pending');
+    } else if (activeTab === 'error') {
+      return data.filter(item => item.status === 'error');
     }
     return data;
   }, [data, activeTab]);
@@ -26,8 +30,10 @@ const useFetchRecords = (activeTab: string) => {
   // حساب عدد السجلات لكل تبويب
   const counts = useMemo(() => ({
     all: data.length,
-    processing: data.filter(item => item.status === 'pending' || item.status === 'processing').length,
+    processing: data.filter(item => item.status === 'processing').length,
+    pending: data.filter(item => item.status === 'pending').length,
     completed: data.filter(item => item.status === 'completed').length,
+    error: data.filter(item => item.status === 'error').length,
   }), [data]);
 
   const fetchRecords = async () => {
@@ -60,6 +66,8 @@ const useFetchRecords = (activeTab: string) => {
               price: '50000',
               file: createDummyFile(),
               previewUrl: 'https://via.placeholder.com/150',
+              extractedText: '',
+              submitted: false,
             },
             {
               id: '2',
@@ -72,6 +80,8 @@ const useFetchRecords = (activeTab: string) => {
               price: '35000',
               file: createDummyFile(),
               previewUrl: 'https://via.placeholder.com/150',
+              extractedText: '',
+              submitted: false,
             },
             {
               id: '3',
@@ -84,6 +94,36 @@ const useFetchRecords = (activeTab: string) => {
               price: '75000',
               file: createDummyFile(),
               previewUrl: 'https://via.placeholder.com/150',
+              extractedText: '',
+              submitted: false,
+            },
+            {
+              id: '4',
+              code: 'D101',
+              senderName: 'فاطمة محمد',
+              phoneNumber: '07734567890',
+              province: 'النجف',
+              date: new Date(),
+              status: 'pending',
+              price: '85000',
+              file: createDummyFile(),
+              previewUrl: 'https://via.placeholder.com/150',
+              extractedText: '',
+              submitted: false,
+            },
+            {
+              id: '5',
+              code: 'E202',
+              senderName: 'حسن كريم',
+              phoneNumber: '07745678901',
+              province: 'كربلاء',
+              date: new Date(),
+              status: 'error',
+              price: '65000',
+              file: createDummyFile(),
+              previewUrl: 'https://via.placeholder.com/150',
+              extractedText: '',
+              submitted: false,
             },
           ]);
         }, 1000);

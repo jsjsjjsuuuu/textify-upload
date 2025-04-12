@@ -16,7 +16,7 @@ export interface TabBarProps {
 
 const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabChange }) => {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" dir="rtl">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -34,7 +34,7 @@ const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabChange }) => {
             <span className="text-white text-sm">{tab.label}</span>
           </div>
           <div className={`task-count-badge ${
-            activeTab === tab.id ? 'bg-indigo-600' : ''
+            activeTab === tab.id ? 'bg-indigo-600' : 'bg-slate-800'
           }`}>
             {tab.count}
           </div>

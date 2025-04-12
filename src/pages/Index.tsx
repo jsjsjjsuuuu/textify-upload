@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
@@ -90,7 +89,7 @@ const Index = () => {
             <div className="mt-6">
               <ImagesCard
                 images={images}
-                isSubmitting={false} // تصحيح: تغيير من boolean إلى Record<string, boolean>
+                isSubmitting={false}
                 onTextChange={handleTextChange}
                 onDelete={handleDelete}
                 onSubmit={handleSubmitToApi}
@@ -102,7 +101,7 @@ const Index = () => {
         </div>
 
         {/* إضافة آخر السجلات في أسفل الصفحة */}
-        <div className="container mx-auto px-4 mt-8">
+        <div className="mt-8">
           <RecentRecords />
         </div>
       </div>

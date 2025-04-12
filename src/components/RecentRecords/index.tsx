@@ -28,7 +28,7 @@ const RecentRecords: React.FC = () => {
       id: "pending", 
       label: "قيد الانتظار", 
       icon: <Clock className="h-4 w-4" />, 
-      count: 0
+      count: counts.pending 
     },
     { 
       id: "completed", 
@@ -37,16 +37,10 @@ const RecentRecords: React.FC = () => {
       count: counts.completed 
     },
     { 
-      id: "incomplete", 
-      label: "غير مكتملة", 
-      icon: <AlertCircle className="h-4 w-4" />, 
-      count: 0
-    },
-    { 
       id: "error", 
       label: "أخطاء", 
       icon: <AlertCircle className="h-4 w-4" />, 
-      count: 0
+      count: counts.error 
     }
   ];
 
@@ -60,36 +54,26 @@ const RecentRecords: React.FC = () => {
 
   return (
     <div className="task-system-bg p-6 rounded-xl shadow-xl">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold text-white">نظام إدارة السجلات</h2>
-        <div className="text-slate-400 text-sm">١٢ أبريل، ٢٠٢٥</div>
-      </div>
+      <CardHeader onRefresh={handleRefresh} />
       
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => handleTabChange(tab.id)}
-            className={`task-card flex items-center justify-between p-4 ${activeTab === tab.id ? 'bg-indigo-600/30 border-indigo-400/50' : ''}`}
-          >
-            <div className="text-white font-medium text-sm">{tab.label}</div>
-            <div className={`task-count-badge ${activeTab === tab.id ? 'bg-indigo-600' : 'bg-slate-800'}`}>
-              {tab.count}
-            </div>
-          </button>
-        ))}
-      </div>
+      <TabBar
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
       
-      <div className="task-card p-4 mb-6">
+      <div className="task-card p-4 mb-6 mt-6">
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-2 text-white">
             <LayoutGrid className="text-indigo-400" size={20} />
-            <span className="font-medium">الكل</span>
+            <span className="font-medium">{tabs.find(tab => tab.id === activeTab)?.label || "الكل"}</span>
             <span className="bg-slate-700/80 px-3 py-1 rounded-full text-xs">
-              {counts.all} عناصر
+              {activeTab === 'all' ? counts.all : activeTab === 'processing' ? counts.processing : 
+               activeTab === 'completed' ? counts.completed : activeTab === 'pending' ? counts.pending : 
+               activeTab === 'error' ? counts.error : 0} عناصر
             </span>
           </div>
-          <button className="bg-indigo-600 rounded-lg p-2 text-white">
+          <button className="bg-indigo-600 hover:bg-indigo-700 transition-colors rounded-lg p-2 text-white">
             <LayoutGrid size={18} />
           </button>
         </div>
