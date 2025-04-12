@@ -32,17 +32,9 @@ function App() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
               </div>
             }>
-              <div className="min-h-screen bg-[#0a0f1d] transition-colors duration-300 relative overflow-x-hidden">
-                {/* خلفية مع تأثير الطبق */}
-                <div className="glass-bg-element opacity-15 blur-3xl rounded-full bg-gradient-to-r from-indigo-500/30 via-purple-500/30 to-pink-500/20 w-[55rem] h-[55rem] fixed top-[-30rem] right-[-35rem] z-[-1]"></div>
-                <div className="glass-bg-element opacity-15 blur-3xl rounded-full bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 w-[65rem] h-[65rem] fixed bottom-[-35rem] left-[-30rem] z-[-1]"></div>
-                
-                {/* تأثير دوراني بطيء للأشكال في الخلفية */}
-                <div className="fixed inset-0 z-[-2] overflow-hidden">
-                  <div className="absolute w-[70rem] h-[70rem] rounded-full bg-gradient-to-br from-blue-600/5 to-purple-600/5 blur-3xl -top-[20rem] -right-[20rem] animate-[spin_120s_linear_infinite]"></div>
-                  <div className="absolute w-[80rem] h-[80rem] rounded-full bg-gradient-to-br from-indigo-600/5 to-blue-600/5 blur-3xl -bottom-[30rem] -left-[30rem] animate-[spin_140s_linear_reverse_infinite]"></div>
-                </div>
-                
+              <div className="min-h-screen bg-[#0a0f1d] transition-colors duration-300">
+                <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/10 w-[40rem] h-[40rem] fixed top-[-20rem] right-[-20rem] z-[-1]"></div>
+                <div className="glass-bg-element opacity-10 blur-3xl rounded-full bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 w-[50rem] h-[50rem] fixed bottom-[-25rem] left-[-20rem] z-[-1]"></div>
                 <AppRoutes />
               </div>
             </Suspense>

@@ -1,50 +1,63 @@
 
 import React from 'react';
-import { Input } from '@/components/ui/input';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, SortAsc } from 'lucide-react';
 
 interface UserFiltersProps {
-  searchTerm: string;
-  filterRole: string;
-  onSearchChange: (term: string) => void;
-  onFilterChange: (role: string) => void;
+  searchQuery: string;
+  filterPlan: string;
+  filterStatus: string;
+  onSearchChange: (value: string) => void;
+  onPlanFilterChange: (value: string) => void;
+  onStatusFilterChange: (value: string) => void;
 }
 
 const UserFilters: React.FC<UserFiltersProps> = ({
-  searchTerm,
-  filterRole,
+  searchQuery,
+  filterPlan,
+  filterStatus,
   onSearchChange,
-  onFilterChange
+  onPlanFilterChange,
+  onStatusFilterChange
 }) => {
   return (
-    <div className="dish-effect mb-8">
-      <div className="dish-content">
-        <div className="p-6 flex flex-col md:flex-row gap-4">
-          <div className="relative w-full md:w-3/4">
-            <Search className="absolute right-4 top-3.5 h-5 w-5 text-white/50" />
-            <Input
-              type="text"
-              placeholder="ابحث عن مستخدم بالاسم أو البريد الإلكتروني..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="bg-[#131b31] border-0 text-white pr-12 h-12 shadow-[0_0_8px_rgba(0,0,0,0.2)_inset]"
-            />
-          </div>
-          
-          <div className="relative w-full md:w-1/4">
-            <Filter className="absolute right-4 top-3.5 h-5 w-5 text-white/50" />
-            <select 
-              value={filterRole}
-              onChange={(e) => onFilterChange(e.target.value)}
-              className="bg-[#131b31] border-0 text-white pr-12 h-12 w-full rounded-md shadow-[0_0_8px_rgba(0,0,0,0.2)_inset]"
-            >
-              <option value="all">جميع الأدوار</option>
-              <option value="user">مستخدم</option>
-              <option value="admin">مسؤول</option>
-              <option value="editor">محرر</option>
-            </select>
-          </div>
-        </div>
+    <div className="flex flex-col md:flex-row gap-5 mb-8">
+      <div className="w-full md:w-1/2 relative">
+        <Search className="absolute right-5 top-3.5 h-5 w-5 text-blue-200/60" />
+        <input
+          type="text"
+          placeholder="البحث بالاسم أو البريد الإلكتروني..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="w-full bg-[#131b31] rounded-xl py-3 pr-12 pl-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base"
+        />
+      </div>
+      
+      <div className="w-full md:w-1/4">
+        <select 
+          value={filterPlan} 
+          onChange={(e) => onPlanFilterChange(e.target.value)}
+          className="w-full bg-[#131b31] rounded-xl py-3 px-5 text-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base appearance-none"
+          style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'left 1.25rem center', backgroundSize: '.65rem auto' }}
+        >
+          <option value="all">جميع الباقات</option>
+          <option value="standard">الباقة العادية</option>
+          <option value="vip">الباقة VIP</option>
+          <option value="pro">الباقة المتميزة PRO</option>
+        </select>
+      </div>
+      
+      <div className="w-full md:w-1/4">
+        <select 
+          value={filterStatus} 
+          onChange={(e) => onStatusFilterChange(e.target.value)}
+          className="w-full bg-[#131b31] rounded-xl py-3 px-5 text-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base appearance-none"
+          style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'left 1.25rem center', backgroundSize: '.65rem auto' }}
+        >
+          <option value="all">جميع الحالات</option>
+          <option value="active">نشط</option>
+          <option value="suspended">موقوف</option>
+          <option value="expired">منتهي</option>
+        </select>
       </div>
     </div>
   );

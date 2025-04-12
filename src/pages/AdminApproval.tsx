@@ -1,143 +1,250 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import UserTable from '@/components/admin/UserTable';
-import { useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
-import UserTabsFilter from '@/components/admin/UserTabsFilter';
-import UserFilters from '@/components/admin/UserFilters';
-import { useUserManagement } from '@/hooks/useUserManagement';
-import UserEditForm from '@/components/admin/UserEditForm';
 import { Button } from '@/components/ui/button';
+import { RefreshCw, User, CheckCircle, Clock, Search, Filter, PlusCircle } from 'lucide-react';
+import { toast } from 'sonner';
+
+// استيراد المكونات المستخرجة
+import UserTable from '@/components/admin/UserTable';
+import UserEditForm from '@/components/admin/UserEditForm';
+import UserFilters from '@/components/admin/UserFilters';
+import UserTabsFilter from '@/components/admin/UserTabsFilter';
 import ResetPasswordDialog from '@/components/admin/ResetPasswordDialog';
-import { Users, RefreshCw } from 'lucide-react';
+
+// استيراد custom hook
+import { useUserManagement } from '@/hooks/useUserManagement';
 
 const AdminApproval = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
-  const [activeTab, setActiveTab] = useState('all');
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  // استخدام hook إدارة المستخدمين
+  const { user, userProfile } = useAuth();
   const {
     users,
-    filteredUsers,
     isLoading,
-    error,
-    selectedUser,
-    resetPasswordUser,
-    resetPasswordProcessing,
-    updateUserRole,
+    activeTab,
+    filterPlan,
+    filterStatus,
+    searchQuery,
+    isEditingUser,
+    editedUserData,
+    newPassword,
+    showPassword,
+    isProcessing,
+    selectedDate,
+    showConfirmReset,
+    userToReset,
+    fetchAttempted,
+    setActiveTab,
+    setFilterPlan,
+    setFilterStatus,
+    setSearchQuery,
+    setNewPassword,
+    setShowPassword,
+    setShowConfirmReset,
+    setUserToReset,
+    fetchUsers,
     approveUser,
-    deleteUser,
-    setSelectedUser,
-    setResetPasswordUser,
-    refreshUsers,
-    handleResetPassword,
-    totalUsers,
-    pendingUsers,
-    approvedUsers,
+    rejectUser,
+    resetUserPassword,
+    updateUserEmail,
+    saveUserData,
+    startEditing,
+    cancelEditing,
+    handleEditChange,
+    getFilteredUsers,
+    getUserCounts,
+    prepareUserPasswordReset,
+    handleDateSelect,
   } = useUserManagement();
 
-  // التأكد من أن المستخدم مسؤول
+  // جلب البيانات عند تحميل الصفحة - مع منع التكرار
   useEffect(() => {
-    if (user && user.user_metadata?.role !== 'admin') {
-      navigate('/');
+    console.log('جاري تحميل صفحة إدارة المستخدمين...', { fetchAttempted });
+    
+    // تسجيل معلومات المستخدم للتصحيح
+    console.log('معلومات المستخدم في AdminApproval:', {
+      id: user?.id,
+      email: user?.email,
+      is_approved: userProfile?.is_approved,
+      is_admin: userProfile?.is_admin
+    });
+    
+    // جلب البيانات فقط إذا لم تتم محاولة الجلب من قبل أو إذا كانت قائمة المستخدمين فارغة
+    if (!fetchAttempted && user && userProfile) {
+      fetchUsers();
     }
-  }, [user, navigate]);
+  }, [user, userProfile, fetchAttempted]);
 
-  const handleFilterChange = (role: string) => {
-    setFilterRole(role);
+  // التعامل مع تأكيد إعادة تعيين كلمة المرور
+  const handleConfirmReset = () => {
+    if (userToReset && newPassword) {
+      // طباعة سجل تصحيح لمساعدة في تشخيص المشكلة
+      console.log('تنفيذ إعادة تعيين كلمة المرور مع البيانات:', {
+        userToReset,
+        userToResetType: typeof userToReset,
+        userToResetLength: userToReset.length,
+        passwordLength: newPassword.length,
+        passwordEmpty: !newPassword.trim()
+      });
+      
+      // تنفيذ عملية إعادة تعيين كلمة المرور
+      resetUserPassword(userToReset, newPassword);
+    } else {
+      console.error('لا يمكن إعادة تعيين كلمة المرور:', {
+        userToReset,
+        hasPassword: !!newPassword,
+        passwordLength: newPassword ? newPassword.length : 0
+      });
+      
+      if (!userToReset) {
+        toast.error('لم يتم تحديد مستخدم لإعادة تعيين كلمة المرور');
+      }
+      
+      if (!newPassword) {
+        toast.error('يرجى إدخال كلمة المرور الجديدة');
+      }
+    }
   };
 
-  const handleSearchChange = (term: string) => {
-    setSearchTerm(term);
-  };
+  const userCounts = getUserCounts();
+  const filteredUsers = getFilteredUsers();
 
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-  };
-  
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#0a0f1d]">
       <AppHeader />
       
-      {/* إضافة تأثير الطبق المجسم */}
-      <div className="container mx-auto py-8 px-4 md:px-6">
-        <div className="dish-effect">
-          <div className="dish-glow"></div>
-          <div className="dish-content">
-            <div className="dish-inner">
-              <div className="dish-shimmer"></div>
-              
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
-                <div>
-                  <h1 className="text-3xl font-bold text-gradient flex items-center gap-2">
-                    <Users className="h-7 w-7 text-blue-400" />
-                    إدارة المستخدمين
-                  </h1>
-                  <p className="text-white/60 mt-2 text-lg">
-                    يمكنك إدارة المستخدمين واعتمادهم وتغيير أدوارهم من هنا
-                  </p>
-                </div>
-                
-                <Button
-                  onClick={refreshUsers}
-                  variant="outline"
-                  className="bg-[#1a253f] hover:bg-[#243050] text-white/90 border-0 flex items-center gap-2 self-start md:self-auto"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  تحديث
-                </Button>
-              </div>
-              
-              <UserFilters
-                searchTerm={searchTerm}
-                filterRole={filterRole}
-                onSearchChange={handleSearchChange}
-                onFilterChange={handleFilterChange}
-              />
-              
-              <UserTabsFilter
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                totalUsers={totalUsers}
-                pendingUsers={pendingUsers}
-                approvedUsers={approvedUsers}
+      <div className="container py-12 mx-auto max-w-7xl px-4">
+        <div className="rounded-2xl bg-[#0e1529]/95 overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-8 border-b border-[#1e2a47]">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">نظام إدارة المستخدمين</h1>
+              <p className="text-base text-blue-200/70 mt-2">إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline"
+                className="bg-[#131b31] hover:bg-[#1a253f] text-white border-0"
+                onClick={fetchUsers} 
+                disabled={isLoading}
               >
-                <UserTable
+                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''} mr-2`} />
+                تحديث
+              </Button>
+              <Button 
+                className="bg-primary hover:bg-primary/90 text-black font-medium"
+              >
+                <PlusCircle className="h-5 w-5 mr-2" />
+                إضافة مستخدم
+              </Button>
+            </div>
+          </div>
+          
+          <div className="p-8">
+            {/* أدوات البحث والتصفية */}
+            <UserFilters 
+              searchQuery={searchQuery}
+              filterPlan={filterPlan}
+              filterStatus={filterStatus}
+              onSearchChange={setSearchQuery}
+              onPlanFilterChange={setFilterPlan}
+              onStatusFilterChange={setFilterStatus}
+            />
+            
+            <UserTabsFilter
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              totalUsers={userCounts.total}
+              pendingUsers={userCounts.pending}
+              approvedUsers={userCounts.approved}
+            >
+              {isEditingUser ? (
+                <UserEditForm 
+                  userData={editedUserData!}
+                  newPassword={newPassword}
+                  showPassword={showPassword}
+                  isProcessing={isProcessing}
+                  selectedDate={selectedDate}
+                  onCancel={cancelEditing}
+                  onSave={saveUserData}
+                  onShowPasswordToggle={() => setShowPassword(!showPassword)}
+                  onNewPasswordChange={setNewPassword}
+                  onUserDataChange={handleEditChange}
+                  onDateSelect={handleDateSelect}
+                  onPasswordReset={() => prepareUserPasswordReset(editedUserData!.id)}
+                  onEmailChange={updateUserEmail}
+                />
+              ) : (
+                <UserTable 
                   users={filteredUsers}
                   isLoading={isLoading}
-                  error={error}
+                  onEdit={startEditing}
                   onApprove={approveUser}
-                  onDelete={deleteUser}
-                  onEdit={setSelectedUser}
-                  onResetPassword={setResetPasswordUser}
-                />
-              </UserTabsFilter>
-              
-              {selectedUser && (
-                <UserEditForm
-                  user={selectedUser}
-                  onClose={() => setSelectedUser(null)}
-                  onUpdateRole={updateUserRole}
+                  onReject={rejectUser}
                 />
               )}
+            </UserTabsFilter>
+            
+            {/* إحصائيات المستخدمين */}
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31]">
+                <div>
+                  <h3 className="text-base text-blue-200/70 mb-1">المستخدمون</h3>
+                  <p className="text-3xl font-bold">{userCounts.total}</p>
+                </div>
+                <div className="rounded-full p-4 bg-blue-600/20">
+                  <User className="h-7 w-7 text-blue-300" />
+                </div>
+              </div>
               
-              {resetPasswordUser && (
-                <ResetPasswordDialog
-                  isOpen={!!resetPasswordUser}
-                  onOpenChange={() => setResetPasswordUser(null)}
-                  onCancel={() => setResetPasswordUser(null)}
-                  onConfirm={handleResetPassword}
-                  isProcessing={resetPasswordProcessing}
-                />
-              )}
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31]">
+                <div>
+                  <h3 className="text-base text-blue-200/70 mb-1">معتمدون</h3>
+                  <p className="text-3xl font-bold">{userCounts.approved}</p>
+                </div>
+                <div className="rounded-full p-4 bg-emerald-500/20">
+                  <CheckCircle className="h-7 w-7 text-emerald-300" />
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31]">
+                <div>
+                  <h3 className="text-base text-blue-200/70 mb-1">في الانتظار</h3>
+                  <p className="text-3xl font-bold">{userCounts.pending}</p>
+                </div>
+                <div className="rounded-full p-4 bg-amber-500/20">
+                  <Clock className="h-7 w-7 text-amber-300" />
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] col-span-1 md:col-span-2">
+                <div className="w-full">
+                  <h3 className="text-base text-blue-200/70 mb-3">نشاط المستخدمين</h3>
+                  <div className="w-full bg-[#1a2544] rounded-full h-2.5">
+                    <div className="bg-gradient-to-r from-blue-600 to-emerald-500 h-2.5 rounded-full" style={{ width: `${(userCounts.approved / Math.max(userCounts.total, 1)) * 100}%` }}></div>
+                  </div>
+                  <div className="flex justify-between text-sm mt-3">
+                    <span className="text-blue-200/70">{Math.round((userCounts.approved / Math.max(userCounts.total, 1)) * 100)}% معتمد</span>
+                    <span className="text-blue-200/70">{Math.round((userCounts.pending / Math.max(userCounts.total, 1)) * 100)}% قيد الانتظار</span>
+                  </div>
+                </div>
+              </div>
             </div>
+            
           </div>
         </div>
       </div>
+      
+      {/* مربع حوار تأكيد إعادة تعيين كلمة المرور */}
+      <ResetPasswordDialog 
+        isOpen={showConfirmReset}
+        onOpenChange={setShowConfirmReset}
+        onCancel={() => {
+          setUserToReset(null);
+          setNewPassword('');
+        }}
+        onConfirm={handleConfirmReset}
+        isProcessing={isProcessing}
+      />
     </div>
   );
 };
