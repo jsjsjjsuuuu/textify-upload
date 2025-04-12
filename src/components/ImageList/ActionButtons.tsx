@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Trash, Send } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface ActionButtonsProps {
   imageId: string;
@@ -23,6 +24,21 @@ const ActionButtons = ({
   onDelete,
   onSubmit
 }: ActionButtonsProps) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // مراقبة حالة التقديم لتتبع العملية
+  useEffect(() => {
+    if (isSubmitting) {
+      setIsProcessing(true);
+    } else {
+      // تأخير صغير لإظهار "تم الإرسال" قبل إخفاء الزر
+      const timer = setTimeout(() => {
+        setIsProcessing(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSubmitting]);
+
   // عنوان زر توضيحي للإرشاد
   const getSubmitButtonTitle = () => {
     if (isSubmitted) {

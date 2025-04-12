@@ -40,6 +40,15 @@ const Index = () => {
 
   const { imageStats } = useImageStatsCalculator(images);
 
+  // تسجيل معلومات التشخيص
+  useEffect(() => {
+    if (typeof hideImage === 'function') {
+      console.log("تم تحميل وظيفة hideImage بنجاح");
+    } else {
+      console.error("خطأ: وظيفة hideImage غير معرّفة أو ليست دالة", typeof hideImage);
+    }
+  }, [hideImage]);
+
   // عرض رسالة التحميل أثناء التحقق من المستخدم
   if (isAuthLoading) {
     return <AuthLoading />;

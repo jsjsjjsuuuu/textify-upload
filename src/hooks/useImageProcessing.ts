@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -35,7 +36,7 @@ export const useImageProcessing = () => {
     unhideImage,
     unhideAllImages,
     getHiddenImageIds,
-    hideImage // تأكد من استدعاء hideImage من useImageState
+    hideImage // تأكد من استخراج hideImage من useImageState
   } = useImageState();
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
@@ -263,6 +264,7 @@ export const useImageProcessing = () => {
   // مواجهة مبسطة للتقديم مع تسجيل الصورة كمعالجة بعد الإرسال
   const handleSubmitToApi = useCallback(async (id: string) => {
     try {
+      console.log("بدء عملية الإرسال للصورة:", id);
       // تحديث حالة التقديم
       setIsSubmitting(prev => ({ ...prev, [id]: true }));
       
@@ -278,6 +280,7 @@ export const useImageProcessing = () => {
       
       // تحديث حالة الصورة إذا كان الإرسال ناجحًا
       if (result) {
+        console.log("تم إرسال الصورة بنجاح:", id);
         updateImage(id, { submitted: true });
         
         // تسجيل الصورة كمعالجة بعد الإرسال الناجح
@@ -291,6 +294,14 @@ export const useImageProcessing = () => {
           title: "تم الإرسال بنجاح",
           description: "تم إرسال البيانات بنجاح إلى API"
         });
+        
+        // إخفاء الصورة بعد الإرسال
+        console.log("إخفاء الصورة بعد الإرسال الناجح:", id);
+        if (typeof hideImage === 'function') {
+          hideImage(id);
+        } else {
+          console.error("وظيفة hideImage غير معرفة!", typeof hideImage);
+        }
       }
       
       return result;
@@ -306,7 +317,7 @@ export const useImageProcessing = () => {
       // إعادة تعيين حالة التقديم
       setIsSubmitting(prev => ({ ...prev, [id]: false }));
     }
-  }, [images, submitToApi, toast, updateImage, user?.id, markImageAsProcessed]);
+  }, [images, submitToApi, toast, updateImage, user?.id, markImageAsProcessed, hideImage]);
 
   // تنفيذ الوظائف الناقصة
   const retryProcessing = () => {
@@ -393,7 +404,7 @@ export const useImageProcessing = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     formatDate: formatDateFn,
-    // تأكد من تصدير وظيفة hideImage هنا
+    // تصدير وظيفة hideImage هنا بشكل واضح
     hideImage,
     // إضافة الوظائف الجديدة للتحكم في الصور المخفية
     unhideImage,

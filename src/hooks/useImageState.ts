@@ -3,6 +3,9 @@ import { useState, useCallback, useEffect } from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "./use-toast";
 
+// مفتاح localStorage لتخزين معرّفات الصور المخفية
+const HIDDEN_IMAGES_STORAGE_KEY = 'hiddenImageIds';
+
 export const useImageState = () => {
   const [images, setImages] = useState<ImageData[]>([]);
   const [sessionImages, setSessionImages] = useState<ImageData[]>([]);
@@ -12,19 +15,23 @@ export const useImageState = () => {
   // استدعاء الصور المخفية من التخزين المحلي عند بدء التطبيق
   useEffect(() => {
     try {
-      const storedHiddenImages = localStorage.getItem('hiddenImageIds');
+      const storedHiddenImages = localStorage.getItem(HIDDEN_IMAGES_STORAGE_KEY);
       if (storedHiddenImages) {
+        console.log("تم استرجاع الصور المخفية من التخزين المحلي:", storedHiddenImages);
         setHiddenImageIds(JSON.parse(storedHiddenImages));
       }
     } catch (error) {
       console.error("خطأ في استرجاع الصور المخفية:", error);
+      // حذف البيانات المخزنة إذا كانت تالفة
+      localStorage.removeItem(HIDDEN_IMAGES_STORAGE_KEY);
     }
   }, []);
 
   // حفظ الصور المخفية في التخزين المحلي عند تغييرها
   useEffect(() => {
     try {
-      localStorage.setItem('hiddenImageIds', JSON.stringify(hiddenImageIds));
+      console.log("حفظ الصور المخفية في التخزين المحلي:", hiddenImageIds);
+      localStorage.setItem(HIDDEN_IMAGES_STORAGE_KEY, JSON.stringify(hiddenImageIds));
     } catch (error) {
       console.error("خطأ في حفظ الصور المخفية:", error);
     }
@@ -62,11 +69,21 @@ export const useImageState = () => {
 
   // إخفاء صورة من العرض فقط (دون حذفها من قاعدة البيانات)
   const hideImage = useCallback((id: string) => {
+    console.log("بدء إخفاء الصورة:", id);
+    
     // إضافة الصورة إلى قائمة الصور المخفية
-    setHiddenImageIds(prev => [...prev, id]);
+    setHiddenImageIds(prev => {
+      const newHiddenIds = [...prev, id];
+      console.log("معرّفات الصور المخفية الجديدة:", newHiddenIds);
+      return newHiddenIds;
+    });
     
     // إزالة الصورة من عرض الصور الحالية
-    setImages(prev => prev.filter(img => img.id !== id));
+    setImages(prev => {
+      const newImages = prev.filter(img => img.id !== id);
+      console.log("تم تصفية الصور بعد الإخفاء، عدد الصور المتبقية:", newImages.length);
+      return newImages;
+    });
     
     // إزالة الصورة من الصور المؤقتة أيضًا إذا كانت موجودة هناك
     setSessionImages(prev => prev.filter(img => img.id !== id));

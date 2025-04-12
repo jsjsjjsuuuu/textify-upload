@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -29,7 +30,9 @@ export const useImageProcessingCore = () => {
     clearSessionImages,
     removeDuplicates,
     hiddenImageIds,
-    hideImage // استخدام وظيفة إخفاء الصورة
+    hideImage, // تأكد أن هذه الوظيفة مستخرجة من useImageState بشكل صحيح
+    unhideImage,
+    unhideAllImages
   } = useImageState();
   
   const {
@@ -108,7 +111,7 @@ export const useImageProcessingCore = () => {
     return true;
   };
 
-  // إعادة هيكلة وظيفة handleSubmitToApi لتستخدم وظيفة saveProcessedImage
+  // إعادة هيكلة وظيفة handleSubmitToApi لتستخدم وظيفة إخفاء الصورة بعد الإرسال
   const handleSubmitToApi = async (id: string) => {
     // العثور على الصورة حسب المعرف
     const image = images.find(img => img.id === id);
@@ -119,24 +122,22 @@ export const useImageProcessingCore = () => {
         description: "لم يتم العثور على الصورة المحددة",
         variant: "destructive"
       });
-      return;
+      return false;
     }
     
     // التحقق من اكتمال البيانات قبل الإرسال
     if (!validateRequiredFields(image)) {
-      return;
+      return false;
     }
     
     setIsSubmitting(true);
     try {
+      console.log("جاري إرسال البيانات للصورة:", id);
       // محاولة إرسال البيانات إلى API وحفظها في قاعدة البيانات
       const success = await submitToApi(id, image, user?.id);
       
       if (success) {
-        toast({
-          title: "تم الإرسال",
-          description: "تم إرسال البيانات وحفظها بنجاح",
-        });
+        console.log("تم إرسال البيانات بنجاح للصورة:", id);
         
         // تحديث الصورة محلياً
         updateImage(id, { submitted: true, status: "completed" });
@@ -144,17 +145,23 @@ export const useImageProcessingCore = () => {
         // تسجيل الصورة كمعالجة لتجنب إعادة المعالجة
         duplicateDetectionTools.markImageAsProcessed(image);
         
-        // إخفاء الصورة من العرض بعد الإرسال الناجح
-        hideImage(id);
+        toast({
+          title: "تم الإرسال",
+          description: "تم إرسال البيانات وحفظها بنجاح",
+        });
         
-        // إعادة تحميل الصور من قاعدة البيانات للتأكد من التزامن
-        if (user) {
-          loadUserImages(user.id, (loadedImages) => {
-            // تأكد من تطبيق فلتر الصور المخفية على الصور المحملة
-            const filteredImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
-            setAllImages(filteredImages);
-          });
+        // إخفاء الصورة من العرض بعد الإرسال الناجح - تأكد من أن الدالة موجودة
+        if (typeof hideImage === 'function') {
+          console.log("جاري إخفاء الصورة:", id);
+          hideImage(id);
+        } else {
+          console.error("وظيفة hideImage غير معرفة!", typeof hideImage);
         }
+        
+        return true;
+      } else {
+        console.error("فشل في إرسال البيانات للصورة:", id);
+        return false;
       }
     } catch (error) {
       console.error("خطأ في إرسال البيانات:", error);
@@ -163,6 +170,7 @@ export const useImageProcessingCore = () => {
         description: "حدث خطأ أثناء محاولة إرسال البيانات",
         variant: "destructive"
       });
+      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -241,14 +249,14 @@ export const useImageProcessingCore = () => {
     isSubmitting,
     isLoadingUserImages,
     bookmarkletStats,
-    hiddenImageIds, // إضافة معرّفات الصور المخفية للواجهة
+    hiddenImageIds,
     handleFileChange,
     handleTextChange,
     handleDelete: deleteImage,
     handleSubmitToApi,
     saveImageToDatabase,
     saveProcessedImage,
-    hideImage, // إضافة وظيفة إخفاء الصورة للواجهة
+    hideImage, // تأكد من تصدير وظيفة hideImage للاستخدام الخارجي
     loadUserImages: (callback?: (images: ImageData[]) => void) => {
       if (user) {
         loadUserImages(user.id, callback || ((loadedImages) => {
@@ -260,7 +268,7 @@ export const useImageProcessingCore = () => {
     },
     clearSessionImages,
     removeDuplicates,
-    validateRequiredFields: () => true,
+    validateRequiredFields,
     runCleanupNow,
     activeUploads,
     queueLength,
@@ -268,16 +276,7 @@ export const useImageProcessingCore = () => {
     ...duplicateDetectionTools,
     processWithGemini,
     processWithOcr,
-    unhideImage: (id: string) => {
-      // استدعاء وظيفة unhideImage من useImageState
-      return {
-        id,
-        result: false
-      };
-    },
-    unhideAllImages: () => {
-      // استدعاء وظيفة unhideAllImages من useImageState
-      return false;
-    }
+    unhideImage,
+    unhideAllImages
   };
 };
