@@ -1,7 +1,7 @@
 import { ImageData } from "@/types/ImageData";
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Save, SendHorizonal, Filter, Loader, Image, ZoomIn, ZoomOut, RefreshCw, Maximize2 } from "lucide-react";
+import { Trash2, Save, SendHorizontal, Filter, Loader, Image, ZoomIn, ZoomOut, RefreshCw, Maximize2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import ExtractedDataEditor from "@/components/ExtractedData/ExtractedDataEditor";
@@ -306,7 +306,7 @@ const ImagePreviewContainer = ({
             disabled={isSubmitting} 
             className="bg-green-600 hover:bg-green-700 text-white"
           >
-            {isSubmitting ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <SendHorizonal className="mr-2 h-4 w-4" />}
+            {isSubmitting ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <SendHorizontal className="mr-2 h-4 w-4" />}
             إرسال
           </Button>
         )}
