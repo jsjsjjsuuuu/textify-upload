@@ -1,5 +1,53 @@
+
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 220 20% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 20%;
+
+    --primary: 220 70% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 10% 96%;
+    --secondary-foreground: 220 20% 20%;
+
+    --muted: 220 10% 96%;
+    --muted-foreground: 220 5% 45%;
+
+    --accent: 220 10% 96%;
+    --accent-foreground: 220 20% 20%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 10% 90%;
+    --input: 220 10% 90%;
+    --ring: 220 70% 50%;
+
+    --radius: 0.75rem;
+
+    --color-1: 220 70% 50%;
+    --color-2: 0 84% 60%;
+    --color-3: 220 20% 20%;
+    --color-4: 220 10% 96%;
+    --color-5: 0 0% 100%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 20%;
+    --sidebar-primary: 220 70% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 10% 96%;
+    --sidebar-accent-foreground: 220 20% 20%;
+    --sidebar-border: 220 10% 90%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
     --background: 220 20% 10%;
     --foreground: 0 0% 100%;
 
@@ -42,76 +90,12 @@
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 220 20% 25%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-    
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-background: rgba(0, 0, 0, 0.3);
-    --glass-highlight: rgba(255, 255, 255, 0.1);
-    --glass-shadow: rgba(0, 0, 0, 0.5);
-  }
-
-  .dark {
-    --background: 20 14.3% 4.1%;
-    --foreground: 0 0% 98%;
-
-    --card: 20 14.3% 10%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 20 14.3% 10%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 20 14.3% 4.1%;
-
-    --secondary: 20 14.3% 15%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 20 14.3% 15%;
-    --muted-foreground: 20 8.6% 46.3%;
-
-    --accent: 20 14.3% 15%;
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 72.2% 50.6%;
-    --destructive-foreground: 0 0% 98%;
-    
-    --border: 20 14.3% 20%;
-    --input: 20 14.3% 20%;
-    --ring: 217.2 91.2% 59.8%;
   }
 }
 
 @layer utilities {
   .glass-card {
-    @apply bg-black/30 backdrop-blur-md border border-white/10 shadow-lg;
-  }
-  
-  .glass-background {
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  .glass-border {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  .glass-shadow {
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  }
-  
-  .glass-glow {
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-  }
-  
-  .glass-card-hover {
-    transition: all 0.3s ease;
-  }
-  
-  .glass-card-hover:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    @apply bg-card/80 backdrop-blur-sm border shadow-sm;
   }
   
   .text-balance {
@@ -120,23 +104,5 @@
   
   .dark-transition {
     @apply transition-colors duration-300 ease-in-out;
-  }
-  
-  /* تنسيقات خاصة لصفحة السجلات والمهام */
-  .task-system-bg {
-    @apply bg-gradient-to-br from-[#0e1320] to-[#141b2d];
-  }
-  
-  .task-card {
-    @apply bg-slate-900/40 backdrop-blur-md border border-slate-800/50 rounded-xl 
-           transition-all hover:bg-slate-900/60 shadow-lg hover:shadow-xl;
-  }
-  
-  .task-count-badge {
-    @apply w-8 h-8 flex items-center justify-center rounded-md bg-indigo-600/90 text-white;
-  }
-  
-  .task-icon-wrapper {
-    @apply w-8 h-8 flex items-center justify-center rounded-full;
   }
 }

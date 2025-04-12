@@ -10,14 +10,14 @@ interface CardHeaderProps {
 
 const CardHeader = ({ onRefresh }: CardHeaderProps) => {
   return (
-    <UICardHeader className="glassmorphism-header border-b border-white/10">
-      <CardTitle className="flex justify-between items-center text-white">
+    <UICardHeader>
+      <CardTitle className="flex justify-between items-center">
         <span>آخر السجلات</span>
-        <Button variant="outline" size="icon" onClick={onRefresh} className="bg-white/10 hover:bg-white/20 text-white border-white/20">
+        <Button variant="outline" size="icon" onClick={onRefresh}>
           <RefreshCw className="h-4 w-4" />
         </Button>
       </CardTitle>
-      <CardDescription className="text-white/70">
+      <CardDescription>
         عرض أحدث السجلات المضافة في النظام
       </CardDescription>
     </UICardHeader>

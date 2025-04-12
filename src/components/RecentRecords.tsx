@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from "@/components/ui/card";
-import { Database, ExternalLink, Loader } from 'lucide-react';
+import { Database, ExternalLink } from 'lucide-react';
 
 const RecentRecords: React.FC = () => {
   const [records, setRecords] = useState<ImageData[]>([]);
@@ -28,7 +28,7 @@ const RecentRecords: React.FC = () => {
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(10);
+          .limit(15);
 
         if (error) {
           console.error("خطأ في جلب السجلات الأخيرة:", error);
@@ -87,18 +87,18 @@ const RecentRecords: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Card className="glass-card border-none overflow-hidden shadow-xl">
-        <div className="glassmorphism-header p-4 flex justify-between items-center border-b border-white/10">
-          <h2 className="text-xl font-bold text-white">آخر السجلات</h2>
-          <Button variant="ghost" size="sm" disabled className="text-white/70 hover:bg-white/10">
-            <Loader className="w-4 h-4 ml-1 animate-spin" /> جاري التحميل...
+      <Card className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">آخر السجلات</h2>
+          <Button variant="ghost" size="sm" disabled>
+            <ExternalLink className="w-4 h-4 ml-1" /> عرض الكل
           </Button>
         </div>
-        <div className="space-y-4 p-6 backdrop-blur-md bg-black/30">
+        <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex justify-between items-center">
-              <Skeleton className="h-6 w-3/4 bg-white/10" />
-              <Skeleton className="h-6 w-1/5 bg-white/10" />
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-6 w-1/5" />
             </div>
           ))}
         </div>
@@ -108,55 +108,54 @@ const RecentRecords: React.FC = () => {
 
   if (records.length === 0) {
     return (
-      <Card className="glass-card border-none overflow-hidden shadow-xl">
-        <div className="glassmorphism-header p-4 flex justify-between items-center border-b border-white/10">
-          <h2 className="text-xl font-bold text-white">آخر السجلات</h2>
-          <Button variant="ghost" size="sm" onClick={handleViewAllClick} className="text-white hover:bg-white/20">
+      <Card className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">آخر السجلات</h2>
+          <Button variant="ghost" size="sm" onClick={handleViewAllClick}>
             <ExternalLink className="w-4 h-4 ml-1" /> عرض الكل
           </Button>
         </div>
-        <div className="text-center p-12 text-white/70 backdrop-blur-md bg-black/30">
-          <Database className="w-12 h-12 mx-auto mb-4 opacity-20" />
-          <p className="text-lg">لا توجد سجلات حتى الآن</p>
-          <p className="text-sm mt-2 text-white/50">ستظهر هنا السجلات بمجرد إضافتها</p>
+        <div className="text-center p-8 text-muted-foreground">
+          <Database className="w-12 h-12 mx-auto mb-2 opacity-20" />
+          <p>لا توجد سجلات حتى الآن</p>
         </div>
       </Card>
     );
   }
 
   return (
-    <Card className="glass-card border-none overflow-hidden shadow-xl">
-      <div className="glassmorphism-header p-4 flex justify-between items-center border-b border-white/10">
-        <h2 className="text-xl font-bold text-white">آخر السجلات</h2>
-        <Button variant="ghost" size="sm" onClick={handleViewAllClick} className="text-white hover:bg-white/20">
+    <Card className="overflow-hidden">
+      <div className="p-4 flex justify-between items-center border-b">
+        <h2 className="text-xl font-bold">آخر السجلات</h2>
+        <Button variant="ghost" size="sm" onClick={handleViewAllClick}>
           <ExternalLink className="w-4 h-4 ml-1" /> عرض الكل
         </Button>
       </div>
-      <div className="overflow-x-auto backdrop-blur-md bg-black/30">
-        <Table className="w-full">
+      <div className="overflow-x-auto">
+        <Table>
           <TableHeader>
-            <TableRow className="glassmorphism-header-row">
-              <TableHead className="text-white/90 font-bold text-right">#</TableHead>
-              <TableHead className="text-white/90 font-bold text-right">التاريخ</TableHead>
-              <TableHead className="text-white/90 font-bold text-right">المرسل</TableHead>
-              <TableHead className="text-white/90 font-bold text-right">الهاتف</TableHead>
-              <TableHead className="text-white/90 font-bold text-right">المبلغ</TableHead>
-              <TableHead className="text-white/90 font-bold text-right">الشركة</TableHead>
+            <TableRow>
+              <TableHead className="w-[60px]">#</TableHead>
+              <TableHead>التاريخ</TableHead>
+              <TableHead>المرسل</TableHead>
+              <TableHead>الهاتف</TableHead>
+              <TableHead>المبلغ</TableHead>
+              <TableHead>الشركة</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {records.map((record) => (
               <TableRow 
                 key={record.id} 
-                className="glassmorphism-table-row cursor-pointer hover:bg-white/10 transition-colors"
+                className="cursor-pointer hover:bg-muted transition-colors"
                 onClick={() => navigate(`/records?id=${record.id}`)}
               >
-                <TableCell className="font-medium text-white text-right">{record.number}</TableCell>
-                <TableCell className="text-white/90 text-right">{formatDate(record.date)}</TableCell>
-                <TableCell className="text-white/90 text-right">{record.senderName || '—'}</TableCell>
-                <TableCell className="text-white/90 text-right">{record.phoneNumber || '—'}</TableCell>
-                <TableCell className="text-white/90 text-right">{record.price || '—'}</TableCell>
-                <TableCell className="text-white/90 text-right">{record.companyName || '—'}</TableCell>
+                <TableCell className="font-medium">{record.number}</TableCell>
+                <TableCell>{formatDate(record.date)}</TableCell>
+                <TableCell>{record.senderName || '—'}</TableCell>
+                <TableCell>{record.phoneNumber || '—'}</TableCell>
+                <TableCell>{record.price || '—'}</TableCell>
+                <TableCell>{record.companyName || '—'}</TableCell>
               </TableRow>
             ))}
           </TableBody>

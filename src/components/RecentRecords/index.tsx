@@ -41,10 +41,10 @@ const RecentRecords: React.FC = () => {
   };
 
   return (
-    <Card className="mb-6 glass-card border-none shadow-xl" dir="rtl">
+    <Card className="mb-6" dir="rtl">
       <CardHeader onRefresh={handleRefresh} />
       
-      <div className="px-4 pb-2">
+      <div className="px-6 pb-4">
         <TabBar 
           tabs={tabs} 
           activeTab={activeTab} 
