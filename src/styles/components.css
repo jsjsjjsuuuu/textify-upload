@@ -95,4 +95,49 @@
   .dark .elegant-upload {
     @apply from-brand-coral/15 via-brand-beige/10 to-brand-green/10;
   }
+  
+  /* تنسيقات التصميم المورفي الزجاجي (Glassmorphism) */
+  .glass-card {
+    @apply rounded-2xl overflow-hidden bg-white/10 backdrop-blur-lg border border-white/20 shadow-lg;
+  }
+  
+  .glassmorphism-header {
+    @apply bg-black/40 backdrop-blur-md;
+  }
+  
+  .glassmorphism-table {
+    @apply w-full border-collapse;
+  }
+  
+  .glassmorphism-header-row {
+    @apply border-b border-white/10;
+  }
+  
+  .glassmorphism-header-row th {
+    @apply py-4 px-6 font-bold;
+  }
+  
+  .glassmorphism-table-row {
+    @apply border-b border-white/5;
+  }
+  
+  .glassmorphism-table-row td {
+    @apply py-4 px-6;
+  }
+  
+  .glassmorphism-card {
+    @apply bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl text-white;
+  }
+  
+  .glassmorphism-input {
+    @apply bg-black/20 backdrop-blur-md border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/50 focus:ring-2 focus:ring-white/30 focus:border-transparent;
+  }
+  
+  .glassmorphism-button {
+    @apply bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg px-4 py-2 transition-all;
+  }
+  
+  .glassmorphism-accent {
+    @apply bg-gradient-to-r from-purple-500/80 to-blue-500/80 backdrop-blur-md;
+  }
 }

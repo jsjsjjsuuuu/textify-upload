@@ -1,123 +1,104 @@
 
-@layer base {
-  /* Search box animation */
-  @keyframes shimmer {
-    0% {
-      background-position: -468px 0;
-    }
-    100% {
-      background-position: 468px 0;
-    }
-  }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
 
-  .shimmer {
-    background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 20%, rgba(255,255,255,0) 40%);
-    background-size: 468px 468px;
-    animation-duration: 1.5s;
-    animation-fill-mode: forwards;
-    animation-iteration-count: infinite;
-    animation-name: shimmer;
-    animation-timing-function: linear;
-  }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
 
-  /* Animation for the uploader icon */
-  @keyframes pulse-ring {
-    0% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(227, 95, 82, 0.2);
-    }
-    70% {
-      transform: scale(1);
-      box-shadow: 0 0 0 10px rgba(227, 95, 82, 0);
-    }
-    100% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(227, 95, 82, 0);
-    }
-  }
+@keyframes scale {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
 
-  .pulse-icon {
-    animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+@keyframes shimmer {
+  from {
+    background-position: -1000px 0;
   }
-
-  /* Rainbow animation */
-  @keyframes rainbow {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
+  to {
+    background-position: 1000px 0;
   }
+}
 
-  .animate-rainbow {
-    animation: rainbow 4s linear infinite;
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
   }
-
-  /* Background shimmer effect */
-  .bg-shimmer {
-    background: linear-gradient(
-      90deg, 
-      rgba(255,255,255,0) 0%, 
-      rgba(255,255,255,0.15) 25%, 
-      rgba(255,255,255,0.3) 50%, 
-      rgba(255,255,255,0.15) 75%, 
-      rgba(255,255,255,0) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer-bg 3s infinite linear;
+  to {
+    transform: rotate(360deg);
   }
+}
 
-  @keyframes shimmer-bg {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
+@keyframes growWidth {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
   }
-
-  /* Upload icon floating animation */
-  .upload-icon-animate {
-    animation: float-icon 2s ease-in-out infinite, glow 3s ease-in-out infinite;
-    transform-origin: center;
+  
+  .animate-pulse-slow {
+    animation: pulse 3s ease-in-out infinite;
   }
-
-  @keyframes float-icon {
-    0%, 100% {
-      transform: translateY(0) rotate(0deg);
-    }
-    25% {
-      transform: translateY(-2px) rotate(5deg);
-    }
-    75% {
-      transform: translateY(2px) rotate(-5deg);
-    }
+  
+  .animate-scale-in {
+    animation: scale 0.3s ease-out forwards;
   }
-
-  @keyframes glow {
-    0%, 100% {
-      filter: drop-shadow(0 0 2px rgba(227, 95, 82, 0.3));
-    }
-    50% {
-      filter: drop-shadow(0 0 5px rgba(227, 95, 82, 0.6));
-    }
+  
+  .animate-shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite linear;
   }
-
-  /* Text animation */
-  .upload-text {
-    animation: pulse-text 2s ease-in-out infinite;
+  
+  .animate-rotate {
+    animation: rotate 30s linear infinite;
   }
-
-  @keyframes pulse-text {
-    0%, 100% {
-      opacity: 0.8;
-    }
-    50% {
-      opacity: 1;
-    }
+  
+  .animate-grow-width {
+    animation: growWidth 1s ease-out forwards;
+  }
+  
+  .glassmorphism-hover {
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  .glassmorphism-hover:hover {
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+    backdrop-filter: blur(8px);
+    transform: translateY(-2px);
+  }
+  
+  .glassmorphism-button {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  .glassmorphism-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+    transform: translateY(-1px);
+  }
+  
+  /* Glow effects */
+  .glow {
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+  }
+  
+  .glow-border {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  }
+  
+  .glow-text {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
   }
 }

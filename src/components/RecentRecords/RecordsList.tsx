@@ -20,8 +20,10 @@ const RecordsList: React.FC<RecordsListProps> = ({ records, isLoading, isError }
 
   if (isError) {
     return (
-      <CardContent className="text-center py-8 text-muted-foreground">
-        حدث خطأ في جلب البيانات. يرجى المحاولة مرة أخرى.
+      <CardContent className="text-center py-8 text-white/70 glassmorphism-card">
+        <div className="p-6">
+          حدث خطأ في جلب البيانات. يرجى المحاولة مرة أخرى.
+        </div>
       </CardContent>
     );
   }
@@ -31,7 +33,7 @@ const RecordsList: React.FC<RecordsListProps> = ({ records, isLoading, isError }
   }
 
   return (
-    <CardContent className="space-y-4">
+    <CardContent className="space-y-4 p-6">
       {records.map((record) => (
         <RecordItem 
           key={record.id}

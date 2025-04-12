@@ -87,7 +87,7 @@ const RecentRecords: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Card className="p-4">
+      <Card className="glass-card p-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">آخر السجلات</h2>
           <Button variant="ghost" size="sm" disabled>
@@ -108,7 +108,7 @@ const RecentRecords: React.FC = () => {
 
   if (records.length === 0) {
     return (
-      <Card className="p-4">
+      <Card className="glass-card p-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">آخر السجلات</h2>
           <Button variant="ghost" size="sm" onClick={handleViewAllClick}>
@@ -124,38 +124,38 @@ const RecentRecords: React.FC = () => {
   }
 
   return (
-    <Card className="overflow-hidden">
-      <div className="p-4 flex justify-between items-center border-b">
-        <h2 className="text-xl font-bold">آخر السجلات</h2>
-        <Button variant="ghost" size="sm" onClick={handleViewAllClick}>
+    <Card className="glass-card overflow-hidden border-none shadow-lg">
+      <div className="glassmorphism-header p-4 flex justify-between items-center border-b border-white/10">
+        <h2 className="text-xl font-bold text-white">آخر السجلات</h2>
+        <Button variant="ghost" size="sm" onClick={handleViewAllClick} className="text-white hover:bg-white/20">
           <ExternalLink className="w-4 h-4 ml-1" /> عرض الكل
         </Button>
       </div>
-      <div className="overflow-x-auto">
-        <Table>
+      <div className="overflow-x-auto backdrop-blur-md bg-black/30">
+        <Table className="glassmorphism-table">
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-[60px]">#</TableHead>
-              <TableHead>التاريخ</TableHead>
-              <TableHead>المرسل</TableHead>
-              <TableHead>الهاتف</TableHead>
-              <TableHead>المبلغ</TableHead>
-              <TableHead>الشركة</TableHead>
+            <TableRow className="glassmorphism-header-row">
+              <TableHead className="w-[60px] text-white/80">#</TableHead>
+              <TableHead className="text-white/80">التاريخ</TableHead>
+              <TableHead className="text-white/80">المرسل</TableHead>
+              <TableHead className="text-white/80">الهاتف</TableHead>
+              <TableHead className="text-white/80">المبلغ</TableHead>
+              <TableHead className="text-white/80">الشركة</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {records.map((record) => (
               <TableRow 
                 key={record.id} 
-                className="cursor-pointer hover:bg-muted transition-colors"
+                className="glassmorphism-table-row cursor-pointer hover:bg-white/10 transition-colors"
                 onClick={() => navigate(`/records?id=${record.id}`)}
               >
-                <TableCell className="font-medium">{record.number}</TableCell>
-                <TableCell>{formatDate(record.date)}</TableCell>
-                <TableCell>{record.senderName || '—'}</TableCell>
-                <TableCell>{record.phoneNumber || '—'}</TableCell>
-                <TableCell>{record.price || '—'}</TableCell>
-                <TableCell>{record.companyName || '—'}</TableCell>
+                <TableCell className="font-medium text-white">{record.number}</TableCell>
+                <TableCell className="text-white/90">{formatDate(record.date)}</TableCell>
+                <TableCell className="text-white/90">{record.senderName || '—'}</TableCell>
+                <TableCell className="text-white/90">{record.phoneNumber || '—'}</TableCell>
+                <TableCell className="text-white/90">{record.price || '—'}</TableCell>
+                <TableCell className="text-white/90">{record.companyName || '—'}</TableCell>
               </TableRow>
             ))}
           </TableBody>
