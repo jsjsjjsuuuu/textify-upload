@@ -73,7 +73,7 @@ const AdminApproval = () => {
     if (!fetchAttempted && user && userProfile) {
       fetchUsers();
     }
-  }, [user, userProfile, fetchAttempted]);
+  }, [user, userProfile, fetchAttempted, fetchUsers]);
 
   // التعامل مع تأكيد إعادة تعيين كلمة المرور
   const handleConfirmReset = () => {
@@ -114,8 +114,18 @@ const AdminApproval = () => {
       <AppHeader />
       
       <div className="container py-12 mx-auto max-w-7xl px-4">
-        <div className="rounded-2xl bg-[#0e1529]/95 overflow-hidden">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-8 border-b border-[#1e2a47]">
+        <div className="rounded-2xl bg-[#0e1529]/95 overflow-hidden shadow-[0_10px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-md relative">
+          {/* تأثير توهج خلفية الطبق */}
+          <div className="absolute inset-0 -bottom-10 bg-gradient-to-b from-blue-500/10 via-transparent to-transparent blur-2xl opacity-50"></div>
+          <div className="absolute inset-0 -top-10 bg-gradient-to-t from-blue-500/10 via-transparent to-transparent blur-2xl opacity-50"></div>
+          
+          {/* ظل داخلي */}
+          <div className="absolute inset-0 shadow-inner pointer-events-none"></div>
+          
+          {/* تأثير انعكاس أعلى الطبق */}
+          <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-white/5 to-transparent opacity-50"></div>
+          
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-8 border-b border-[#1e2a47]/30 relative z-10">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">نظام إدارة المستخدمين</h1>
               <p className="text-base text-blue-200/70 mt-2">إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات</p>
@@ -123,7 +133,7 @@ const AdminApproval = () => {
             <div className="flex items-center gap-3">
               <Button 
                 variant="outline"
-                className="bg-[#131b31] hover:bg-[#1a253f] text-white border-0"
+                className="bg-[#131b31] hover:bg-[#1a253f] text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
                 onClick={fetchUsers} 
                 disabled={isLoading}
               >
@@ -131,7 +141,7 @@ const AdminApproval = () => {
                 تحديث
               </Button>
               <Button 
-                className="bg-primary hover:bg-primary/90 text-black font-medium"
+                className="bg-primary hover:bg-primary/90 text-black font-medium shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <PlusCircle className="h-5 w-5 mr-2" />
                 إضافة مستخدم
@@ -139,7 +149,7 @@ const AdminApproval = () => {
             </div>
           </div>
           
-          <div className="p-8">
+          <div className="p-8 relative z-10">
             {/* أدوات البحث والتصفية */}
             <UserFilters 
               searchQuery={searchQuery}
@@ -186,7 +196,7 @@ const AdminApproval = () => {
             
             {/* إحصائيات المستخدمين */}
             <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
-              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31]">
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] shadow-lg hover:shadow-xl transition-all duration-300">
                 <div>
                   <h3 className="text-base text-blue-200/70 mb-1">المستخدمون</h3>
                   <p className="text-3xl font-bold">{userCounts.total}</p>
@@ -196,7 +206,7 @@ const AdminApproval = () => {
                 </div>
               </div>
               
-              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31]">
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] shadow-lg hover:shadow-xl transition-all duration-300">
                 <div>
                   <h3 className="text-base text-blue-200/70 mb-1">معتمدون</h3>
                   <p className="text-3xl font-bold">{userCounts.approved}</p>
@@ -206,7 +216,7 @@ const AdminApproval = () => {
                 </div>
               </div>
               
-              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31]">
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] shadow-lg hover:shadow-xl transition-all duration-300">
                 <div>
                   <h3 className="text-base text-blue-200/70 mb-1">في الانتظار</h3>
                   <p className="text-3xl font-bold">{userCounts.pending}</p>
@@ -216,7 +226,7 @@ const AdminApproval = () => {
                 </div>
               </div>
               
-              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] col-span-1 md:col-span-2">
+              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] shadow-lg hover:shadow-xl transition-all duration-300 col-span-1 md:col-span-2">
                 <div className="w-full">
                   <h3 className="text-base text-blue-200/70 mb-3">نشاط المستخدمين</h3>
                   <div className="w-full bg-[#1a2544] rounded-full h-2.5">

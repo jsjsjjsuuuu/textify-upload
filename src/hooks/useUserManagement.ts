@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserProfile } from '@/types/UserProfile';
@@ -24,7 +24,7 @@ export const useUserManagement = () => {
   const [userToReset, setUserToReset] = useState<string | null>(null);
 
   // جلب قائمة المستخدمين
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     if (isLoading) return; // منع التنفيذ المتعدد إذا كان هناك طلب جاري بالفعل
     
     setIsLoading(true);
@@ -100,7 +100,7 @@ export const useUserManagement = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading]);
 
   // وظيفة الموافقة على مستخدم
   const approveUser = async (userId: string) => {
@@ -433,23 +433,33 @@ export const useUserManagement = () => {
   };
 
   // تطبيق جميع الفلاتر
-  const getFilteredUsers = () => {
-    let filteredUsers = [...users];
-    filteredUsers = filterUsersByTab(filteredUsers);
-    filteredUsers = filterUsersByPlan(filteredUsers);
-    filteredUsers = filterUsersByStatus(filteredUsers);
-    filteredUsers = searchUsers(filteredUsers);
+  const getFilteredUsers = useCallback(() => {
+    let filteredUsers = [...(users || [])]; // التأكد من أن المصفوفة موجودة
+    if (users && users.length > 0) {
+      filteredUsers = filterUsersByTab(filteredUsers);
+      filteredUsers = filterUsersByPlan(filteredUsers);
+      filteredUsers = filterUsersByStatus(filteredUsers);
+      filteredUsers = searchUsers(filteredUsers);
+    }
     return filteredUsers;
-  };
+  }, [users, activeTab, filterPlan, filterStatus, searchQuery]);
 
   // عدد المستخدمين في كل فئة
-  const getUserCounts = () => {
+  const getUserCounts = useCallback(() => {
+    if (!users || users.length === 0) {
+      return {
+        total: 0,
+        pending: 0,
+        approved: 0
+      };
+    }
+    
     return {
       total: users.length,
       pending: users.filter(u => !u.is_approved).length,
       approved: users.filter(u => u.is_approved).length
     };
-  };
+  }, [users]);
 
   // إعداد المستخدم لإعادة تعيين كلمة المرور
   const prepareUserPasswordReset = (userId: string) => {
