@@ -17,7 +17,6 @@ const Index = () => {
     images,
     isProcessing,
     processingProgress,
-    isSubmitting,
     handleFileChange,
     handleTextChange,
     handleDelete,
@@ -91,7 +90,7 @@ const Index = () => {
             <div className="mt-6">
               <ImagesCard
                 images={images}
-                isSubmitting={isSubmitting}
+                isSubmitting={false}
                 onTextChange={handleTextChange}
                 onDelete={handleDelete}
                 onSubmit={handleSubmitToApi}
