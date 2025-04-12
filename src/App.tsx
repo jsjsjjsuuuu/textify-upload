@@ -1,11 +1,23 @@
 
 import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter } from "react-router-dom";
-import { AppRoutes } from "@/routes";
+import routes from "@/routes";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
+
+// مكون AppRoutes لإنشاء مسارات التطبيق من مصفوفة المسارات
+const AppRoutes = () => {
+  return (
+    <Routes>
+      {routes.map((route, index) => (
+        <Route key={index} path={route.path} element={route.element} />
+      ))}
+    </Routes>
+  );
+};
 
 function App() {
   console.log("تحميل التطبيق الرئيسي App");

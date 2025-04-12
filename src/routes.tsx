@@ -41,31 +41,31 @@ const routes = [
   },
   {
     path: "/upload",
-    element: <ProtectedRoute element={<Index />} />,
+    element: <ProtectedRoute><Index /></ProtectedRoute>,
   },
   {
     path: "/records",
-    element: <ProtectedRoute element={<Records />} />,
+    element: <ProtectedRoute><Records /></ProtectedRoute>,
   },
   {
     path: "/profile",
-    element: <ProtectedRoute element={<Profile />} />,
+    element: <ProtectedRoute><Profile /></ProtectedRoute>,
   },
   {
     path: "/api-settings",
-    element: <ProtectedRoute element={<ApiSettings />} />,
+    element: <ProtectedRoute><ApiSettings /></ProtectedRoute>,
   },
   {
     path: "/server-settings",
-    element: <ProtectedRoute element={<ServerSettings />} />,
+    element: <ProtectedRoute><ServerSettings /></ProtectedRoute>,
   },
   {
     path: "/server-automation",
-    element: <ProtectedRoute element={<ServerAutomation />} />,
+    element: <ProtectedRoute><ServerAutomation /></ProtectedRoute>,
   },
   {
     path: "/bookmarklet",
-    element: <ProtectedRoute element={<Bookmarklet />} />,
+    element: <ProtectedRoute><Bookmarklet /></ProtectedRoute>,
   },
   {
     path: "/privacy",
@@ -77,11 +77,11 @@ const routes = [
   },
   {
     path: "/admin",
-    element: <ProtectedRoute element={<AdminApproval />} />,
+    element: <ProtectedRoute adminOnly={true}><AdminApproval /></ProtectedRoute>,
   },
   {
     path: "/tasks",
-    element: <ProtectedRoute element={<Records />} />,
+    element: <ProtectedRoute><Records /></ProtectedRoute>,
   },
   {
     path: "404",
