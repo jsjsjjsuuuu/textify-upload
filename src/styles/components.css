@@ -1,4 +1,8 @@
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @layer base {
   .design-element {
     @apply absolute pointer-events-none opacity-30;
@@ -94,5 +98,35 @@
   
   .dark .elegant-upload {
     @apply from-brand-coral/15 via-brand-beige/10 to-brand-green/10;
+  }
+  
+  /* تنسيقات نظام المهام الزجاجي */
+  .task-system-bg {
+    @apply bg-gradient-to-br from-[#111827] to-[#1a2234] min-h-[30rem];
+  }
+  
+  .task-card {
+    @apply bg-[#1e2738]/70 backdrop-blur-md border border-slate-700/50 rounded-xl 
+           transition-all hover:bg-[#1e2738]/90 shadow-md;
+  }
+  
+  .task-count-badge {
+    @apply min-w-8 h-8 flex items-center justify-center rounded-md bg-slate-800 text-white text-sm;
+  }
+  
+  .task-status-pending {
+    @apply bg-yellow-600/20 text-yellow-400 border border-yellow-600/30;
+  }
+  
+  .task-status-processing {
+    @apply bg-blue-600/20 text-blue-400 border border-blue-600/30;
+  }
+  
+  .task-status-completed {
+    @apply bg-green-600/20 text-green-400 border border-green-600/30;
+  }
+  
+  .task-status-error {
+    @apply bg-red-600/20 text-red-400 border border-red-600/30;
   }
 }

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
+import { CheckCircle } from "lucide-react";
 import { ImageData } from "@/types/ImageData";
 
 interface RecordItemProps {
@@ -10,29 +10,24 @@ interface RecordItemProps {
 
 const RecordItem = ({ record, formatDate }: RecordItemProps) => {
   return (
-    <div 
-      className="p-4 bg-muted/40 rounded-lg flex flex-col md:flex-row justify-between gap-4"
-    >
-      <div>
-        <h4 className="font-medium">
-          {record.code || 'بدون كود'} - {record.senderName || 'بدون اسم مرسل'}
-        </h4>
-        <div className="text-sm text-muted-foreground">
-          {record.phoneNumber && `${record.phoneNumber} • `}
-          {record.province && `${record.province} • `}
-          {record.date && formatDate(record.date)}
+    <div className="task-card flex flex-row justify-between items-center p-4">
+      <div className="flex items-center">
+        <div className="bg-teal-700/30 text-teal-400 rounded-md px-4 py-1 text-sm mr-4">
+          مكتمل
         </div>
       </div>
-      <div className="flex items-center gap-2 self-end md:self-center">
-        <Button 
-          variant="outline" 
-          className="text-xs h-8"
-          asChild
-        >
-          <a href={`/automation/${record.id}`}>
-            تفاصيل
-          </a>
-        </Button>
+
+      <div className="flex flex-col items-end">
+        <div className="text-white font-semibold">
+          مهمة #{record.id.substring(0, 4)}
+        </div>
+        <div className="text-slate-400 text-sm">
+          تم الانتهاء بتاريخ {formatDate(record.date)}
+        </div>
+      </div>
+
+      <div className="bg-teal-700/30 rounded-xl p-2">
+        <CheckCircle className="text-teal-500" size={24} />
       </div>
     </div>
   );

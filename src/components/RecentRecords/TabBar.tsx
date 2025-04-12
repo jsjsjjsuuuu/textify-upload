@@ -1,6 +1,5 @@
 
 import React from "react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export interface TabItem {
   id: string;
@@ -17,19 +16,31 @@ export interface TabBarProps {
 
 const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabChange }) => {
   return (
-    <Tabs value={activeTab} onValueChange={onTabChange} dir="rtl">
-      <TabsList className="flex space-x-1">
-        {tabs.map((tab) => (
-          <TabsTrigger key={tab.id} value={tab.id} className="flex items-center">
-            {tab.icon}
-            <span className="mx-1">{tab.label}</span>
-            <span className="ml-1 px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 rounded-full">
-              {tab.count}
-            </span>
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" dir="rtl">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => onTabChange(tab.id)}
+          className={`task-card flex items-center justify-between p-4 ${
+            activeTab === tab.id ? 'bg-indigo-600/30 border-indigo-400/50' : ''
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <div className={`task-icon-wrapper ${
+              activeTab === tab.id ? 'text-indigo-400' : 'text-slate-400'
+            }`}>
+              {tab.icon}
+            </div>
+            <span className="text-white text-sm">{tab.label}</span>
+          </div>
+          <div className={`task-count-badge ${
+            activeTab === tab.id ? 'bg-indigo-600' : ''
+          }`}>
+            {tab.count}
+          </div>
+        </button>
+      ))}
+    </div>
   );
 };
 

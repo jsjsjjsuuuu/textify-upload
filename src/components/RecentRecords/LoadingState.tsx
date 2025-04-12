@@ -1,13 +1,12 @@
 
 import React from 'react';
 import { Loader2 } from "lucide-react";
-import { CardContent } from "@/components/ui/card";
 
 const LoadingState = () => {
   return (
-    <CardContent className="flex justify-center py-8">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-    </CardContent>
+    <div className="flex justify-center py-12 bg-slate-800/50 backdrop-blur-md rounded-xl border border-slate-700/50">
+      <Loader2 className="h-12 w-12 animate-spin text-indigo-400" />
+    </div>
   );
 };
 
