@@ -64,62 +64,87 @@ const useFetchRecords = (activeTab: string) => {
     setIsError(false);
 
     try {
-      // محاكاة الاتصال بالخادم واستجابته
-      // في التطبيق الفعلي، سيتم استبدال هذا بطلب API حقيقي
-      const mockResponse = await new Promise<ImageData[]>((resolve) => {
-        setTimeout(() => {
-          // إنشاء ملف وهمي للاستخدام في البيانات الوهمية
-          const createDummyFile = () => new File(["dummy content"], "image.jpg", { type: "image/jpeg" });
-          
-          // بيانات وهمية للعرض مع إضافة الخصائص المفقودة
-          resolve([
-            {
-              id: '1203',
-              code: 'A1203',
-              senderName: 'محمد أحمد',
-              phoneNumber: '07701234567',
-              province: 'بغداد',
-              date: new Date(),
-              status: 'completed',
-              price: '50000',
-              file: createDummyFile(),
-              previewUrl: 'https://via.placeholder.com/150',
-              extractedText: '',
-              submitted: false,
-            },
-            {
-              id: '1193',
-              code: 'B1193',
-              senderName: 'علي حسين',
-              phoneNumber: '07712345678',
-              province: 'البصرة',
-              date: new Date(),
-              status: 'completed',
-              price: '35000',
-              file: createDummyFile(),
-              previewUrl: 'https://via.placeholder.com/150',
-              extractedText: '',
-              submitted: false,
-            },
-            {
-              id: '1183',
-              code: 'C1183',
-              senderName: 'زينب خالد',
-              phoneNumber: '07723456789',
-              province: 'أربيل',
-              date: new Date(),
-              status: 'completed',
-              price: '75000',
-              file: createDummyFile(),
-              previewUrl: 'https://via.placeholder.com/150',
-              extractedText: '',
-              submitted: false,
-            },
-          ]);
-        }, 1000);
-      });
+      // تأخير وهمي لإظهار حالة التحميل
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // إنشاء ملف وهمي للاستخدام في البيانات الوهمية
+      const createDummyFile = () => new File(["dummy content"], "image.jpg", { type: "image/jpeg" });
+      
+      // توليد بيانات مختلفة الحالات
+      const mockData: ImageData[] = [
+        {
+          id: '1203',
+          code: 'A1203',
+          senderName: 'محمد أحمد',
+          phoneNumber: '07701234567',
+          province: 'بغداد',
+          date: new Date(),
+          status: 'completed',
+          price: '50000',
+          file: createDummyFile(),
+          previewUrl: 'https://via.placeholder.com/150',
+          extractedText: '',
+          submitted: true,
+        },
+        {
+          id: '1193',
+          code: 'B1193',
+          senderName: 'علي حسين',
+          phoneNumber: '07712345678',
+          province: 'البصرة',
+          date: new Date(),
+          status: 'processing',
+          price: '35000',
+          file: createDummyFile(),
+          previewUrl: 'https://via.placeholder.com/150',
+          extractedText: '',
+          submitted: false,
+        },
+        {
+          id: '1183',
+          code: 'C1183',
+          senderName: 'زينب خالد',
+          phoneNumber: '07723456789',
+          province: 'أربيل',
+          date: new Date(Date.now() - 86400000 * 3), // قبل 3 أيام
+          status: 'pending',
+          price: '75000',
+          file: createDummyFile(),
+          previewUrl: 'https://via.placeholder.com/150',
+          extractedText: '',
+          submitted: false,
+        },
+        {
+          id: '1173',
+          code: 'D1173',
+          senderName: 'أحمد محمد',
+          phoneNumber: '07734567890',
+          province: 'نينوى',
+          date: new Date(Date.now() - 86400000 * 5), // قبل 5 أيام
+          status: 'error',
+          price: '60000',
+          file: createDummyFile(),
+          previewUrl: 'https://via.placeholder.com/150',
+          extractedText: '',
+          submitted: false,
+        },
+        {
+          id: '1163',
+          code: 'E1163',
+          senderName: 'فاطمة علي',
+          phoneNumber: '07745678901',
+          province: 'كركوك',
+          date: new Date(Date.now() - 86400000 * 7), // قبل 7 أيام
+          status: 'unknown', // حالة غير معروفة
+          price: '45000',
+          file: createDummyFile(),
+          previewUrl: 'https://via.placeholder.com/150',
+          extractedText: '',
+          submitted: false,
+        },
+      ];
 
-      setData(mockResponse);
+      setData(mockData);
     } catch (error) {
       console.error('Error fetching records:', error);
       setIsError(true);
