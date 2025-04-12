@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,7 +61,7 @@ const Index = () => {
   }
   
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-[#0a101f]" dir="rtl">
       <AppHeader />
       
       <div className="container mx-auto py-6 px-4">
@@ -100,7 +101,7 @@ const Index = () => {
           </div>
         </div>
 
-        {/* إضافة آخر السجلات في أسفل الصفحة */}
+        {/* إضافة آخر السجلات في أسفل الصفحة مع تصميم زجاجي محسن */}
         <div className="mt-8">
           <RecentRecords />
         </div>
