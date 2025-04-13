@@ -1,12 +1,14 @@
+
 import { ImageData } from "@/types/ImageData";
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Save, SendHorizontal, Filter, Loader, Image, ZoomIn, ZoomOut, RefreshCw, Maximize2 } from "lucide-react";
+import { Trash2, Save, SendHorizontal, Filter, Loader, Image, ZoomIn, ZoomOut, RefreshCw, Maximize2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import ExtractedDataEditor from "@/components/ExtractedData/ExtractedDataEditor";
 import StatusBadges from "@/components/ImageViewer/StatusBadges";
 import { ImageViewer } from "@/components/ImagePreview";
+import { Input } from "@/components/ui/input";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -34,6 +36,7 @@ const ImagePreviewContainer = ({
   const [activeTab, setActiveTab] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   // حالات جديدة لتكبير الصورة
@@ -43,6 +46,18 @@ const ImagePreviewContainer = ({
   // تصفية الصور حسب علامة التبويب النشطة
   const filteredImages = useCallback(() => {
     let result = [...images];
+
+    // البحث النصي
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(img => 
+        (img.code && img.code.toLowerCase().includes(term)) ||
+        (img.senderName && img.senderName.toLowerCase().includes(term)) ||
+        (img.phoneNumber && img.phoneNumber.toLowerCase().includes(term)) ||
+        (img.province && img.province.toLowerCase().includes(term))
+      );
+    }
+
     if (activeTab === "pending") {
       // الصور قيد الانتظار: الصور التي لم تكتمل معالجتها بعد
       result = result.filter(img => img.status === "pending");
@@ -60,7 +75,7 @@ const ImagePreviewContainer = ({
       result = result.filter(img => img.status === "completed" && !isImageComplete(img) && !hasPhoneError(img));
     }
     return result;
-  }, [images, activeTab]);
+  }, [images, activeTab, searchTerm]);
 
   // الاستماع إلى حدث معالجة الصورة لتحديث الصورة النشطة
   useEffect(() => {
@@ -215,7 +230,8 @@ const ImagePreviewContainer = ({
   };
 
   // عرض قائمة الصور المصغرة
-  const renderImagesThumbnails = () => <div className="grid grid-cols-5 gap-2">
+  const renderImagesThumbnails = () => (
+    <div className="grid grid-cols-5 gap-2">
       {paginatedImages().map(image => (
         <motion.div 
           key={image.id} 
@@ -251,18 +267,21 @@ const ImagePreviewContainer = ({
           </div>
         </motion.div>
       ))}
-    </div>;
+    </div>
+  );
 
   // عرض أدوات الصفحات
   const renderPagination = () => {
     if (totalPages <= 1) return null;
-    return <div className="flex justify-center mt-4">
+    return (
+      <div className="flex justify-center mt-4">
         <div className="flex items-center space-x-1 space-x-reverse">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => goToPage(currentPage - 1)} 
             disabled={currentPage === 1}
+            className="glass-button"
           >
             السابق
           </Button>
@@ -276,17 +295,20 @@ const ImagePreviewContainer = ({
             size="sm" 
             onClick={() => goToPage(currentPage + 1)} 
             disabled={currentPage === totalPages}
+            className="glass-button"
           >
             التالي
           </Button>
         </div>
-      </div>;
+      </div>
+    );
   };
 
   // عرض أزرار الإجراءات للصورة النشطة
   const renderImageActions = () => {
     if (!activeImage) return null;
-    return <div className="flex justify-end space-x-2 space-x-reverse mb-2">
+    return (
+      <div className="flex justify-end space-x-2 space-x-reverse mb-2">
         <Button 
           variant="ghost" 
           size="sm" 
@@ -310,62 +332,100 @@ const ImagePreviewContainer = ({
             إرسال
           </Button>
         )}
-      </div>;
+      </div>
+    );
   };
 
-  // تحديد المخطط الرئيسي
+  // تحديد المخطط الرئيسي باستخدام تصميم زجاجي جديد
   return (
     <div className="container mx-auto">
-      <StatusBadges
-        counts={countByStatus}
-        activeFilter={activeTab}
-        onFilterChange={setActiveTab}
-      />
+      {/* شريط التصفية الموحد مع البحث في تصميم زجاجي */}
+      <div className="glass-morphism p-6 mb-6 rounded-xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
+        <div className="glass-blur absolute inset-0"></div>
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gradient">معالجة الصور</h2>
+            <div className="relative flex-grow max-w-md w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="بحث عن كود، اسم مرسل، رقم هاتف..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-[#131b31]/80 backdrop-blur-sm border-0 text-white"
+              />
+            </div>
+          </div>
+          
+          {/* شريط الفلتر الموحد */}
+          <StatusBadges
+            counts={countByStatus}
+            activeFilter={activeTab}
+            onFilterChange={setActiveTab}
+          />
+        </div>
+      </div>
       
       {/* عرض الصور المصغرة أعلى الصفحة */}
-      <div className="mb-6">
-        {renderImagesThumbnails()}
-        {renderPagination()}
+      <div className="glass-morphism p-4 mb-6 rounded-xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
+        <div className="glass-blur absolute inset-0"></div>
+        <div className="relative z-10">
+          {renderImagesThumbnails()}
+          {renderPagination()}
+        </div>
       </div>
       
       {/* عرض الصورة النشطة والبيانات بجانبها */}
       {activeImage ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* عرض الصورة بحجم كبير */}
-          <div className="lg:col-span-7 h-[600px]">
-            <ImageViewer 
-              selectedImage={activeImage}
-              zoomLevel={zoomLevel}
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onResetZoom={handleResetZoom}
-              onZoomChange={handleZoomChange}
-              formatDate={formatDate}
-              isFullScreen={isFullScreen}
-              onToggleFullScreen={toggleFullScreen}
-            />
+          <div className="lg:col-span-7 h-[600px] glass-morphism p-4 rounded-xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
+            <div className="glass-blur absolute inset-0"></div>
+            <div className="relative z-10 h-full">
+              <ImageViewer 
+                selectedImage={activeImage}
+                zoomLevel={zoomLevel}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onResetZoom={handleResetZoom}
+                onZoomChange={handleZoomChange}
+                formatDate={formatDate}
+                isFullScreen={isFullScreen}
+                onToggleFullScreen={toggleFullScreen}
+              />
+            </div>
           </div>
           
           {/* عرض البيانات */}
           <div className="lg:col-span-5">
-            <div className="bg-gray-50 dark:bg-gray-800/95 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow h-full">
-              <div className="mb-4 flex justify-between items-center">
-                <h2 className="text-lg font-semibold">البيانات المستخرجــة</h2>
-                {renderImageActions()}
-              </div>
-              
-              {/* محتوى البيانات */}
-              <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
-                <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+            <div className="glass-morphism p-4 rounded-xl relative overflow-hidden h-full">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
+              <div className="glass-blur absolute inset-0"></div>
+              <div className="relative z-10 h-full">
+                <div className="mb-4 flex justify-between items-center">
+                  <h2 className="text-lg font-semibold text-gradient">البيانات المستخرجــة</h2>
+                  {renderImageActions()}
+                </div>
+                
+                {/* محتوى البيانات */}
+                <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2 custom-scrollbar">
+                  <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
+                </div>
               </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="h-60 flex items-center justify-center border-2 border-dashed rounded-lg p-8">
-          <p className="text-muted-foreground">
-            اختر صورة لعرض التفاصيل
-          </p>
+        <div className="h-60 flex items-center justify-center glass-morphism p-8 rounded-xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
+          <div className="glass-blur absolute inset-0"></div>
+          <div className="relative z-10">
+            <p className="text-muted-foreground">
+              اختر صورة لعرض التفاصيل
+            </p>
+          </div>
         </div>
       )}
     </div>

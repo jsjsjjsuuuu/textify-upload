@@ -216,30 +216,79 @@
     @apply bg-gradient-to-br from-[#0a0f1d] to-[#0e1529] min-h-[30rem];
   }
   
-  /* تصميم زجاجي محسن للبطاقات */
+  /* ======= GLASS MORPHISM 2.0 - تصميم زجاجي محسن ======= */
+  /* تصميم زجاجي أساسي */
   .glass-morphism {
-    @apply bg-[#0e1529]/95 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-xl;
+    @apply bg-[#0e1529]/90 backdrop-blur-md border border-[#1e2a47]/50 shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-xl transition-all duration-300;
   }
   
+  .glass-morphism:hover {
+    @apply shadow-[0_12px_48px_rgba(0,0,0,0.5)] border-[#2a3d6b]/50;
+  }
+  
+  /* تأثير الزجاج المورفي - النوع الثاني (أكثر شفافية) */
+  .glass-morphism-light {
+    @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.2)] rounded-xl;
+  }
+  
+  /* عنصر تأثير الضبابية للطبقات الزجاجية */
+  .glass-blur {
+    @apply backdrop-blur-md;
+  }
+  
+  /* كارت زجاجي بتأثير أكثر عمقًا */
   .glass-card {
-    @apply bg-[#131b31] backdrop-blur-md shadow-[0_4px_15px_rgba(0,0,0,0.3)] rounded-xl transition-all duration-300;
+    @apply bg-[#131b31]/90 backdrop-blur-md border border-white/5 shadow-[0_4px_15px_rgba(0,0,0,0.3)] rounded-xl transition-all duration-300;
   }
   
   .glass-card:hover {
-    @apply bg-[#1a253f] shadow-[0_8px_32px_rgba(0,0,0,0.5)];
+    @apply bg-[#182143]/90 shadow-[0_8px_32px_rgba(0,0,0,0.5)];
   }
   
-  /* أزرار زجاجية جديدة */
+  /* زر زجاجي محسن */
   .glass-button {
-    @apply rounded-xl bg-[#131b31] backdrop-blur-md hover:bg-primary hover:text-black transition-all duration-300 
-           text-white px-4 py-2;
+    @apply bg-[#131b31]/80 backdrop-blur-md border border-[#2a3d6b]/30 rounded-xl hover:bg-[#182143]/90 hover:border-[#3a5190]/40 hover:shadow-[0_0_15px_rgba(49,130,206,0.3)] transition-all duration-300 text-white/90 hover:text-white;
   }
   
+  /* تأثير التوهج للنص */
+  .text-gradient {
+    @apply bg-gradient-to-r from-white via-white/95 to-blue-200/90 bg-clip-text text-transparent;
+  }
+  
+  /* تأثير التوهج للنص الأساسي */
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-blue-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent;
+  }
+  
+  /* تأثير التوهج للنص الأخضر */
+  .text-gradient-success {
+    @apply bg-gradient-to-r from-emerald-300 via-green-300 to-teal-300 bg-clip-text text-transparent;
+  }
+  
+  /* شريط التمرير المخصص */ 
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 130, 246, 0.3) rgba(30, 41, 59, 0.2);
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-[#131b31]/50 rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-blue-500/20 rounded-full hover:bg-blue-500/30;
+  }
+  
+  /* ========= علامة التبويب النشطة ========= */
   .active-tab {
     @apply bg-primary shadow-[0_0_15px_rgba(99,102,241,0.5)];
   }
   
-  /* حالات المهام مع تأثير الزجاج */
+  /* ========= حالات المهام ========= */
   .task-status-pending {
     @apply bg-amber-600/20 text-amber-400;
   }
@@ -256,24 +305,26 @@
     @apply bg-red-600/20 text-red-400;
   }
   
+  /* ========= شارات العدد ========= */
   .count-badge {
-    @apply bg-[#131b31] text-white text-xs px-3 py-1 rounded-full;
+    @apply bg-[#131b31]/80 text-white text-xs px-3 py-1 rounded-full;
   }
   
   .count-badge-active {
     @apply bg-primary text-black shadow-[0_0_10px_rgba(99,102,241,0.5)];
   }
   
-  /* عنصر المهمة المحسن */
+  /* ========= عنصر المهمة المحسن ========= */
   .task-item {
     @apply flex justify-between items-center p-4 my-2
-           bg-[#131b31] rounded-xl transition-all hover:bg-[#1a253f] 
-           shadow-[0_4px_15px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.3)];
+           bg-[#131b31]/90 backdrop-blur-sm rounded-xl transition-all hover:bg-[#182143]/90 
+           shadow-[0_4px_15px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.3)]
+           border border-[#2a3d6b]/20 hover:border-[#3a5190]/30;
   }
   
   /* أيقونات مع تأثير التوهج */
   .glow-icon {
-    @apply relative;
+    @apply relative inline-flex items-center justify-center;
   }
   
   .glow-icon:after {
@@ -297,6 +348,10 @@
     @apply bg-red-500;
   }
   
+  .glow-icon.rose:after {
+    @apply bg-rose-500;
+  }
+  
   /* لبنات التصميم للخلفية الزجاجية */
   .glass-bg-element {
     @apply absolute rounded-full opacity-20 blur-3xl bg-gradient-to-r;
@@ -306,16 +361,24 @@
     @apply animate-pulse bg-[#131b31] rounded-xl;
   }
   
-  /* تأثيرات التحويل والتدرج */
-  .gradient-text {
-    @apply bg-gradient-to-r from-white to-indigo-200 bg-clip-text text-transparent;
+  /* تأثير الطبق */
+  .dish-container {
+    @apply bg-[#0a0f1e]/95 rounded-2xl shadow-[0_10px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-md relative overflow-hidden border border-[#1e2a47]/30;
   }
   
-  .gradient-border {
-    @apply relative p-[1px] bg-gradient-to-r from-indigo-500/30 to-purple-500/30 rounded-xl;
+  .dish-glow-top {
+    @apply absolute inset-0 -top-10 bg-gradient-to-t from-blue-500/10 via-transparent to-transparent blur-2xl opacity-50;
   }
   
-  .gradient-border-content {
-    @apply bg-[#131b31] rounded-xl h-full w-full;
+  .dish-glow-bottom {
+    @apply absolute inset-0 -bottom-10 bg-gradient-to-b from-blue-500/10 via-transparent to-transparent blur-2xl opacity-50;
+  }
+  
+  .dish-reflection {
+    @apply absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-white/5 to-transparent opacity-50;
+  }
+  
+  .dish-inner-shadow {
+    @apply absolute inset-0 shadow-inner pointer-events-none;
   }
 }
