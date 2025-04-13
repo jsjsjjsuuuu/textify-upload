@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
