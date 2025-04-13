@@ -78,26 +78,29 @@ const AdminApproval = () => {
   const filteredUsers = getFilteredUsers();
 
   return (
-    <div className="min-h-screen app-background bg-[#0a0f1d]">
+    <div className="min-h-screen app-background bg-[#070b17] pb-16">
       <AppHeader />
       
-      <div className="container py-16 mx-auto px-4"> 
-        <div className="glass-card p-0 overflow-hidden shadow-2xl"> 
+      <div className="container py-16 mx-auto px-6"> 
+        <div className="dish-container rounded-2xl shadow-2xl"> 
+          <div className="dish-glow-top"></div>
+          <div className="dish-glow-bottom"></div>
+          
           {/* رأس الصفحة مع العنوان والأزرار */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-6 border-b border-[#1e2a47]/30 bg-[#0e1529]/95">
-            <div className="space-y-1 text-right mb-4 md:mb-0">
-              <h1 className="text-2xl font-bold text-white">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-8 border-b border-[#1e2a47]/30 bg-[#0a0f1d]/95">
+            <div className="space-y-2 text-right mb-4 md:mb-0">
+              <h1 className="text-2xl font-bold text-gradient">
                 نظام إدارة المستخدمين
               </h1>
               <p className="text-sm text-blue-200/70">
                 إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Button 
                 variant="outline"
                 size="sm"
-                className="bg-[#131b31] hover:bg-[#1a253f] text-white border-0" 
+                className="admin-button admin-button-secondary" 
                 onClick={fetchUsers} 
                 disabled={isLoading}
               >
@@ -106,7 +109,7 @@ const AdminApproval = () => {
               </Button>
               <Button 
                 size="sm"
-                className="theme-button-primary bg-blue-500 hover:bg-blue-600 text-white"
+                className="admin-button admin-button-primary"
               >
                 <PlusCircle className="h-4 w-4 ml-2" />
                 إضافة مستخدم
@@ -114,7 +117,7 @@ const AdminApproval = () => {
             </div>
           </div>
           
-          <div className="p-6 space-y-6">
+          <div className="p-8 space-y-8">
             {/* أدوات البحث والتصفية */}
             <UserFilters 
               searchQuery={searchQuery}

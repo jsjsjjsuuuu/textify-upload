@@ -20,11 +20,11 @@ const UserTabsFilter: React.FC<UserTabsFilterProps> = ({
   children
 }) => {
   return (
-    <div>
-      <div className="flex rounded-md overflow-hidden mb-6">
+    <div className="space-y-8">
+      <div className="flex rounded-xl overflow-hidden">
         <button 
           onClick={() => onTabChange('all')}
-          className={`flex items-center justify-center gap-2 py-2 px-4 text-sm ${activeTab === 'all' ? 'bg-blue-500 text-white' : 'bg-[#131b31]/90 hover:bg-[#1a253f] text-white/80'}`}
+          className={`flex items-center justify-center gap-2 py-3 px-5 text-sm ${activeTab === 'all' ? 'bg-blue-500 text-white' : 'bg-[#0e1834]/80 hover:bg-[#1a253f] text-white/80'}`}
           style={{flex: 1}}
         >
           <User className="h-4 w-4" />
@@ -36,7 +36,7 @@ const UserTabsFilter: React.FC<UserTabsFilterProps> = ({
         
         <button 
           onClick={() => onTabChange('approved')}
-          className={`flex items-center justify-center gap-2 py-2 px-4 text-sm ${activeTab === 'approved' ? 'bg-blue-500 text-white' : 'bg-[#131b31]/90 hover:bg-[#1a253f] text-white/80'}`}
+          className={`flex items-center justify-center gap-2 py-3 px-5 text-sm ${activeTab === 'approved' ? 'bg-blue-500 text-white' : 'bg-[#0e1834]/80 hover:bg-[#1a253f] text-white/80'}`}
           style={{flex: 1}}
         >
           <CheckCircle className="h-4 w-4" />
@@ -48,7 +48,7 @@ const UserTabsFilter: React.FC<UserTabsFilterProps> = ({
         
         <button 
           onClick={() => onTabChange('pending')}
-          className={`flex items-center justify-center gap-2 py-2 px-4 text-sm ${activeTab === 'pending' ? 'bg-blue-500 text-white' : 'bg-[#131b31]/90 hover:bg-[#1a253f] text-white/80'}`}
+          className={`flex items-center justify-center gap-2 py-3 px-5 text-sm ${activeTab === 'pending' ? 'bg-blue-500 text-white' : 'bg-[#0e1834]/80 hover:bg-[#1a253f] text-white/80'}`}
           style={{flex: 1}}
         >
           <Clock className="h-4 w-4" />

@@ -36,11 +36,11 @@
   
   /* نظام إدارة المستخدمين - التصميم الزجاجي المحسن */
   .admin-container {
-    @apply min-h-screen bg-[#0a0f1d] text-white;
+    @apply min-h-screen bg-[#070b17] text-white;
   }
   
   .admin-card {
-    @apply rounded-2xl bg-[#0e1529]/95 shadow-lg overflow-hidden;
+    @apply rounded-2xl bg-[#0a0f1d]/95 shadow-lg overflow-hidden;
   }
   
   .admin-header {
@@ -68,11 +68,11 @@
   }
   
   .admin-search-input {
-    @apply w-full bg-[#131b31] rounded-xl py-3 pr-10 pl-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
+    @apply w-full bg-[#0e1834] rounded-xl py-3 pr-10 pl-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
   }
   
   .admin-select {
-    @apply w-full bg-[#131b31] rounded-xl py-3 px-5 text-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
+    @apply w-full bg-[#0e1834] rounded-xl py-3 px-5 text-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
   }
   
   .admin-tabs {
@@ -84,7 +84,7 @@
   }
   
   .admin-tab-inactive {
-    @apply bg-[#131b31] hover:bg-[#1a253f] text-white/70;
+    @apply bg-[#0e1834] hover:bg-[#1a253f] text-white/70;
   }
   
   .admin-tab-active {
@@ -92,7 +92,7 @@
   }
   
   .admin-stat-card {
-    @apply flex items-center justify-between p-6 rounded-xl bg-[#131b31];
+    @apply flex items-center justify-between p-6 rounded-xl bg-[#0e1834];
   }
   
   .admin-table {
@@ -100,7 +100,7 @@
   }
   
   .admin-table-header {
-    @apply bg-[#131b31];
+    @apply bg-[#0e1834];
   }
   
   .admin-table-header th {
@@ -108,7 +108,7 @@
   }
   
   .admin-table-row {
-    @apply border-b border-[#1e2a47] transition-colors hover:bg-[#131b31];
+    @apply border-b border-[#1e2a47] transition-colors hover:bg-[#0e1834];
   }
   
   .admin-table-row:last-child {
@@ -172,15 +172,15 @@
   }
   
   .admin-button {
-    @apply px-5 py-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 font-medium text-base;
+    @apply px-5 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 font-medium text-base;
   }
   
   .admin-button-primary {
-    @apply bg-primary hover:bg-primary/90 text-black;
+    @apply bg-blue-500 hover:bg-blue-600 text-white;
   }
   
   .admin-button-secondary {
-    @apply bg-[#131b31] hover:bg-[#1a253f] text-white;
+    @apply bg-[#0e1834] hover:bg-[#1a253f] text-white;
   }
   
   .admin-button-outline {
@@ -196,11 +196,11 @@
   }
   
   .admin-button-icon {
-    @apply p-2.5 rounded-lg;
+    @apply p-3 rounded-lg;
   }
   
   .admin-form-group {
-    @apply mb-5;
+    @apply mb-6;
   }
   
   .admin-form-label {
@@ -208,18 +208,18 @@
   }
   
   .admin-form-input {
-    @apply w-full bg-[#131b31] rounded-xl py-3 px-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
+    @apply w-full bg-[#0e1834] rounded-xl py-3 px-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
   }
   
   /* ترتيب جديد لأنماط نظام المهام الزجاجي */
   .task-system-bg {
-    @apply bg-gradient-to-br from-[#0a0f1d] to-[#0e1529] min-h-[30rem];
+    @apply bg-gradient-to-br from-[#070b17] to-[#0e1834] min-h-[30rem];
   }
   
-  /* ======= GLASS MORPHISM 2.0 - تصميم زجاجي محسن ======= */
+  /* ======= GLASS MORPHISM 2.0 - تصميم زجاجي محسن للصفحة الجديدة ======= */
   /* تصميم زجاجي أساسي */
   .glass-morphism {
-    @apply bg-[#0e1529]/90 backdrop-blur-md border border-[#1e2a47]/50 shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-xl transition-all duration-300;
+    @apply bg-[#0a0f1d]/90 backdrop-blur-md border border-[#1e2a47]/50 shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-xl transition-all duration-300;
   }
   
   .glass-morphism:hover {
@@ -238,7 +238,7 @@
   
   /* كارت زجاجي بتأثير أكثر عمقًا */
   .glass-card {
-    @apply bg-[#131b31]/90 backdrop-blur-md border border-white/5 shadow-[0_4px_15px_rgba(0,0,0,0.3)] rounded-xl transition-all duration-300;
+    @apply bg-[#0e1834]/90 backdrop-blur-md border border-white/5 shadow-[0_4px_15px_rgba(0,0,0,0.3)] rounded-xl transition-all duration-300;
   }
   
   .glass-card:hover {
@@ -247,7 +247,7 @@
   
   /* زر زجاجي محسن */
   .glass-button {
-    @apply bg-[#131b31]/80 backdrop-blur-md border border-[#2a3d6b]/30 rounded-xl hover:bg-[#182143]/90 hover:border-[#3a5190]/40 hover:shadow-[0_0_15px_rgba(49,130,206,0.3)] transition-all duration-300 text-white/90 hover:text-white;
+    @apply bg-[#0e1834]/80 backdrop-blur-md border border-[#2a3d6b]/30 rounded-xl hover:bg-[#182143]/90 hover:border-[#3a5190]/40 hover:shadow-[0_0_15px_rgba(49,130,206,0.3)] transition-all duration-300 text-white/90 hover:text-white;
   }
   
   /* تأثير التوهج للنص */
@@ -276,7 +276,7 @@
   }
   
   .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-[#131b31]/50 rounded-full;
+    @apply bg-[#0e1834]/50 rounded-full;
   }
   
   .custom-scrollbar::-webkit-scrollbar-thumb {
@@ -307,7 +307,7 @@
   
   /* ========= شارات العدد ========= */
   .count-badge {
-    @apply bg-[#131b31]/80 text-white text-xs px-3 py-1 rounded-full;
+    @apply bg-[#0e1834]/80 text-white text-xs px-3 py-1 rounded-full;
   }
   
   .count-badge-active {
@@ -317,7 +317,7 @@
   /* ========= عنصر المهمة المحسن ========= */
   .task-item {
     @apply flex justify-between items-center p-4 my-2
-           bg-[#131b31]/90 backdrop-blur-sm rounded-xl transition-all hover:bg-[#182143]/90 
+           bg-[#0e1834]/90 backdrop-blur-sm rounded-xl transition-all hover:bg-[#182143]/90 
            shadow-[0_4px_15px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.3)]
            border border-[#2a3d6b]/20 hover:border-[#3a5190]/30;
   }
@@ -358,24 +358,24 @@
   }
   
   .loading-skeleton {
-    @apply animate-pulse bg-[#131b31] rounded-xl;
+    @apply animate-pulse bg-[#0e1834] rounded-xl;
   }
   
-  /* تأثير الطبق */
+  /* تأثير الطبق - تحديثات لجعلها أبعد وتبدو أكثر عمقًا */
   .dish-container {
-    @apply bg-[#0a0f1e]/95 rounded-2xl shadow-[0_10px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-md relative overflow-hidden border border-[#1e2a47]/30;
+    @apply bg-[#070a16]/95 rounded-2xl shadow-[0_20px_80px_-15px_rgba(0,0,0,0.7)] backdrop-blur-md relative overflow-hidden border border-[#1e2a47]/20;
   }
   
   .dish-glow-top {
-    @apply absolute inset-0 -top-10 bg-gradient-to-t from-blue-500/10 via-transparent to-transparent blur-2xl opacity-50;
+    @apply absolute inset-x-0 top-0 h-1/2 bg-gradient-to-t from-transparent via-blue-500/5 to-blue-500/10 blur-3xl opacity-30;
   }
   
   .dish-glow-bottom {
-    @apply absolute inset-0 -bottom-10 bg-gradient-to-b from-blue-500/10 via-transparent to-transparent blur-2xl opacity-50;
+    @apply absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent via-blue-500/5 to-blue-500/10 blur-3xl opacity-30;
   }
   
   .dish-reflection {
-    @apply absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-white/5 to-transparent opacity-50;
+    @apply absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-white/5 to-transparent opacity-30;
   }
   
   .dish-inner-shadow {
