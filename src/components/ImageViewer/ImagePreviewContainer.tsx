@@ -279,28 +279,35 @@ const ImagePreviewContainer = ({
   };
 
   // تحديد المخطط الرئيسي وفقًا لوضع العرض
-  return <div className="container mx-auto">
+  return (
+    <div className="container mx-auto space-y-10"> {/* زيادة المسافة بين العناصر */}
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 space-y-4 md:space-y-0">
-          <TabsList className="mb-2 md:mb-0 bg-[#0a0f1e]/80">
-            <TabsTrigger value="all">
-              الكل <span className="mr-1 text-xs bg-gray-200 dark:bg-[#161d33] px-1.5 py-0.5 rounded-full">{countByStatus.all}</span>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 space-y-5 md:space-y-0"> {/* زيادة التباعد */}
+          <TabsList className="mb-4 md:mb-0 bg-[#0a0f1e]/80 space-x-2"> {/* إضافة مساحة بين العناصر */}
+            
+            <TabsTrigger value="all" className="px-6 py-3"> {/* زيادة حجم التبويبات */}
+              الكل <span className="mr-2 text-sm bg-gray-200 dark:bg-[#161d33] px-2 py-1 rounded-full">{countByStatus.all}</span>
             </TabsTrigger>
-            <TabsTrigger value="pending">
-              قيد الانتظار <span className="mr-1 text-xs bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.pending}</span>
+            
+            <TabsTrigger value="pending" className="px-6 py-3"> {/* زيادة حجم التبويبات */}
+              قيد الانتظار <span className="mr-2 text-sm bg-amber-100 dark:bg-amber-900/50 px-2 py-1 rounded-full">{countByStatus.pending}</span>
             </TabsTrigger>
-            <TabsTrigger value="completed">
-              مكتملة <span className="mr-1 text-xs bg-green-100 dark:bg-green-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.completed}</span>
+            
+            <TabsTrigger value="completed" className="px-6 py-3"> {/* زيادة حجم التبويبات */}
+              مكتملة <span className="mr-2 text-sm bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded-full">{countByStatus.completed}</span>
             </TabsTrigger>
-            <TabsTrigger value="incomplete">
-              غير مكتملة <span className="mr-1 text-xs bg-purple-100 dark:bg-purple-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.incomplete}</span>
+            
+            <TabsTrigger value="incomplete" className="px-6 py-3"> {/* زيادة حجم التبويبات */}
+              غير مكتملة <span className="mr-2 text-sm bg-purple-100 dark:bg-purple-900/50 px-2 py-1 rounded-full">{countByStatus.incomplete}</span>
             </TabsTrigger>
-            <TabsTrigger value="error">
-              أخطاء <span className="mr-1 text-xs bg-red-100 dark:bg-red-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.error}</span>
+            
+            <TabsTrigger value="error" className="px-6 py-3"> {/* زيادة حجم التبويبات */}
+              أخطاء <span className="mr-2 text-sm bg-red-100 dark:bg-red-900/50 px-2 py-1 rounded-full">{countByStatus.error}</span>
             </TabsTrigger>
           </TabsList>
         </div>
 
+        
         <TabsContent value="all" className="mt-4">
           {/* عرض الصور المصغرة أعلى الصفحة */}
           <div className="mb-6">
@@ -510,6 +517,8 @@ const ImagePreviewContainer = ({
             </div>}
         </TabsContent>
       </Tabs>
-    </div>;
+    </div>
+  );
 };
+
 export default ImagePreviewContainer;
