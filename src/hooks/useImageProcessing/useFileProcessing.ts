@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -91,11 +92,6 @@ export const useFileProcessing = ({
         if (saveProcessedImage) {
           await saveProcessedImage(processedImage);
         }
-        
-        // تسجيل الصورة كمعالجة إذا كانت الدالة متاحة - ملاحظة: تم تعطيلها
-        if (markImageAsProcessed) {
-          // لا نفعل شيئًا هنا لتعطيل تسجيل الصور المعالجة
-        }
       } catch (geminiError) {
         console.error("خطأ في معالجة الصورة باستخدام Gemini:", geminiError);
         
@@ -112,11 +108,6 @@ export const useFileProcessing = ({
           // حفظ الصورة المعالجة
           if (saveProcessedImage) {
             await saveProcessedImage(processedImage);
-          }
-          
-          // تسجيل الصورة كمعالجة - ملاحظة: تم تعطيلها
-          if (markImageAsProcessed) {
-            // لا نفعل شيئًا هنا لتعطيل تسجيل الصور المعالجة
           }
         } catch (ocrError) {
           console.error("فشل في معالجة الصورة باستخدام OCR:", ocrError);

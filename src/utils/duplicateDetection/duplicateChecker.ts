@@ -14,6 +14,7 @@ export const isImageDuplicate = (
   ignoreTemporary: boolean = true
 ): boolean => {
   // دائماً نُرجع false لتجاوز فحص التكرار تماماً
+  console.log("تم تجاوز فحص التكرار للصورة:", image.id);
   return false;
 };
 

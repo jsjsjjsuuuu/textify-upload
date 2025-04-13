@@ -82,7 +82,8 @@ export const useImageProcessingCore = () => {
     hideImage,
     submitToApi,
     validateRequiredFields,
-    markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
+    // تعطيل وظيفة تسجيل الصور كمعالجة
+    markImageAsProcessed: () => {}
   });
 
   // استخدام هوك حذف الصور
