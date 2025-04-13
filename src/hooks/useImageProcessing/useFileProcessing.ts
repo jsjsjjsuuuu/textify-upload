@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -33,7 +32,7 @@ export const useFileProcessing = ({
   const [activeUploads, setActiveUploads] = useState(0);
   const [queueLength, setQueueLength] = useState(0);
   const [imageQueue, setImageQueue] = useState<File[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({}); 
+  const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   // معالجة ملف واحد من القائمة مع تجاهل فحص التكرار
@@ -161,7 +160,6 @@ export const useFileProcessing = ({
     queueLength
   ]);
 
-  // بدء المعالجة عندما يتغير الطابور
   useEffect(() => {
     if (imageQueue.length > 0 && !isPaused && !isProcessing) {
       setIsProcessing(true);

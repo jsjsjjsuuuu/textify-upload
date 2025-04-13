@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate } from "@/utils/dateFormatter";
 import { useImageState } from "../imageState";
@@ -8,11 +9,13 @@ import { useDuplicateDetection } from "../useDuplicateDetection";
 import { useFileProcessing } from "./useFileProcessing";
 import { useApiKeyManagement } from "../processingCore/useApiKeyManagement";
 import { useImageDeletion } from "../processingCore/useImageDeletion";
+import { useState } from "react";
 import type { ImageData } from "@/types/ImageData"; // استيراد النوع بشكل صريح
 
 export const useImageProcessing = () => {
   // إعادة تصدير دالة formatDate لاستخدامها في المكونات
   const formatDateFn = formatDate;
+  const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
 
   // توابع المعالجة الرئيسية من الهوكس الخاصة
   const { user } = useAuth();
@@ -56,7 +59,7 @@ export const useImageProcessing = () => {
   });
   
   // هوك كشف التكرارات
-  const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection();
+  const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection({ enabled: false });
   
   // استخدام هوك معالجة الملفات مع إضافة isSubmitting و setIsSubmitting
   const { 
@@ -65,15 +68,13 @@ export const useImageProcessing = () => {
     activeUploads,
     queueLength,
     handleFileChange,
-    setProcessingProgress,
-    isSubmitting,              // استخدام الخاصية المضافة من الهوك
-    setIsSubmitting            // استخدام الدالة المضافة من الهوك
+    setProcessingProgress
   } = useFileProcessing({
     addImage,
     updateImage,
     processWithOcr,
     processWithGemini,
-    checkDuplicateImage: isDuplicateImage,
+    checkDuplicateImage: () => Promise.resolve(false), // تعطيل التحقق من التكرار
     markImageAsProcessed,
     user,
     images
@@ -84,7 +85,7 @@ export const useImageProcessing = () => {
     try {
       console.log("بدء عملية الإرسال للصورة:", id);
       
-      // تحديث حالة التقديم باستخدام setIsSubmitting المستوردة من useFileProcessing
+      // تحديث حالة التقديم باستخدام setIsSubmitting 
       setIsSubmitting(prev => ({ ...prev, [id]: true }));
       
       // البحث عن الصورة المقابلة
@@ -191,6 +192,6 @@ export const useImageProcessing = () => {
     loadUserImages,
     setImages: setAllImages,
     clearOldApiKey,
-    checkDuplicateImage: isDuplicateImage
+    checkDuplicateImage: () => Promise.resolve(false) // دائما نعيد false لتعطيل فحص التكرار
   };
 };
