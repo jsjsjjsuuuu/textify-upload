@@ -95,28 +95,21 @@
     @apply flex items-center justify-between p-8 rounded-xl bg-[#0e1834];
   }
   
-  .admin-table {
-    @apply w-full border-collapse rounded-xl overflow-hidden;
+  /* تنسيقات جديدة لجدول البيانات */
+  .admin-data-table {
+    @apply w-full border-collapse rounded-xl overflow-hidden border border-[#1e2a47]/20;
   }
   
-  .admin-table-header {
-    @apply bg-[#101d3a];
+  .table-header-cell {
+    @apply py-6 px-6 text-right text-base font-medium text-blue-200/90 border-b border-[#1e2a47] bg-[#0a0f1d];
   }
   
-  .admin-table-header th {
-    @apply py-6 px-8 text-right text-base font-medium text-blue-200/80 border-b border-[#1e2a47];
+  .table-row-style {
+    @apply border-b border-[#1e2a47]/50 transition-colors hover:bg-[#121c32];
   }
   
-  .admin-table-row {
-    @apply border-b border-[#1e2a47] transition-colors hover:bg-[#0e1834];
-  }
-  
-  .admin-table-row:last-child {
-    @apply border-0;
-  }
-  
-  .admin-table-cell {
-    @apply py-5 px-8 text-base;
+  .table-cell-style {
+    @apply py-5 px-6 text-base;
   }
   
   .admin-avatar {
