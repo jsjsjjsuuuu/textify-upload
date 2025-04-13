@@ -9,11 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from "@/components/ui/card";
-import { Database, ExternalLink } from 'lucide-react';
+import { Database, ExternalLink, ListFilter } from 'lucide-react';
+import RecordsList from './RecentRecords/RecordsList';
 
 const RecentRecords: React.FC = () => {
   const [records, setRecords] = useState<ImageData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isError, setIsError] = useState<boolean>(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -27,22 +29,22 @@ const RecentRecords: React.FC = () => {
           .from('images')
           .select('*')
           .eq('user_id', user.id)
+          .eq('submitted', true)  // عرض السجلات المرسلة فقط
           .order('created_at', { ascending: false })
-          .limit(15);
+          .limit(10);  // تقليل عدد السجلات لتحسين الأداء
 
         if (error) {
           console.error("خطأ في جلب السجلات الأخيرة:", error);
+          setIsError(true);
           throw error;
         }
 
         if (data) {
-          // تحويل البيانات المسترجعة إلى كائنات ImageData
           const formattedRecords = data.map((record, index) => {
             const dummyFile = new File([], record.file_name || "image.jpg", { 
               type: "image/jpeg" 
             });
             
-            // التأكد من أن status يتوافق مع النوع المحدد
             let status: "pending" | "processing" | "completed" | "error" = "completed";
             if (record.status === "pending") status = "pending";
             else if (record.status === "processing") status = "processing";
@@ -73,6 +75,7 @@ const RecentRecords: React.FC = () => {
         }
       } catch (error) {
         console.error("خطأ في جلب السجلات الأخيرة:", error);
+        setIsError(true);
       } finally {
         setIsLoading(false);
       }
@@ -85,82 +88,78 @@ const RecentRecords: React.FC = () => {
     navigate('/records');
   };
 
-  if (isLoading) {
-    return (
-      <Card className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">آخر السجلات</h2>
-          <Button variant="ghost" size="sm" disabled>
-            <ExternalLink className="w-4 h-4 ml-1" /> عرض الكل
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex justify-between items-center">
-              <Skeleton className="h-6 w-3/4" />
-              <Skeleton className="h-6 w-1/5" />
-            </div>
-          ))}
-        </div>
-      </Card>
-    );
-  }
-
-  if (records.length === 0) {
-    return (
-      <Card className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">آخر السجلات</h2>
-          <Button variant="ghost" size="sm" onClick={handleViewAllClick}>
-            <ExternalLink className="w-4 h-4 ml-1" /> عرض الكل
-          </Button>
-        </div>
-        <div className="text-center p-8 text-muted-foreground">
-          <Database className="w-12 h-12 mx-auto mb-2 opacity-20" />
-          <p>لا توجد سجلات حتى الآن</p>
-        </div>
-      </Card>
-    );
-  }
-
   return (
     <Card className="overflow-hidden">
       <div className="p-4 flex justify-between items-center border-b">
-        <h2 className="text-xl font-bold">آخر السجلات</h2>
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Database className="h-5 w-5 opacity-70" />
+          آخر السجلات المرسلة
+        </h2>
         <Button variant="ghost" size="sm" onClick={handleViewAllClick}>
           <ExternalLink className="w-4 h-4 ml-1" /> عرض الكل
         </Button>
       </div>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[60px]">#</TableHead>
-              <TableHead>التاريخ</TableHead>
-              <TableHead>المرسل</TableHead>
-              <TableHead>الهاتف</TableHead>
-              <TableHead>المبلغ</TableHead>
-              <TableHead>الشركة</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {records.map((record) => (
-              <TableRow 
-                key={record.id} 
-                className="cursor-pointer hover:bg-muted transition-colors"
-                onClick={() => navigate(`/records?id=${record.id}`)}
-              >
-                <TableCell className="font-medium">{record.number}</TableCell>
-                <TableCell>{formatDate(record.date)}</TableCell>
-                <TableCell>{record.senderName || '—'}</TableCell>
-                <TableCell>{record.phoneNumber || '—'}</TableCell>
-                <TableCell>{record.price || '—'}</TableCell>
-                <TableCell>{record.companyName || '—'}</TableCell>
-              </TableRow>
+      
+      {isLoading && (
+        <div className="p-4">
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex justify-between items-center">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-6 w-1/5" />
+              </div>
             ))}
-          </TableBody>
-        </Table>
-      </div>
+          </div>
+        </div>
+      )}
+      
+      {!isLoading && !isError && records.length === 0 && (
+        <div className="text-center p-8 text-muted-foreground">
+          <Database className="w-12 h-12 mx-auto mb-2 opacity-20" />
+          <p>لا توجد سجلات مرسلة حتى الآن</p>
+        </div>
+      )}
+      
+      {!isLoading && isError && (
+        <div className="text-center p-8 text-destructive">
+          <p>حدث خطأ في جلب السجلات. يرجى المحاولة مرة أخرى.</p>
+        </div>
+      )}
+      
+      {!isLoading && !isError && records.length > 0 && (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px] text-center">#</TableHead>
+                <TableHead>الكود</TableHead>
+                <TableHead>المرسل</TableHead>
+                <TableHead>رقم الهاتف</TableHead>
+                <TableHead>المحافظة</TableHead>
+                <TableHead>المبلغ</TableHead>
+                <TableHead className="w-[120px] text-center">التاريخ</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {records.map((record) => (
+                <TableRow 
+                  key={record.id} 
+                  className="cursor-pointer hover:bg-muted transition-colors"
+                  onClick={() => navigate(`/records?id=${record.id}`)}
+                >
+                  <TableCell className="font-medium text-center">{record.number}</TableCell>
+                  <TableCell className="font-semibold">{record.code || '—'}</TableCell>
+                  <TableCell>{record.senderName || '—'}</TableCell>
+                  <TableCell dir="ltr" className="text-center">{record.phoneNumber || '—'}</TableCell>
+                  <TableCell>{record.province || '—'}</TableCell>
+                  <TableCell>{record.price || '—'}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm text-center">{formatDate(record.date)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </Card>
   );
 };

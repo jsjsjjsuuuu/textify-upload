@@ -1,10 +1,13 @@
 
 import React from 'react';
 import { ImageData } from "@/types/ImageData";
-import RecordItem from './RecordItem';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatDate } from '@/utils/dateFormatter';
+import { useNavigate } from 'react-router-dom';
 import LoadingState from './LoadingState';
 import EmptyState from './EmptyState';
 import { motion } from 'framer-motion';
+import { Badge } from "@/components/ui/badge";
 
 interface RecordsListProps {
   records: ImageData[];
@@ -13,6 +16,8 @@ interface RecordsListProps {
 }
 
 const RecordsList: React.FC<RecordsListProps> = ({ records, isLoading, isError }) => {
+  const navigate = useNavigate();
+  
   if (isLoading) {
     return <LoadingState />;
   }
@@ -37,21 +42,41 @@ const RecordsList: React.FC<RecordsListProps> = ({ records, isLoading, isError }
 
   return (
     <motion.div 
-      className="space-y-3"
+      className="overflow-x-auto"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      {records.map((record, index) => (
-        <motion.div
-          key={record.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.05 }}
-        >
-          <RecordItem record={record} />
-        </motion.div>
-      ))}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>#</TableHead>
+            <TableHead>الكود</TableHead>
+            <TableHead>المرسل</TableHead>
+            <TableHead>الهاتف</TableHead>
+            <TableHead>المحافظة</TableHead>
+            <TableHead>المبلغ</TableHead>
+            <TableHead>التاريخ</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((record) => (
+            <TableRow 
+              key={record.id} 
+              className="cursor-pointer hover:bg-muted/20 transition-colors"
+              onClick={() => navigate(`/records?id=${record.id}`)}
+            >
+              <TableCell className="font-medium">{record.number}</TableCell>
+              <TableCell className="font-semibold">{record.code || '—'}</TableCell>
+              <TableCell>{record.senderName || '—'}</TableCell>
+              <TableCell dir="ltr">{record.phoneNumber || '—'}</TableCell>
+              <TableCell>{record.province || '—'}</TableCell>
+              <TableCell>{record.price || '—'}</TableCell>
+              <TableCell className="text-muted-foreground text-sm">{formatDate(record.date)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </motion.div>
   );
 };

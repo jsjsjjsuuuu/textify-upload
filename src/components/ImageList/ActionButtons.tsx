@@ -44,7 +44,7 @@ const ActionButtons = ({
   // عنوان زر توضيحي للإرشاد
   const getSubmitButtonTitle = () => {
     if (isSubmitted) {
-      return "تم إرسال البيانات بالفعل";
+      return "تم إرسال البيانات بالفعل وإخفاء العنصر";
     } 
     if (!isAllFieldsFilled) {
       return "يجب ملء جميع الحقول أولاً: الكود، اسم المرسل، رقم الهاتف، المحافظة، السعر";
@@ -57,6 +57,13 @@ const ActionButtons = ({
 
   const handleSubmit = () => {
     console.log("زر الإرسال: بدء إرسال الصورة:", imageId);
+    
+    // إظهار رسالة تأكيد
+    toast({
+      title: "جاري إرسال البيانات",
+      description: "سيتم إخفاء العنصر بعد الإرسال الناجح"
+    });
+    
     onSubmit(imageId);
   };
 

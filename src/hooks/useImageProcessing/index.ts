@@ -45,7 +45,8 @@ export const useImageProcessing = () => {
     loadUserImages: fetchUserImages, 
     saveImageToDatabase, 
     handleSubmitToApi: submitToApi, 
-    deleteImageFromDatabase, 
+    deleteImageFromDatabase,
+    handlePermanentDelete: permanentDelete, 
     runCleanupNow 
   } = useImageDatabase(updateImage);
   
@@ -59,7 +60,8 @@ export const useImageProcessing = () => {
     activeUploads,
     queueLength,
     handleFileChange,
-    setProcessingProgress
+    setProcessingProgress,
+    isSubmitting
   } = useFileProcessing({
     addImage,
     updateImage,
@@ -97,19 +99,20 @@ export const useImageProcessing = () => {
           markImageAsProcessed(submittedImage);
         }
         
-        // إخفاء الصورة بعد الإرسال - استدعاء مباشر لوظيفة hideImage
+        // إخفاء الصورة بعد الإرسال - تحسين طريقة الاستدعاء
         console.log("إخفاء الصورة بعد الإرسال الناجح:", id);
         
-        // تم تعديل هنا: استدعاء وظيفة hideImage وتخزين نتيجة الاستدعاء للتحقق
-        const hideResult = hideImage(id);
-        console.log("نتيجة إخفاء الصورة:", hideResult, "معرف الصورة:", id);
+        // استدعاء وظيفة hideImage وتسجيل نتيجة العملية
+        hideImage(id);
+        console.log("تم إخفاء الصورة بنجاح:", id);
+        console.log("معرفات الصور المخفية الآن:", getHiddenImageIds());
         
         return true;
       }
       
       return result;
     } catch (error) {
-      console.error("Error submitting image:", error);
+      console.error("خطأ في إرسال الصورة:", error);
       return false;
     }
   };
@@ -120,6 +123,7 @@ export const useImageProcessing = () => {
       return fetchUserImages(user.id, (loadedImages: ImageData[]) => {
         // تصفية الصور المخفية قبل إضافتها للعرض
         const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
+        console.log(`تم تحميل ${loadedImages.length} صورة، و${visibleImages.length} صورة مرئية بعد تصفية ${hiddenImageIds.length} صورة مخفية`);
         if (callback) {
           callback(visibleImages);
         } else {
@@ -129,13 +133,16 @@ export const useImageProcessing = () => {
     }
   };
 
-  // تنفيذ وظائف تحكم إضافية
-  const retryProcessing = () => {
-    // يمكن تنفيذ منطق إعادة المعالجة هنا
-  };
-  
-  const clearQueue = () => {
-    // يمكن تنفيذ منطق إفراغ القائمة هنا
+  // حذف الصورة بشكل نهائي
+  const handlePermanentDelete = async (id: string) => {
+    console.log("بدء عملية الحذف النهائي للصورة:", id);
+    const result = await permanentDelete(id);
+    if (result) {
+      // إزالة الصورة من قائمة الصور المعروضة
+      deleteImage(id);
+      console.log("تم حذف الصورة نهائيًا:", id);
+    }
+    return result;
   };
 
   // إعادة تصدير الواجهة العامة أكثر تنظيمًا
@@ -149,12 +156,14 @@ export const useImageProcessing = () => {
     processingProgress,
     activeUploads,
     queueLength,
+    isSubmitting,
     
     // الدوال
     handleFileChange,
     handleTextChange,
     handleDelete: deleteImage,
     handleSubmitToApi,
+    handlePermanentDelete,
     saveImageToDatabase,
     formatDate: formatDateFn,
     hideImage,
@@ -162,8 +171,6 @@ export const useImageProcessing = () => {
     unhideAllImages,
     getHiddenImageIds,
     clearSessionImages,
-    retryProcessing,
-    clearQueue,
     runCleanup: (userId: string) => {
       if (userId) {
         runCleanupNow(userId);

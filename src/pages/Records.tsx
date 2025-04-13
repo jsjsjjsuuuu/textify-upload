@@ -1,7 +1,8 @@
+
 import React, { useEffect, useState } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader, Search, Filter, Download, Trash2, Eye } from 'lucide-react';
+import { Loader, Search, Filter, Download, Trash2, SortAsc, SortDesc, ListFilter } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { ImageData } from '@/types/ImageData';
 import AppHeader from '@/components/AppHeader';
@@ -28,7 +29,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Pagination } from '@/components/ui/pagination';
 import { formatDate } from '@/utils/dateFormatter';
 import { useToast } from '@/hooks/use-toast';
-import ImageCardContainer from '@/components/ImageViewer/ImageCardContainer';
 import ImageDetailsPanel from '@/components/ImageViewer/ImageDetailsPanel';
 
 const Records = () => {
@@ -39,11 +39,11 @@ const Records = () => {
   const {
     loadUserImages,
     images,
-    handlePermanentDelete, // استخدام وظيفة الحذف الدائم
+    handlePermanentDelete,
     handleTextChange,
     handleSubmitToApi,
     isSubmitting,
-    unhideAllImages, // استخدام وظيفة إعادة إظهار جميع الصور
+    unhideAllImages,
     hiddenImageIds
   } = useImageProcessing();
   
@@ -54,19 +54,20 @@ const Records = () => {
   const [activeImage, setActiveImage] = useState<ImageData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [dataLoaded, setDataLoaded] = useState(false); // إضافة حالة جديدة لتتبع ما إذا تم تحميل البيانات بالفعل
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [sortField, setSortField] = useState<string>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const itemsPerPage = 20;
   
-  // تحميل صور المستخدم عند تحميل الصفحة - مع تحسين لمنع التحميل المتكرر
+  // تحميل صور المستخدم عند تحميل الصفحة
   useEffect(() => {
     if (user && !dataLoaded) {
       setIsLoading(true);
       
-      // استخدام loadUserImages مع دالة رجوع فقط - تم تصحيح طريقة الاستدعاء هنا
       loadUserImages((loadedImages) => {
         console.log(`تم تحميل ${loadedImages.length} صورة للمستخدم`);
         setIsLoading(false);
-        setDataLoaded(true); // تعيين حالة التحميل إلى "تم" لمنع إعادة التحميل
+        setDataLoaded(true);
         
         // التحقق من وجود معرف في عنوان URL
         const idParam = searchParams.get('id');
@@ -78,16 +79,7 @@ const Records = () => {
         }
       });
     }
-  }, [user, loadUserImages, searchParams, dataLoaded]); // إضافة dataLoaded إلى مصفوفة التبعيات
-
-  // إعادة تحميل البيانات عند تغيير قائمة الصور المخفية
-  useEffect(() => {
-    if (dataLoaded && user) {
-      loadUserImages((loadedImages) => {
-        console.log(`تم إعادة تحميل ${loadedImages.length} صورة للمستخدم بعد تغيير الصور المخفية`);
-      });
-    }
-  }, [hiddenImageIds, dataLoaded, user, loadUserImages]);
+  }, [user, loadUserImages, searchParams, dataLoaded]);
 
   // تصفية الصور بناءً على معايير البحث
   useEffect(() => {
@@ -119,26 +111,66 @@ const Records = () => {
       }
     }
     
-    // ترتيب النتائج (الأحدث أولاً)
-    result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // ترتيب النتائج
+    result.sort((a, b) => {
+      let fieldA: any;
+      let fieldB: any;
+
+      // تحديد القيم حسب حقل الترتيب
+      switch (sortField) {
+        case 'code':
+          fieldA = a.code || '';
+          fieldB = b.code || '';
+          break;
+        case 'senderName':
+          fieldA = a.senderName || '';
+          fieldB = b.senderName || '';
+          break;
+        case 'phoneNumber':
+          fieldA = a.phoneNumber || '';
+          fieldB = b.phoneNumber || '';
+          break;
+        case 'province':
+          fieldA = a.province || '';
+          fieldB = b.province || '';
+          break;
+        case 'price':
+          fieldA = parseFloat(a.price || '0');
+          fieldB = parseFloat(b.price || '0');
+          break;
+        case 'date':
+        default:
+          fieldA = new Date(a.date).getTime();
+          fieldB = new Date(b.date).getTime();
+      }
+
+      // تطبيق اتجاه الترتيب
+      if (sortDirection === 'asc') {
+        return fieldA > fieldB ? 1 : -1;
+      } else {
+        return fieldA < fieldB ? 1 : -1;
+      }
+    });
     
     setFilteredImages(result);
-    
-    // إعادة تعيين الصفحة الحالية إلى 1 عند تغيير معايير التصفية
     setCurrentPage(1);
-  }, [images, searchTerm, statusFilter]);
+  }, [images, searchTerm, statusFilter, sortField, sortDirection]);
 
-  // معالجة الضغط على زر إظهار جميع الصور المخفية
-  const handleUnhideAllImages = () => {
-    unhideAllImages();
-    // إعادة تحميل البيانات
-    setDataLoaded(false);
+  // تغيير ترتيب الجدول
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // تبديل اتجاه الترتيب إذا كان نفس الحقل
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // تعيين الحقل الجديد واتجاه الترتيب الافتراضي
+      setSortField(field);
+      setSortDirection('asc');
+    }
   };
 
-  // التعامل مع النقر على صورة
-  const handleImageClick = (image: ImageData) => {
+  // التعامل مع النقر على سجل
+  const handleRowClick = (image: ImageData) => {
     setActiveImage(image);
-    // تحديث عنوان URL
     setSearchParams({ id: image.id });
   };
 
@@ -159,11 +191,11 @@ const Records = () => {
     return !!image.phoneNumber && image.phoneNumber.replace(/[^\d]/g, '').length !== 11;
   };
 
-  // حذف الصور المحددة
+  // حذف السجلات المحددة
   const handleDeleteSelected = async () => {
     if (selectedImages.length === 0) return;
     
-    const confirmed = window.confirm(`هل أنت متأكد من حذف ${selectedImages.length} صورة نهائيًا من قاعدة البيانات؟`);
+    const confirmed = window.confirm(`هل أنت متأكد من حذف ${selectedImages.length} سجل نهائيًا من قاعدة البيانات؟`);
     if (!confirmed) return;
     
     let successCount = 0;
@@ -178,25 +210,22 @@ const Records = () => {
           errorCount++;
         }
       } catch (error) {
-        console.error(`خطأ في حذف الصورة ${id}:`, error);
+        console.error(`خطأ في حذف السجل ${id}:`, error);
         errorCount++;
       }
     }
     
-    // إعادة تعيين قائمة الصور المحددة
     setSelectedImages([]);
     
-    // إظهار رسالة نجاح
     toast({
       title: "تم الحذف",
-      description: `تم حذف ${successCount} صورة بنجاح${errorCount > 0 ? ` (فشل حذف ${errorCount} صورة)` : ''}`,
+      description: `تم حذف ${successCount} سجل بنجاح${errorCount > 0 ? ` (فشل حذف ${errorCount} سجل)` : ''}`,
     });
     
-    // إعادة تحميل الصور - إعادة تعيين حالة التحميل فقط لتشغيل useEffect من جديد
     setDataLoaded(false);
   };
 
-  // تصدير الصور المحددة
+  // تصدير السجلات المحددة
   const handleExportSelected = () => {
     if (selectedImages.length === 0) return;
     
@@ -211,19 +240,16 @@ const Records = () => {
       date: formatDate(img.date)
     }));
     
-    // تحويل البيانات إلى JSON
     const jsonData = JSON.stringify(exportData, null, 2);
     const blob = new Blob([jsonData], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     
-    // إنشاء رابط تنزيل
     const a = document.createElement('a');
     a.href = url;
     a.download = `exported_records_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     
-    // تنظيف
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
@@ -233,6 +259,15 @@ const Records = () => {
       title: "تم التصدير",
       description: `تم تصدير ${selectedImages.length} سجل بنجاح`,
     });
+  };
+
+  // تحديد حالة تحديد الكل
+  const toggleSelectAll = () => {
+    if (selectedImages.length === currentImages.length) {
+      setSelectedImages([]);
+    } else {
+      setSelectedImages(currentImages.map(img => img.id));
+    }
   };
 
   // حساب الصفحات
@@ -258,19 +293,25 @@ const Records = () => {
     </div>;
   }
 
+  // رمز الترتيب
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ? <SortAsc className="h-3 w-3 mr-1" /> : <SortDesc className="h-3 w-3 mr-1" />;
+  };
+
   return (
     <div className="min-h-screen app-background">
       <AppHeader />
       
       <div className="container mx-auto p-4">
-        {/* تطبيق تأثير الطبق على العنوان والأدوات */}
+        {/* العنوان والأدوات */}
         <div className="dish-container mb-6">
           <div className="dish-glow-top"></div>
           <div className="dish-glow-bottom"></div>
           <div className="dish-reflection"></div>
           <div className="dish-inner-shadow"></div>
           <div className="relative z-10 p-6">
-            <h1 className="text-2xl font-bold mb-6 text-gradient">سجلات الصور</h1>
+            <h1 className="text-2xl font-bold mb-6 text-gradient">سجلات المعاملات</h1>
             
             {/* أدوات البحث والتصفية */}
             <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -303,14 +344,17 @@ const Records = () => {
                   setSearchTerm('');
                   setStatusFilter('all');
                 }} className="bg-[#131b31] border-0">
-                  <Filter className="h-4 w-4" />
+                  <ListFilter className="h-4 w-4" />
                 </Button>
                 
-                {/* زر إظهار جميع الصور المخفية */}
+                {/* زر إظهار المخفي إذا وجد */}
                 {hiddenImageIds?.length > 0 && (
-                  <Button variant="outline" onClick={handleUnhideAllImages} className="whitespace-nowrap bg-[#131b31] border-0">
-                    <Eye className="h-4 w-4 ml-2" />
-                    إظهار الصور المخفية ({hiddenImageIds.length})
+                  <Button 
+                    variant="outline" 
+                    onClick={() => unhideAllImages()} 
+                    className="whitespace-nowrap bg-[#131b31] border-0"
+                  >
+                    إظهار السجلات المخفية ({hiddenImageIds.length})
                   </Button>
                 )}
               </div>
@@ -333,44 +377,154 @@ const Records = () => {
             {/* عرض عدد النتائج */}
             <div className="text-sm text-muted-foreground mb-4">
               تم العثور على {filteredImages.length} سجل
-              {hiddenImageIds?.length > 0 && (
-                <span className="mr-2">{hiddenImageIds.length} صورة مخفية</span>
-              )}
             </div>
           </div>
         </div>
         
-        {/* عرض الصور والتفاصيل */}
+        {/* عرض الجدول والتفاصيل */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            {/* تطبيق تأثير الطبق على قائمة الصور */}
+          <div className="lg:col-span-2">
+            {/* جدول السجلات */}
             <div className="dish-container">
               <div className="dish-glow-top"></div>
               <div className="dish-glow-bottom"></div>
               <div className="dish-reflection"></div>
               <div className="dish-inner-shadow"></div>
-              <div className="relative z-10 p-6">
-                <h2 className="text-lg font-semibold mb-4 text-gradient">الصور</h2>
-                
-                {currentImages.length === 0 ? (
+              <div className="relative z-10 p-0">
+                {filteredImages.length === 0 ? (
                   <div className="text-center p-8 text-muted-foreground">
                     لا توجد نتائج مطابقة لمعايير البحث
                   </div>
                 ) : (
-                  <ImageCardContainer
-                    images={currentImages}
-                    activeImage={activeImage}
-                    selectedImages={selectedImages}
-                    handleImageClick={handleImageClick}
-                    setSelectedImages={setSelectedImages}
-                    isImageComplete={isImageComplete}
-                    hasPhoneError={hasPhoneError}
-                  />
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-center w-10">
+                            <Checkbox 
+                              checked={selectedImages.length === currentImages.length && currentImages.length > 0}
+                              onCheckedChange={toggleSelectAll}
+                            />
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handleSort('code')}
+                          >
+                            <div className="flex items-center">
+                              {getSortIcon('code')}
+                              الكود
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handleSort('senderName')}
+                          >
+                            <div className="flex items-center">
+                              {getSortIcon('senderName')}
+                              المرسل
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handleSort('phoneNumber')}
+                          >
+                            <div className="flex items-center">
+                              {getSortIcon('phoneNumber')}
+                              رقم الهاتف
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handleSort('province')}
+                          >
+                            <div className="flex items-center">
+                              {getSortIcon('province')}
+                              المحافظة
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handleSort('price')}
+                          >
+                            <div className="flex items-center">
+                              {getSortIcon('price')}
+                              المبلغ
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => handleSort('date')}
+                          >
+                            <div className="flex items-center">
+                              {getSortIcon('date')}
+                              التاريخ
+                            </div>
+                          </TableHead>
+                          <TableHead>الحالة</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentImages.map((image) => (
+                          <TableRow 
+                            key={image.id} 
+                            className={`cursor-pointer hover:bg-muted/30 transition-colors ${activeImage?.id === image.id ? 'bg-muted/50' : ''}`}
+                            onClick={() => handleRowClick(image)}
+                          >
+                            <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox 
+                                checked={selectedImages.includes(image.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedImages(prev => [...prev, image.id]);
+                                  } else {
+                                    setSelectedImages(prev => prev.filter(id => id !== image.id));
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{image.code || '—'}</TableCell>
+                            <TableCell>{image.senderName || '—'}</TableCell>
+                            <TableCell dir="ltr" className="text-center">{image.phoneNumber || '—'}</TableCell>
+                            <TableCell>{image.province || '—'}</TableCell>
+                            <TableCell>{image.price || '—'}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">{formatDate(image.date)}</TableCell>
+                            <TableCell>
+                              {image.status === 'completed' && image.submitted && (
+                                <Badge variant="outline" className="bg-green-100/20 text-green-600 border-green-200/30">
+                                  تم الإرسال
+                                </Badge>
+                              )}
+                              {image.status === 'completed' && !image.submitted && (
+                                <Badge variant="outline" className="bg-blue-100/20 text-blue-600 border-blue-200/30">
+                                  مكتملة
+                                </Badge>
+                              )}
+                              {image.status === 'processing' && (
+                                <Badge variant="outline" className="bg-yellow-100/20 text-yellow-600 border-yellow-200/30">
+                                  قيد المعالجة
+                                </Badge>
+                              )}
+                              {image.status === 'error' && (
+                                <Badge variant="outline" className="bg-red-100/20 text-red-600 border-red-200/30">
+                                  خطأ
+                                </Badge>
+                              )}
+                              {image.status === 'pending' && (
+                                <Badge variant="outline" className="bg-slate-100/20 text-slate-600 border-slate-200/30">
+                                  قيد الانتظار
+                                </Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
                 
                 {/* ترقيم الصفحات */}
                 {totalPages > 1 && (
-                  <div className="mt-4 flex justify-center">
+                  <div className="mt-4 p-4 border-t flex justify-center">
                     <Pagination
                       currentPage={currentPage}
                       totalPages={totalPages}
@@ -382,7 +536,7 @@ const Records = () => {
             </div>
           </div>
           
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-1">
             {activeImage ? (
               <div className="dish-container">
                 <div className="dish-glow-top"></div>
@@ -411,7 +565,8 @@ const Records = () => {
                 <div className="dish-reflection"></div>
                 <div className="dish-inner-shadow"></div>
                 <div className="relative z-10 p-8 text-center text-muted-foreground">
-                  <p>اختر صورة من القائمة لعرض التفاصيل</p>
+                  <p className="mb-2">اختر سجلاً من الجدول لعرض التفاصيل</p>
+                  <p className="text-sm opacity-70">يمكنك الضغط على عناوين الأعمدة للترتيب التصاعدي أو التنازلي</p>
                 </div>
               </div>
             )}
