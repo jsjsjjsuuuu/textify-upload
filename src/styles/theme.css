@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -88,7 +89,7 @@
   
   /* تباعد محتوى موحد */
   .content-spacing {
-    @apply py-16 px-10 md:px-16 lg:px-20; /* زيادة المساحات */
+    @apply py-12 px-7 md:px-12 lg:px-14;
   }
   
   /* تأثيرات الخلفية العامة للتطبيق */
@@ -98,7 +99,7 @@
   
   /* تصميم الصفحة المقعر (على شكل طبق) */
   .dish-container {
-    @apply p-8 my-8 bg-[#0a0f1e]/95 rounded-2xl shadow-[0_10px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-md relative overflow-hidden; /* زيادة التباعد والهوامش */
+    @apply bg-[#0a0f1e]/95 rounded-2xl shadow-[0_10px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-md relative overflow-hidden;
   }
   
   /* تأثيرات التوهج للطبق */
@@ -122,7 +123,7 @@
   
   /* أزرار وعناصر تحكم متناسقة مع الثيم */
   .theme-button {
-    @apply py-4 px-7 bg-secondary hover:bg-secondary/80 text-white transition-all duration-300 shadow-md hover:shadow-lg; /* زيادة حجم الأزرار */
+    @apply bg-secondary hover:bg-secondary/80 text-white transition-all duration-300 shadow-md hover:shadow-lg;
   }
   
   .theme-button-primary {

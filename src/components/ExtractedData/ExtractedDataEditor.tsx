@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { ImageData } from "@/types/ImageData";
 import { Card, CardContent } from "@/components/ui/card";
@@ -79,32 +80,32 @@ const ExtractedDataEditor = ({
       className="h-full"
       dir="rtl"
     >
-      <Card className="bg-white/95 dark:bg-gray-800/95 shadow-lg border-brand-beige dark:border-gray-700 hover:shadow-xl transition-shadow">
-        {/* زيادة التباعد في شريط الحالة */}
-        <div className={`p-6 flex items-center justify-between rounded-t-lg space-x-4 ${
+      <Card className="bg-white/95 dark:bg-gray-800/95 shadow-sm border-brand-beige dark:border-gray-700 hover:shadow-md transition-shadow">
+        {/* شريط حالة البيانات الجديد */}
+        <div className={`p-3 flex items-center justify-between rounded-t-lg ${
           isDataComplete ? "bg-green-500/20 text-green-700 dark:bg-green-900/30 dark:text-green-400" : 
           hasPhoneNumberError ? "bg-red-500/20 text-red-700 dark:bg-red-900/30 dark:text-red-400" : 
           "bg-amber-500/20 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
         }`}>
-          <div className="flex items-center gap-4"> {/* زيادة المسافة بين العناصر */}
+          <div className="flex items-center gap-2">
             {isDataComplete ? (
-              <CheckCircle className="h-7 w-7" />
+              <CheckCircle className="h-5 w-5" />
             ) : (
-              <AlertTriangle className="h-7 w-7" />
+              <AlertTriangle className="h-5 w-5" />
             )}
-            <span className="font-medium text-xl"> {/* زيادة حجم الخط */}
+            <span className="font-medium">
               {isDataComplete ? "البيانات مكتملة" : 
                hasPhoneNumberError ? "خطأ في رقم الهاتف" : 
                "البيانات غير مكتملة"}
             </span>
           </div>
-          <div className="text-lg"> {/* زيادة حجم الخط */}
+          <div className="text-sm">
             {image.submitted ? "تم الإرسال" : "لم يتم الإرسال بعد"}
           </div>
         </div>
 
-        <CardContent className="p-8"> {/* زيادة التباعد الداخلي */}
-          <div className="flex justify-between items-center mb-8"> {/* زيادة المسافة */}
+        <CardContent className="p-4">
+          <div className="flex justify-between items-center mb-4">
             <ExtractedDataActions 
               editMode={editMode} 
               onEditToggle={handleEditToggle} 
@@ -115,9 +116,8 @@ const ExtractedDataEditor = ({
             />
           </div>
 
-          <div className="mb-8"> {/* زيادة المسافة أسفل مؤشر الاكتمال */}
-            <DataCompletionIndicator image={imageDataChanged} />
-          </div>
+          {/* نقلت DataCompletionIndicator تحت شريط الحالة لتفاصيل إضافية عن الحقول */}
+          <DataCompletionIndicator image={imageDataChanged} />
 
           <LearningNotifications 
             correctionsMade={correctionsMade} 
@@ -128,7 +128,6 @@ const ExtractedDataEditor = ({
             initial={false} 
             animate={{ scale: editMode ? 1.01 : 1 }}
             transition={{ duration: 0.2 }}
-            className="mb-8" /* زيادة المسافة أسفل الحقول */
           >
             <ExtractedDataFields 
               tempData={tempData} 
@@ -138,11 +137,13 @@ const ExtractedDataEditor = ({
             />
           </motion.div>
 
-          <div className="mt-8 mb-8 flex justify-center"> {/* زيادة المسافات */}
+          {/* زر الأتمتة */}
+          <div className="mt-4 flex justify-center">
             <AutomationButton image={image} />
           </div>
 
-          <div className="mt-8"> {/* زيادة المسافة فوق عارض النص */}
+          {/* عرض النص الخام في قسم منفصل بعد تحسين التصميم */}
+          <div className="mt-4">
             <RawTextViewer text={image.extractedText} />
           </div>
         </CardContent>
