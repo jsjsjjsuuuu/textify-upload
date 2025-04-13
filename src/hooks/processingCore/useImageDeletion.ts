@@ -13,7 +13,7 @@ export const useImageDeletion = ({
 }: ImageDeletionProps) => {
   const { toast } = useToast();
 
-  // تعديل وظيفة حذف الصورة لتشمل الحذف من قاعدة البيانات
+  // تعديل وظيفة حذف الصورة لتشمل الحذف من العرض فقط
   const handleDelete = useCallback(async (id: string) => {
     try {
       // حذف من العرض فقط (دون حذفها من قاعدة البيانات)
@@ -38,7 +38,7 @@ export const useImageDeletion = ({
         await deleteImageFromDatabase(id);
       }
       
-      // ثم حذفه من الحالة المحلية (مع الإشارة إلى أنه تم حذفه من قاعدة البيانات)
+      // ثم حذفه من الحالة المحلية
       deleteImage(id);
       
       toast({

@@ -56,7 +56,7 @@ export const AppRoutes = () => {
       
       <Route path="/records" element={
         <ProtectedRoute>
-          <Navigate to="/" replace />
+          <Records />
         </ProtectedRoute>
       } />
       <Route path="/automation/:imageId" element={

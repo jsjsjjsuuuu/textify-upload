@@ -8,6 +8,7 @@ import { useImageDatabase } from "../useImageDatabase";
 import { useDuplicateDetection } from "../useDuplicateDetection";
 import { useFileProcessing } from "./useFileProcessing";
 import { useApiKeyManagement } from "../processingCore/useApiKeyManagement";
+import { useImageDeletion } from "../processingCore/useImageDeletion";
 import type { ImageData } from "@/types/ImageData"; // استيراد النوع بشكل صريح
 
 export const useImageProcessing = () => {
@@ -46,9 +47,14 @@ export const useImageProcessing = () => {
     saveImageToDatabase, 
     handleSubmitToApi: submitToApi, 
     deleteImageFromDatabase,
-    handlePermanentDelete: permanentDelete, 
     runCleanupNow 
   } = useImageDatabase(updateImage);
+  
+  // استيراد هوك حذف الصور
+  const { handlePermanentDelete: permanentDelete } = useImageDeletion({ 
+    deleteImage, 
+    deleteImageFromDatabase 
+  });
   
   // هوك كشف التكرارات
   const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection();

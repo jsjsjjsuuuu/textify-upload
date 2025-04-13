@@ -76,7 +76,8 @@ const ActionButtons = ({
     });
   };
 
-  return <div className="flex justify-end gap-2 mt-3">
+  return (
+    <div className="flex justify-end gap-2 mt-3">
       <Button 
         variant="outline" 
         size="sm" 
@@ -99,7 +100,8 @@ const ActionButtons = ({
         <Send size={14} className="ml-1 opacity-70" />
         {isSubmitting ? "جاري الإرسال..." : isSubmitted ? "تم الإرسال" : "إرسال وإخفاء"}
       </Button>
-    </div>;
+    </div>
+  );
 };
 
 export default ActionButtons;
