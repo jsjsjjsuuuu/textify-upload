@@ -53,13 +53,21 @@ const Index = () => {
   // تسجيل معلومات التشخيص
   useEffect(() => {
     console.log("قائمة معرّفات الصور المخفية:", hiddenImageIds);
+    console.log("عدد الصور المخفية:", hiddenImageIds.length);
+    console.log("عدد الصور المعروضة:", images.length);
     
     if (typeof hideImage === 'function') {
       console.log("تم تحميل وظيفة hideImage بنجاح");
     } else {
       console.error("خطأ: وظيفة hideImage غير معرّفة أو ليست دالة", typeof hideImage);
     }
-  }, [hideImage, hiddenImageIds]);
+    
+    // تجربة فلترة الصور لاستبعاد الصور المخفية - للتأكد من أن المنطق يعمل
+    if (images.length > 0 && hiddenImageIds.length > 0) {
+      const filteredImages = images.filter(img => !hiddenImageIds.includes(img.id));
+      console.log("عدد الصور بعد التصفية:", filteredImages.length);
+    }
+  }, [hideImage, hiddenImageIds, images]);
 
   // عرض رسالة التحميل أثناء التحقق من المستخدم
   if (isAuthLoading) {

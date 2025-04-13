@@ -99,7 +99,10 @@ export const useImageProcessing = () => {
         
         // إخفاء الصورة بعد الإرسال - استدعاء مباشر لوظيفة hideImage
         console.log("إخفاء الصورة بعد الإرسال الناجح:", id);
-        hideImage(id);
+        
+        // تم تعديل هنا: استدعاء وظيفة hideImage وتخزين نتيجة الاستدعاء للتحقق
+        const hideResult = hideImage(id);
+        console.log("نتيجة إخفاء الصورة:", hideResult, "معرف الصورة:", id);
         
         return true;
       }

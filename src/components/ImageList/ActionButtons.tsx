@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Trash, Send } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ActionButtonsProps {
   imageId: string;
@@ -25,6 +26,7 @@ const ActionButtons = ({
   onSubmit
 }: ActionButtonsProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
   
   // مراقبة حالة التقديم لتتبع العملية
   useEffect(() => {
@@ -54,11 +56,17 @@ const ActionButtons = ({
   };
 
   const handleSubmit = () => {
+    console.log("زر الإرسال: بدء إرسال الصورة:", imageId);
     onSubmit(imageId);
   };
 
   const handleDelete = () => {
+    console.log("زر الحذف: بدء حذف الصورة:", imageId);
     onDelete(imageId);
+    toast({
+      title: "تمت إزالة الصورة",
+      description: "تم إخفاء الصورة من العرض",
+    });
   };
 
   return <div className="flex justify-end gap-2 mt-3">

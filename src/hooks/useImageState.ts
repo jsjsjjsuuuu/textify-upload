@@ -18,7 +18,9 @@ export const useImageState = () => {
       const storedHiddenImages = localStorage.getItem(HIDDEN_IMAGES_STORAGE_KEY);
       if (storedHiddenImages) {
         console.log("تم استرجاع الصور المخفية من التخزين المحلي:", storedHiddenImages);
-        setHiddenImageIds(JSON.parse(storedHiddenImages));
+        const parsedHiddenImages = JSON.parse(storedHiddenImages);
+        setHiddenImageIds(parsedHiddenImages);
+        console.log("تم تعيين معرفات الصور المخفية:", parsedHiddenImages);
       }
     } catch (error) {
       console.error("خطأ في استرجاع الصور المخفية:", error);
@@ -30,8 +32,10 @@ export const useImageState = () => {
   // حفظ الصور المخفية في التخزين المحلي عند تغييرها
   useEffect(() => {
     try {
-      console.log("حفظ الصور المخفية في التخزين المحلي:", hiddenImageIds);
-      localStorage.setItem(HIDDEN_IMAGES_STORAGE_KEY, JSON.stringify(hiddenImageIds));
+      if (hiddenImageIds.length > 0) {
+        console.log("حفظ الصور المخفية في التخزين المحلي:", hiddenImageIds);
+        localStorage.setItem(HIDDEN_IMAGES_STORAGE_KEY, JSON.stringify(hiddenImageIds));
+      }
     } catch (error) {
       console.error("خطأ في حفظ الصور المخفية:", error);
     }
@@ -75,6 +79,7 @@ export const useImageState = () => {
     setHiddenImageIds(prev => {
       // تأكد من عدم إضافة معرف مكرر
       if (prev.includes(id)) {
+        console.log("الصورة مخفية بالفعل:", id);
         return prev;
       }
       const newHiddenIds = [...prev, id];
@@ -173,6 +178,7 @@ export const useImageState = () => {
   const setAllImages = useCallback((newImages: ImageData[]) => {
     // تصفية الصور المخفية من القائمة الجديدة
     const filteredImages = newImages.filter(img => !hiddenImageIds.includes(img.id));
+    console.log("تعيين الصور بعد تصفية الصور المخفية:", filteredImages.length, "من", newImages.length);
     setImages(filteredImages);
     
     // تحديث الصور المؤقتة أيضًا
