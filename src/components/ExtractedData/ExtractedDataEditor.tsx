@@ -80,32 +80,32 @@ const ExtractedDataEditor = ({
       className="h-full"
       dir="rtl"
     >
-      <Card className="bg-white/95 dark:bg-gray-800/95 shadow-sm border-brand-beige dark:border-gray-700 hover:shadow-md transition-shadow">
-        {/* شريط حالة البيانات الجديد */}
-        <div className={`p-3 flex items-center justify-between rounded-t-lg ${
+      <Card className="bg-white/95 dark:bg-gray-800/95 shadow-md border-brand-beige dark:border-gray-700 hover:shadow-lg transition-shadow">
+        {/* شريط حالة البيانات بتصميم أكثر وضوحاً */}
+        <div className={`p-5 flex items-center justify-between rounded-t-lg ${
           isDataComplete ? "bg-green-500/20 text-green-700 dark:bg-green-900/30 dark:text-green-400" : 
           hasPhoneNumberError ? "bg-red-500/20 text-red-700 dark:bg-red-900/30 dark:text-red-400" : 
           "bg-amber-500/20 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
         }`}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {isDataComplete ? (
-              <CheckCircle className="h-5 w-5" />
+              <CheckCircle className="h-6 w-6" />
             ) : (
-              <AlertTriangle className="h-5 w-5" />
+              <AlertTriangle className="h-6 w-6" />
             )}
-            <span className="font-medium">
+            <span className="font-medium text-lg">
               {isDataComplete ? "البيانات مكتملة" : 
                hasPhoneNumberError ? "خطأ في رقم الهاتف" : 
                "البيانات غير مكتملة"}
             </span>
           </div>
-          <div className="text-sm">
+          <div className="text-base">
             {image.submitted ? "تم الإرسال" : "لم يتم الإرسال بعد"}
           </div>
         </div>
 
-        <CardContent className="p-4">
-          <div className="flex justify-between items-center mb-4">
+        <CardContent className="p-6"> {/* زيادة التباعد الداخلي */}
+          <div className="flex justify-between items-center mb-6"> {/* زيادة المسافة أسفل الأزرار */}
             <ExtractedDataActions 
               editMode={editMode} 
               onEditToggle={handleEditToggle} 
@@ -117,7 +117,9 @@ const ExtractedDataEditor = ({
           </div>
 
           {/* نقلت DataCompletionIndicator تحت شريط الحالة لتفاصيل إضافية عن الحقول */}
-          <DataCompletionIndicator image={imageDataChanged} />
+          <div className="mb-6"> {/* زيادة المسافة أسفل مؤشر الاكتمال */}
+            <DataCompletionIndicator image={imageDataChanged} />
+          </div>
 
           <LearningNotifications 
             correctionsMade={correctionsMade} 
@@ -128,6 +130,7 @@ const ExtractedDataEditor = ({
             initial={false} 
             animate={{ scale: editMode ? 1.01 : 1 }}
             transition={{ duration: 0.2 }}
+            className="mb-6" /* زيادة المسافة أسفل الحقول */
           >
             <ExtractedDataFields 
               tempData={tempData} 
@@ -138,12 +141,12 @@ const ExtractedDataEditor = ({
           </motion.div>
 
           {/* زر الأتمتة */}
-          <div className="mt-4 flex justify-center">
+          <div className="mt-6 mb-6 flex justify-center"> {/* زيادة المسافات */}
             <AutomationButton image={image} />
           </div>
 
           {/* عرض النص الخام في قسم منفصل بعد تحسين التصميم */}
-          <div className="mt-4">
+          <div className="mt-6"> {/* زيادة المسافة فوق عارض النص */}
             <RawTextViewer text={image.extractedText} />
           </div>
         </CardContent>

@@ -29,16 +29,18 @@ const ImageTabs: React.FC<ImageTabsProps> = ({
   formatDate,
   imageStats
 }) => {
-  // إرجاع مكون ImageTabContent مباشرة دون تبويبات إضافية
+  // إضافة تصميم حاوية خارجية مع تباعد أكبر
   return (
-    <ImageTabContent
-      images={images}
-      isSubmitting={typeof isSubmitting === 'boolean' ? isSubmitting : Object.values(isSubmitting).some(Boolean)}
-      onTextChange={onTextChange}
-      onDelete={onDelete}
-      onSubmit={onSubmit}
-      formatDate={formatDate}
-    />
+    <div className="p-4 md:p-6"> {/* إضافة تباعد خارجي للمكون بأكمله */}
+      <ImageTabContent
+        images={images}
+        isSubmitting={typeof isSubmitting === 'boolean' ? isSubmitting : Object.values(isSubmitting).some(Boolean)}
+        onTextChange={onTextChange}
+        onDelete={onDelete}
+        onSubmit={onSubmit}
+        formatDate={formatDate}
+      />
+    </div>
   );
 };
 
