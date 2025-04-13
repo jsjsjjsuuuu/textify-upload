@@ -58,13 +58,13 @@ export const useImageProcessing = () => {
     deleteImageFromDatabase 
   });
   
-  // هوك كشف التكرارات - تعطيله ليتم معالجة كل الصور حتى المكررة
+  // هوك كشف التكرارات - تعطيله تمامًا بتعيين enabled: false
   const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection({ enabled: false });
   
   // استخدام هوك معالجة الملفات مع تعيين التوقيعات المصدّرة بشكل صحيح
   const { 
     isProcessing, 
-    processingProgress, // تأكد من استلام هذه القيمة
+    processingProgress,
     activeUploads,
     queueLength,
     handleFileChange,
@@ -74,7 +74,7 @@ export const useImageProcessing = () => {
     updateImage,
     processWithOcr,
     processWithGemini,
-    checkDuplicateImage: () => Promise.resolve(false), // تعطيل التحقق من التكرار
+    checkDuplicateImage: () => Promise.resolve(false), // تعطيل التحقق من التكرار تمامًا
     markImageAsProcessed,
     user,
     images
@@ -164,7 +164,7 @@ export const useImageProcessing = () => {
     
     // الحالة
     isProcessing,
-    processingProgress, // تصدير processingProgress بشكل صحيح
+    processingProgress,
     activeUploads,
     queueLength,
     isSubmitting,

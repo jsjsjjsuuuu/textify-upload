@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -35,7 +36,7 @@ export const useFileProcessing = ({
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
-  // معالجة ملف واحد من القائمة مع تجاهل فحص التكرار
+  // معالجة ملف واحد من القائمة - تم تعطيل فحص التكرار تمامًا
   const processNextFile = useCallback(async () => {
     if (imageQueue.length === 0 || isPaused) {
       // تم الانتهاء من معالجة الصور أو تم إيقاف المعالجة مؤقتًا
@@ -70,7 +71,7 @@ export const useFileProcessing = ({
         sessionImage: true
       };
 
-      // إضافة الصورة إلى القائمة
+      // إضافة الصورة إلى القائمة بغض النظر عن وجود تكرار
       addImage(imageData);
 
       // معالجة الصورة
@@ -181,7 +182,7 @@ export const useFileProcessing = ({
         return;
       }
       
-      // إضافة الملفات إلى طابور المعالجة - معالجة جميع الملفات بدون تجاهل المكررة
+      // إضافة جميع الملفات إلى طابور المعالجة - معالجة جميع الملفات حتى المكررة
       setImageQueue(prev => [...prev, ...validFiles]);
       setQueueLength(validFiles.length);
       
@@ -215,7 +216,7 @@ export const useFileProcessing = ({
 
   return {
     isProcessing,
-    processingProgress, // تصدير هذه الخاصية
+    processingProgress,
     activeUploads,
     queueLength,
     handleFileChange,
@@ -225,7 +226,7 @@ export const useFileProcessing = ({
       setProcessingProgress(0);
       setActiveUploads(0);
     },
-    setProcessingProgress, // تصدير دالة تعيين التقدم أيضًا
+    setProcessingProgress,
     isSubmitting,
     setIsSubmitting
   };

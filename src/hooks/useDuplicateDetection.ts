@@ -8,7 +8,7 @@ interface UseDuplicateDetectionOptions {
 }
 
 export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}) => {
-  const { enabled = false } = options; // تغيير القيمة الافتراضية إلى false لتعطيل فحص التكرار
+  const { enabled = false } = options; // تغيير القيمة الافتراضية إلى false لتعطيل فحص التكرار بشكل كامل
   
   // استخدام مجموعة لتخزين توقيعات الصور المعالجة للكشف السريع
   const [processedImageSignatures, setProcessedImageSignatures] = useState<Set<string>>(new Set());
@@ -28,15 +28,15 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
     });
   }, [enabled]);
 
-  // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا
+  // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا - تعطيل هذه الوظيفة تمامًا
   const checkDuplicateImage = useCallback(async (image: ImageData, images: ImageData[]): Promise<boolean> => {
-    // دائمًا نُرجع false لتجاوز فحص التكرار
+    // دائمًا نُرجع false لتجاوز فحص التكرار بغض النظر عن إعداد enabled
     return false;
   }, []);
 
-  // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا بشكل متزامن
+  // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا بشكل متزامن - تعطيل هذه الوظيفة تمامًا
   const isDuplicateImage = useCallback(async (image: ImageData, images: ImageData[]): Promise<boolean> => {
-    // دائمًا نُرجع false لتجاوز فحص التكرار
+    // دائمًا نُرجع false لتجاوز فحص التكرار بغض النظر عن إعداد enabled
     return false;
   }, []);
 
