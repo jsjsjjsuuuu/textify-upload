@@ -84,7 +84,7 @@ const AdminApproval = () => {
         <div className="dish-container relative space-y-12"> {/* زيادة المسافات الرأسية */}
           {/* تأثيرات توهج الخلفية */}
           <div className="dish-glow-top"></div>
-          <div className="dish-glow-bottom"></div>
+          <div className="dish-glow-bottom opacity-30 w-3/4 mx-auto blur-xl"></div>
           <div className="dish-inner-shadow"></div>
           <div className="dish-reflection"></div>
           
