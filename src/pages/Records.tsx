@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader, Search, Filter, Download, Trash2, SortAsc, SortDesc, ListFilter } from 'lucide-react';
+import { Loader, Search, Filter, Download, Trash2, SortAsc, SortDesc, ListFilter, RefreshCw } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { ImageData } from '@/types/ImageData';
 import AppHeader from '@/components/AppHeader';
@@ -23,7 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Pagination } from '@/components/ui/pagination';
@@ -62,24 +61,29 @@ const Records = () => {
   // تحميل صور المستخدم عند تحميل الصفحة
   useEffect(() => {
     if (user && !dataLoaded) {
-      setIsLoading(true);
-      
-      loadUserImages((loadedImages) => {
-        console.log(`تم تحميل ${loadedImages.length} صورة للمستخدم`);
-        setIsLoading(false);
-        setDataLoaded(true);
-        
-        // التحقق من وجود معرف في عنوان URL
-        const idParam = searchParams.get('id');
-        if (idParam) {
-          const selectedImage = loadedImages.find(img => img.id === idParam);
-          if (selectedImage) {
-            setActiveImage(selectedImage);
-          }
-        }
-      });
+      loadData();
     }
-  }, [user, loadUserImages, searchParams, dataLoaded]);
+  }, [user, dataLoaded]);
+
+  // دالة لتحميل البيانات
+  const loadData = () => {
+    setIsLoading(true);
+    
+    loadUserImages((loadedImages) => {
+      console.log(`تم تحميل ${loadedImages.length} صورة للمستخدم`);
+      setIsLoading(false);
+      setDataLoaded(true);
+      
+      // التحقق من وجود معرف في عنوان URL
+      const idParam = searchParams.get('id');
+      if (idParam) {
+        const selectedImage = loadedImages.find(img => img.id === idParam);
+        if (selectedImage) {
+          setActiveImage(selectedImage);
+        }
+      }
+    });
+  };
 
   // تصفية الصور بناءً على معايير البحث
   useEffect(() => {
@@ -311,7 +315,21 @@ const Records = () => {
           <div className="dish-reflection"></div>
           <div className="dish-inner-shadow"></div>
           <div className="relative z-10 p-6">
-            <h1 className="text-2xl font-bold mb-6 text-gradient">سجلات المعاملات</h1>
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold text-gradient">سجلات المعاملات</h1>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setDataLoaded(false);
+                  loadData();
+                }}
+                className="bg-[#131b31] border-0"
+              >
+                <RefreshCw size={16} className="ml-2" />
+                تحديث البيانات
+              </Button>
+            </div>
             
             {/* أدوات البحث والتصفية */}
             <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -364,11 +382,11 @@ const Records = () => {
             {selectedImages.length > 0 && (
               <div className="flex gap-2 mb-4">
                 <Button variant="outline" size="sm" className="bg-[#131b31] border-0" onClick={handleExportSelected}>
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="h-4 w-4 ml-2" />
                   تصدير ({selectedImages.length})
                 </Button>
                 <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="h-4 w-4 ml-2" />
                   حذف نهائي ({selectedImages.length})
                 </Button>
               </div>
@@ -382,192 +400,152 @@ const Records = () => {
         </div>
         
         {/* عرض الجدول والتفاصيل */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            {/* جدول السجلات */}
-            <div className="dish-container">
-              <div className="dish-glow-top"></div>
-              <div className="dish-glow-bottom"></div>
-              <div className="dish-reflection"></div>
-              <div className="dish-inner-shadow"></div>
-              <div className="relative z-10 p-0">
-                {filteredImages.length === 0 ? (
-                  <div className="text-center p-8 text-muted-foreground">
-                    لا توجد نتائج مطابقة لمعايير البحث
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-center w-10">
-                            <Checkbox 
-                              checked={selectedImages.length === currentImages.length && currentImages.length > 0}
-                              onCheckedChange={toggleSelectAll}
-                            />
-                          </TableHead>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handleSort('code')}
-                          >
-                            <div className="flex items-center">
-                              {getSortIcon('code')}
-                              الكود
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handleSort('senderName')}
-                          >
-                            <div className="flex items-center">
-                              {getSortIcon('senderName')}
-                              المرسل
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handleSort('phoneNumber')}
-                          >
-                            <div className="flex items-center">
-                              {getSortIcon('phoneNumber')}
-                              رقم الهاتف
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handleSort('province')}
-                          >
-                            <div className="flex items-center">
-                              {getSortIcon('province')}
-                              المحافظة
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handleSort('price')}
-                          >
-                            <div className="flex items-center">
-                              {getSortIcon('price')}
-                              المبلغ
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => handleSort('date')}
-                          >
-                            <div className="flex items-center">
-                              {getSortIcon('date')}
-                              التاريخ
-                            </div>
-                          </TableHead>
-                          <TableHead>الحالة</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentImages.map((image) => (
-                          <TableRow 
-                            key={image.id} 
-                            className={`cursor-pointer hover:bg-muted/30 transition-colors ${activeImage?.id === image.id ? 'bg-muted/50' : ''}`}
-                            onClick={() => handleRowClick(image)}
-                          >
-                            <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox 
-                                checked={selectedImages.includes(image.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedImages(prev => [...prev, image.id]);
-                                  } else {
-                                    setSelectedImages(prev => prev.filter(id => id !== image.id));
-                                  }
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium">{image.code || '—'}</TableCell>
-                            <TableCell>{image.senderName || '—'}</TableCell>
-                            <TableCell dir="ltr" className="text-center">{image.phoneNumber || '—'}</TableCell>
-                            <TableCell>{image.province || '—'}</TableCell>
-                            <TableCell>{image.price || '—'}</TableCell>
-                            <TableCell className="text-muted-foreground text-sm">{formatDate(image.date)}</TableCell>
-                            <TableCell>
-                              {image.status === 'completed' && image.submitted && (
-                                <Badge variant="outline" className="bg-green-100/20 text-green-600 border-green-200/30">
-                                  تم الإرسال
-                                </Badge>
-                              )}
-                              {image.status === 'completed' && !image.submitted && (
-                                <Badge variant="outline" className="bg-blue-100/20 text-blue-600 border-blue-200/30">
-                                  مكتملة
-                                </Badge>
-                              )}
-                              {image.status === 'processing' && (
-                                <Badge variant="outline" className="bg-yellow-100/20 text-yellow-600 border-yellow-200/30">
-                                  قيد المعالجة
-                                </Badge>
-                              )}
-                              {image.status === 'error' && (
-                                <Badge variant="outline" className="bg-red-100/20 text-red-600 border-red-200/30">
-                                  خطأ
-                                </Badge>
-                              )}
-                              {image.status === 'pending' && (
-                                <Badge variant="outline" className="bg-slate-100/20 text-slate-600 border-slate-200/30">
-                                  قيد الانتظار
-                                </Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-                
-                {/* ترقيم الصفحات */}
-                {totalPages > 1 && (
-                  <div className="mt-4 p-4 border-t flex justify-center">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={setCurrentPage}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="lg:col-span-1">
-            {activeImage ? (
-              <div className="dish-container">
-                <div className="dish-glow-top"></div>
-                <div className="dish-glow-bottom"></div>
-                <div className="dish-reflection"></div>
-                <div className="dish-inner-shadow"></div>
-                <div className="relative z-10 p-6">
-                  <ImageDetailsPanel
-                    image={activeImage}
-                    onTextChange={(id, field, value) => handleTextChange(id, field, value)}
-                    onSubmit={() => handleSubmitToApi(activeImage.id)}
-                    onDelete={() => {
-                      handlePermanentDelete(activeImage.id);
-                      setActiveImage(null);
-                    }}
-                    isSubmitting={!!isSubmitting[activeImage.id]}
-                    isComplete={isImageComplete(activeImage)}
-                    hasPhoneError={hasPhoneError(activeImage)}
-                  />
-                </div>
+        <div className="dish-container">
+          <div className="dish-glow-top"></div>
+          <div className="dish-glow-bottom"></div>
+          <div className="dish-reflection"></div>
+          <div className="dish-inner-shadow"></div>
+          <div className="relative z-10 p-0">
+            {filteredImages.length === 0 ? (
+              <div className="text-center p-8 text-muted-foreground">
+                لا توجد نتائج مطابقة لمعايير البحث
               </div>
             ) : (
-              <div className="dish-container">
-                <div className="dish-glow-top"></div>
-                <div className="dish-glow-bottom"></div>
-                <div className="dish-reflection"></div>
-                <div className="dish-inner-shadow"></div>
-                <div className="relative z-10 p-8 text-center text-muted-foreground">
-                  <p className="mb-2">اختر سجلاً من الجدول لعرض التفاصيل</p>
-                  <p className="text-sm opacity-70">يمكنك الضغط على عناوين الأعمدة للترتيب التصاعدي أو التنازلي</p>
-                </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-[#111827] shadow-md z-10">
+                    <TableRow>
+                      <TableHead className="text-center w-10">
+                        <Checkbox 
+                          checked={selectedImages.length === currentImages.length && currentImages.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                      <TableHead className="text-center w-16 font-bold bg-muted/20">#</TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/30 transition-colors font-bold bg-muted/20"
+                        onClick={() => handleSort('code')}
+                      >
+                        <div className="flex items-center">
+                          {getSortIcon('code')}
+                          الكود
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/30 transition-colors font-bold bg-muted/20"
+                        onClick={() => handleSort('senderName')}
+                      >
+                        <div className="flex items-center">
+                          {getSortIcon('senderName')}
+                          المرسل
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/30 transition-colors font-bold bg-muted/20"
+                        onClick={() => handleSort('phoneNumber')}
+                      >
+                        <div className="flex items-center">
+                          {getSortIcon('phoneNumber')}
+                          رقم الهاتف
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/30 transition-colors font-bold bg-muted/20"
+                        onClick={() => handleSort('province')}
+                      >
+                        <div className="flex items-center">
+                          {getSortIcon('province')}
+                          المحافظة
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/30 transition-colors font-bold bg-muted/20"
+                        onClick={() => handleSort('price')}
+                      >
+                        <div className="flex items-center">
+                          {getSortIcon('price')}
+                          المبلغ
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/30 transition-colors font-bold bg-muted/20"
+                        onClick={() => handleSort('date')}
+                      >
+                        <div className="flex items-center">
+                          {getSortIcon('date')}
+                          التاريخ
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-bold bg-muted/20">الحالة</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currentImages.map((image, index) => (
+                      <TableRow 
+                        key={image.id} 
+                        className={`hover:bg-muted/30 transition-colors ${index % 2 === 0 ? 'bg-muted/5' : ''} ${activeImage?.id === image.id ? 'bg-muted/50' : ''}`}
+                      >
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox 
+                            checked={selectedImages.includes(image.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedImages(prev => [...prev, image.id]);
+                              } else {
+                                setSelectedImages(prev => prev.filter(id => id !== image.id));
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium text-center">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
+                        <TableCell className="font-semibold">{image.code || '—'}</TableCell>
+                        <TableCell>{image.senderName || '—'}</TableCell>
+                        <TableCell dir="ltr" className="text-center">{image.phoneNumber || '—'}</TableCell>
+                        <TableCell>{image.province || '—'}</TableCell>
+                        <TableCell>{image.price || '—'}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{formatDate(image.date)}</TableCell>
+                        <TableCell>
+                          {image.status === 'completed' && image.submitted && (
+                            <Badge variant="outline" className="bg-green-100/20 text-green-600 border-green-200/30">
+                              تم الإرسال
+                            </Badge>
+                          )}
+                          {image.status === 'completed' && !image.submitted && (
+                            <Badge variant="outline" className="bg-blue-100/20 text-blue-600 border-blue-200/30">
+                              مكتملة
+                            </Badge>
+                          )}
+                          {image.status === 'processing' && (
+                            <Badge variant="outline" className="bg-yellow-100/20 text-yellow-600 border-yellow-200/30">
+                              قيد المعالجة
+                            </Badge>
+                          )}
+                          {image.status === 'error' && (
+                            <Badge variant="outline" className="bg-red-100/20 text-red-600 border-red-200/30">
+                              خطأ
+                            </Badge>
+                          )}
+                          {image.status === 'pending' && (
+                            <Badge variant="outline" className="bg-slate-100/20 text-slate-600 border-slate-200/30">
+                              قيد الانتظار
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+            
+            {/* ترقيم الصفحات */}
+            {totalPages > 1 && (
+              <div className="mt-4 p-4 border-t flex justify-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
               </div>
             )}
           </div>

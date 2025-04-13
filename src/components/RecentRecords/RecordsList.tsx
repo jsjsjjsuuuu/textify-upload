@@ -50,21 +50,21 @@ const RecordsList: React.FC<RecordsListProps> = ({ records, isLoading, isError }
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="text-center">#</TableHead>
-            <TableHead>الكود</TableHead>
-            <TableHead>المرسل</TableHead>
-            <TableHead className="text-center">الهاتف</TableHead>
-            <TableHead>المحافظة</TableHead>
-            <TableHead>المبلغ</TableHead>
-            <TableHead className="text-center">التاريخ</TableHead>
-            <TableHead>الحالة</TableHead>
+            <TableHead className="text-center font-bold w-16 bg-muted/30">#</TableHead>
+            <TableHead className="font-bold bg-muted/30">الكود</TableHead>
+            <TableHead className="font-bold bg-muted/30">المرسل</TableHead>
+            <TableHead className="text-center font-bold bg-muted/30">الهاتف</TableHead>
+            <TableHead className="font-bold bg-muted/30">المحافظة</TableHead>
+            <TableHead className="font-bold bg-muted/30">المبلغ</TableHead>
+            <TableHead className="text-center font-bold bg-muted/30">التاريخ</TableHead>
+            <TableHead className="font-bold bg-muted/30">الحالة</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {records.map((record, index) => (
             <TableRow 
               key={record.id} 
-              className="cursor-pointer hover:bg-muted/20 transition-colors"
+              className={`cursor-pointer hover:bg-muted/20 transition-colors ${index % 2 === 0 ? 'bg-muted/5' : ''}`}
               onClick={() => navigate(`/records?id=${record.id}`)}
             >
               <TableCell className="font-medium text-center">{index + 1}</TableCell>
@@ -78,6 +78,21 @@ const RecordsList: React.FC<RecordsListProps> = ({ records, isLoading, isError }
                 {record.submitted && (
                   <Badge className="bg-green-100/20 text-green-600 border-green-200/30">
                     تم الإرسال
+                  </Badge>
+                )}
+                {!record.submitted && record.status === "completed" && (
+                  <Badge className="bg-blue-100/20 text-blue-600 border-blue-200/30">
+                    مكتملة
+                  </Badge>
+                )}
+                {record.status === "processing" && (
+                  <Badge className="bg-yellow-100/20 text-yellow-600 border-yellow-200/30">
+                    قيد المعالجة
+                  </Badge>
+                )}
+                {record.status === "error" && (
+                  <Badge className="bg-red-100/20 text-red-600 border-red-200/30">
+                    خطأ
                   </Badge>
                 )}
               </TableCell>
