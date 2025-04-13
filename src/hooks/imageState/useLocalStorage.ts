@@ -1,10 +1,11 @@
 
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "../use-toast";
 
 // مفتاح localStorage لتخزين معرّفات الصور المخفية
 const HIDDEN_IMAGES_STORAGE_KEY = 'hiddenImageIds';
 
+// هوك لإدارة معرّفات الصور المخفية في localStorage
 export const useHiddenImagesStorage = () => {
   const [hiddenImageIds, setHiddenImageIds] = useState<string[]>([]);
   const { toast } = useToast();
@@ -34,54 +35,39 @@ export const useHiddenImagesStorage = () => {
     }
   }, [hiddenImageIds]);
 
-  // إضافة معرف صورة إلى القائمة المخفية
-  const hideImage = (id: string) => {
+  // إضافة معرّف صورة إلى قائمة الصور المخفية
+  const hideImage = useCallback((id: string) => {
+    console.log("إضافة الصورة إلى قائمة المخفية:", id);
     setHiddenImageIds(prev => {
       // تأكد من عدم إضافة معرف مكرر
       if (prev.includes(id)) {
         return prev;
       }
-      const newHiddenIds = [...prev, id];
-      console.log("معرّفات الصور المخفية الجديدة:", newHiddenIds);
-      return newHiddenIds;
+      return [...prev, id];
     });
-    
-    toast({
-      title: "تم حفظ البيانات",
-      description: "تم إرسال البيانات وحفظها في قاعدة البيانات، وإزالة الصورة من العرض الحالي",
-    });
-    
     return true;
-  };
+  }, []);
 
-  // إعادة إظهار صورة تم إخفاؤها سابقًا
-  const unhideImage = (id: string) => {
+  // إزالة معرّف صورة من قائمة الصور المخفية
+  const unhideImage = useCallback((id: string) => {
     setHiddenImageIds(prev => prev.filter(hiddenId => hiddenId !== id));
-    
-    toast({
-      title: "تمت إعادة الإظهار",
-      description: "تم إعادة إظهار الصورة في العرض",
-    });
-    
     return true;
-  };
+  }, []);
 
   // إعادة إظهار جميع الصور المخفية
-  const unhideAllImages = () => {
+  const unhideAllImages = useCallback(() => {
     setHiddenImageIds([]);
-    
     toast({
       title: "تمت إعادة إظهار جميع الصور",
       description: "تم إعادة إظهار جميع الصور المخفية",
     });
-    
     return true;
-  };
+  }, [toast]);
 
   // الحصول على قائمة معرفات الصور المخفية
-  const getHiddenImageIds = () => {
+  const getHiddenImageIds = useCallback(() => {
     return hiddenImageIds;
-  };
+  }, [hiddenImageIds]);
 
   return {
     hiddenImageIds,
