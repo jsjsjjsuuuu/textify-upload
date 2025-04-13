@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -36,7 +35,7 @@ export const useFileProcessing = ({
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
-  // معالجة ملف واحد من القائمة - تم تعطيل فحص التكرار تمامًا
+  // معالجة ملف واحد من القائمة - تعطيل فحص التكرار تمامًا
   const processNextFile = useCallback(async () => {
     if (imageQueue.length === 0 || isPaused) {
       // تم الانتهاء من معالجة الصور أو تم إيقاف المعالجة مؤقتًا
@@ -52,7 +51,7 @@ export const useFileProcessing = ({
     setActiveUploads(1);
 
     try {
-      // نتجاهل التحقق من التكرار ونعالج الصورة مباشرة
+      // تجاهل التحقق من التكرار ومعالجة الصورة مباشرة
       console.log("معالجة الملف:", file.name);
 
       // إنشاء معرّف فريد للصورة
@@ -93,9 +92,9 @@ export const useFileProcessing = ({
           await saveProcessedImage(processedImage);
         }
         
-        // تسجيل الصورة كمعالجة إذا كانت الدالة متاحة
+        // تسجيل الصورة كمعالجة إذا كانت الدالة متاحة - ملاحظة: تم تعطيلها
         if (markImageAsProcessed) {
-          markImageAsProcessed(processedImage);
+          // لا نفعل شيئًا هنا لتعطيل تسجيل الصور المعالجة
         }
       } catch (geminiError) {
         console.error("خطأ في معالجة الصورة باستخدام Gemini:", geminiError);
@@ -115,9 +114,9 @@ export const useFileProcessing = ({
             await saveProcessedImage(processedImage);
           }
           
-          // تسجيل الصورة كمعالجة
+          // تسجيل الصورة كمعالجة - ملاحظة: تم تعطيلها
           if (markImageAsProcessed) {
-            markImageAsProcessed(processedImage);
+            // لا نفعل شيئًا هنا لتعطيل تسجيل الصور المعالجة
           }
         } catch (ocrError) {
           console.error("فشل في معالجة الصورة باستخدام OCR:", ocrError);
@@ -158,7 +157,7 @@ export const useFileProcessing = ({
     }
   }, [imageQueue, isPaused, isProcessing, processNextFile]);
 
-  // معالجة الملفات المحددة
+  // معالجة الملفات المحددة - إزالة فحص التكرار
   const handleFileChange = useCallback(
     (fileList: FileList | File[]) => {
       console.log(`استلام ${fileList.length} ملف للمعالجة`);
@@ -182,7 +181,7 @@ export const useFileProcessing = ({
         return;
       }
       
-      // إضافة جميع الملفات إلى طابور المعالجة - معالجة جميع الملفات حتى المكررة
+      // معالجة جميع الملفات - بدون أي تحقق من التكرار
       setImageQueue(prev => [...prev, ...validFiles]);
       setQueueLength(validFiles.length);
       

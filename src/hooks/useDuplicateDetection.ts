@@ -1,53 +1,45 @@
 
 import { useState, useCallback } from 'react';
 import { ImageData } from '@/types/ImageData';
-import { isImageDuplicate, isFullyProcessed } from '@/utils/duplicateDetection';
 
 interface UseDuplicateDetectionOptions {
   enabled?: boolean;
 }
 
 export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}) => {
-  const { enabled = false } = options; // تغيير القيمة الافتراضية إلى false لتعطيل فحص التكرار بشكل كامل
+  // تغيير القيمة الافتراضية إلى false لتعطيل فحص التكرار بشكل كامل
+  const { enabled = false } = options;
   
   // استخدام مجموعة لتخزين توقيعات الصور المعالجة للكشف السريع
   const [processedImageSignatures, setProcessedImageSignatures] = useState<Set<string>>(new Set());
 
-  // إضافة صورة إلى قائمة الصور المعالجة
+  // إضافة صورة إلى قائمة الصور المعالجة - لا تفعل شيئاً إذا كان التعطيل مفعل
   const markImageAsProcessed = useCallback((image: ImageData) => {
-    if (!enabled || !image || !image.id) return;
-    
-    // إنشاء توقيع للصورة
-    const imageSignature = `id-${image.id}`;
-    
-    // إضافة التوقيع إلى المجموعة
-    setProcessedImageSignatures(prev => {
-      const newSignatures = new Set(prev);
-      newSignatures.add(imageSignature);
-      return newSignatures;
-    });
-  }, [enabled]);
+    // لا تفعل شيئاً عندما يكون فحص التكرار معطل
+    return;
+  }, []);
 
-  // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا - تعطيل هذه الوظيفة تمامًا
+  // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا - دائماً تعيد false حتى لو كانت مكررة
   const checkDuplicateImage = useCallback(async (image: ImageData, images: ImageData[]): Promise<boolean> => {
-    // دائمًا نُرجع false لتجاوز فحص التكرار بغض النظر عن إعداد enabled
+    // دائمًا نُرجع false لتجاوز فحص التكرار
     return false;
   }, []);
 
-  // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا بشكل متزامن - تعطيل هذه الوظيفة تمامًا
-  const isDuplicateImage = useCallback(async (image: ImageData, images: ImageData[]): Promise<boolean> => {
-    // دائمًا نُرجع false لتجاوز فحص التكرار بغض النظر عن إعداد enabled
+  // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا بشكل متزامن - دائماً تعيد false
+  const isDuplicateImage = useCallback((image: ImageData, images: ImageData[]): boolean => {
+    // دائمًا نُرجع false لتجاوز فحص التكرار
     return false;
   }, []);
 
-  // إضافة صورة إلى الذاكرة المؤقتة للصور المعالجة
+  // إضافة صورة إلى الذاكرة المؤقتة للصور المعالجة - لا تفعل شيئاً
   const addToProcessedCache = useCallback((image: ImageData) => {
-    markImageAsProcessed(image);
-  }, [markImageAsProcessed]);
+    // لا تفعل شيئاً عندما يكون فحص التكرار معطل
+    return;
+  }, []);
 
-  // التحقق من اكتمال معالجة الصورة
+  // التحقق من اكتمال معالجة الصورة - استخدام الوظيفة الموجودة
   const isProcessed = useCallback((image: ImageData): boolean => {
-    return isFullyProcessed(image);
+    return image.status === "completed" || image.status === "error";
   }, []);
 
   return {

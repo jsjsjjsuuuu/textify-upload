@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate } from "@/utils/dateFormatter";
 import { useImageState } from "../useImageState";
@@ -59,9 +58,9 @@ export const useImageProcessing = () => {
   });
   
   // هوك كشف التكرارات - تعطيله تمامًا بتعيين enabled: false
-  const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection({ enabled: false });
+  const { checkDuplicateImage, markImageAsProcessed } = useDuplicateDetection({ enabled: false });
   
-  // استخدام هوك معالجة الملفات مع تعيين التوقيعات المصدّرة بشكل صحيح
+  // استخدام هوك معالجة الملفات مع تمرير الإعدادات الصحيحة
   const { 
     isProcessing, 
     processingProgress,
@@ -74,8 +73,8 @@ export const useImageProcessing = () => {
     updateImage,
     processWithOcr,
     processWithGemini,
-    checkDuplicateImage: () => Promise.resolve(false), // تعطيل التحقق من التكرار تمامًا
-    markImageAsProcessed,
+    checkDuplicateImage: () => Promise.resolve(false), // تعطيل فحص التكرار تمامًا
+    markImageAsProcessed: () => {}, // دالة فارغة لا تفعل شيئًا
     user,
     images
   });
@@ -102,12 +101,6 @@ export const useImageProcessing = () => {
       if (result) {
         console.log("تم إرسال الصورة بنجاح:", id);
         updateImage(id, { submitted: true });
-        
-        // تسجيل الصورة كمعالجة بعد الإرسال الناجح
-        const submittedImage = images.find(img => img.id === id);
-        if (submittedImage) {
-          markImageAsProcessed(submittedImage);
-        }
         
         // إخفاء الصورة بعد الإرسال - تحسين طريقة الاستدعاء
         console.log("إخفاء الصورة بعد الإرسال الناجح:", id);
@@ -156,7 +149,7 @@ export const useImageProcessing = () => {
     return result;
   };
 
-  // إعادة تصدير الواجهة العامة أكثر تنظيمًا
+  // إعادة تصدير الواجهة العامة بشكل أكثر تنظيماً
   return {
     // البيانات
     images,
@@ -174,7 +167,7 @@ export const useImageProcessing = () => {
     handleTextChange,
     handleDelete: deleteImage,
     handleSubmitToApi,
-    handlePermanentDelete,
+    handlePermanentDelete: permanentDelete,
     saveImageToDatabase,
     formatDate: formatDateFn,
     hideImage,
