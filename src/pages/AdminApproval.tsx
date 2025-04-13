@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
@@ -77,47 +78,43 @@ const AdminApproval = () => {
   const filteredUsers = getFilteredUsers();
 
   return (
-    <div className="min-h-screen app-background">
+    <div className="min-h-screen app-background bg-[#0a0f1d]">
       <AppHeader />
       
-      <div className="container py-24 mx-auto max-w-[85rem] px-8"> {/* زيادة المساحة الخارجية والعرض */}
-        <div className="dish-container relative space-y-12"> {/* زيادة المسافات الرأسية */}
-          {/* تأثيرات توهج الخلفية */}
-          <div className="dish-glow-top"></div>
-          <div className="dish-glow-bottom opacity-20 w-1/2 mx-auto blur-2xl"></div>
-          <div className="dish-inner-shadow"></div>
-          <div className="dish-reflection"></div>
-          
-          {/* الرأس والعنوان */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8 p-10 border-b border-[#1e2a47]/30 relative z-10"> {/* Increased padding and gap */}
-            <div className="space-y-4"> {/* Added vertical spacing */}
-              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+      <div className="container py-16 mx-auto px-4"> 
+        <div className="glass-card p-0 overflow-hidden shadow-2xl"> 
+          {/* رأس الصفحة مع العنوان والأزرار */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-6 border-b border-[#1e2a47]/30 bg-[#0e1529]/95">
+            <div className="space-y-1 text-right mb-4 md:mb-0">
+              <h1 className="text-2xl font-bold text-white">
                 نظام إدارة المستخدمين
               </h1>
-              <p className="text-lg text-blue-200/70">
+              <p className="text-sm text-blue-200/70">
                 إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات
               </p>
             </div>
-            <div className="flex items-center gap-4"> {/* Slightly reduced gap */}
+            <div className="flex gap-2">
               <Button 
                 variant="outline"
-                className="bg-[#131b31] hover:bg-[#1a253f] text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-3" // Added padding
+                size="sm"
+                className="bg-[#131b31] hover:bg-[#1a253f] text-white border-0" 
                 onClick={fetchUsers} 
                 disabled={isLoading}
               >
-                <RefreshCw className={`h-6 w-6 ${isLoading ? 'animate-spin' : ''} mr-3`} /> {/* Increased icon size */}
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} ml-2`} />
                 تحديث
               </Button>
               <Button 
-                className="theme-button-primary shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-3" // Added padding
+                size="sm"
+                className="theme-button-primary bg-blue-500 hover:bg-blue-600 text-white"
               >
-                <PlusCircle className="h-6 w-6 mr-3" /> {/* Increased icon size */}
+                <PlusCircle className="h-4 w-4 ml-2" />
                 إضافة مستخدم
               </Button>
             </div>
           </div>
           
-          <div className="p-14 relative z-10 space-y-14"> {/* زيادة الحشو والمسافات الرأسية */}
+          <div className="p-6 space-y-6">
             {/* أدوات البحث والتصفية */}
             <UserFilters 
               searchQuery={searchQuery}
@@ -128,6 +125,7 @@ const AdminApproval = () => {
               onStatusFilterChange={setFilterStatus}
             />
             
+            {/* علامات التبويب للتصفية */}
             <UserTabsFilter
               activeTab={activeTab}
               onTabChange={setActiveTab}
@@ -161,52 +159,6 @@ const AdminApproval = () => {
                 />
               )}
             </UserTabsFilter>
-            
-            {/* إحصائيات المستخدمين */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6"> {/* Increased gap */}
-              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] shadow-lg hover:shadow-xl transition-all duration-300">
-                <div>
-                  <h3 className="text-base text-blue-200/70 mb-1">المستخدمون</h3>
-                  <p className="text-3xl font-bold">{userCounts.total}</p>
-                </div>
-                <div className="rounded-full p-4 bg-blue-600/20">
-                  <User className="h-7 w-7 text-blue-300" />
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] shadow-lg hover:shadow-xl transition-all duration-300">
-                <div>
-                  <h3 className="text-base text-blue-200/70 mb-1">معتمدون</h3>
-                  <p className="text-3xl font-bold">{userCounts.approved}</p>
-                </div>
-                <div className="rounded-full p-4 bg-emerald-500/20">
-                  <CheckCircle className="h-7 w-7 text-emerald-300" />
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] shadow-lg hover:shadow-xl transition-all duration-300">
-                <div>
-                  <h3 className="text-base text-blue-200/70 mb-1">في الانتظار</h3>
-                  <p className="text-3xl font-bold">{userCounts.pending}</p>
-                </div>
-                <div className="rounded-full p-4 bg-amber-500/20">
-                  <Clock className="h-7 w-7 text-amber-300" />
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] shadow-lg hover:shadow-xl transition-all duration-300 col-span-1 md:col-span-2">
-                <div className="w-full">
-                  <h3 className="text-base text-blue-200/70 mb-3">نشاط المستخدمين</h3>
-                  <div className="w-full bg-[#1a2544] rounded-full h-2.5">
-                    <div className="bg-gradient-to-r from-blue-600 to-emerald-500 h-2.5 rounded-full" style={{ width: `${(userCounts.approved / Math.max(userCounts.total, 1)) * 100}%` }}></div>
-                  </div>
-                  <div className="flex justify-between text-sm mt-3">
-                    <span className="text-blue-200/70">{Math.round((userCounts.approved / Math.max(userCounts.total, 1)) * 100)}% معتمد</span>
-                    <span className="text-blue-200/70">{Math.round((userCounts.pending / Math.max(userCounts.total, 1)) * 100)}% قيد الانتظار</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -221,7 +173,6 @@ const AdminApproval = () => {
         }}
         onConfirm={() => {
           if (userToReset && newPassword) {
-            // طباعة سجل تصحيح لمساعدة في تشخيص المشكلة
             console.log('تنفيذ إعادة تعيين كلمة المرور مع البيانات:', {
               userToReset,
               userToResetType: typeof userToReset,
@@ -230,7 +181,6 @@ const AdminApproval = () => {
               passwordEmpty: !newPassword.trim()
             });
             
-            // تنفيذ عملية إعادة تعيين كلمة المرور
             resetUserPassword(userToReset, newPassword);
           } else {
             console.error('لا يمكن إعادة تعيين كلمة المرور:', {
