@@ -44,7 +44,7 @@
   }
   
   .admin-header {
-    @apply flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-8 border-b border-[#1e2a47];
+    @apply flex flex-col md:flex-row md:items-center md:justify-between gap-8 p-10 border-b border-[#1e2a47];
   }
   
   .admin-title {
@@ -56,11 +56,11 @@
   }
   
   .admin-content {
-    @apply p-8;
+    @apply p-10;
   }
   
   .admin-filters {
-    @apply flex flex-col md:flex-row gap-5 mb-8;
+    @apply flex flex-col md:flex-row gap-6 mb-10;
   }
   
   .admin-search {
@@ -68,19 +68,19 @@
   }
   
   .admin-search-input {
-    @apply w-full bg-[#0e1834] rounded-xl py-3 pr-10 pl-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
+    @apply w-full bg-[#0e1834] rounded-xl py-4 pr-10 pl-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
   }
   
   .admin-select {
-    @apply w-full bg-[#0e1834] rounded-xl py-3 px-5 text-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
+    @apply w-full bg-[#0e1834] rounded-xl py-4 px-5 text-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
   }
   
   .admin-tabs {
-    @apply flex mb-8 rounded-xl overflow-hidden;
+    @apply flex mb-10 rounded-xl overflow-hidden;
   }
   
   .admin-tab {
-    @apply flex-1 text-center py-4 transition-all duration-200 text-base font-medium;
+    @apply flex-1 text-center py-5 transition-all duration-200 text-base font-medium;
   }
   
   .admin-tab-inactive {
@@ -92,7 +92,7 @@
   }
   
   .admin-stat-card {
-    @apply flex items-center justify-between p-6 rounded-xl bg-[#0e1834];
+    @apply flex items-center justify-between p-8 rounded-xl bg-[#0e1834];
   }
   
   .admin-table {
@@ -100,11 +100,11 @@
   }
   
   .admin-table-header {
-    @apply bg-[#0e1834];
+    @apply bg-[#101d3a];
   }
   
   .admin-table-header th {
-    @apply py-5 px-6 text-left text-base font-medium text-blue-200/80 border-b border-[#1e2a47];
+    @apply py-6 px-8 text-right text-base font-medium text-blue-200/80 border-b border-[#1e2a47];
   }
   
   .admin-table-row {
@@ -116,7 +116,7 @@
   }
   
   .admin-table-cell {
-    @apply py-5 px-6 text-base;
+    @apply py-5 px-8 text-base;
   }
   
   .admin-avatar {
@@ -124,7 +124,7 @@
   }
   
   .admin-badge {
-    @apply inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium;
+    @apply inline-flex items-center px-4 py-2 rounded-full text-sm font-medium;
   }
   
   .admin-badge-green {
@@ -172,7 +172,7 @@
   }
   
   .admin-button {
-    @apply px-5 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 font-medium text-base;
+    @apply px-5 py-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 font-medium text-base;
   }
   
   .admin-button-primary {
@@ -196,19 +196,19 @@
   }
   
   .admin-button-icon {
-    @apply p-3 rounded-lg;
+    @apply p-4 rounded-lg;
   }
   
   .admin-form-group {
-    @apply mb-6;
+    @apply mb-8;
   }
   
   .admin-form-label {
-    @apply block text-base font-medium text-blue-200/80 mb-2;
+    @apply block text-base font-medium text-blue-200/80 mb-3;
   }
   
   .admin-form-input {
-    @apply w-full bg-[#0e1834] rounded-xl py-3 px-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
+    @apply w-full bg-[#0e1834] rounded-xl py-4 px-5 text-white placeholder:text-blue-200/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30 text-base;
   }
   
   /* ترتيب جديد لأنماط نظام المهام الزجاجي */
@@ -363,7 +363,7 @@
   
   /* تأثير الطبق - تحديثات لجعلها أبعد وتبدو أكثر عمقًا */
   .dish-container {
-    @apply bg-[#070a16]/95 rounded-2xl shadow-[0_20px_80px_-15px_rgba(0,0,0,0.7)] backdrop-blur-md relative overflow-hidden border border-[#1e2a47]/20;
+    @apply bg-[#070a16]/95 rounded-2xl shadow-[0_25px_100px_-20px_rgba(0,0,0,0.8)] backdrop-blur-md relative overflow-hidden border border-[#1e2a47]/20;
   }
   
   .dish-glow-top {
