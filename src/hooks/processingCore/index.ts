@@ -47,8 +47,8 @@ export const useImageProcessingCore = () => {
     setBookmarkletStats
   } = useImageStats();
   
-  // استخدام أدوات اكتشاف التكرار
-  const duplicateDetectionTools = useDuplicateDetection({ enabled: true });
+  // استخدام أدوات اكتشاف التكرار - تعيين enabled إلى false لتعطيل الكشف عن التكرار
+  const duplicateDetectionTools = useDuplicateDetection({ enabled: false });
   
   // استخدام هوك معالجة الصور
   const { processWithGemini } = useGeminiProcessing();
@@ -148,8 +148,10 @@ export const useImageProcessingCore = () => {
     unhideAllImages,
     clearOldApiKey,
     handlePermanentDelete,
-    // تصدير أدوات كشف التكرار
-    ...duplicateDetectionTools,
+    // تعديل الدوال لتعطيل فحص التكرارات
+    isDuplicateImage: () => Promise.resolve(false),
+    checkDuplicateImage: () => Promise.resolve(false),
+    markImageAsProcessed: () => {},
     processWithGemini,
     processWithOcr
   };

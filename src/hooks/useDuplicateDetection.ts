@@ -8,7 +8,7 @@ interface UseDuplicateDetectionOptions {
 }
 
 export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}) => {
-  const { enabled = true } = options;
+  const { enabled = false } = options; // تغيير القيمة الافتراضية إلى false لتعطيل فحص التكرار
   
   // استخدام مجموعة لتخزين توقيعات الصور المعالجة للكشف السريع
   const [processedImageSignatures, setProcessedImageSignatures] = useState<Set<string>>(new Set());
@@ -30,23 +30,15 @@ export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}
 
   // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا
   const checkDuplicateImage = useCallback(async (image: ImageData, images: ImageData[]): Promise<boolean> => {
-    if (!enabled || !image || !image.id) return false;
-    
-    // التحقق من وجود توقيع الصورة في المجموعة
-    const imageSignature = `id-${image.id}`;
-    if (processedImageSignatures.has(imageSignature)) {
-      console.log(`الصورة ${image.id} موجودة في قائمة الصور المعالجة`);
-      return true;
-    }
-    
-    // التحقق من وجود الصورة في قائمة الصور المتوفرة
-    return isImageDuplicate(image, images);
-  }, [enabled, processedImageSignatures]);
+    // دائمًا نُرجع false لتجاوز فحص التكرار
+    return false;
+  }, []);
 
   // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا بشكل متزامن
   const isDuplicateImage = useCallback(async (image: ImageData, images: ImageData[]): Promise<boolean> => {
-    return checkDuplicateImage(image, images);
-  }, [checkDuplicateImage]);
+    // دائمًا نُرجع false لتجاوز فحص التكرار
+    return false;
+  }, []);
 
   // إضافة صورة إلى الذاكرة المؤقتة للصور المعالجة
   const addToProcessedCache = useCallback((image: ImageData) => {

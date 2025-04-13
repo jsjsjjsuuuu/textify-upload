@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -32,10 +33,10 @@ export const useFileProcessing = ({
   const [activeUploads, setActiveUploads] = useState(0);
   const [queueLength, setQueueLength] = useState(0);
   const [imageQueue, setImageQueue] = useState<File[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({}); // إضافة حالة isSubmitting
+  const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({}); 
   const { toast } = useToast();
 
-  // معالجة ملف واحد من القائمة مع التحقق من التكرار
+  // معالجة ملف واحد من القائمة مع تجاهل فحص التكرار
   const processNextFile = useCallback(async () => {
     if (imageQueue.length === 0 || isPaused) {
       // تم الانتهاء من معالجة الصور أو تم إيقاف المعالجة مؤقتًا
@@ -62,23 +63,7 @@ export const useFileProcessing = ({
     };
     
     try {
-      // التحقق من التكرار إذا كانت الدالة متاحة
-      if (checkDuplicateImage) {
-        const isDuplicate = await checkDuplicateImage(imageObj, images);
-        
-        if (isDuplicate) {
-          console.log("تم اكتشاف ملف مكرر:", file.name);
-          toast({
-            title: "ملف مكرر",
-            description: `تم تجاهل "${file.name}" لأنه موجود بالفعل`,
-            variant: "destructive"
-          });
-          
-          // المعالجة التالية
-          processNextFile();
-          return;
-        }
-      }
+      // نتجاهل التحقق من التكرار ونعالج الصورة مباشرة
 
       // إنشاء معرّف فريد للصورة
       const id = uuidv4();
@@ -170,12 +155,10 @@ export const useFileProcessing = ({
     images, 
     processWithGemini, 
     processWithOcr, 
-    checkDuplicateImage, 
     markImageAsProcessed, 
     saveProcessedImage, 
     user, 
-    queueLength, 
-    toast
+    queueLength
   ]);
 
   // بدء المعالجة عندما يتغير الطابور
@@ -250,7 +233,7 @@ export const useFileProcessing = ({
     handleFileChange,
     stopProcessing,
     setProcessingProgress,
-    isSubmitting,                  // إضافة هذه الخاصية للكائن المُرجع
-    setIsSubmitting                // إضافة هذه الدالة للكائن المُرجع
+    isSubmitting,
+    setIsSubmitting
   };
 };

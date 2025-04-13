@@ -39,7 +39,15 @@ export const useImageProcessing = () => {
   } = useImageState();
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
-  const { handleFileChange: fileUploadHandler } = useFileUpload({
+  const { 
+    handleFileChange: fileUploadHandler,
+    isProcessing,
+    processingProgress,
+    activeUploads,
+    queueLength,
+    isSubmitting,
+    setIsSubmitting
+  } = useFileUpload({
     images,
     addImage,
     updateImage,
@@ -61,8 +69,8 @@ export const useImageProcessing = () => {
   // استيراد هوك قاعدة البيانات مع تمرير دالة updateImage
   const { loadUserImages: fetchUserImages, saveImageToDatabase, handleSubmitToApi: submitToApi, deleteImageFromDatabase, runCleanupNow } = useImageDatabase(updateImage);
   
-  // هوك كشف التكرارات
-  const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection();
+  // هوك كشف التكرارات مع تعطيله
+  const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection({ enabled: false });
   
   // تحميل الصور السابقة
   useEffect(() => {
@@ -388,7 +396,6 @@ export const useImageProcessing = () => {
     // الحالة
     isProcessing,
     processingProgress,
-    isPaused,
     isSubmitting,
     activeUploads,
     queueLength,
@@ -420,7 +427,6 @@ export const useImageProcessing = () => {
     loadUserImages,
     setImages: setAllImages,
     clearOldApiKey,
-    // إضافة دالة لتحقق من وجود الصورة مسبقاً
-    checkDuplicateImage: isDuplicateImage
+    checkDuplicateImage: () => Promise.resolve(false) // تعديل وظيفة التحقق من التكرار لتعود دائمًا بـ false
   };
 };
