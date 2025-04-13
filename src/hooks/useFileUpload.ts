@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -469,10 +470,12 @@ export const useFileUpload = ({
         return;
       }
       
-      // فلترة الملفات المكررة
-      const newFiles = validFiles.filter(file => !isFileProcessed(file));
+      // فلترة الملفات المكررة - تعطيل هذا الجزء لمعالجة جميع الصور حتى المكررة
+      // const newFiles = validFiles.filter(file => !isFileProcessed(file));
+      const newFiles = validFiles; // معالجة جميع الملفات حتى المكررة
       
-      // إذا كانت جميع الملفات مكررة
+      // إذا لم يكن هناك ملفات للمعالجة (تم تعطيل هذا الشرط)
+      /* 
       if (newFiles.length === 0 && validFiles.length > 0) {
         toast({
           title: "ملفات مكررة",
@@ -481,12 +484,14 @@ export const useFileUpload = ({
         });
         return;
       }
+      */
       
       setIsProcessing(true);
       setProcessingQueue(prev => [...prev, ...newFiles]);
       setActiveUploads(newFiles.length);
       
       // إعلام المستخدم بعدد الملفات التي سيتم معالجتها
+      /* تعليق التنبيه الخاص بالصور المكررة
       if (newFiles.length < validFiles.length) {
         const skippedCount = validFiles.length - newFiles.length;
         toast({
@@ -494,11 +499,12 @@ export const useFileUpload = ({
           description: `تتم معالجة ${newFiles.length} ملف. تم تخطي ${skippedCount} ملف مكرر.`,
         });
       } else {
-        toast({
-          title: "جاري المعالجة",
-          description: `تتم معالجة ${newFiles.length} ملف`,
-        });
-      }
+      */
+      toast({
+        title: "جاري المعالجة",
+        description: `تتم معالجة ${newFiles.length} ملف`,
+      });
+      //}
       
       // تشخيص
       console.log(`تمت إضافة ${newFiles.length} ملف إلى قائمة المعالجة. الحالة: active=${newFiles.length}`);
@@ -512,7 +518,7 @@ export const useFileUpload = ({
     activeUploads,
     queueLength: processingQueue.length,
     cleanupDuplicates,
-    // تصدير متغير تقدم المعالجة
-    processingProgress: processingProgress
+    // تصدير متغير تقدم المعالجة بشكل صريح
+    processingProgress
   };
 };

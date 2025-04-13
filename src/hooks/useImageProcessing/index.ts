@@ -1,7 +1,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate } from "@/utils/dateFormatter";
-import { useImageState } from "../imageState";
+import { useImageState } from "../useImageState";
 import { useOcrProcessing } from "../useOcrProcessing";
 import { useGeminiProcessing } from "../useGeminiProcessing";
 import { useImageDatabase } from "../useImageDatabase";
@@ -58,13 +58,13 @@ export const useImageProcessing = () => {
     deleteImageFromDatabase 
   });
   
-  // هوك كشف التكرارات
+  // هوك كشف التكرارات - تعطيله ليتم معالجة كل الصور حتى المكررة
   const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection({ enabled: false });
   
-  // استخدام هوك معالجة الملفات مع إضافة isSubmitting و setIsSubmitting
+  // استخدام هوك معالجة الملفات مع تعيين التوقيعات المصدّرة بشكل صحيح
   const { 
     isProcessing, 
-    processingProgress,
+    processingProgress, // تأكد من استلام هذه القيمة
     activeUploads,
     queueLength,
     handleFileChange,
@@ -111,8 +111,6 @@ export const useImageProcessing = () => {
         
         // إخفاء الصورة بعد الإرسال - تحسين طريقة الاستدعاء
         console.log("إخفاء الصورة بعد الإرسال الناجح:", id);
-        
-        // استدعاء وظيفة hideImage وتسجيل نتيجة العملية
         hideImage(id);
         console.log("تم إخفاء الصورة بنجاح:", id);
         console.log("معرفات الصور المخفية الآن:", getHiddenImageIds());
@@ -166,7 +164,7 @@ export const useImageProcessing = () => {
     
     // الحالة
     isProcessing,
-    processingProgress,
+    processingProgress, // تصدير processingProgress بشكل صحيح
     activeUploads,
     queueLength,
     isSubmitting,

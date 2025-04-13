@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -51,19 +50,9 @@ export const useFileProcessing = ({
     setImageQueue((prevQueue) => prevQueue.slice(1));
     setActiveUploads(1);
 
-    // تهيئة كائن الصورة للتحقق من التكرار
-    const imageObj: ImageData = {
-      id: uuidv4(),
-      file,
-      previewUrl: URL.createObjectURL(file),
-      date: new Date(),
-      status: "pending",
-      user_id: user?.id,
-      batch_id: uuidv4()
-    };
-    
     try {
       // نتجاهل التحقق من التكرار ونعالج الصورة مباشرة
+      console.log("معالجة الملف:", file.name);
 
       // إنشاء معرّف فريد للصورة
       const id = uuidv4();
@@ -192,7 +181,7 @@ export const useFileProcessing = ({
         return;
       }
       
-      // إضافة الملفات إلى طابور المعالجة
+      // إضافة الملفات إلى طابور المعالجة - معالجة جميع الملفات بدون تجاهل المكررة
       setImageQueue(prev => [...prev, ...validFiles]);
       setQueueLength(validFiles.length);
       
@@ -230,7 +219,12 @@ export const useFileProcessing = ({
     activeUploads,
     queueLength,
     handleFileChange,
-    stopProcessing,
+    stopProcessing: () => {
+      setImageQueue([]);
+      setIsProcessing(false);
+      setProcessingProgress(0);
+      setActiveUploads(0);
+    },
     setProcessingProgress, // تصدير دالة تعيين التقدم أيضًا
     isSubmitting,
     setIsSubmitting

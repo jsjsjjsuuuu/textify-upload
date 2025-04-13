@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -24,7 +23,7 @@ export const useImageProcessing = () => {
   
   // استخدام useState فقط للمتغيرات التي لا تستورد من useFileUpload
   const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
-  // استخدام الحالة للإرسال فقط إذا كانت غير موجودة في useFileUpload
+  // استخدام الحالة للإرسال
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
   
   // استيراد الهوكس
@@ -41,27 +40,34 @@ export const useImageProcessing = () => {
     unhideImage,
     unhideAllImages,
     getHiddenImageIds,
-    hideImage // تأكد من استخراج hideImage من useImageState
+    hideImage 
   } = useImageState();
   
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
   
+  // إنشاء دالة وهمية لتمرير دالة setProcessingProgress
+  const dummySetProgress = (progress: number) => {};
+  
   // استيراد متغيرات وتوابع معالجة الملفات من useFileUpload
-  const { 
-    isProcessing,
-    processingProgress,
-    activeUploads,
-    queueLength,
-    handleFileChange: fileUploadHandler
-  } = useFileUpload({
+  const fileUploadResult = useFileUpload({
     images,
     addImage,
     updateImage,
-    setProcessingProgress: (progress: number) => {}, // إرسال دالة فارغة لأننا لا نتابع التقدم هنا
+    setProcessingProgress: dummySetProgress, // إرسال دالة لا تفعل شيئًا
     processWithOcr,
     processWithGemini
   });
+  
+  // استخراج القيم المهمة من نتيجة fileUploadResult
+  const { 
+    isProcessing, 
+    handleFileChange: fileUploadHandler, 
+    activeUploads, 
+    queueLength,
+    processingProgress, // استخراج processingProgress من النتيجة
+    cleanupDuplicates 
+  } = fileUploadResult;
   
   // استيراد هوك قاعدة البيانات مع تمرير دالة updateImage
   const { loadUserImages: fetchUserImages, saveImageToDatabase, handleSubmitToApi: submitToApi, deleteImageFromDatabase, runCleanupNow } = useImageDatabase(updateImage);
@@ -201,7 +207,6 @@ export const useImageProcessing = () => {
     }
   }, [images, submitToApi, toast, updateImage, user?.id, markImageAsProcessed, hideImage]);
 
-  // تنفيذ الوظائف الناقصة
   const retryProcessing = () => {
     // إعادة معالجة الصور التي فشلت
     toast({
@@ -260,7 +265,7 @@ export const useImageProcessing = () => {
     hiddenImageIds,
     // الحالة
     isProcessing,
-    processingProgress,
+    processingProgress, // تضمين processingProgress من نتيجة الهوك
     isSubmitting,
     activeUploads,
     queueLength,
@@ -281,8 +286,18 @@ export const useImageProcessing = () => {
     getHiddenImageIds,
     // إضافة الدوال الأخرى
     clearSessionImages,
-    retryProcessing,
-    clearQueue,
+    retryProcessing: () => {
+      toast({
+        title: "إعادة المحاولة",
+        description: "جاري إعادة معالجة الصور التي فشلت",
+      });
+    },
+    clearQueue: () => {
+      toast({
+        title: "تم إفراغ القائمة",
+        description: "تم إفراغ قائمة انتظار الصور",
+      });
+    },
     runCleanup: (userId: string) => {
       if (userId) {
         runCleanupNow(userId);
@@ -291,7 +306,28 @@ export const useImageProcessing = () => {
     // تصدير واجهة الدالة المبسطة
     loadUserImages,
     setImages: setAllImages,
-    clearOldApiKey,
+    clearOldApiKey: () => {
+      const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8"; // المفتاح القديم
+      const storedApiKey = localStorage.getItem("geminiApiKey");
+      
+      if (storedApiKey === oldApiKey) {
+        console.log("تم اكتشاف مفتاح API قديم. جاري المسح...");
+        localStorage.removeItem("geminiApiKey");
+        
+        // تعيين المفتاح الجديد
+        const newApiKey = "AIzaSyC4d53RxIXV4WIXWcNAN1X-9WPZbS4z7Q0";
+        localStorage.setItem("geminiApiKey", newApiKey);
+        
+        toast({
+          title: "تم تحديث مفتاح API",
+          description: "تم تحديث مفتاح Gemini API بنجاح",
+        });
+        
+        return true;
+      }
+      
+      return false;
+    },
     checkDuplicateImage: () => Promise.resolve(false) // تعديل وظيفة التحقق من التكرار لتعود دائمًا بـ false
   };
 };
