@@ -50,8 +50,8 @@ export const useFileUpload = ({
   saveProcessedImage,
   removeDuplicates,
   processedImage,
-  processWithOcr, // إضافة هذا الوسيط للسماح باستخدام OCR
-  processWithGemini // إضافة هذا الوسيط للسماح باستخدام Gemini
+  processWithOcr,
+  processWithGemini
 }: UseFileUploadProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeUploads, setActiveUploads] = useState(0); 
@@ -59,8 +59,10 @@ export const useFileUpload = ({
   const [queueProcessing, setQueueProcessing] = useState(false);
   const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
   const [currentProcessingIndex, setCurrentProcessingIndex] = useState<number>(-1);
-  const [lastProcessedImageTime, setLastProcessedImageTime] = useState<number>(0); // تتبع وقت آخر معالجة
-  const [processedFileSignatures, setProcessedFileSignatures] = useState<Set<string>>(new Set()); // تتبع توقيعات الملفات المعالجة
+  const [lastProcessedImageTime, setLastProcessedImageTime] = useState<number>(0);
+  const [processedFileSignatures, setProcessedFileSignatures] = useState<Set<string>>(new Set());
+  // إضافة متغير حالة لتتبع تقدم المعالجة بشكل صريح
+  const [processingProgress, setLocalProcessingProgress] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -169,6 +171,7 @@ export const useFileUpload = ({
       if (processingQueue.length === 0) {
         console.log("قائمة المعالجة فارغة. تصفير حالة المعالجة.");
         setActiveUploads(0);
+        setLocalProcessingProgress(100);
         setProcessingProgress(100);
         // سنقوم بتأخير إيقاف المعالجة لضمان أن المستخدم يرى أن العملية اكتملت
         setTimeout(() => {
@@ -192,6 +195,7 @@ export const useFileUpload = ({
       
       const file = processingQueue[i];
       const currentProgress = Math.round(((i + 1) / processingQueue.length) * 100);
+      setLocalProcessingProgress(currentProgress);
       setProcessingProgress(currentProgress);
       
       // تحديث عدد الملفات النشطة بدقة
@@ -325,7 +329,8 @@ export const useFileUpload = ({
     setProcessingQueue([]);
     setCurrentProcessingIndex(-1);
     setActiveUploads(0); // تصفير عدد الملفات النشطة عند الانتهاء
-    setProcessingProgress(100); // تعيين التقدم إلى 100% عند الانتهاء
+    setLocalProcessingProgress(100); // تعيين التقدم إلى 100% عند الانتهاء
+    setProcessingProgress(100);
     
     // انتظار للحظة قبل إيقاف المعالجة
     setTimeout(() => {
@@ -409,12 +414,13 @@ export const useFileUpload = ({
       console.log("القائمة فارغة لكن المعالجة لا تزال جارية. إيقاف المعالجة...");
       setQueueProcessing(false);
       setIsProcessing(false);
+      setLocalProcessingProgress(100);
       setProcessingProgress(100);
       setActiveUploads(0);
     }
   }, [processingQueue, queueProcessing, processQueue]);
 
-  // تحديث تقدم العملية بانتظام
+  // تعديل تتبع التقدم لاستخدام المتغير المحلي والخارجي
   useEffect(() => {
     if (!queueProcessing || processingQueue.length === 0) {
       return;
@@ -423,16 +429,18 @@ export const useFileUpload = ({
     const interval = setInterval(() => {
       if (currentProcessingIndex >= 0) {
         const progress = Math.round(((currentProcessingIndex + 1) / processingQueue.length) * 100);
+        setLocalProcessingProgress(progress);
+        // استخدام setProcessingProgress الخارجية لمزامنة التقدم مع المكونات الأخرى
         setProcessingProgress(progress);
         
         // تحديث عدد الملفات النشطة
         const remainingFiles = Math.max(0, processingQueue.length - currentProcessingIndex - 1);
-        setActiveUploads(remainingFiles > 0 ? 1 : 0); // إما معالجة ملف واحد أو لا شيء
+        setActiveUploads(remainingFiles > 0 ? 1 : 0);
         
         // تشخيص حالة المعالجة
         console.log(`تحديث حالة المعالجة: progress=${progress}%, remaining=${remainingFiles}, active=${remainingFiles > 0 ? 1 : 0}`);
       }
-    }, PROGRESS_UPDATE_INTERVAL);
+    }, 1000); // تحديث كل ثانية
     
     return () => clearInterval(interval);
   }, [queueProcessing, processingQueue, currentProcessingIndex, setProcessingProgress]);
@@ -503,6 +511,8 @@ export const useFileUpload = ({
     handleFileChange,
     activeUploads,
     queueLength: processingQueue.length,
-    cleanupDuplicates
+    cleanupDuplicates,
+    // تصدير متغير تقدم المعالجة
+    processingProgress: processingProgress
   };
 };

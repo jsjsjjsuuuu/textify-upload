@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -225,12 +226,12 @@ export const useFileProcessing = ({
 
   return {
     isProcessing,
-    processingProgress,
+    processingProgress, // تصدير هذه الخاصية
     activeUploads,
     queueLength,
     handleFileChange,
     stopProcessing,
-    setProcessingProgress,
+    setProcessingProgress, // تصدير دالة تعيين التقدم أيضًا
     isSubmitting,
     setIsSubmitting
   };
