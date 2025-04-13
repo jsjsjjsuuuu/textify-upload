@@ -80,8 +80,8 @@ const AdminApproval = () => {
     <div className="min-h-screen app-background">
       <AppHeader />
       
-      <div className="container py-16 mx-auto max-w-7xl px-6"> {/* Increased padding and max width */}
-        <div className="dish-container relative space-y-8"> {/* Added more vertical spacing */}
+      <div className="container py-24 mx-auto max-w-[85rem] px-8"> {/* زيادة المساحة الخارجية والعرض */}
+        <div className="dish-container relative space-y-12"> {/* زيادة المسافات الرأسية */}
           {/* تأثيرات توهج الخلفية */}
           <div className="dish-glow-top"></div>
           <div className="dish-glow-bottom"></div>
@@ -117,7 +117,7 @@ const AdminApproval = () => {
             </div>
           </div>
           
-          <div className="p-10 relative z-10 space-y-10"> {/* Increased padding and added vertical spacing */}
+          <div className="p-14 relative z-10 space-y-14"> {/* زيادة الحشو والمسافات الرأسية */}
             {/* أدوات البحث والتصفية */}
             <UserFilters 
               searchQuery={searchQuery}
