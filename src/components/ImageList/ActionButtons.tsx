@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Trash, Send } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -6,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ActionButtonsProps {
   imageId: string;
-  isSubmitting: boolean;
+  isSubmitting: boolean | Record<string, boolean>;
   isCompleted: boolean;
   isSubmitted: boolean;
   isPhoneNumberValid: boolean;
@@ -30,7 +29,12 @@ const ActionButtons = ({
   
   // مراقبة حالة التقديم لتتبع العملية
   useEffect(() => {
-    if (isSubmitting) {
+    // التحقق من نوع isSubmitting وتحويله للقيمة المناسبة
+    const submittingState = typeof isSubmitting === 'boolean' 
+      ? isSubmitting 
+      : isSubmitting?.[imageId] || false;
+    
+    if (submittingState) {
       setIsProcessing(true);
     } else {
       // تأخير صغير لإظهار "تم الإرسال" قبل إخفاء الزر
@@ -39,7 +43,7 @@ const ActionButtons = ({
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [isSubmitting]);
+  }, [isSubmitting, imageId]);
 
   // عنوان زر توضيحي للإرشاد
   const getSubmitButtonTitle = () => {
@@ -93,12 +97,15 @@ const ActionButtons = ({
         variant="default" 
         size="sm" 
         className={`${isSubmitted ? 'bg-green-600' : 'bg-brand-green hover:bg-brand-green/90'} text-white transition-colors h-8 text-xs`}
-        disabled={!isAllFieldsFilled || isSubmitting || isSubmitted || !isPhoneNumberValid} 
+        disabled={!isAllFieldsFilled || 
+                 (typeof isSubmitting === 'boolean' ? isSubmitting : isSubmitting?.[imageId]) || 
+                 isSubmitted || 
+                 !isPhoneNumberValid} 
         onClick={handleSubmit}
         title={getSubmitButtonTitle()}
       >
         <Send size={14} className="ml-1 opacity-70" />
-        {isSubmitting ? "جاري الإرسال..." : isSubmitted ? "تم الإرسال" : "إرسال وإخفاء"}
+        {(typeof isSubmitting === 'boolean' ? isSubmitting : isSubmitting?.[imageId]) ? "جاري الإرسال..." : isSubmitted ? "تم الإرسال" : "إرسال وإخفاء"}
       </Button>
     </div>
   );

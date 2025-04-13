@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate } from "@/utils/dateFormatter";
 import { useImageState } from "../imageState";
@@ -59,7 +58,7 @@ export const useImageProcessing = () => {
   // هوك كشف التكرارات
   const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection();
   
-  // استخدام هوك معالجة الملفات
+  // استخدام هوك معالجة الملفات مع إضافة isSubmitting و setIsSubmitting
   const { 
     isProcessing, 
     processingProgress,
@@ -67,7 +66,8 @@ export const useImageProcessing = () => {
     queueLength,
     handleFileChange,
     setProcessingProgress,
-    isSubmitting
+    isSubmitting,              // استخدام الخاصية المضافة من الهوك
+    setIsSubmitting            // استخدام الدالة المضافة من الهوك
   } = useFileProcessing({
     addImage,
     updateImage,
@@ -83,6 +83,9 @@ export const useImageProcessing = () => {
   const handleSubmitToApi = async (id: string) => {
     try {
       console.log("بدء عملية الإرسال للصورة:", id);
+      
+      // تحديث حالة التقديم باستخدام setIsSubmitting المستوردة من useFileProcessing
+      setIsSubmitting(prev => ({ ...prev, [id]: true }));
       
       // البحث عن الصورة المقابلة
       const image = images.find(img => img.id === id);
@@ -120,6 +123,9 @@ export const useImageProcessing = () => {
     } catch (error) {
       console.error("خطأ في إرسال الصورة:", error);
       return false;
+    } finally {
+      // إعادة تعيين حالة التقديم
+      setIsSubmitting(prev => ({ ...prev, [id]: false }));
     }
   };
   

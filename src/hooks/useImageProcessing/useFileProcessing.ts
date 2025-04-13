@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -33,6 +32,7 @@ export const useFileProcessing = ({
   const [activeUploads, setActiveUploads] = useState(0);
   const [queueLength, setQueueLength] = useState(0);
   const [imageQueue, setImageQueue] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({}); // إضافة حالة isSubmitting
   const { toast } = useToast();
 
   // معالجة ملف واحد من القائمة مع التحقق من التكرار
@@ -249,6 +249,8 @@ export const useFileProcessing = ({
     queueLength,
     handleFileChange,
     stopProcessing,
-    setProcessingProgress
+    setProcessingProgress,
+    isSubmitting,                  // إضافة هذه الخاصية للكائن المُرجع
+    setIsSubmitting                // إضافة هذه الدالة للكائن المُرجع
   };
 };
