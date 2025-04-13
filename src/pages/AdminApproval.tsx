@@ -1,9 +1,8 @@
-
 import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppHeader from '@/components/AppHeader';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, User, CheckCircle, Clock, Search, Filter, PlusCircle } from 'lucide-react';
+import { RefreshCw, User, CheckCircle, Clock, PlusCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 // استيراد المكونات المستخرجة
@@ -57,7 +56,6 @@ const AdminApproval = () => {
     handleDateSelect,
   } = useUserManagement();
 
-  // جلب البيانات عند تحميل الصفحة - مع منع التكرار
   useEffect(() => {
     console.log('جاري تحميل صفحة إدارة المستخدمين...', { fetchAttempted });
     
@@ -75,37 +73,6 @@ const AdminApproval = () => {
     }
   }, [user, userProfile, fetchAttempted, fetchUsers]);
 
-  // التعامل مع تأكيد إعادة تعيين كلمة المرور
-  const handleConfirmReset = () => {
-    if (userToReset && newPassword) {
-      // طباعة سجل تصحيح لمساعدة في تشخيص المشكلة
-      console.log('تنفيذ إعادة تعيين كلمة المرور مع البيانات:', {
-        userToReset,
-        userToResetType: typeof userToReset,
-        userToResetLength: userToReset.length,
-        passwordLength: newPassword.length,
-        passwordEmpty: !newPassword.trim()
-      });
-      
-      // تنفيذ عملية إعادة تعيين كلمة المرور
-      resetUserPassword(userToReset, newPassword);
-    } else {
-      console.error('لا يمكن إعادة تعيين كلمة المرور:', {
-        userToReset,
-        hasPassword: !!newPassword,
-        passwordLength: newPassword ? newPassword.length : 0
-      });
-      
-      if (!userToReset) {
-        toast.error('لم يتم تحديد مستخدم لإعادة تعيين كلمة المرور');
-      }
-      
-      if (!newPassword) {
-        toast.error('يرجى إدخال كلمة المرور الجديدة');
-      }
-    }
-  };
-
   const userCounts = getUserCounts();
   const filteredUsers = getFilteredUsers();
 
@@ -113,43 +80,44 @@ const AdminApproval = () => {
     <div className="min-h-screen app-background">
       <AppHeader />
       
-      <div className="container py-12 mx-auto max-w-7xl px-4">
-        <div className="dish-container relative">
-          {/* تأثير توهج خلفية الطبق */}
+      <div className="container py-16 mx-auto max-w-7xl px-6"> {/* Increased padding and max width */}
+        <div className="dish-container relative space-y-8"> {/* Added more vertical spacing */}
+          {/* تأثيرات توهج الخلفية */}
           <div className="dish-glow-top"></div>
           <div className="dish-glow-bottom"></div>
-          
-          {/* ظل داخلي */}
           <div className="dish-inner-shadow"></div>
-          
-          {/* تأثير انعكاس أعلى الطبق */}
           <div className="dish-reflection"></div>
           
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-8 border-b border-[#1e2a47]/30 relative z-10">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">نظام إدارة المستخدمين</h1>
-              <p className="text-base text-blue-200/70 mt-2">إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات</p>
+          {/* الرأس والعنوان */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8 p-10 border-b border-[#1e2a47]/30 relative z-10"> {/* Increased padding and gap */}
+            <div className="space-y-4"> {/* Added vertical spacing */}
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+                نظام إدارة المستخدمين
+              </h1>
+              <p className="text-lg text-blue-200/70">
+                إدارة حسابات المستخدمين والتحكم الكامل في الصلاحيات والاشتراكات
+              </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4"> {/* Slightly reduced gap */}
               <Button 
                 variant="outline"
-                className="bg-[#131b31] hover:bg-[#1a253f] text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+                className="bg-[#131b31] hover:bg-[#1a253f] text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-3" // Added padding
                 onClick={fetchUsers} 
                 disabled={isLoading}
               >
-                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''} mr-2`} />
+                <RefreshCw className={`h-6 w-6 ${isLoading ? 'animate-spin' : ''} mr-3`} /> {/* Increased icon size */}
                 تحديث
               </Button>
               <Button 
-                className="theme-button-primary shadow-lg hover:shadow-xl transition-all duration-300"
+                className="theme-button-primary shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-3" // Added padding
               >
-                <PlusCircle className="h-5 w-5 mr-2" />
+                <PlusCircle className="h-6 w-6 mr-3" /> {/* Increased icon size */}
                 إضافة مستخدم
               </Button>
             </div>
           </div>
           
-          <div className="p-8 relative z-10">
+          <div className="p-10 relative z-10 space-y-10"> {/* Increased padding and added vertical spacing */}
             {/* أدوات البحث والتصفية */}
             <UserFilters 
               searchQuery={searchQuery}
@@ -195,7 +163,7 @@ const AdminApproval = () => {
             </UserTabsFilter>
             
             {/* إحصائيات المستخدمين */}
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6"> {/* Increased gap */}
               <div className="flex items-center justify-between p-6 rounded-xl bg-[#131b31] shadow-lg hover:shadow-xl transition-all duration-300">
                 <div>
                   <h3 className="text-base text-blue-200/70 mb-1">المستخدمون</h3>
@@ -239,7 +207,6 @@ const AdminApproval = () => {
                 </div>
               </div>
             </div>
-            
           </div>
         </div>
       </div>
@@ -252,7 +219,35 @@ const AdminApproval = () => {
           setUserToReset(null);
           setNewPassword('');
         }}
-        onConfirm={handleConfirmReset}
+        onConfirm={() => {
+          if (userToReset && newPassword) {
+            // طباعة سجل تصحيح لمساعدة في تشخيص المشكلة
+            console.log('تنفيذ إعادة تعيين كلمة المرور مع البيانات:', {
+              userToReset,
+              userToResetType: typeof userToReset,
+              userToResetLength: userToReset.length,
+              passwordLength: newPassword.length,
+              passwordEmpty: !newPassword.trim()
+            });
+            
+            // تنفيذ عملية إعادة تعيين كلمة المرور
+            resetUserPassword(userToReset, newPassword);
+          } else {
+            console.error('لا يمكن إعادة تعيين كلمة المرور:', {
+              userToReset,
+              hasPassword: !!newPassword,
+              passwordLength: newPassword ? newPassword.length : 0
+            });
+            
+            if (!userToReset) {
+              toast.error('لم يتم تحديد مستخدم لإعادة تعيين كلمة المرور');
+            }
+            
+            if (!newPassword) {
+              toast.error('يرجى إدخال كلمة المرور الجديدة');
+            }
+          }
+        }}
         isProcessing={isProcessing}
       />
     </div>
