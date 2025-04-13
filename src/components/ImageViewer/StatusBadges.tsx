@@ -2,6 +2,7 @@
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { CheckCircle, AlertCircle, Clock, XCircle, Activity, LayoutGrid } from "lucide-react";
 
 interface StatusBadgesProps {
   counts: {
@@ -21,15 +22,57 @@ const StatusBadges: React.FC<StatusBadgesProps> = ({
   activeFilter,
   onFilterChange
 }) => {
-  // تعريف تنسيقات البادجات
-  const badgeStyles = {
-    all: "bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300",
-    pending: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
-    completed: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100",
-    incomplete: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100",
-    error: "bg-red-50 text-red-700 border-red-200 hover:bg-red-100",
-    processing: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-  };
+  // تعريف تنسيقات البادجات مع دمج الأيقونات
+  const badges = [
+    {
+      id: "all",
+      label: "الكل",
+      count: counts.all,
+      icon: <LayoutGrid className="h-3.5 w-3.5 ml-1" />,
+      className: "bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300",
+      activeClassName: "border-gray-400 font-bold"
+    },
+    {
+      id: "pending",
+      label: "قيد الانتظار",
+      count: counts.pending,
+      icon: <Clock className="h-3.5 w-3.5 ml-1" />,
+      className: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
+      activeClassName: "border-amber-500 font-bold"
+    },
+    {
+      id: "processing",
+      label: "قيد المعالجة",
+      count: counts.processing,
+      icon: <Activity className="h-3.5 w-3.5 ml-1" />,
+      className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+      activeClassName: "border-blue-500 font-bold"
+    },
+    {
+      id: "completed",
+      label: "مكتملة",
+      count: counts.completed,
+      icon: <CheckCircle className="h-3.5 w-3.5 ml-1" />,
+      className: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100",
+      activeClassName: "border-green-500 font-bold"
+    },
+    {
+      id: "incomplete",
+      label: "غير مكتملة",
+      count: counts.incomplete,
+      icon: <XCircle className="h-3.5 w-3.5 ml-1" />,
+      className: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100",
+      activeClassName: "border-purple-500 font-bold"
+    },
+    {
+      id: "error",
+      label: "أخطاء",
+      count: counts.error,
+      icon: <AlertCircle className="h-3.5 w-3.5 ml-1" />,
+      className: "bg-red-50 text-red-700 border-red-200 hover:bg-red-100",
+      activeClassName: "border-red-500 font-bold"
+    }
+  ];
 
   // تأثيرات الحركة
   const badgeVariants = {
@@ -38,108 +81,35 @@ const StatusBadges: React.FC<StatusBadgesProps> = ({
   };
 
   return (
-    <div className="flex flex-wrap gap-2 justify-end" dir="rtl">
-      {/* بادج الكل */}
-      <motion.div
-        variants={badgeVariants}
-        animate={activeFilter === "all" ? "active" : "inactive"}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ duration: 0.2 }}
-      >
-        <Badge 
-          variant={activeFilter === "all" ? "default" : "outline"} 
-          className={`cursor-pointer border-2 text-sm px-3 py-1 ${badgeStyles.all} ${activeFilter === "all" ? "border-gray-400 font-bold" : ""}`}
-          onClick={() => onFilterChange("all")}
+    <div className="flex flex-wrap gap-2 justify-end mb-4" dir="rtl">
+      {badges.map(badge => (
+        <motion.div
+          key={badge.id}
+          variants={badgeVariants}
+          animate={activeFilter === badge.id ? "active" : "inactive"}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ duration: 0.2 }}
         >
-          الكل <span className="inline-flex items-center justify-center bg-white text-gray-800 rounded-full w-5 h-5 text-xs mr-1">{counts.all}</span>
-        </Badge>
-      </motion.div>
-      
-      {/* بادج قيد الانتظار */}
-      <motion.div
-        variants={badgeVariants}
-        animate={activeFilter === "pending" ? "active" : "inactive"}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ duration: 0.2 }}
-      >
-        <Badge 
-          variant={activeFilter === "pending" ? "default" : "outline"} 
-          className={`cursor-pointer border-2 text-sm px-3 py-1 ${badgeStyles.pending} ${activeFilter === "pending" ? "border-amber-500 font-bold" : ""}`}
-          onClick={() => onFilterChange("pending")}
-        >
-          قيد الانتظار <span className="inline-flex items-center justify-center bg-white text-amber-700 rounded-full w-5 h-5 text-xs mr-1">{counts.pending}</span>
-        </Badge>
-      </motion.div>
-      
-      {/* بادج المعالجة */}
-      <motion.div
-        variants={badgeVariants}
-        animate={activeFilter === "processing" ? "active" : "inactive"}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ duration: 0.2 }}
-      >
-        <Badge 
-          variant={activeFilter === "processing" ? "default" : "outline"} 
-          className={`cursor-pointer border-2 text-sm px-3 py-1 ${badgeStyles.processing} ${activeFilter === "processing" ? "border-blue-500 font-bold" : ""}`}
-          onClick={() => onFilterChange("processing")}
-        >
-          قيد المعالجة <span className="inline-flex items-center justify-center bg-white text-blue-700 rounded-full w-5 h-5 text-xs mr-1">{counts.processing}</span>
-        </Badge>
-      </motion.div>
-      
-      {/* بادج مكتملة */}
-      <motion.div
-        variants={badgeVariants}
-        animate={activeFilter === "completed" ? "active" : "inactive"}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ duration: 0.2 }}
-      >
-        <Badge 
-          variant={activeFilter === "completed" ? "default" : "outline"} 
-          className={`cursor-pointer border-2 text-sm px-3 py-1 ${badgeStyles.completed} ${activeFilter === "completed" ? "border-green-500 font-bold" : ""}`}
-          onClick={() => onFilterChange("completed")}
-        >
-          مكتملة <span className="inline-flex items-center justify-center bg-white text-green-700 rounded-full w-5 h-5 text-xs mr-1">{counts.completed}</span>
-        </Badge>
-      </motion.div>
-      
-      {/* بادج غير مكتملة */}
-      <motion.div
-        variants={badgeVariants}
-        animate={activeFilter === "incomplete" ? "active" : "inactive"}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ duration: 0.2 }}
-      >
-        <Badge 
-          variant={activeFilter === "incomplete" ? "default" : "outline"} 
-          className={`cursor-pointer border-2 text-sm px-3 py-1 ${badgeStyles.incomplete} ${activeFilter === "incomplete" ? "border-purple-500 font-bold" : ""}`}
-          onClick={() => onFilterChange("incomplete")}
-        >
-          غير مكتملة <span className="inline-flex items-center justify-center bg-white text-purple-700 rounded-full w-5 h-5 text-xs mr-1">{counts.incomplete}</span>
-        </Badge>
-      </motion.div>
-      
-      {/* بادج أخطاء */}
-      <motion.div
-        variants={badgeVariants}
-        animate={activeFilter === "error" ? "active" : "inactive"}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ duration: 0.2 }}
-      >
-        <Badge 
-          variant={activeFilter === "error" ? "default" : "outline"} 
-          className={`cursor-pointer border-2 text-sm px-3 py-1 ${badgeStyles.error} ${activeFilter === "error" ? "border-red-500 font-bold" : ""}`}
-          onClick={() => onFilterChange("error")}
-        >
-          أخطاء <span className="inline-flex items-center justify-center bg-white text-red-700 rounded-full w-5 h-5 text-xs mr-1">{counts.error}</span>
-        </Badge>
-      </motion.div>
+          <Badge 
+            variant={activeFilter === badge.id ? "default" : "outline"} 
+            className={`cursor-pointer border-2 text-sm px-3 py-1 ${badge.className} ${activeFilter === badge.id ? badge.activeClassName : ""}`}
+            onClick={() => onFilterChange(badge.id)}
+          >
+            <div className="flex items-center">
+              {badge.icon}
+              {badge.label}
+            </div>
+            <span className={`inline-flex items-center justify-center bg-white rounded-full w-5 h-5 text-xs mr-1 ${
+              activeFilter === badge.id 
+                ? "bg-white/20 text-current" 
+                : `text-${badge.id === "all" ? "gray" : badge.id === "pending" ? "amber" : badge.id === "processing" ? "blue" : badge.id === "completed" ? "green" : badge.id === "incomplete" ? "purple" : "red"}-700`
+            }`}>
+              {badge.count}
+            </span>
+          </Badge>
+        </motion.div>
+      ))}
     </div>
   );
 };

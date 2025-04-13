@@ -10,6 +10,7 @@ import AutomationButton from "./AutomationButton";
 import { useDataExtraction } from "@/hooks/useDataExtraction";
 import { motion } from "framer-motion";
 import DataCompletionIndicator from "./DataCompletionIndicator";
+import { CheckCircle, AlertTriangle } from "lucide-react";
 
 interface ExtractedDataEditorProps {
   image: ImageData;
@@ -54,6 +55,23 @@ const ExtractedDataEditor = ({
     timestamp: Date.now() // إضافة طابع زمني لضمان التحديث
   }), [image]);
 
+  // التحقق من اكتمال البيانات
+  const isDataComplete = useMemo(() => {
+    return Boolean(
+      image.code && 
+      image.senderName && 
+      image.phoneNumber && 
+      image.province && 
+      image.price &&
+      (!image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11)
+    );
+  }, [image]);
+
+  // التحقق مما إذا كان هناك خطأ في رقم الهاتف
+  const hasPhoneNumberError = useMemo(() => {
+    return Boolean(image.phoneNumber) && image.phoneNumber.replace(/[^\d]/g, '').length !== 11;
+  }, [image.phoneNumber]);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -63,6 +81,29 @@ const ExtractedDataEditor = ({
       dir="rtl"
     >
       <Card className="bg-white/95 dark:bg-gray-800/95 shadow-sm border-brand-beige dark:border-gray-700 hover:shadow-md transition-shadow">
+        {/* شريط حالة البيانات الجديد */}
+        <div className={`p-3 flex items-center justify-between rounded-t-lg ${
+          isDataComplete ? "bg-green-500/20 text-green-700 dark:bg-green-900/30 dark:text-green-400" : 
+          hasPhoneNumberError ? "bg-red-500/20 text-red-700 dark:bg-red-900/30 dark:text-red-400" : 
+          "bg-amber-500/20 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+        }`}>
+          <div className="flex items-center gap-2">
+            {isDataComplete ? (
+              <CheckCircle className="h-5 w-5" />
+            ) : (
+              <AlertTriangle className="h-5 w-5" />
+            )}
+            <span className="font-medium">
+              {isDataComplete ? "البيانات مكتملة" : 
+               hasPhoneNumberError ? "خطأ في رقم الهاتف" : 
+               "البيانات غير مكتملة"}
+            </span>
+          </div>
+          <div className="text-sm">
+            {image.submitted ? "تم الإرسال" : "لم يتم الإرسال بعد"}
+          </div>
+        </div>
+
         <CardContent className="p-4">
           <div className="flex justify-between items-center mb-4">
             <ExtractedDataActions 
@@ -75,6 +116,7 @@ const ExtractedDataEditor = ({
             />
           </div>
 
+          {/* نقلت DataCompletionIndicator تحت شريط الحالة لتفاصيل إضافية عن الحقول */}
           <DataCompletionIndicator image={imageDataChanged} />
 
           <LearningNotifications 

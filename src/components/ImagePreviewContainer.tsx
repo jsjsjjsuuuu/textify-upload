@@ -339,7 +339,7 @@ const ImagePreviewContainer = ({
   // تحديد المخطط الرئيسي باستخدام تصميم زجاجي جديد
   return (
     <div className="container mx-auto">
-      {/* شريط التصفية الموحد مع البحث في تصميم زجاجي */}
+      {/* شريط التصفية الموحد في الأعلى فقط مع البادجات */}
       <div className="glass-morphism p-6 mb-6 rounded-xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
         <div className="glass-blur absolute inset-0"></div>
@@ -357,7 +357,7 @@ const ImagePreviewContainer = ({
             </div>
           </div>
           
-          {/* شريط الفلتر الموحد */}
+          {/* شريط الفلاتر موحد مع الأيقونات */}
           <StatusBadges
             counts={countByStatus}
             activeFilter={activeTab}
@@ -400,17 +400,17 @@ const ImagePreviewContainer = ({
           
           {/* عرض البيانات */}
           <div className="lg:col-span-5">
-            <div className="glass-morphism p-4 rounded-xl relative overflow-hidden h-full">
+            <div className="glass-morphism p-0 rounded-xl relative overflow-hidden h-full">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
               <div className="glass-blur absolute inset-0"></div>
               <div className="relative z-10 h-full">
-                <div className="mb-4 flex justify-between items-center">
+                <div className="flex justify-between items-center px-4 pt-4">
                   <h2 className="text-lg font-semibold text-gradient">البيانات المستخرجــة</h2>
                   {renderImageActions()}
                 </div>
                 
                 {/* محتوى البيانات */}
-                <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="h-[calc(600px-70px)] overflow-y-auto pr-2 custom-scrollbar">
                   <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
                 </div>
               </div>

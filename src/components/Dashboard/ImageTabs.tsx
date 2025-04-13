@@ -29,7 +29,6 @@ const ImageTabs: React.FC<ImageTabsProps> = ({
   formatDate,
   imageStats
 }) => {
-  // وحدنا واجهة التصفية، فلا نحتاج إلى هذا المكون الإضافي
   // إرجاع مكون ImageTabContent مباشرة دون تبويبات إضافية
   return (
     <ImageTabContent
