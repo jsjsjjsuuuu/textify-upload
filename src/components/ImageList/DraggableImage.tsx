@@ -29,15 +29,44 @@ const DraggableImage = ({
   const [imageUrl, setImageUrl] = useState<string | null>(image.previewUrl);
   const [retryCount, setRetryCount] = useState(image.retryCount || 0); // استخدام عداد المحاولات من الصورة
   const [isZoomed, setIsZoomed] = useState(false);
+  const [isDataUrl, setIsDataUrl] = useState(false); // إضافة حالة لتتبع نوع الرابط
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const { toast } = useToast();
   
-  // تحميل الصورة من التخزين إذا كان مسار التخزين متوفرًا
+  // تحميل الصورة من التخزين أو تحويلها إلى Data URL إذا كانت blob
   useEffect(() => {
     const getImageUrl = async () => {
       setImgError(false); // إعادة تعيين حالة الخطأ عند تغيير الصورة
       
+      // معالجة الروابط السابقة من نوع blob:
+      if (image.previewUrl && image.previewUrl.startsWith('blob:')) {
+        try {
+          // إذا كان لدينا ملف الصورة الأصلي، نستخدم FileReader لتحويلها إلى Data URL
+          if (image.file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const dataUrl = reader.result as string;
+              setImageUrl(dataUrl);
+              setIsDataUrl(true);
+              console.log("تم تحويل blob URL إلى data URL");
+            };
+            reader.onerror = () => {
+              console.error("فشل في تحويل الملف إلى Data URL");
+              setImgError(true);
+              setErrorMessage("فشل في معالجة الصورة");
+            };
+            reader.readAsDataURL(image.file);
+            return;
+          }
+        } catch (error) {
+          console.error("خطأ عند محاولة معالجة blob URL:", error);
+          setImgError(true);
+          setErrorMessage("فشل في معالجة رابط الصورة");
+        }
+      }
+      
+      // المسار العادي للحصول على الصورة من التخزين إذا كان متاحًا
       if (image.storage_path) {
         try {
           const { data } = supabase.storage
@@ -47,9 +76,11 @@ const DraggableImage = ({
           if (data && data.publicUrl) {
             console.log("تم الحصول على رابط الصورة من التخزين:", data.publicUrl.substring(0, 50) + "...");
             setImageUrl(data.publicUrl);
-          } else if (image.previewUrl) {
+            setIsDataUrl(false);
+          } else if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
             console.log("استخدام عنوان المعاينة الاحتياطي:", image.previewUrl.substring(0, 50) + "...");
             setImageUrl(image.previewUrl);
+            setIsDataUrl(false);
           } else {
             console.error("لا يوجد رابط صورة متاح");
             setImgError(true);
@@ -59,22 +90,26 @@ const DraggableImage = ({
           console.error("خطأ في جلب عنوان URL للصورة:", error);
           setErrorMessage("خطأ في جلب رابط الصورة من الخادم");
           
-          if (image.previewUrl) {
+          if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
             setImageUrl(image.previewUrl);
+            setIsDataUrl(false);
           } else {
             setImgError(true);
           }
         }
-      } else if (image.previewUrl) {
+      } else if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
+        // التأكد من أن الرابط ليس من نوع blob قبل استخدامه
         setImageUrl(image.previewUrl);
-      } else {
+        setIsDataUrl(image.previewUrl.startsWith('data:'));
+      } else if (!imageUrl) {
+        // لا يوجد أي رابط متاح
         setImgError(true);
         setErrorMessage("لا يوجد مسار تخزين أو معاينة للصورة");
       }
     };
     
     getImageUrl();
-  }, [image.storage_path, image.previewUrl, image.id]);
+  }, [image.storage_path, image.previewUrl, image.id, image.file]);
 
   // Reset position when component mounts or when image changes
   useEffect(() => {
@@ -188,6 +223,30 @@ const DraggableImage = ({
     // زيادة عداد المحاولات
     setRetryCount(prev => prev + 1);
     
+    // إذا كان لدينا ملف الصورة الأصلي، نحاول استخدام Data URL
+    if (image.file) {
+      try {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImageUrl(reader.result as string);
+          setIsDataUrl(true);
+          setImgError(false);
+          setErrorMessage(undefined);
+          
+          toast({
+            title: "إعادة تحميل",
+            description: "جاري محاولة تحميل الصورة كـ Data URL",
+            variant: "default"
+          });
+        };
+        reader.readAsDataURL(image.file);
+        return;
+      } catch (error) {
+        console.error("فشل في تحويل الملف إلى Data URL:", error);
+      }
+    }
+    
+    // معالجة الصور المخزنة في سوبابيس
     if (image.storage_path) {
       // استخدام نهج أكثر قوة: إضافة طابع زمني عشوائي لتجنب ذاكرة التخزين المؤقت
       const { data } = supabase.storage
@@ -202,6 +261,7 @@ const DraggableImage = ({
         setImageUrl(freshUrl);
         setImgError(false);
         setErrorMessage(undefined);
+        setIsDataUrl(false);
         
         toast({
           title: "إعادة تحميل",
@@ -209,7 +269,7 @@ const DraggableImage = ({
           variant: "default"
         });
       }
-    } else if (image.previewUrl) {
+    } else if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
       // محاولة استخدام URL للمعاينة مع تجنب التخزين المؤقت
       const timestamp = new Date().getTime();
       const randomSuffix = Math.floor(Math.random() * 10000);
@@ -218,6 +278,7 @@ const DraggableImage = ({
       setImageUrl(freshUrl);
       setImgError(false);
       setErrorMessage(undefined);
+      setIsDataUrl(false);
     }
     
     // استدعاء وظيفة إعادة المحاولة من الخارج إذا كانت موجودة
@@ -289,6 +350,13 @@ const DraggableImage = ({
               <div className="w-10 h-10 border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent rounded-full animate-spin mx-auto"></div>
               <p className="mt-2 text-sm font-medium">جاري معالجة الصورة...</p>
             </div>
+          </div>
+        )}
+        
+        {/* مؤشر إذا كانت الصورة مستخدمة كـ Data URL للتشخيص */}
+        {isDataUrl && (
+          <div className="absolute top-3 left-3 bg-green-500 bg-opacity-70 text-white text-xs py-1 px-2 rounded-md pointer-events-none">
+            data:URL
           </div>
         )}
       </div>

@@ -9,11 +9,11 @@ export const useImageCollection = (hiddenImageIds: string[]) => {
   // إنشاء عنوان URL آمن لمعاينة الصورة
   const createSafeObjectURL = useCallback((file: File): string => {
     try {
-      // إنشاء رابط URL للملف في نفس سياق الموقع
+      // محاولة إنشاء عنوان URL في نفس سياق الموقع
       return URL.createObjectURL(file);
     } catch (error) {
       console.error("خطأ في إنشاء عنوان URL للصورة:", error);
-      // في حالة الفشل، إنشاء رابط بديل باستخدام Data URL
+      // في حال الفشل، استخدام FileReader لتحويل الصورة إلى Data URL
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);

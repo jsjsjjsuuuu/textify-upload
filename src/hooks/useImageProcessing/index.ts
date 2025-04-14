@@ -49,6 +49,22 @@ export const useImageProcessing = () => {
     runCleanupNow 
   } = useImageDatabase(updateImage);
   
+  // إنشاء دالة لإنشاء URLs آمنة للصور
+  const createSafeObjectURL = useCallback((file: File): string => {
+    try {
+      // محاولة إنشاء عنوان URL في نفس سياق الموقع
+      return URL.createObjectURL(file);
+    } catch (error) {
+      console.error("خطأ في إنشاء عنوان URL للصورة:", error);
+      // في حال الفشل، استخدام FileReader لتحويل الصورة إلى Data URL
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      }) as unknown as string;
+    }
+  }, []);
+  
   // استيراد معالجة الملفات
   const fileProcessingResult = useFileProcessing({
     images,
@@ -57,7 +73,8 @@ export const useImageProcessing = () => {
     processWithOcr,
     processWithGemini,
     saveProcessedImage: saveImageToDatabase,
-    user
+    user,
+    createSafeObjectURL // تمرير دالة إنشاء URLs الآمنة
     // إزالة الخاصية المكررة images
   });
   
@@ -71,7 +88,6 @@ export const useImageProcessing = () => {
     handleFileChange: fileUploadHandler, 
     activeUploads, 
     queueLength,
-    createSafeObjectURL
   } = fileProcessingResult;
 
   // تحميل الصور السابقة
@@ -201,6 +217,7 @@ export const useImageProcessing = () => {
         runCleanupNow(userId);
       }
     },
+    createSafeObjectURL, // تصدير الدالة للاستخدام الخارجي
     checkDuplicateImage: () => Promise.resolve(false) // تعطيل فحص التكرار
   };
 };

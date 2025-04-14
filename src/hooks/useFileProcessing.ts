@@ -14,6 +14,7 @@ interface FileProcessingProps {
   markImageAsProcessed?: (image: ImageData) => void;
   user?: { id: string } | null;
   images: ImageData[];
+  createSafeObjectURL?: (file: File) => string; // إضافة وسيطة دالة إنشاء URLs الآمنة
 }
 
 export const useFileProcessing = ({
@@ -25,7 +26,8 @@ export const useFileProcessing = ({
   checkDuplicateImage,
   markImageAsProcessed,
   user,
-  images
+  images,
+  createSafeObjectURL // استقبال الدالة من الخارج
 }: FileProcessingProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -35,6 +37,28 @@ export const useFileProcessing = ({
   const [imageQueue, setImageQueue] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+
+  // تعريف دالة إنشاء URL آمنة داخلية في حال عدم توفرها من الخارج
+  const createSafeObjectURLInternal = useCallback((file: File): string => {
+    // استخدام الدالة الخارجية إن وجدت
+    if (createSafeObjectURL) {
+      return createSafeObjectURL(file);
+    }
+    
+    // وإلا استخدام التنفيذ الداخلي
+    try {
+      // محاولة إنشاء عنوان URL في نفس سياق الموقع
+      return URL.createObjectURL(file);
+    } catch (error) {
+      console.error("خطأ في إنشاء عنوان URL للصورة:", error);
+      // في حال الفشل، استخدام FileReader لتحويل الصورة إلى Data URL
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      }) as unknown as string;
+    }
+  }, [createSafeObjectURL]);
 
   // معالجة ملف واحد من القائمة - تعطيل فحص التكرار تمامًا
   const processNextFile = useCallback(async () => {
@@ -59,8 +83,8 @@ export const useFileProcessing = ({
       const id = uuidv4();
       const batchId = uuidv4();
 
-      // إنشاء معاينة الصورة بأمان باستخدام نفس سياق الموقع
-      const previewUrl = createSafeObjectURL(file);
+      // إنشاء معاينة الصورة بأمان
+      const previewUrl = createSafeObjectURLInternal(file);
 
       // تهيئة كائن الصورة
       const imageData: ImageData = {
@@ -141,24 +165,9 @@ export const useFileProcessing = ({
     markImageAsProcessed, 
     saveProcessedImage, 
     user, 
-    queueLength
+    queueLength,
+    createSafeObjectURLInternal
   ]);
-
-  // دالة إنشاء رابط صورة آمن
-  const createSafeObjectURL = (file: File): string => {
-    try {
-      // إنشاء رابط URL للملف في نفس سياق الموقع
-      return URL.createObjectURL(file);
-    } catch (error) {
-      console.error("خطأ في إنشاء عنوان URL للصورة:", error);
-      // في حالة الفشل، إنشاء رابط بديل باستخدام Data URL
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      }) as unknown as string;
-    }
-  };
 
   useEffect(() => {
     if (imageQueue.length > 0 && !isPaused && !isProcessing) {
@@ -238,6 +247,6 @@ export const useFileProcessing = ({
     setProcessingProgress,
     isSubmitting,
     setIsSubmitting,
-    createSafeObjectURL
+    createSafeObjectURL: createSafeObjectURLInternal // إصدار الدالة الآمنة للخارج
   };
 };

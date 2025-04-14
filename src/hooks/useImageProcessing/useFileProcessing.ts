@@ -14,6 +14,7 @@ interface FileProcessingProps {
   markImageAsProcessed?: (image: ImageData) => void;
   user?: { id: string } | null;
   images: ImageData[];
+  createSafeObjectURL?: (file: File) => string; // إضافة دالة إنشاء عناوين URL آمنة
 }
 
 export const useFileProcessing = ({
@@ -25,7 +26,8 @@ export const useFileProcessing = ({
   checkDuplicateImage,
   markImageAsProcessed,
   user,
-  images
+  images,
+  createSafeObjectURL // استقبال الدالة من المستدعي
 }: FileProcessingProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -35,6 +37,28 @@ export const useFileProcessing = ({
   const [imageQueue, setImageQueue] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+
+  // دالة لإنشاء عنوان URL آمن للصورة
+  const createSafeImageUrl = useCallback((file: File): string => {
+    // استخدام الدالة المقدمة من المستدعي إذا كانت موجودة
+    if (typeof createSafeObjectURL === 'function') {
+      return createSafeObjectURL(file);
+    }
+
+    // التنفيذ الافتراضي إذا لم يتم توفير الدالة من الخارج
+    try {
+      // إنشاء رابط URL للملف في نفس سياق الموقع
+      return URL.createObjectURL(file);
+    } catch (error) {
+      console.error("خطأ في إنشاء عنوان URL للصورة:", error);
+      // في حالة الفشل، إنشاء رابط بديل باستخدام Data URL
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      }) as unknown as string;
+    }
+  }, [createSafeObjectURL]);
 
   // معالجة ملف واحد من القائمة - تعطيل فحص التكرار تمامًا
   const processNextFile = useCallback(async () => {
@@ -59,11 +83,14 @@ export const useFileProcessing = ({
       const id = uuidv4();
       const batchId = uuidv4();
 
+      // استخدام الدالة الآمنة لإنشاء معاينة للصورة
+      const previewUrl = createSafeImageUrl(file);
+
       // تهيئة كائن الصورة
       const imageData: ImageData = {
         id,
         file,
-        previewUrl: URL.createObjectURL(file),
+        previewUrl,
         date: new Date(),
         status: "pending",
         user_id: user?.id,
@@ -138,7 +165,8 @@ export const useFileProcessing = ({
     markImageAsProcessed, 
     saveProcessedImage, 
     user, 
-    queueLength
+    queueLength,
+    createSafeImageUrl
   ]);
 
   useEffect(() => {
@@ -210,14 +238,10 @@ export const useFileProcessing = ({
     activeUploads,
     queueLength,
     handleFileChange,
-    stopProcessing: () => {
-      setImageQueue([]);
-      setIsProcessing(false);
-      setProcessingProgress(0);
-      setActiveUploads(0);
-    },
+    stopProcessing,
     setProcessingProgress,
     isSubmitting,
-    setIsSubmitting
+    setIsSubmitting,
+    createSafeObjectURL: createSafeImageUrl
   };
 };
