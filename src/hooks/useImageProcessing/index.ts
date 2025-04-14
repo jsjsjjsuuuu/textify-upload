@@ -1,3 +1,4 @@
+
 import { useCallback } from "react";
 import { useFileProcessing } from "../useFileProcessing";
 import { useOcrProcessing } from "../useOcrProcessing";
@@ -36,6 +37,12 @@ export const useImageProcessing = () => {
   const { processWithOcr, processFileWithOcr } = useOcrProcessing();
   const { processWithGemini, processFileWithGemini } = useGeminiProcessing();
   
+  // إضافة useImageDatabase لاستخدام وظائفه
+  const { 
+    loadUserImages, 
+    saveImageToDatabase 
+  } = useImageDatabase(updateImage);
+  
   const fileProcessingResult = useFileProcessing({
     images,
     addImage,
@@ -44,9 +51,7 @@ export const useImageProcessing = () => {
     processWithGemini: processFileWithGemini,
     saveProcessedImage: saveImageToDatabase,
     user,
-    createSafeObjectURL: async (file: File) => {
-      return await createSafeObjectURL(file);
-    },
+    createSafeObjectURL,
     checkDuplicateImage: undefined,
     markImageAsProcessed: undefined
   });
@@ -97,7 +102,8 @@ export const useImageProcessing = () => {
     clearSessionImages,
     loadUserImages: (callback?: (images: ImageData[]) => void) => {
       if (user) {
-        fetchUserImages(user.id, (loadedImages) => {
+        setIsLoadingUserImages(true);
+        loadUserImages(user.id, (loadedImages) => {
           const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
           
           if (callback) {
