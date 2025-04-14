@@ -34,7 +34,7 @@ export const useImageProcessing = () => {
     unhideAllImages,
     getHiddenImageIds,
     setAllImages,
-    createSafeObjectURL // استخدام الدالة المصدرة من useImageState
+    createSafeObjectURL // استيراد دالة URL الآمنة من useImageState
   } = useImageState();
   
   // استيراد معالجات OCR و Gemini

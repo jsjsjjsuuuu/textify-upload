@@ -29,8 +29,7 @@ export const useImageState = () => {
     clearSessionImages, 
     setAllImages, 
     addDatabaseImages,
-    handleTextChange,
-    createSafeObjectURL // نستورد هذه الدالة من useImageCollection
+    handleTextChange
   } = useImageCollection(hiddenImageIds);
   
   // استخدام هوك إزالة التكرار
@@ -86,7 +85,6 @@ export const useImageState = () => {
     handleTextChange,
     unhideImage,
     unhideAllImages,
-    getHiddenImageIds,
-    createSafeObjectURL // نصدر الدالة للاستخدام الخارجي
+    getHiddenImageIds
   };
 };
