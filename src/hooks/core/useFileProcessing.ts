@@ -7,7 +7,7 @@ import type { ImageData } from "@/types/ImageData";
 interface FileProcessingConfig {
   addImage: (image: ImageData) => void;
   updateImage: (id: string, data: Partial<ImageData>) => void;
-  processWithOcr: (file: File | Blob, image: ImageData) => Promise<ImageData>;
+  processWithOcr: (file: File, image: ImageData) => Promise<ImageData>;
   processWithGemini: (file: File | Blob, image: ImageData) => Promise<ImageData>;
   createSafeObjectURL: (file: File | Blob) => Promise<string>;
   saveProcessedImage?: (image: ImageData) => Promise<void>;
@@ -60,18 +60,26 @@ export const useFileProcessing = ({
       }
     } catch (error) {
       console.error("خطأ في معالجة الملف:", error);
+      toast({
+        title: "خطأ في المعالجة",
+        description: "حدث خطأ أثناء معالجة الملف"
+      });
     }
-  }, [addImage, updateImage, processWithGemini, saveProcessedImage, user, createSafeObjectURL]);
+  }, [addImage, updateImage, processWithGemini, saveProcessedImage, user, createSafeObjectURL, toast]);
 
-  const handleFileChange = useCallback((files: FileList | File[]) => {
+  const handleFileChange = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     setQueueLength(fileArray.length);
     setIsProcessing(true);
     
-    Promise.all(fileArray.map(processFile)).finally(() => {
-      setIsProcessing(false);
-      setProcessingProgress(100);
-    });
+    for (let i = 0; i < fileArray.length; i++) {
+      await processFile(fileArray[i]);
+      const progress = ((i + 1) / fileArray.length) * 100;
+      setProcessingProgress(progress);
+    }
+    
+    setIsProcessing(false);
+    setProcessingProgress(100);
   }, [processFile]);
 
   return {

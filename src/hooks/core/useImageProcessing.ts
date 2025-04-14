@@ -7,6 +7,7 @@ import { useToast } from "../use-toast";
 import { useFileProcessing } from "../useFileProcessing";
 import { useImageDatabase } from "../useImageDatabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { CustomImageData } from "@/types/ImageData";
 
 export const useImageProcessing = () => {
   const { user } = useAuth();
@@ -25,9 +26,21 @@ export const useImageProcessing = () => {
     createSafeObjectURL
   } = useImageState();
 
+  // تكييف وظائف المعالجة
   const { processWithOcr } = useOcrProcessing();
   const { processWithGemini } = useGeminiProcessing();
   const { loadUserImages, saveImageToDatabase } = useImageDatabase(updateImage);
+
+  // تحويل وظائف المعالجة لتتوافق مع الأنواع المطلوبة
+  const adaptedOcrProcess = async (file: File, image: CustomImageData) => {
+    const result = await processWithOcr({ ...image, file });
+    return { ...image, ...result };
+  };
+
+  const adaptedGeminiProcess = async (file: File | Blob, image: CustomImageData) => {
+    const result = await processWithGemini(file, image);
+    return { ...image, ...result };
+  };
 
   const {
     isProcessing,
@@ -39,8 +52,8 @@ export const useImageProcessing = () => {
     images,
     addImage,
     updateImage,
-    processWithOcr,
-    processWithGemini,
+    processWithOcr: adaptedOcrProcess,
+    processWithGemini: adaptedGeminiProcess,
     saveProcessedImage: saveImageToDatabase,
     user,
     createSafeObjectURL
