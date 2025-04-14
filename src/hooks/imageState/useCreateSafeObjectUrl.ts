@@ -9,30 +9,31 @@ export const useCreateSafeObjectUrl = () => {
    * إنشاء عنوان URL آمن للصورة
    * يستخدم Data URL بدلاً من blob URL لتفادي مشاكل الأمان والذاكرة
    */
-  const createSafeObjectURL = useCallback((file: File): string => {
+  const createSafeObjectURL = useCallback(async (file: File): Promise<string> => {
     // تنفيذ افتراضي: استخدام FileReader لتحويل الصورة إلى Data URL مباشرة
     // هذا يتجنب مشاكل CORS والأمان المرتبطة بـ blob URLs
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       try {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
         reader.onerror = (error) => {
           console.error("خطأ في قراءة الملف:", error);
           // إرجاع قيمة فارغة في حالة الخطأ
-          resolve("");
+          reject(new Error("فشل في قراءة الملف"));
         };
         reader.readAsDataURL(file);
       } catch (error) {
         console.error("خطأ في إنشاء عنوان URL للصورة:", error);
         // محاولة استخدام URL.createObjectURL كخطة بديلة
         try {
-          resolve(URL.createObjectURL(file));
+          const objectUrl = URL.createObjectURL(file);
+          resolve(objectUrl);
         } catch (objectUrlError) {
           console.error("فشل في إنشاء object URL:", objectUrlError);
-          resolve("");
+          reject(new Error("فشل في إنشاء عنوان URL للصورة"));
         }
       }
-    }) as unknown as string;
+    });
   }, []);
 
   /**

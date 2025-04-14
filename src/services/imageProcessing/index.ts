@@ -41,9 +41,18 @@ export const useImageProcessing = () => {
     createSafeObjectURL
   } = useImageState();
   
-  // استيراد معالجات OCR و Gemini
-  const { processWithOcr } = useOcrProcessing();
-  const { processWithGemini } = useGeminiProcessing();
+  // استيراد معالجات OCR و Gemini ومواءمتها مع الواجهات المطلوبة
+  const { processWithOcr: originalProcessWithOcr } = useOcrProcessing();
+  const { processWithGemini: originalProcessWithGemini } = useGeminiProcessing();
+  
+  // إنشاء مغلفات الدوال لمواءمة توقيع الدالة
+  const processWithOcr = useCallback((image: ImageData): Promise<string> => {
+    return originalProcessWithOcr(image);
+  }, [originalProcessWithOcr]);
+  
+  const processWithGemini = useCallback((image: ImageData): Promise<Partial<ImageData>> => {
+    return originalProcessWithGemini(image);
+  }, [originalProcessWithGemini]);
   
   // استيراد قاعدة البيانات
   const { 
@@ -65,12 +74,11 @@ export const useImageProcessing = () => {
     images,
     addImage,
     updateImage,
-    setProcessingProgress: () => {}, // سنستخدم processingProgress المتوفر من useFileProcessing
     processWithOcr,
     processWithGemini,
     saveProcessedImage: saveImageToDatabase,
     user,
-    createSafeObjectURL // تمرير دالة URL الآمنة
+    createSafeObjectURL
   });
 
   // تحميل الصور السابقة
