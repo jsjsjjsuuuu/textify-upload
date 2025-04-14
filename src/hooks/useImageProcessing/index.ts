@@ -10,6 +10,7 @@ import { useToast } from "../use-toast";
 import { useDuplicateDetection } from "../useDuplicateDetection";
 import { useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { ImageData } from "@/types/ImageData";
 
 export const useImageProcessing = () => {
   // توابع المعالجة الرئيسية من الهوكس الخاصة
@@ -38,17 +39,17 @@ export const useImageProcessing = () => {
   } = useImageState();
   
   // استيراد معالجات OCR و Gemini
-  const { processWithOcr: originalProcessWithOcr } = useOcrProcessing();
-  const { processWithGemini: originalProcessWithGemini } = useGeminiProcessing();
+  const { processWithOcr: originalOcrProcess } = useOcrProcessing();
+  const { processWithGemini: originalGeminiProcess } = useGeminiProcessing();
 
-  // إنشاء مغلفات الدوال لمواءمة توقيع الدالة
-  const processWithOcr = useCallback((image: ImageData): Promise<string> => {
-    return originalProcessWithOcr(image);
-  }, [originalProcessWithOcr]);
+  // دالات وسيطة لمواءمة الواجهات
+  const processWithOcr = useCallback((imageData: ImageData): Promise<string> => {
+    return originalOcrProcess(imageData);
+  }, [originalOcrProcess]);
   
-  const processWithGemini = useCallback((image: ImageData): Promise<Partial<ImageData>> => {
-    return originalProcessWithGemini(image);
-  }, [originalProcessWithGemini]);
+  const processWithGemini = useCallback((imageData: ImageData): Promise<Partial<ImageData>> => {
+    return originalGeminiProcess(imageData);
+  }, [originalGeminiProcess]);
   
   // استيراد قاعدة البيانات
   const { 
@@ -59,30 +60,58 @@ export const useImageProcessing = () => {
     runCleanupNow 
   } = useImageDatabase(updateImage);
   
+  // إنشاء مغلفات الدوال لمواءمة توقيعات الدوال بشكل صحيح
+  const processFileWithOcr = useCallback(async (file: File, image: ImageData): Promise<ImageData> => {
+    try {
+      // استدعاء دالة معالجة OCR
+      const extractedText = await processWithOcr(image);
+      // إرجاع الصورة مع النص المستخرج
+      return {
+        ...image,
+        extractedText
+      };
+    } catch (error) {
+      console.error("خطأ في معالجة OCR:", error);
+      return {
+        ...image,
+        status: "error",
+        error: "فشل في معالجة OCR"
+      };
+    }
+  }, [processWithOcr]);
+
+  const processFileWithGemini = useCallback(async (file: File | Blob, image: ImageData): Promise<ImageData> => {
+    try {
+      // استدعاء دالة معالجة Gemini
+      const geminiData = await processWithGemini(image);
+      // إرجاع الصورة مع البيانات المستخرجة
+      return {
+        ...image,
+        ...geminiData
+      };
+    } catch (error) {
+      console.error("خطأ في معالجة Gemini:", error);
+      return {
+        ...image,
+        status: "error",
+        error: "فشل في معالجة Gemini"
+      };
+    }
+  }, [processWithGemini]);
+  
   // استيراد معالجة الملفات وتمرير دالة createSafeObjectURL
   const fileProcessingResult = useFileProcessing({
     images,
     addImage,
     updateImage,
-    processWithOcr: async (file: File, imageData: ImageData) => {
-      // دالة وسيطة لتكييف واجهات الدالة
-      const extractedText = await processWithOcr(imageData);
-      return {
-        ...imageData,
-        extractedText
-      };
-    },
-    processWithGemini: async (file: File | Blob, imageData: ImageData) => {
-      // دالة وسيطة لتكييف واجهات الدالة
-      const result = await processWithGemini(imageData);
-      return {
-        ...imageData,
-        ...result
-      };
-    },
+    processWithOcr: processFileWithOcr,
+    processWithGemini: processFileWithGemini,
     saveProcessedImage: saveImageToDatabase,
     user,
-    createSafeObjectURL // تمرير دالة URL الآمنة من useImageState
+    createSafeObjectURL,
+    // الدوال الاختيارية الأخرى
+    checkDuplicateImage: undefined,
+    markImageAsProcessed: undefined
   });
   
   // استيراد كاشف التكرار (معطل)

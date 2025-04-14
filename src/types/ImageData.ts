@@ -3,6 +3,10 @@ import { User } from "@supabase/supabase-js";
 // تصحيح إعادة التصدير باستخدام export type
 import type { BookmarkletItem, BookmarkletExportData } from "@/utils/bookmarklet/types";
 
+// تعريف نوع خاص بدوال معالجة الصور
+export type OcrProcessFn = (image: CustomImageData) => Promise<string>;
+export type GeminiProcessFn = (image: CustomImageData) => Promise<Partial<CustomImageData>>;
+
 // تغيير اسم الواجهة لتجنب التعارض مع ImageData المدمج
 export interface CustomImageData {
   id: string;

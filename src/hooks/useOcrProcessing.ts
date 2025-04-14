@@ -1,35 +1,25 @@
 
 import { useState } from "react";
-import { ImageData } from "@/types/ImageData";
+import { ImageData, CustomImageData } from "@/types/ImageData";
 import { extractTextFromImage } from "@/lib/ocrService";
 import { parseDataFromOCRText, updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { useToast } from "@/hooks/use-toast";
 
-// ملاحظة: لن نستخدم هذه الوظيفة بشكل مباشر بعد الآن لأننا سنستخدم Gemini دائمًا
-// لكن سنحتفظ بها للتوافق مع باقي الكود
-
 export const useOcrProcessing = () => {
   const { toast } = useToast();
 
-  const processWithOcr = async (file: File, image: ImageData): Promise<ImageData> => {
+  // تعريف دالة معالجة OCR مع توافق واجهة البيانات المعدلة
+  const processWithOcr = async (image: CustomImageData): Promise<string> => {
     try {
-      console.log("Calling extractTextFromImage for OCR");
-      const result = await extractTextFromImage(file);
-      console.log("OCR result:", result);
+      console.log("بدء معالجة OCR للصورة:", image.id);
       
-      // Try to parse data from OCR text
-      const extractedData = parseDataFromOCRText(result.text);
-      console.log("Parsed data from OCR text:", extractedData);
+      // استدعاء خدمة OCR مع ملف الصورة
+      const result = await extractTextFromImage(image.file);
+      console.log("نتيجة OCR:", result);
       
-      return updateImageWithExtractedData(
-        image, 
-        result.text, 
-        extractedData, 
-        result.confidence, 
-        "ocr"
-      );
+      return result.text;
     } catch (ocrError) {
-      console.error("OCR processing error:", ocrError);
+      console.error("خطأ في معالجة OCR:", ocrError);
       
       toast({
         title: "فشل في استخراج النص",
@@ -37,10 +27,7 @@ export const useOcrProcessing = () => {
         variant: "destructive"
       });
       
-      return {
-        ...image,
-        status: "error"
-      };
+      return "";
     }
   };
 

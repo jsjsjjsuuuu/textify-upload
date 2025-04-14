@@ -10,8 +10,8 @@ interface FileProcessingConfig {
   images: ImageData[];
   addImage: (image: ImageData) => void;
   updateImage: (id: string, fields: Partial<ImageData>) => void;
-  processWithOcr: (file: File, image: ImageData) => Promise<ImageData>;
-  processWithGemini: (file: File | Blob, image: ImageData) => Promise<ImageData>;
+  processWithOcr: (image: ImageData) => Promise<string>;
+  processWithGemini: (image: ImageData) => Promise<Partial<ImageData>>;
   saveProcessedImage?: (image: ImageData) => Promise<boolean>;
   user?: User | null;
   createSafeObjectURL: (file: File) => Promise<string>;
@@ -71,20 +71,19 @@ export const useFileProcessing = ({
       
       try {
         // معالجة النص من الصورة باستخدام OCR
-        const ocrProcessedImage = await processWithOcr(enhancedFile, imageData);
-        const extractedText = ocrProcessedImage.extractedText || '';
+        const extractedText = await processWithOcr(imageData);
         updateImage(imageData.id, { extractedText });
         
         // استخراج البيانات باستخدام Gemini
-        const geminiProcessedImage = await processWithGemini(enhancedFile, { ...imageData, extractedText });
+        const geminiData = await processWithGemini({ ...imageData, extractedText });
         updateImage(imageData.id, { 
-          ...geminiProcessedImage,
+          ...geminiData,
           status: 'completed' 
         });
         
         // حفظ الصورة المعالجة إذا كانت الدالة متوفرة
         if (saveProcessedImage) {
-          await saveProcessedImage({ ...imageData, ...geminiProcessedImage });
+          await saveProcessedImage({ ...imageData, ...geminiData, extractedText });
         }
         
       } catch (error) {
