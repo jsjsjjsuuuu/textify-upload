@@ -1,4 +1,3 @@
-
 import { useCallback } from "react";
 import { useFileProcessing } from "../useFileProcessing";
 import { useOcrProcessing } from "../useOcrProcessing";
@@ -51,7 +50,7 @@ export const useImageProcessing = () => {
     processWithGemini: processFileWithGemini,
     saveProcessedImage: saveImageToDatabase,
     user,
-    createSafeObjectURL,
+    createSafeObjectURL, // تمرير createSafeObjectURL كما هو حيث تم تعديل التعريف لمطابقة الأنواع
     checkDuplicateImage: undefined,
     markImageAsProcessed: undefined
   });

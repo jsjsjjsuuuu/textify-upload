@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -14,7 +13,7 @@ interface FileProcessingProps {
   markImageAsProcessed?: (image: ImageData) => void;
   user?: { id: string } | null;
   images: ImageData[];
-  createSafeObjectURL?: (file: File) => string;
+  createSafeObjectURL?: (file: File | Blob) => Promise<string>;
 }
 
 export const useFileProcessing = ({
@@ -39,24 +38,22 @@ export const useFileProcessing = ({
   const { toast } = useToast();
 
   // دالة لإنشاء عنوان Data URL دائمًا للصورة (تفادي مشاكل blob URLs)
-  const createSafeObjectURL = useCallback((file: File): string => {
+  const createSafeObjectURL = useCallback(async (file: File | Blob): Promise<string> => {
     // استخدام الدالة الخارجية إن وجدت
     if (typeof externalCreateSafeObjectURL === 'function') {
       return externalCreateSafeObjectURL(file);
     }
     
     // التنفيذ الافتراضي: استخدام FileReader لتحويل الصورة إلى Data URL مباشرة
-    // هذا يتجنب مشاكل CORS والأمان المرتبطة بـ blob URLs
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.onerror = (error) => {
         console.error("خطأ في قراءة الملف:", error);
-        // إرجاع قيمة فارغة في حالة الخطأ
-        resolve("");
+        reject(error);
       };
       reader.readAsDataURL(file);
-    }) as unknown as string;
+    });
   }, [externalCreateSafeObjectURL]);
 
   // معالجة ملف واحد من القائمة - تعطيل فحص التكرار تمامًا

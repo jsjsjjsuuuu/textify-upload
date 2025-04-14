@@ -14,7 +14,8 @@ interface FileProcessingConfig {
   processWithGemini: FileImageProcessFn;
   saveProcessedImage?: (image: CustomImageData) => Promise<boolean>;
   user?: User | null;
-  createSafeObjectURL: (file: File) => Promise<string>;
+  // تعديل نوع البيانات هنا ليقبل Promise<string>
+  createSafeObjectURL: (file: File | Blob) => Promise<string>;
 }
 
 export const useFileProcessing = ({
