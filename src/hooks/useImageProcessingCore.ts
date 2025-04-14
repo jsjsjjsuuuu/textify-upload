@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { ImageData } from "@/types/ImageData";
+import { ImageData, CustomImageData } from "@/types/ImageData";
 import { useImageState } from "@/hooks/useImageState";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,9 +44,9 @@ export const useImageProcessingCore = () => {
   // استخدام اكتشاف التكرار
   const duplicateDetectionTools = useDuplicateDetection({ enabled: true });
   
-  // جلب وظائف معالجة الصور
-  const { processWithGemini } = useGeminiProcessing();
-  const { processWithOcr } = useOcrProcessing();
+  // جلب وظائف معالجة الصور الجديدة المتوافقة
+  const { processFileWithOcr } = useOcrProcessing();
+  const { processFileWithGemini } = useGeminiProcessing();
   
   // تحسين استخدام useSavedImageProcessing مع توقيع الوظيفة الصحيح
   const {
@@ -87,7 +87,7 @@ export const useImageProcessingCore = () => {
   }, [toast]);
   
   // التحقق من اكتمال البيانات المطلوبة للصورة
-  const validateRequiredFields = (image: ImageData): boolean => {
+  const validateRequiredFields = (image: CustomImageData): boolean => {
     if (!image.code || !image.senderName || !image.phoneNumber || !image.province || !image.price) {
       toast({
         title: "بيانات غير مكتملة",
@@ -209,15 +209,15 @@ export const useImageProcessingCore = () => {
     setProcessingProgress,
     saveProcessedImage,
     removeDuplicates,
+    // تمرير وظائف معالجة الصور المحدثة
+    processWithOcr: processFileWithOcr,
+    processWithGemini: processFileWithGemini,
     // استخدام الأداة كما هي بدلاً من تمريرها كخاصية منفصلة
     processedImage: {
       // تحويل وظيفة checkDuplicateImage المتزامنة إلى isDuplicateImage
       isDuplicateImage: duplicateDetectionTools.checkDuplicateImage,
       markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
-    },
-    // تمرير وظائف معالجة الصور
-    processWithOcr,
-    processWithGemini
+    }
   });
 
   
@@ -253,7 +253,7 @@ export const useImageProcessingCore = () => {
     saveImageToDatabase,
     saveProcessedImage,
     hideImage, // تصدير وظيفة hideImage بشكل صريح
-    loadUserImages: (callback?: (images: ImageData[]) => void) => {
+    loadUserImages: (callback?: (images: CustomImageData[]) => void) => {
       if (user) {
         loadUserImages(user.id, callback || ((loadedImages) => {
           // تطبيق فلتر الصور المخفية هنا أيضًا
@@ -270,8 +270,8 @@ export const useImageProcessingCore = () => {
     queueLength,
     cleanupDuplicates,
     ...duplicateDetectionTools,
-    processWithGemini,
-    processWithOcr,
+    processWithOcr: processFileWithOcr,
+    processWithGemini: processFileWithGemini,
     unhideImage,
     unhideAllImages
   };

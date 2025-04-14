@@ -1,6 +1,7 @@
+
 import { useEffect, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { ImageData } from "@/types/ImageData";
+import { ImageData, CustomImageData, ImageProcessFn } from "@/types/ImageData";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOcrProcessing } from "./useOcrProcessing";
 import { useGeminiProcessing } from "./useGeminiProcessing";
@@ -43,8 +44,9 @@ export const useImageProcessing = () => {
     hideImage 
   } = useImageState();
   
-  const { processWithOcr } = useOcrProcessing();
-  const { processWithGemini } = useGeminiProcessing();
+  // استيراد معالجات OCR و Gemini مع الدوال المتوافقة مع تعريفات الأنواع الجديدة
+  const { processFileWithOcr } = useOcrProcessing();
+  const { processFileWithGemini } = useGeminiProcessing();
   
   // إنشاء دالة وهمية لتمرير دالة setProcessingProgress
   const dummySetProgress = (progress: number) => {};
@@ -54,9 +56,10 @@ export const useImageProcessing = () => {
     images,
     addImage,
     updateImage,
-    setProcessingProgress: dummySetProgress, // إرسال دالة لا تفعل شيئًا
-    processWithOcr,
-    processWithGemini
+    setProcessingProgress: dummySetProgress,
+    // استخدام الوظائف المتوافقة مع المتطلبات الجديدة
+    processWithOcr: processFileWithOcr,
+    processWithGemini: processFileWithGemini
   });
   
   // استخراج القيم المهمة من نتيجة fileUploadResult
@@ -65,7 +68,7 @@ export const useImageProcessing = () => {
     handleFileChange: fileUploadHandler, 
     activeUploads, 
     queueLength,
-    processingProgress, // استخراج processingProgress من النتيجة
+    processingProgress,
     cleanupDuplicates 
   } = fileUploadResult;
   
@@ -265,7 +268,7 @@ export const useImageProcessing = () => {
     hiddenImageIds,
     // الحالة
     isProcessing,
-    processingProgress, // تضمين processingProgress من نتيجة الهوك
+    processingProgress,
     isSubmitting,
     activeUploads,
     queueLength,

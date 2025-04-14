@@ -9,7 +9,7 @@ export const useCreateSafeObjectUrl = () => {
   // تخزين قائمة عناوين URL التي تم إنشاؤها
   const [urls, setUrls] = useState<string[]>([]);
   
-  // إنشاء عنوان URL آمن للملف
+  // إنشاء عنوان URL آمن للملف - تعديل الدالة لتعود بوعد
   const createSafeObjectURL = useCallback((file: File): Promise<string> => {
     return new Promise((resolve) => {
       // استخدام FileReader لتحويل الملف إلى Data URL
