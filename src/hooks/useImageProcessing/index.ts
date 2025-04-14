@@ -38,8 +38,17 @@ export const useImageProcessing = () => {
   } = useImageState();
   
   // استيراد معالجات OCR و Gemini
-  const { processWithOcr } = useOcrProcessing();
-  const { processWithGemini } = useGeminiProcessing();
+  const { processWithOcr: originalProcessWithOcr } = useOcrProcessing();
+  const { processWithGemini: originalProcessWithGemini } = useGeminiProcessing();
+
+  // إنشاء مغلفات الدوال لمواءمة توقيع الدالة
+  const processWithOcr = useCallback((image: ImageData): Promise<string> => {
+    return originalProcessWithOcr(image);
+  }, [originalProcessWithOcr]);
+  
+  const processWithGemini = useCallback((image: ImageData): Promise<Partial<ImageData>> => {
+    return originalProcessWithGemini(image);
+  }, [originalProcessWithGemini]);
   
   // استيراد قاعدة البيانات
   const { 
@@ -55,8 +64,22 @@ export const useImageProcessing = () => {
     images,
     addImage,
     updateImage,
-    processWithOcr,
-    processWithGemini,
+    processWithOcr: async (file: File, imageData: ImageData) => {
+      // دالة وسيطة لتكييف واجهات الدالة
+      const extractedText = await processWithOcr(imageData);
+      return {
+        ...imageData,
+        extractedText
+      };
+    },
+    processWithGemini: async (file: File | Blob, imageData: ImageData) => {
+      // دالة وسيطة لتكييف واجهات الدالة
+      const result = await processWithGemini(imageData);
+      return {
+        ...imageData,
+        ...result
+      };
+    },
     saveProcessedImage: saveImageToDatabase,
     user,
     createSafeObjectURL // تمرير دالة URL الآمنة من useImageState
