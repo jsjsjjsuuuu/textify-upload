@@ -1,62 +1,50 @@
 
-import { ZoomIn, ZoomOut, Maximize2, RefreshCw } from "lucide-react";
+import React from 'react';
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { useState } from "react";
 
 interface ZoomControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetZoom: () => void;
+  zoomLevel: number;
 }
 
 const ZoomControls = ({
   onZoomIn,
   onZoomOut,
-  onResetZoom
+  onResetZoom,
+  zoomLevel
 }: ZoomControlsProps) => {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
   return (
-    <div className="absolute top-2 left-2 flex gap-2">
-      <Button variant="secondary" size="icon" onClick={onZoomIn} className="h-8 w-8 bg-white/90 hover:bg-white">
-        <ZoomIn size={16} />
+    <div className="absolute top-3 left-3 z-50 flex gap-2">
+      <Button 
+        onClick={onZoomIn}
+        variant="secondary"
+        size="icon"
+        className="w-9 h-9 bg-gray-900/80 hover:bg-gray-800"
+      >
+        <ZoomIn className="h-5 w-5" />
       </Button>
-      <Button variant="secondary" size="icon" onClick={onZoomOut} className="h-8 w-8 bg-white/90 hover:bg-white">
-        <ZoomOut size={16} />
+      <Button 
+        onClick={onZoomOut}
+        variant="secondary"
+        size="icon"
+        className="w-9 h-9 bg-gray-900/80 hover:bg-gray-800"
+      >
+        <ZoomOut className="h-5 w-5" />
       </Button>
-      <Button variant="secondary" size="icon" onClick={onResetZoom} className="h-8 w-8 bg-white/90 hover:bg-white">
-        <Maximize2 size={16} />
+      <Button 
+        onClick={onResetZoom}
+        variant="secondary"
+        size="icon"
+        className="w-9 h-9 bg-gray-900/80 hover:bg-gray-800"
+      >
+        <RotateCcw className="h-5 w-5" />
       </Button>
-      
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="secondary" 
-              size="icon" 
-              disabled={isAnalyzing}
-              onClick={() => {
-                setIsAnalyzing(true);
-                // هنا يمكن إضافة رمز التحليل المتقدم في المستقبل
-                setTimeout(() => {
-                  setIsAnalyzing(false);
-                }, 1500);
-              }} 
-              className="h-8 w-8 bg-white/90 hover:bg-white"
-            >
-              {isAnalyzing ? (
-                <RefreshCw size={16} className="animate-spin" />
-              ) : (
-                <RefreshCw size={16} />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>تحليل متقدم للصورة</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <span className="px-2 py-1 bg-black/70 rounded-full text-white text-sm">
+        {Math.round(zoomLevel * 100)}%
+      </span>
     </div>
   );
 };

@@ -1,12 +1,13 @@
 
-import { CalendarIcon, Hash, Percent } from "lucide-react";
+import React from 'react';
+import { Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 
 interface ImageInfoBadgesProps {
-  number?: number | string;
+  number?: number;
   date: Date;
   confidence?: number;
-  extractionMethod?: string;
+  extractionMethod?: 'ocr' | 'gemini';
   formatDate: (date: Date) => string;
 }
 
@@ -18,38 +19,41 @@ const ImageInfoBadges = ({
   formatDate
 }: ImageInfoBadgesProps) => {
   return (
-    <div className="absolute top-2 right-2 flex flex-col gap-2 items-end">
-      {number !== undefined && (
-        <Badge variant="secondary" className="flex items-center gap-1 bg-white/80 backdrop-blur-sm">
-          <Hash className="h-3 w-3" />
-          {number}
+    <div className="absolute bottom-4 right-4 flex flex-wrap gap-2 z-10">
+      {number && (
+        <Badge variant="outline" className="bg-gray-900/80 text-white border-gray-700/50">
+          #{number}
         </Badge>
       )}
       
-      <Badge variant="secondary" className="flex items-center gap-1 bg-white/80 backdrop-blur-sm">
-        <CalendarIcon className="h-3 w-3" />
+      <Badge variant="outline" className="bg-gray-900/80 text-white border-gray-700/50">
+        <Clock className="w-3 h-3 ml-1" />
         {formatDate(date)}
       </Badge>
       
-      {confidence !== undefined && (
+      {confidence && (
         <Badge 
-          variant="secondary" 
-          className={`flex items-center gap-1 ${
-            confidence > 80 
-              ? 'bg-green-100 text-green-800' 
-              : confidence > 50 
-                ? 'bg-yellow-100 text-yellow-800' 
-                : 'bg-red-100 text-red-800'
+          variant="outline" 
+          className={`border ${
+            confidence > 80 ? 'bg-green-900/80 border-green-700/50' :
+            confidence > 50 ? 'bg-yellow-900/80 border-yellow-700/50' :
+            'bg-red-900/80 border-red-700/50'
           }`}
         >
-          <Percent className="h-3 w-3" />
-          {Math.round(confidence)}%
+          {confidence > 80 ? (
+            <CheckCircle className="w-3 h-3 ml-1" />
+          ) : confidence > 50 ? (
+            <AlertTriangle className="w-3 h-3 ml-1" />
+          ) : (
+            <AlertTriangle className="w-3 h-3 ml-1" />
+          )}
+          {Math.round(confidence)}% دقة
         </Badge>
       )}
       
       {extractionMethod && (
-        <Badge variant="outline" className="text-xs bg-slate-100 text-slate-800">
-          {extractionMethod}
+        <Badge variant="outline" className="bg-blue-900/80 text-white border-blue-700/50">
+          {extractionMethod === 'ocr' ? 'OCR' : 'Gemini AI'}
         </Badge>
       )}
     </div>
