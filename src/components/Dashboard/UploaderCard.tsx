@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import FileUploader from '@/components/FileUploader';
+import { motion } from 'framer-motion';
 
 interface UploaderCardProps {
   isProcessing: boolean;
@@ -10,18 +11,34 @@ interface UploaderCardProps {
 
 const UploaderCard: React.FC<UploaderCardProps> = ({ isProcessing, onFilesSelected }) => {
   return (
-    <Card className="border shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="pb-0">
-        <CardTitle>تحميل الصور</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {!isProcessing && (
-          <div className="mt-4">
-            <FileUploader onFilesSelected={onFilesSelected} isProcessing={isProcessing} />
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <Card className="overflow-hidden backdrop-blur-lg bg-white/5 dark:bg-gray-900/5 border-white/10 dark:border-gray-800/30 shadow-xl hover:shadow-2xl transition-all duration-300">
+        <CardHeader className="pb-0">
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            تحميل الصور
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!isProcessing && (
+            <motion.div 
+              className="mt-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <FileUploader 
+                onFilesSelected={onFilesSelected} 
+                isProcessing={isProcessing} 
+              />
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 
