@@ -1,186 +1,183 @@
+/**
+ * مكون FileUploader
+ * يوفر واجهة لتحميل الملفات مع دعم السحب والإفلات
+ * 
+ * @component
+ * @param {Object} props - خصائص المكون
+ * @param {Function} props.onFilesSelected - دالة معالجة اختيار الملفات
+ * @param {boolean} [props.isProcessing] - حالة معالجة الملفات
+ * @param {string} [props.className] - فئات CSS إضافية
+ */
 
-import { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, FileImage, ArrowUpDown } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { UploadCloud, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { uploadMonitor } from '@/monitoring/UploadMonitor';
 
 interface FileUploaderProps {
   onFilesSelected: (files: FileList | File[]) => void;
-  isProcessing: boolean;
-  multiple?: boolean;
-  accept?: string;
+  isProcessing?: boolean;
+  className?: string;
 }
 
-const FileUploader: React.FC<FileUploaderProps> = ({
-  onFilesSelected,
-  isProcessing = false,
-  multiple = true,
-  accept = "image/*"
-}) => {
+const FileUploader = ({ 
+  onFilesSelected, 
+  isProcessing = false, 
+  className = '' 
+}: FileUploaderProps) => {
+  // حالة السحب والإفلات
   const [isDragging, setIsDragging] = useState(false);
-  const [dragCounter, setDragCounter] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   
-  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+  /**
+   * معالجة بداية السحب
+   */
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragCounter(prev => prev + 1);
     setIsDragging(true);
-  };
+  }, []);
   
-  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const newCount = dragCounter - 1;
-    setDragCounter(newCount);
-    if (newCount === 0) {
-      setIsDragging(false);
-    }
-  };
-  
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+  /**
+   * معالجة نهاية السحب
+   */
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    setDragCounter(0);
+  }, []);
+  
+  /**
+   * معالجة إفلات الملفات
+   */
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
     
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0 && !isProcessing) {
-      onFilesSelected(e.dataTransfer.files);
-    }
-  };
+    const files = Array.from(e.dataTransfer.files);
+    if (!validateFiles(files)) return;
+    
+    onFilesSelected(files);
+  }, [onFilesSelected]);
   
-  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0 && !isProcessing) {
-      onFilesSelected(e.target.files);
+  /**
+   * معالجة اختيار الملفات
+   */
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !validateFiles(Array.from(files))) return;
+    
+    const batchId = crypto.randomUUID();
+    const totalSize = Array.from(files).reduce((sum, file) => sum + file.size, 0);
+    
+    uploadMonitor.startUpload(batchId, files.length, totalSize);
+    
+    try {
+      onFilesSelected(files);
+      uploadMonitor.completeUpload(batchId, true);
+    } catch (error) {
+      uploadMonitor.recordError(batchId, error instanceof Error ? error.message : 'خطأ غير معروف');
+      uploadMonitor.completeUpload(batchId, false);
     }
-  };
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [onFilesSelected]);
   
-  const handleButtonClick = () => {
-    if (!isProcessing && fileInputRef.current) {
-      fileInputRef.current.click();
+  /**
+   * التحقق من صحة الملفات
+   * @param {File[]} files - مصفوفة من الملفات للتحقق منها
+   * @returns {boolean} صحة الملفات
+   */
+  const validateFiles = (files: File[]): boolean => {
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const invalidFiles = files.filter(file => !validTypes.includes(file.type));
+    
+    if (invalidFiles.length > 0) {
+      toast({
+        title: "نوع ملف غير صالح",
+        description: "يرجى اختيار ملفات صور فقط (JPG, PNG, WEBP)",
+        variant: "destructive"
+      });
+      return false;
     }
+    
+    return true;
   };
 
   return (
-    <AnimatePresence>
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="w-full"
+    <Card className={`relative overflow-hidden ${className}`}>
+      <motion.div
+        className={`p-8 text-center transition-colors ${
+          isDragging ? 'bg-primary/5' : ''
+        }`}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        animate={{ scale: isDragging ? 0.98 : 1 }}
+        transition={{ duration: 0.2 }}
       >
-        <div
-          className={`
-            relative overflow-hidden
-            border-2 border-dashed rounded-xl p-8 transition-all duration-300
-            backdrop-blur-sm bg-white/5
-            ${isDragging 
-              ? 'border-primary bg-primary/5 dark:bg-primary/10' 
-              : 'border-gray-300 dark:border-gray-700 hover:border-primary/50'}
-            ${isProcessing 
-              ? 'cursor-not-allowed opacity-70' 
-              : 'cursor-pointer hover:shadow-lg'}
-          `}
-          onDragEnter={handleDragEnter}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={isProcessing ? undefined : handleButtonClick}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple={multiple}
-            accept={accept}
-            onChange={handleFileInputChange}
-            className="hidden"
-            disabled={isProcessing}
-          />
-          
-          <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: isDragging ? 1.1 : 1 }}
-            className="flex flex-col items-center justify-center gap-4"
-          >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleFileSelect}
+          disabled={isProcessing}
+        />
+        
+        <div className="flex flex-col items-center justify-center gap-4">
+          <AnimatePresence>
             <motion.div
-              animate={{
-                y: isDragging ? -10 : 0,
-                scale: isDragging ? 1.1 : 1,
-              }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className={`p-4 rounded-full ${
-                isDragging 
-                  ? 'bg-primary/20 dark:bg-primary/10' 
-                  : 'bg-gray-100/10 dark:bg-gray-800/30'
-              }`}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="rounded-full bg-primary/10 p-4"
             >
               {isDragging ? (
-                <FileImage className="w-12 h-12 text-primary" />
+                <ImageIcon className="h-12 w-12 text-primary" />
               ) : (
-                <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                <UploadCloud className="h-12 w-12 text-primary" />
               )}
             </motion.div>
-
-            <div className="text-center space-y-2">
-              <motion.h3 
-                className="text-lg font-semibold text-gray-700 dark:text-gray-300"
-                animate={{ scale: isDragging ? 1.05 : 1 }}
-              >
-                {isDragging ? 'أفلت الملفات هنا' : 'اسحب الملفات وأفلتها هنا'}
-              </motion.h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                أو
-              </p>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="relative overflow-hidden group mt-4"
-              disabled={isProcessing}
-              onClick={handleButtonClick}
-            >
-              <motion.div
-                className="absolute inset-0 bg-primary/10"
-                initial={false}
-                animate={{
-                  x: "100%"
-                }}
-                transition={{
-                  duration: 1,
-                  repeat: Infinity,
-                  ease: "linear"
-                }}
-              />
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-              اختر الملفات
-            </Button>
-
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {multiple 
-                ? 'JPG, PNG أو WEBP (الحد الأقصى 10 ميجابايت لكل ملف)'
-                : 'JPG, PNG أو WEBP (الحد الأقصى 10 ميجابايت)'}
+          </AnimatePresence>
+          
+          <div className="max-w-[280px] space-y-2">
+            <h3 className="text-lg font-semibold">
+              {isDragging ? 'أفلت الصور هنا' : 'اختر صورة أو أكثر'}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              اسحب وأفلت الصور هنا أو اضغط لاختيار الملفات
             </p>
-          </motion.div>
-
-          {/* إضافة تأثير موجة عند السحب */}
-          <motion.div
-            className="absolute inset-0 bg-primary/5 pointer-events-none"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={isDragging ? {
-              scale: 1.5,
-              opacity: [0, 0.5, 0],
-              transition: { duration: 1, repeat: Infinity }
-            } : { scale: 0, opacity: 0 }}
-          />
+          </div>
+          
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing}
+            className="mt-2"
+          >
+            اختيار الملفات
+          </Button>
         </div>
       </motion.div>
-    </AnimatePresence>
+      
+      {isProcessing && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="text-sm font-medium">جاري معالجة الصور...</p>
+          </div>
+        </div>
+      )}
+    </Card>
   );
 };
 
