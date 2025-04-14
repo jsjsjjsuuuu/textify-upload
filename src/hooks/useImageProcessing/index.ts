@@ -33,7 +33,8 @@ export const useImageProcessing = () => {
     unhideImage,
     unhideAllImages,
     getHiddenImageIds,
-    setAllImages
+    setAllImages,
+    createSafeObjectURL // استيراد دالة URL الآمنة من useImageState
   } = useImageState();
   
   // استيراد معالجات OCR و Gemini
@@ -49,23 +50,7 @@ export const useImageProcessing = () => {
     runCleanupNow 
   } = useImageDatabase(updateImage);
   
-  // إنشاء دالة لإنشاء URLs آمنة للصور
-  const createSafeObjectURL = useCallback((file: File): string => {
-    try {
-      // محاولة إنشاء عنوان URL في نفس سياق الموقع
-      return URL.createObjectURL(file);
-    } catch (error) {
-      console.error("خطأ في إنشاء عنوان URL للصورة:", error);
-      // في حال الفشل، استخدام FileReader لتحويل الصورة إلى Data URL
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      }) as unknown as string;
-    }
-  }, []);
-  
-  // استيراد معالجة الملفات
+  // استيراد معالجة الملفات وتمرير دالة createSafeObjectURL
   const fileProcessingResult = useFileProcessing({
     images,
     addImage,
@@ -74,8 +59,7 @@ export const useImageProcessing = () => {
     processWithGemini,
     saveProcessedImage: saveImageToDatabase,
     user,
-    createSafeObjectURL // تمرير دالة إنشاء URLs الآمنة
-    // إزالة الخاصية المكررة images
+    createSafeObjectURL // تمرير دالة URL الآمنة من useImageState
   });
   
   // استيراد كاشف التكرار (معطل)
@@ -97,20 +81,11 @@ export const useImageProcessing = () => {
       fetchUserImages(user.id, (loadedImages) => {
         // تصفية الصور المخفية قبل إضافتها للعرض
         const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
-        
-        // معالجة الصور للحصول على روابط آمنة
-        const safeImages = visibleImages.map(img => {
-          if (img.file && (!img.previewUrl || img.previewUrl.startsWith('blob:'))) {
-            return { ...img, previewUrl: createSafeObjectURL(img.file) };
-          }
-          return img;
-        });
-        
-        setAllImages(safeImages);
+        setAllImages(visibleImages);
         setIsLoadingUserImages(false);
       });
     }
-  }, [user, hiddenImageIds, setAllImages, createSafeObjectURL, fetchUserImages]);
+  }, [user, hiddenImageIds, setAllImages, fetchUserImages]);
 
   // معالجة الملفات
   const handleFileChange = (files: FileList | File[]) => {
@@ -187,6 +162,30 @@ export const useImageProcessing = () => {
     });
   };
 
+  // إضافة دالة التحقق من مفتاح API قديم وتحديثه
+  const clearOldApiKey = useCallback(() => {
+    const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8"; // المفتاح القديم
+    const storedApiKey = localStorage.getItem("geminiApiKey");
+    
+    if (storedApiKey === oldApiKey) {
+      console.log("تم اكتشاف مفتاح API قديم. جاري المسح...");
+      localStorage.removeItem("geminiApiKey");
+      
+      // تعيين المفتاح الجديد
+      const newApiKey = "AIzaSyC4d53RxIXV4WIXWcNAN1X-9WPZbS4z7Q0";
+      localStorage.setItem("geminiApiKey", newApiKey);
+      
+      toast({
+        title: "تم تحديث مفتاح API",
+        description: "تم تحديث مفتاح Gemini API بنجاح",
+      });
+      
+      return true;
+    }
+    
+    return false;
+  }, [toast]);
+
   return {
     // البيانات
     images,
@@ -218,6 +217,7 @@ export const useImageProcessing = () => {
       }
     },
     createSafeObjectURL, // تصدير الدالة للاستخدام الخارجي
+    clearOldApiKey,
     checkDuplicateImage: () => Promise.resolve(false) // تعطيل فحص التكرار
   };
 };

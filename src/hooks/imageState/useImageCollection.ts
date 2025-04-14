@@ -6,20 +6,14 @@ export const useImageCollection = (hiddenImageIds: string[]) => {
   const [images, setImages] = useState<ImageData[]>([]);
   const [sessionImages, setSessionImages] = useState<ImageData[]>([]);
 
-  // إنشاء عنوان URL آمن لمعاينة الصورة
+  // إنشاء عنوان Data URL آمن بدلاً من Blob URL
   const createSafeObjectURL = useCallback((file: File): string => {
-    try {
-      // محاولة إنشاء عنوان URL في نفس سياق الموقع
-      return URL.createObjectURL(file);
-    } catch (error) {
-      console.error("خطأ في إنشاء عنوان URL للصورة:", error);
-      // في حال الفشل، استخدام FileReader لتحويل الصورة إلى Data URL
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      }) as unknown as string;
-    }
+    // استخدام FileReader لتحويل الملف إلى Data URL بشكل مباشر
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    }) as unknown as string;
   }, []);
 
   // إضافة صورة جديدة
@@ -33,7 +27,25 @@ export const useImageCollection = (hiddenImageIds: string[]) => {
     // التأكد من أن لدينا عنوان معاينة آمن للصورة
     const imageWithSafeUrl = { ...newImage };
     if (newImage.file && (!newImage.previewUrl || newImage.previewUrl.startsWith('blob:'))) {
-      imageWithSafeUrl.previewUrl = createSafeObjectURL(newImage.file);
+      // استخدام Data URL بدلاً من Blob URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        // تحديث الصورة بعنوان Data URL الآمن
+        setImages(prev => prev.map(img => 
+          img.id === newImage.id ? { ...img, previewUrl: dataUrl } : img
+        ));
+        
+        // تحديث الصورة في قائمة الصور المؤقتة إذا كانت موجودة هناك
+        if (newImage.sessionImage) {
+          setSessionImages(prev => prev.map(img => 
+            img.id === newImage.id ? { ...img, previewUrl: dataUrl } : img
+          ));
+        }
+      };
+      reader.readAsDataURL(newImage.file);
+      // نضع مؤقتًا عنوان فارغ حتى يكتمل تحميل Data URL
+      imageWithSafeUrl.previewUrl = "loading"; 
     }
     
     setImages(prev => [...prev, imageWithSafeUrl]);
@@ -42,7 +54,7 @@ export const useImageCollection = (hiddenImageIds: string[]) => {
     if (newImage.sessionImage) {
       setSessionImages(prev => [...prev, imageWithSafeUrl]);
     }
-  }, [hiddenImageIds, createSafeObjectURL]);
+  }, [hiddenImageIds]);
 
   // تحديث بيانات صورة بناءً على المعرف
   const updateImage = useCallback((id: string, updatedFields: Partial<ImageData>) => {
@@ -85,20 +97,34 @@ export const useImageCollection = (hiddenImageIds: string[]) => {
     const filteredImages = newImages.filter(img => !hiddenImageIds.includes(img.id));
     
     // معالجة الصور للتأكد من أن لديها روابط معاينة آمنة
-    const safeImages = filteredImages.map(img => {
-      // إذا كان لدينا ملف ولكن الرابط غير آمن، نقوم بإنشاء رابط آمن
+    const processedImages = filteredImages.map(img => {
+      // إذا كان لدينا ملف ولكن الرابط غير آمن، نقوم بتحويله إلى Data URL
       if (img.file && (!img.previewUrl || img.previewUrl.startsWith('blob:'))) {
-        return { ...img, previewUrl: createSafeObjectURL(img.file) };
+        // نترك previewUrl كما هو الآن، وسنقوم بتحديثه بعد قراءة الملف
+        const processedImg = { ...img, previewUrl: "loading" };
+        
+        // قراءة الملف وتحديث الصورة لاحقًا
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result as string;
+          setImages(current => 
+            current.map(currentImg => 
+              currentImg.id === img.id ? { ...currentImg, previewUrl: dataUrl } : currentImg
+            )
+          );
+        };
+        reader.readAsDataURL(img.file);
+        return processedImg;
       }
       return img;
     });
     
-    setImages(safeImages);
+    setImages(processedImages);
     
     // تحديث الصور المؤقتة أيضًا
-    const sessionOnly = safeImages.filter(img => img.sessionImage);
+    const sessionOnly = processedImages.filter(img => img.sessionImage);
     setSessionImages(sessionOnly);
-  }, [hiddenImageIds, createSafeObjectURL]);
+  }, [hiddenImageIds]);
 
   // إضافة صور من قاعدة البيانات (الصور الدائمة)
   const addDatabaseImages = useCallback((dbImages: ImageData[]) => {
@@ -110,16 +136,29 @@ export const useImageCollection = (hiddenImageIds: string[]) => {
       );
       
       // معالجة الصور للتأكد من أن لديها روابط معاينة آمنة
-      const safeImages = newImages.map(img => {
+      const processedImages = newImages.map(img => {
         if (img.file && (!img.previewUrl || img.previewUrl.startsWith('blob:'))) {
-          return { ...img, previewUrl: createSafeObjectURL(img.file) };
+          // نفس المنطق السابق لتحويل الصور إلى Data URLs
+          const processedImg = { ...img, previewUrl: "loading" };
+          
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const dataUrl = reader.result as string;
+            setImages(current => 
+              current.map(currentImg => 
+                currentImg.id === img.id ? { ...currentImg, previewUrl: dataUrl } : currentImg
+              )
+            );
+          };
+          reader.readAsDataURL(img.file);
+          return processedImg;
         }
         return img;
       });
       
-      return [...prev, ...safeImages];
+      return [...prev, ...processedImages];
     });
-  }, [hiddenImageIds, createSafeObjectURL]);
+  }, [hiddenImageIds]);
 
   return {
     images,

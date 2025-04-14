@@ -14,7 +14,7 @@ interface FileProcessingProps {
   markImageAsProcessed?: (image: ImageData) => void;
   user?: { id: string } | null;
   images: ImageData[];
-  createSafeObjectURL?: (file: File) => string; // إضافة وسيطة دالة إنشاء URLs الآمنة
+  createSafeObjectURL?: (file: File) => string;
 }
 
 export const useFileProcessing = ({
@@ -27,7 +27,7 @@ export const useFileProcessing = ({
   markImageAsProcessed,
   user,
   images,
-  createSafeObjectURL // استقبال الدالة من الخارج
+  createSafeObjectURL: externalCreateSafeObjectURL
 }: FileProcessingProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -38,27 +38,26 @@ export const useFileProcessing = ({
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
-  // تعريف دالة إنشاء URL آمنة داخلية في حال عدم توفرها من الخارج
-  const createSafeObjectURLInternal = useCallback((file: File): string => {
+  // دالة لإنشاء عنوان Data URL دائمًا للصورة (تفادي مشاكل blob URLs)
+  const createSafeObjectURL = useCallback((file: File): string => {
     // استخدام الدالة الخارجية إن وجدت
-    if (createSafeObjectURL) {
-      return createSafeObjectURL(file);
+    if (typeof externalCreateSafeObjectURL === 'function') {
+      return externalCreateSafeObjectURL(file);
     }
     
-    // وإلا استخدام التنفيذ الداخلي
-    try {
-      // محاولة إنشاء عنوان URL في نفس سياق الموقع
-      return URL.createObjectURL(file);
-    } catch (error) {
-      console.error("خطأ في إنشاء عنوان URL للصورة:", error);
-      // في حال الفشل، استخدام FileReader لتحويل الصورة إلى Data URL
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      }) as unknown as string;
-    }
-  }, [createSafeObjectURL]);
+    // التنفيذ الافتراضي: استخدام FileReader لتحويل الصورة إلى Data URL مباشرة
+    // هذا يتجنب مشاكل CORS والأمان المرتبطة بـ blob URLs
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = (error) => {
+        console.error("خطأ في قراءة الملف:", error);
+        // إرجاع قيمة فارغة في حالة الخطأ
+        resolve("");
+      };
+      reader.readAsDataURL(file);
+    }) as unknown as string;
+  }, [externalCreateSafeObjectURL]);
 
   // معالجة ملف واحد من القائمة - تعطيل فحص التكرار تمامًا
   const processNextFile = useCallback(async () => {
@@ -83,8 +82,9 @@ export const useFileProcessing = ({
       const id = uuidv4();
       const batchId = uuidv4();
 
-      // إنشاء معاينة الصورة بأمان
-      const previewUrl = createSafeObjectURLInternal(file);
+      // استخدام الدالة الآمنة لإنشاء معاينة للصورة
+      // تعيين قيمة placeholder مؤقتة سيتم تحديثها بعد الانتهاء من تحويل الصورة
+      const previewUrl = "loading";
 
       // تهيئة كائن الصورة
       const imageData: ImageData = {
@@ -100,6 +100,14 @@ export const useFileProcessing = ({
 
       // إضافة الصورة إلى القائمة بغض النظر عن وجود تكرار
       addImage(imageData);
+
+      // بدء تحويل الصورة إلى Data URL في الخلفية
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        updateImage(id, { previewUrl: dataUrl });
+      };
+      reader.readAsDataURL(file);
 
       // معالجة الصورة
       updateImage(id, { status: "processing" });
@@ -159,14 +167,11 @@ export const useFileProcessing = ({
     isPaused, 
     addImage, 
     updateImage, 
-    images, 
     processWithGemini, 
     processWithOcr, 
-    markImageAsProcessed, 
     saveProcessedImage, 
     user, 
-    queueLength,
-    createSafeObjectURLInternal
+    queueLength
   ]);
 
   useEffect(() => {
@@ -176,7 +181,7 @@ export const useFileProcessing = ({
     }
   }, [imageQueue, isPaused, isProcessing, processNextFile]);
 
-  // معالجة الملفات المحددة
+  // معالجة الملفات المحددة - إزالة فحص التكرار
   const handleFileChange = useCallback(
     (fileList: FileList | File[]) => {
       console.log(`استلام ${fileList.length} ملف للمعالجة`);
@@ -247,6 +252,6 @@ export const useFileProcessing = ({
     setProcessingProgress,
     isSubmitting,
     setIsSubmitting,
-    createSafeObjectURL: createSafeObjectURLInternal // إصدار الدالة الآمنة للخارج
+    createSafeObjectURL // إصدار الدالة الآمنة للخارج
   };
 };

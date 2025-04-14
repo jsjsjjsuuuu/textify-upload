@@ -26,90 +26,111 @@ const DraggableImage = ({
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [imgError, setImgError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
-  const [imageUrl, setImageUrl] = useState<string | null>(image.previewUrl);
-  const [retryCount, setRetryCount] = useState(image.retryCount || 0); // استخدام عداد المحاولات من الصورة
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(image.retryCount || 0);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [isDataUrl, setIsDataUrl] = useState(false); // إضافة حالة لتتبع نوع الرابط
+  const [isDataUrl, setIsDataUrl] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const { toast } = useToast();
   
-  // تحميل الصورة من التخزين أو تحويلها إلى Data URL إذا كانت blob
+  // تحميل الصورة من التخزين أو تحويلها إلى Data URL
   useEffect(() => {
-    const getImageUrl = async () => {
-      setImgError(false); // إعادة تعيين حالة الخطأ عند تغيير الصورة
-      
-      // معالجة الروابط السابقة من نوع blob:
-      if (image.previewUrl && image.previewUrl.startsWith('blob:')) {
-        try {
-          // إذا كان لدينا ملف الصورة الأصلي، نستخدم FileReader لتحويلها إلى Data URL
-          if (image.file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              const dataUrl = reader.result as string;
-              setImageUrl(dataUrl);
-              setIsDataUrl(true);
-              console.log("تم تحويل blob URL إلى data URL");
-            };
-            reader.onerror = () => {
-              console.error("فشل في تحويل الملف إلى Data URL");
-              setImgError(true);
-              setErrorMessage("فشل في معالجة الصورة");
-            };
-            reader.readAsDataURL(image.file);
-            return;
-          }
-        } catch (error) {
-          console.error("خطأ عند محاولة معالجة blob URL:", error);
-          setImgError(true);
-          setErrorMessage("فشل في معالجة رابط الصورة");
-        }
+    console.log("تحميل الصورة:", image.id, "نوع المعاينة:", image.previewUrl?.substring(0, 20));
+    setImgError(false); // إعادة تعيين حالة الخطأ عند تغيير الصورة
+    setImageLoading(true);
+    
+    const loadImage = async () => {
+      // حالة 1: إذا كانت previewUrl تبدأ بـ data: فهي آمنة للاستخدام مباشرةً
+      if (image.previewUrl && image.previewUrl.startsWith('data:')) {
+        console.log("استخدام Data URL موجود");
+        setImageUrl(image.previewUrl);
+        setIsDataUrl(true);
+        setImageLoading(false);
+        return;
       }
       
-      // المسار العادي للحصول على الصورة من التخزين إذا كان متاحًا
+      // حالة 2: إذا كان لدينا مسار تخزين في سوبابيس، نستخدمه
       if (image.storage_path) {
         try {
+          console.log("الحصول على URL من سوبابيس:", image.storage_path);
           const { data } = supabase.storage
             .from('receipt_images')
             .getPublicUrl(image.storage_path);
             
-          if (data && data.publicUrl) {
-            console.log("تم الحصول على رابط الصورة من التخزين:", data.publicUrl.substring(0, 50) + "...");
+          if (data?.publicUrl) {
             setImageUrl(data.publicUrl);
             setIsDataUrl(false);
-          } else if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
-            console.log("استخدام عنوان المعاينة الاحتياطي:", image.previewUrl.substring(0, 50) + "...");
-            setImageUrl(image.previewUrl);
-            setIsDataUrl(false);
+            setImageLoading(false);
           } else {
-            console.error("لا يوجد رابط صورة متاح");
-            setImgError(true);
-            setErrorMessage("لا يوجد رابط صورة متاح");
+            throw new Error("لا يوجد رابط عام متاح من سوبابيس");
           }
         } catch (error) {
-          console.error("خطأ في جلب عنوان URL للصورة:", error);
-          setErrorMessage("خطأ في جلب رابط الصورة من الخادم");
-          
-          if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
-            setImageUrl(image.previewUrl);
-            setIsDataUrl(false);
-          } else {
-            setImgError(true);
-          }
+          console.error("خطأ في جلب URL من سوبابيس:", error);
+          // في حالة الفشل، نحاول تحويل الملف مباشرة
+          convertFileToDataUrl();
         }
-      } else if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
-        // التأكد من أن الرابط ليس من نوع blob قبل استخدامه
-        setImageUrl(image.previewUrl);
-        setIsDataUrl(image.previewUrl.startsWith('data:'));
-      } else if (!imageUrl) {
-        // لا يوجد أي رابط متاح
+        return;
+      }
+      
+      // حالة 3: إذا كان لدينا previewUrl ولكنه blob URL أو آخر، نحاول تحويل الملف
+      if (image.previewUrl && (image.previewUrl.startsWith('blob:') || image.previewUrl === "loading")) {
+        console.log("تحويل blob URL إلى data URL");
+        convertFileToDataUrl();
+        return;
+      }
+      
+      // حالة 4: لا يوجد previewUrl أو storage_path ولدينا الملف الأصلي، نقوم بتحويله
+      if (image.file) {
+        console.log("تحويل الملف مباشرة إلى data URL");
+        convertFileToDataUrl();
+        return;
+      }
+      
+      // حالة 5: المعاينة غير آمنة ولا يوجد ملف، نظهر رسالة خطأ
+      console.error("لا يمكن تحميل الصورة: ليس لدينا URL آمن أو ملف للتحويل");
+      setImgError(true);
+      setErrorMessage("لا يمكن تحميل الصورة: المصدر غير متاح");
+      setImageLoading(false);
+    };
+    
+    // وظيفة مساعدة لتحويل الملف إلى Data URL
+    const convertFileToDataUrl = () => {
+      if (!image.file) {
+        console.error("لا يوجد ملف للتحويل!");
         setImgError(true);
-        setErrorMessage("لا يوجد مسار تخزين أو معاينة للصورة");
+        setErrorMessage("الملف غير متاح للتحويل");
+        setImageLoading(false);
+        return;
+      }
+      
+      try {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result as string;
+          setImageUrl(dataUrl);
+          setIsDataUrl(true);
+          setImageLoading(false);
+          console.log("تم تحويل الملف إلى Data URL بنجاح");
+        };
+        reader.onerror = () => {
+          console.error("فشل في قراءة الملف");
+          setImgError(true);
+          setErrorMessage("فشل في قراءة ملف الصورة");
+          setImageLoading(false);
+        };
+        reader.readAsDataURL(image.file);
+      } catch (error) {
+        console.error("خطأ أثناء تحويل الملف:", error);
+        setImgError(true);
+        setErrorMessage("خطأ أثناء معالجة ملف الصورة");
+        setImageLoading(false);
       }
     };
     
-    getImageUrl();
-  }, [image.storage_path, image.previewUrl, image.id, image.file]);
+    loadImage();
+  }, [image.id, image.previewUrl, image.storage_path, image.file]);
 
   // Reset position when component mounts or when image changes
   useEffect(() => {
@@ -219,11 +240,17 @@ const DraggableImage = ({
     setErrorMessage("فشل في تحميل الصورة من المصدر");
   };
   
+  const handleImageLoad = () => {
+    console.log("تم تحميل الصورة بنجاح:", image.id);
+    setImgError(false);
+    setErrorMessage(undefined);
+  };
+  
   const handleRetryImage = () => {
     // زيادة عداد المحاولات
     setRetryCount(prev => prev + 1);
     
-    // إذا كان لدينا ملف الصورة الأصلي، نحاول استخدام Data URL
+    // إذا كان لدينا ملف الصورة الأصلي، نحاول تحويله إلى Data URL
     if (image.file) {
       try {
         const reader = new FileReader();
@@ -235,7 +262,7 @@ const DraggableImage = ({
           
           toast({
             title: "إعادة تحميل",
-            description: "جاري محاولة تحميل الصورة كـ Data URL",
+            description: "تم تحويل الصورة إلى Data URL بنجاح",
             variant: "default"
           });
         };
@@ -246,49 +273,20 @@ const DraggableImage = ({
       }
     }
     
-    // معالجة الصور المخزنة في سوبابيس
-    if (image.storage_path) {
-      // استخدام نهج أكثر قوة: إضافة طابع زمني عشوائي لتجنب ذاكرة التخزين المؤقت
-      const { data } = supabase.storage
-        .from('receipt_images')
-        .getPublicUrl(image.storage_path);
-        
-      if (data && data.publicUrl) {
-        const timestamp = new Date().getTime();
-        const randomSuffix = Math.floor(Math.random() * 10000);
-        const freshUrl = `${data.publicUrl}?t=${timestamp}&r=${randomSuffix}`;
-        
-        setImageUrl(freshUrl);
-        setImgError(false);
-        setErrorMessage(undefined);
-        setIsDataUrl(false);
-        
-        toast({
-          title: "إعادة تحميل",
-          description: "جاري محاولة تحميل الصورة مرة أخرى...",
-          variant: "default"
-        });
-      }
-    } else if (image.previewUrl && !image.previewUrl.startsWith('blob:')) {
-      // محاولة استخدام URL للمعاينة مع تجنب التخزين المؤقت
-      const timestamp = new Date().getTime();
-      const randomSuffix = Math.floor(Math.random() * 10000);
-      const freshUrl = `${image.previewUrl}?t=${timestamp}&r=${randomSuffix}`;
-      
-      setImageUrl(freshUrl);
-      setImgError(false);
-      setErrorMessage(undefined);
-      setIsDataUrl(false);
-    }
-    
     // استدعاء وظيفة إعادة المحاولة من الخارج إذا كانت موجودة
     if (onRetryLoad) {
       onRetryLoad(image.id);
     }
+    
+    toast({
+      title: "إعادة تحميل",
+      description: "جاري محاولة تحميل الصورة مرة أخرى...",
+      variant: "default"
+    });
   };
 
-  // تحديد حالة الصورة - إظهار حالة التحميل للصور الجديدة
-  const isLoading = image.status === "processing";
+  // تحديد حالة الصورة
+  const isLoading = imageLoading || image.status === "processing";
 
   return (
     <div className="p-3 bg-white/95 dark:bg-gray-800/95 rounded-lg shadow-md border border-gray-100 dark:border-gray-700 relative overflow-hidden">
@@ -310,20 +308,33 @@ const DraggableImage = ({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
       >
+        {/* حالة تحميل الصورة */}
+        {isLoading && !imgError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
+            <div className="p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-center">
+              <div className="w-10 h-10 border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="mt-2 text-sm font-medium">
+                {image.status === "processing" ? "جاري معالجة الصورة..." : "جاري تحميل الصورة..."}
+              </p>
+            </div>
+          </div>
+        )}
+        
         {/* الصورة قابلة للسحب */}
-        {!imgError && imageUrl && (
+        {!imgError && imageUrl && !imageLoading && (
           <>
             <img
               ref={imageRef}
               src={imageUrl}
               alt={`صورة ${image.number || ''}`}
-              className={`max-w-full max-h-full ${isLoading ? 'opacity-40' : 'opacity-100'} transition-all duration-300 ${isZoomed ? '' : 'hover:opacity-90'}`}
+              className={`max-w-full max-h-full transition-all duration-300 ${isZoomed ? '' : 'hover:opacity-90'}`}
               style={{
                 transform: `translate(${position.x}px, ${position.y}px) scale(${zoomLevel})`,
                 transformOrigin: 'center',
                 transition: isDragging ? 'none' : 'transform 0.2s ease-out',
               }}
               onError={handleImageError}
+              onLoad={handleImageLoad}
               draggable={false}
             />
             {isZoomed && (
@@ -343,18 +354,8 @@ const DraggableImage = ({
           />
         )}
         
-        {/* مؤشر حالة المعالجة */}
-        {isLoading && !imgError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
-            <div className="p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-center">
-              <div className="w-10 h-10 border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent rounded-full animate-spin mx-auto"></div>
-              <p className="mt-2 text-sm font-medium">جاري معالجة الصورة...</p>
-            </div>
-          </div>
-        )}
-        
         {/* مؤشر إذا كانت الصورة مستخدمة كـ Data URL للتشخيص */}
-        {isDataUrl && (
+        {isDataUrl && !imgError && !isLoading && (
           <div className="absolute top-3 left-3 bg-green-500 bg-opacity-70 text-white text-xs py-1 px-2 rounded-md pointer-events-none">
             data:URL
           </div>
