@@ -1,275 +1,129 @@
 
-import { useState, useCallback, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { useToast } from "@/hooks/use-toast";
+import { compressImage, enhanceImageForOCR } from "@/utils/imageCompression";
 import { ImageData } from "@/types/ImageData";
-import { compressImage } from "@/utils/imageCompression";
+import { User } from "@supabase/supabase-js";
 
-interface UseFileProcessingProps {
+interface FileProcessingConfig {
   images: ImageData[];
   addImage: (image: ImageData) => void;
   updateImage: (id: string, fields: Partial<ImageData>) => void;
-  setProcessingProgress: (progress: number) => void;
-  processWithOcr?: (file: File, image: ImageData) => Promise<ImageData>;
-  processWithGemini?: (file: Blob | File, image: ImageData) => Promise<ImageData>;
-  saveProcessedImage?: (image: ImageData) => Promise<void>;
-  user?: { id: string } | null;
-  createSafeObjectURL?: (file: File) => string;
+  processWithOcr: (image: ImageData) => Promise<string>;
+  processWithGemini: (image: ImageData) => Promise<Partial<ImageData>>;
+  saveProcessedImage?: (image: ImageData) => Promise<boolean>;
+  user?: User | null;
+  createSafeObjectURL: (file: File) => Promise<string>;
 }
 
 export const useFileProcessing = ({
   images,
   addImage,
   updateImage,
-  setProcessingProgress,
   processWithOcr,
   processWithGemini,
   saveProcessedImage,
   user,
   createSafeObjectURL
-}: UseFileProcessingProps) => {
-  // حالة معالجة الملفات
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingProgress, setLocalProcessingProgress] = useState(0);
-  const [activeUploads, setActiveUploads] = useState(0);
-  const [queueLength, setQueueLength] = useState(0);
-  const [processingQueue, setProcessingQueue] = useState<File[]>([]);
+}: FileProcessingConfig) => {
   const { toast } = useToast();
   
-  // مفتاح لتخزين توقيعات الملفات المعالجة
-  const PROCESSED_FILES_KEY = 'processedImageFiles';
-  const [processedFileSignatures, setProcessedFileSignatures] = useState<Set<string>>(new Set());
-
-  // استعادة الملفات المعالجة من التخزين المحلي
-  useEffect(() => {
+  // حالة المعالجة
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [activeUploads, setActiveUploads] = useState(0);
+  const [queueLength, setQueueLength] = useState(0);
+  
+  // معالجة ملف واحد
+  const processFile = useCallback(async (file: File, batchId?: string) => {
     try {
-      const storedSignatures = localStorage.getItem(PROCESSED_FILES_KEY);
-      if (storedSignatures) {
-        const signatures = JSON.parse(storedSignatures);
-        setProcessedFileSignatures(new Set(signatures));
-      }
-    } catch (error) {
-      console.error('خطأ في تحميل توقيعات الملفات المعالجة:', error);
-    }
-  }, []);
-
-  // إنشاء توقيع للملف
-  const createFileSignature = useCallback((file: File): string => {
-    return `${file.name}_${file.size}_${file.lastModified}`;
-  }, []);
-
-  // تسجيل ملف كمعالج
-  const markFileAsProcessed = useCallback((file: File): void => {
-    const signature = createFileSignature(file);
-    setProcessedFileSignatures(prev => {
-      const newSet = new Set(prev);
-      newSet.add(signature);
-      return newSet;
-    });
-
-    // حفظ في التخزين المحلي
-    try {
-      const currentSignatures = localStorage.getItem(PROCESSED_FILES_KEY);
-      const signatures = currentSignatures ? JSON.parse(currentSignatures) : [];
-      if (!signatures.includes(signature)) {
-        signatures.push(signature);
-        localStorage.setItem(PROCESSED_FILES_KEY, JSON.stringify(signatures));
-      }
-    } catch (error) {
-      console.error('خطأ في حفظ توقيع الملف:', error);
-    }
-  }, [createFileSignature]);
-
-  // معالجة طابور الملفات
-  const processQueue = useCallback(async () => {
-    if (processingQueue.length === 0) {
-      setIsProcessing(false);
-      setLocalProcessingProgress(100);
-      setProcessingProgress(100);
-      setActiveUploads(0);
-      return;
-    }
-
-    setIsProcessing(true);
-    let processed = 0;
-    const totalFiles = processingQueue.length;
-
-    // معالجة الملفات واحدًا تلو الآخر
-    for (const file of processingQueue) {
-      try {
-        // ضغط الصورة قبل المعالجة
-        const compressedFile = await compressImage(file);
-
-        // إنشاء كائن صورة جديد
-        const id = uuidv4();
-        // استخدام دالة إنشاء URL آمنة إن وجدت
-        const previewUrl = createSafeObjectURL ? 
-          await createSafeObjectURL(compressedFile) : 
-          URL.createObjectURL(compressedFile);
-        
-        const newImage: ImageData = {
-          id,
-          file: compressedFile,
-          previewUrl,
-          date: new Date(),
-          status: "pending",
-          user_id: user?.id,
-          batch_id: `batch-${Date.now()}`,
-          sessionImage: true
-        };
-
-        // إضافة الصورة إلى المجموعة
-        addImage(newImage);
-        
-        // تحديث حالة المعالجة
-        updateImage(id, { status: "processing" });
-        
-        // معالجة الصورة باستخدام Gemini أولاً إذا متوفر
-        if (processWithGemini) {
-          try {
-            const processedImage = await processWithGemini(compressedFile, newImage);
-            updateImage(id, { 
-              ...processedImage,
-              status: "completed",
-            });
-            
-            // حفظ الصورة المعالجة
-            if (saveProcessedImage) {
-              await saveProcessedImage(processedImage);
-            }
-          } catch (geminiError) {
-            console.error("خطأ في معالجة الصورة باستخدام Gemini:", geminiError);
-            
-            // استخدام OCR كخطة بديلة
-            if (processWithOcr) {
-              try {
-                const processedImage = await processWithOcr(compressedFile, newImage);
-                updateImage(id, { 
-                  ...processedImage,
-                  status: "completed",
-                });
-                
-                if (saveProcessedImage) {
-                  await saveProcessedImage(processedImage);
-                }
-              } catch (ocrError) {
-                console.error("فشل في معالجة الصورة باستخدام OCR:", ocrError);
-                updateImage(id, { 
-                  status: "error", 
-                  extractedText: "فشلت معالجة الصورة. يرجى المحاولة مرة أخرى." 
-                });
-              }
-            } else {
-              // ليس هناك طريقة بديلة متاحة
-              updateImage(id, { 
-                status: "error", 
-                extractedText: "فشلت معالجة الصورة باستخدام Gemini." 
-              });
-            }
-          }
-        } 
-        // استخدام OCR إذا Gemini غير متوفر
-        else if (processWithOcr) {
-          try {
-            const processedImage = await processWithOcr(compressedFile, newImage);
-            updateImage(id, { 
-              ...processedImage,
-              status: "completed",
-            });
-            
-            if (saveProcessedImage) {
-              await saveProcessedImage(processedImage);
-            }
-          } catch (error) {
-            console.error("فشل في معالجة الصورة باستخدام OCR:", error);
-            updateImage(id, { 
-              status: "error", 
-              extractedText: "فشلت معالجة الصورة. يرجى المحاولة مرة أخرى." 
-            });
-          }
-        } else {
-          // لا توجد طرق معالجة متاحة
-          updateImage(id, { 
-            status: "error", 
-            extractedText: "لا توجد طرق معالجة متاحة." 
-          });
-        }
-
-        // تسجيل الملف كمعالج
-        markFileAsProcessed(file);
-      } catch (error) {
-        console.error(`خطأ في معالجة الملف ${file.name}:`, error);
-      }
-
-      // تحديث التقدم
-      processed++;
-      const progress = Math.round((processed / totalFiles) * 100);
-      setLocalProcessingProgress(progress);
-      setProcessingProgress(progress);
-      setActiveUploads(totalFiles - processed);
+      // ضغط وتحسين الصورة
+      const optimizedFile = await compressImage(file);
+      const enhancedFile = await enhanceImageForOCR(optimizedFile);
       
-      // إضافة تأخير صغير بين الملفات لتجنب إرهاق الموارد
-      if (processed < totalFiles) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-
-    // الانتهاء من معالجة الطابور
-    setProcessingQueue([]);
-    
-    // التأخير قليلاً قبل إيقاف المعالجة
-    setTimeout(() => {
-      setIsProcessing(false);
-    }, 1000);
-  }, [
-    processingQueue,
-    addImage,
-    updateImage,
-    processWithGemini,
-    processWithOcr,
-    setProcessingProgress,
-    saveProcessedImage,
-    user,
-    markFileAsProcessed,
-    createSafeObjectURL
-  ]);
-
-  // بدء المعالجة عند إضافة ملفات للطابور
-  useEffect(() => {
-    if (processingQueue.length > 0 && !isProcessing) {
-      processQueue();
-    }
-  }, [processingQueue, isProcessing, processQueue]);
-
-  // وظيفة التعامل مع الملفات المحددة
-  const handleFileChange = useCallback((fileList: FileList | File[]) => {
-    const files = Array.from(fileList);
-    
-    // التحقق من أن الملفات عبارة عن صور
-    const validFiles = files.filter(file => {
-      const isImage = file.type.startsWith('image/');
-      if (!isImage) {
-        toast({
-          title: "ملف غير مدعوم",
-          description: `الملف ${file.name} ليس صورة`,
-          variant: "destructive",
+      // إنشاء عنوان URL آمن للمعاينة
+      const previewUrl = await createSafeObjectURL(enhancedFile);
+      
+      // إنشاء كائن بيانات الصورة الأولي
+      const imageData: ImageData = {
+        id: uuidv4(),
+        file: enhancedFile,
+        date: new Date(),
+        number: images.length + 1,
+        previewUrl,
+        status: 'processing',
+        sessionImage: true,
+        user_id: user?.id,
+        batch_id: batchId,
+        extractedText: '',
+        code: '',
+        senderName: '',
+        phoneNumber: '',
+        province: '',
+        price: '',
+        companyName: ''
+      };
+      
+      // إضافة الصورة إلى القائمة
+      addImage(imageData);
+      setActiveUploads(prev => prev + 1);
+      
+      try {
+        // معالجة النص من الصورة
+        const extractedText = await processWithOcr(imageData);
+        updateImage(imageData.id, { extractedText });
+        
+        // استخراج البيانات باستخدام Gemini
+        const extractedData = await processWithGemini({ ...imageData, extractedText });
+        updateImage(imageData.id, { 
+          ...extractedData,
+          status: 'completed' 
         });
+        
+        // حفظ الصورة المعالجة إذا كانت الدالة متوفرة
+        if (saveProcessedImage) {
+          await saveProcessedImage({ ...imageData, ...extractedData });
+        }
+        
+      } catch (error) {
+        console.error("خطأ في معالجة الصورة:", error);
+        updateImage(imageData.id, { status: 'error' });
       }
-      return isImage;
-    });
+      
+    } catch (error) {
+      console.error("خطأ في معالجة الملف:", error);
+      toast({
+        title: "خطأ في المعالجة",
+        description: "حدث خطأ أثناء معالجة الملف",
+        variant: "destructive"
+      });
+    } finally {
+      setActiveUploads(prev => prev - 1);
+    }
+  }, [images, addImage, updateImage, processWithOcr, processWithGemini, saveProcessedImage, user, createSafeObjectURL, toast]);
+
+  // معالجة مجموعة من الملفات
+  const handleFileChange = useCallback(async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
     
-    if (validFiles.length === 0) return;
+    setIsProcessing(true);
+    setQueueLength(fileArray.length);
     
-    // إضافة الملفات إلى طابور المعالجة
-    setProcessingQueue(prev => [...prev, ...validFiles]);
-    setQueueLength(validFiles.length);
-    setActiveUploads(validFiles.length);
+    const batchId = uuidv4();
     
-    toast({
-      title: "جاري المعالجة",
-      description: `تتم معالجة ${validFiles.length} ملف`,
-    });
-  }, [toast]);
+    for (let i = 0; i < fileArray.length; i++) {
+      await processFile(fileArray[i], batchId);
+      const progress = Math.round(((i + 1) / fileArray.length) * 100);
+      setProcessingProgress(progress);
+    }
+    
+    setIsProcessing(false);
+    setProcessingProgress(0);
+    setQueueLength(0);
+    
+  }, [processFile]);
 
   return {
     isProcessing,
