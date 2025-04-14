@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData, CustomImageData, FileImageProcessFn, ImageProcessFn } from "@/types/ImageData";
@@ -165,7 +164,7 @@ export const useFileUpload = ({
     }
   }, [createFileSignature]);
 
-  // وظيفة معالجة طابور الملفات بشكل متسلسل
+  // معالجة طابور الملفات بشكل متسلسل
   const processQueue = useCallback(async () => {
     if (processingQueue.length === 0 || queueProcessing) {
       // إذا كانت القائمة فارغة، نتأكد من تصفير حالة المعالجة
@@ -253,30 +252,36 @@ export const useFileUpload = ({
           const compressedFile = await compressImage(file);
           
           // استخدام Gemini لمعالجة الصورة إذا كان متاحًا
-          if (processWithGemini || geminiProcessor) {
-            const processorToUse = processWithGemini || geminiProcessor.processFileWithGemini;
-            
-            // تصحيح استدعاء المعالج باستخدام الملف والصورة
-            const processedImageData = await processorToUse(compressedFile, { ...newImage });
-            console.log("تمت معالجة الصورة باستخدام Gemini:", processedImageData.status);
-            
-            // تحديث الصورة بالنتائج
-            updateImage(newImage.id, { 
-              ...processedImageData,
-              status: "completed",
-            });
-            
-            // تعيين الصورة الحالية كصورة نشطة لعرض البيانات المستخرجة فوراً
-            if (window && window.dispatchEvent) {
-              console.log("إطلاق حدث معالجة الصورة:", newImage.id);
-              window.dispatchEvent(new CustomEvent('image-processed', { 
-                detail: { imageId: newImage.id } 
-              }));
-            }
-            
-            // حفظ الصورة المعالجة إذا كانت الوظيفة متاحة
-            if (saveProcessedImage) {
-              await saveProcessedImage(processedImageData);
+          if (processWithGemini) {
+            // التحقق من نوع الدالة المستخدمة لمعالجة Gemini
+            if (typeof processWithGemini === 'function') {
+              try {
+                // استدعاء دالة Gemini وتمرير الملف والصورة
+                const processedImageData = await processWithGemini(compressedFile, { ...newImage });
+                console.log("تمت معالجة الصورة باستخدام Gemini:", processedImageData.status);
+                
+                // تحديث الصورة بالنتائج
+                updateImage(newImage.id, { 
+                  ...processedImageData,
+                  status: "completed",
+                });
+                
+                // تعيين الصورة الحالية كصورة نشطة لعرض البيانات المستخرجة فوراً
+                if (window && window.dispatchEvent) {
+                  console.log("إطلاق حدث معالجة الصورة:", newImage.id);
+                  window.dispatchEvent(new CustomEvent('image-processed', { 
+                    detail: { imageId: newImage.id } 
+                  }));
+                }
+                
+                // حفظ الصورة المعالجة إذا كانت الوظيفة متاحة
+                if (saveProcessedImage) {
+                  await saveProcessedImage(processedImageData);
+                }
+              } catch (geminiError) {
+                console.error("خطأ في معالجة Gemini:", geminiError);
+                updateImage(newImage.id, { status: 'error', error: String(geminiError) });
+              }
             }
           } 
           // استخدام OCR إذا كان Gemini غير متاح
@@ -394,8 +399,7 @@ export const useFileUpload = ({
     updateImage,
     saveProcessedImage,
     processWithOcr,
-    processWithGemini,
-    geminiProcessor
+    processWithGemini
   ]);
 
   // وظيفة تنظيف التكرارات من الذاكرة المؤقتة

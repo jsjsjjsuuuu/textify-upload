@@ -68,7 +68,9 @@ export const useImageProcessing = () => {
     processWithGemini: processFileWithGemini,
     saveProcessedImage: saveImageToDatabase,
     user,
-    createSafeObjectURL,
+    createSafeObjectURL: async (file: File) => {
+      return await createSafeObjectURL(file);
+    },
     // الدوال الاختيارية الأخرى
     checkDuplicateImage: undefined,
     markImageAsProcessed: undefined
@@ -86,118 +88,7 @@ export const useImageProcessing = () => {
     queueLength,
   } = fileProcessingResult;
 
-  // تحميل الصور السابقة
-  useEffect(() => {
-    if (user) {
-      setIsLoadingUserImages(true);
-      fetchUserImages(user.id, (loadedImages) => {
-        // تصفية الصور المخفية قبل إضافتها للعرض
-        const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
-        setAllImages(visibleImages);
-        setIsLoadingUserImages(false);
-      });
-    }
-  }, [user, hiddenImageIds, setAllImages, fetchUserImages]);
-
-  // معالجة الملفات
-  const handleFileChange = (files: FileList | File[]) => {
-    fileUploadHandler(files);
-  };
-
-  // حذف الصور
-  const handleDelete = async (id: string) => {
-    try {
-      return deleteImage(id, false);
-    } catch (error) {
-      console.error("Error deleting image:", error);
-      return false;
-    }
-  };
-
-  // إرسال الصور إلى API
-  const handleSubmitToApi = useCallback(async (id: string) => {
-    try {
-      setIsSubmitting(prev => ({ ...prev, [id]: true }));
-      
-      const image = images.find(img => img.id === id);
-      if (!image) {
-        throw new Error(`الصورة ذات المعرف ${id} غير موجودة`);
-      }
-      
-      const result = await submitToApi(id, image, user?.id);
-      
-      if (result) {
-        updateImage(id, { submitted: true });
-        
-        const submittedImage = images.find(img => img.id === id);
-        if (submittedImage) {
-          markImageAsProcessed(submittedImage);
-        }
-        
-        toast({
-          title: "تم الإرسال بنجاح",
-          description: "تم إرسال البيانات بنجاح إلى API"
-        });
-        
-        hideImage(id);
-        
-        return true;
-      }
-      
-      return result;
-    } catch (error) {
-      console.error("Error submitting image:", error);
-      toast({
-        title: "خطأ في الإرسال",
-        description: "حدث خطأ أثناء إرسال البيانات",
-        variant: "destructive"
-      });
-      return false;
-    } finally {
-      setIsSubmitting(prev => ({ ...prev, [id]: false }));
-    }
-  }, [images, submitToApi, toast, updateImage, user?.id, markImageAsProcessed, hideImage]);
-
-  // إعادة محاولة المعالجة
-  const retryProcessing = () => {
-    toast({
-      title: "إعادة المحاولة",
-      description: "جاري إعادة معالجة الصور التي فشلت",
-    });
-  };
-  
-  // مسح قائمة الانتظار
-  const clearQueue = () => {
-    toast({
-      title: "تم إفراغ القائمة",
-      description: "تم إفراغ قائمة انتظار الصور",
-    });
-  };
-
-  // إضافة دالة التحقق من مفتاح API قديم وتحديثه
-  const clearOldApiKey = useCallback(() => {
-    const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8"; // المفتاح القديم
-    const storedApiKey = localStorage.getItem("geminiApiKey");
-    
-    if (storedApiKey === oldApiKey) {
-      console.log("تم اكتشاف مفتاح API قديم. جاري المسح...");
-      localStorage.removeItem("geminiApiKey");
-      
-      // تعيين المفتاح الجديد
-      const newApiKey = "AIzaSyC4d53RxIXV4WIXWcNAN1X-9WPZbS4z7Q0";
-      localStorage.setItem("geminiApiKey", newApiKey);
-      
-      toast({
-        title: "تم تحديث مفتاح API",
-        description: "تم تحديث مفتاح Gemini API بنجاح",
-      });
-      
-      return true;
-    }
-    
-    return false;
-  }, [toast]);
-
+  // تصدير واجهة الخدمة
   return {
     // البيانات
     images,
@@ -210,7 +101,9 @@ export const useImageProcessing = () => {
     queueLength,
     isLoadingUserImages,
     // الدوال
-    handleFileChange,
+    handleFileChange: (files: FileList | File[]) => {
+      fileUploadHandler(files);
+    },
     handleTextChange,
     handleDelete: async (id: string) => {
       try {
@@ -228,25 +121,41 @@ export const useImageProcessing = () => {
     unhideAllImages,
     getHiddenImageIds,
     clearSessionImages,
-    retryProcessing: () => {
-      toast({
-        title: "إعادة المحاولة",
-        description: "جاري إعادة معالجة الصور التي فشلت",
-      });
-    },
-    clearQueue: () => {
-      toast({
-        title: "تم إفراغ القائمة",
-        description: "تم إفراغ قائمة انتظار الصور",
-      });
-    },
-    runCleanup: (userId: string) => {
-      if (userId) {
-        runCleanupNow(userId);
+    loadUserImages: (callback?: (images: ImageData[]) => void) => {
+      if (user) {
+        fetchUserImages(user.id, (loadedImages) => {
+          // تصفية الصور المخفية قبل تمريرها
+          const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
+          
+          if (callback) {
+            callback(visibleImages);
+          } else {
+            setAllImages(visibleImages);
+          }
+          
+          setIsLoadingUserImages(false);
+        });
       }
     },
-    createSafeObjectURL, // تصدير الدالة للاستخدام الخارجي
-    clearOldApiKey,
+    clearOldApiKey: () => {
+      const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
+      const storedApiKey = localStorage.getItem("geminiApiKey");
+      
+      if (storedApiKey === oldApiKey) {
+        localStorage.removeItem("geminiApiKey");
+        const newApiKey = "AIzaSyC4d53RxIXV4WIXWcNAN1X-9WPZbS4z7Q0";
+        localStorage.setItem("geminiApiKey", newApiKey);
+        
+        toast({
+          title: "تم تحديث مفتاح API",
+          description: "تم تحديث مفتاح Gemini API بنجاح",
+        });
+        
+        return true;
+      }
+      
+      return false;
+    },
     checkDuplicateImage: () => Promise.resolve(false) // تعطيل فحص التكرار
   };
 };

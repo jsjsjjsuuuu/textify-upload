@@ -23,7 +23,10 @@ export function adaptOcrToImageProcess(ocrFn: OcrProcessFn): ImageProcessFn {
  * تحويل دالة GeminiProcessFn إلى دالة FileImageProcessFn
  */
 export function adaptGeminiToFileImageProcess(geminiFn: GeminiProcessFn): FileImageProcessFn {
-  return async (file: File | Blob, image: CustomImageData): Promise<CustomImageData> => {
+  return async (fileOrBlob: File | Blob, image: CustomImageData): Promise<CustomImageData> => {
+    // تحويل الكائن إلى File إذا كان من نوع Blob
+    const file = fileOrBlob instanceof File ? fileOrBlob : new File([fileOrBlob], "image.png", { type: fileOrBlob.type });
+    
     const result = await geminiFn({...image, file});
     return {
       ...image,

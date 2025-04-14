@@ -74,3 +74,43 @@ export const formatPrice = (price: string | number): string => {
   // تنسيق السعر بالفواصل
   return numPrice.toLocaleString('ar-IQ');
 };
+
+/**
+ * تحسين البيانات المستخرجة
+ * @param data البيانات المستخرجة
+ * @param extractedText النص المستخرج الكامل
+ * @returns البيانات المحسنة
+ */
+export const enhanceExtractedData = (data: Record<string, string>, extractedText: string): Record<string, string> => {
+  const enhancedData = { ...data };
+  
+  // تحسين رقم الهاتف إذا وجد
+  if (enhancedData.phoneNumber) {
+    // تنظيف رقم الهاتف (إزالة المسافات والشرطات)
+    enhancedData.phoneNumber = enhancedData.phoneNumber.replace(/\s+|-/g, '');
+    
+    // التأكد من أن رقم الهاتف يبدأ بـ 07
+    if (!enhancedData.phoneNumber.startsWith('07') && enhancedData.phoneNumber.length >= 8) {
+      enhancedData.phoneNumber = '07' + enhancedData.phoneNumber.slice(-8);
+    }
+  }
+  
+  return enhancedData;
+};
+
+/**
+ * حساب درجة الثقة في البيانات المستخرجة
+ * @param data البيانات المستخرجة
+ * @returns درجة الثقة (0-1)
+ */
+export const calculateConfidenceScore = (data: Record<string, string>): number => {
+  // المفاتيح الأساسية التي نتوقع وجودها
+  const expectedKeys = ['code', 'senderName', 'phoneNumber', 'province', 'price'];
+  
+  // عدد المفاتيح الموجودة
+  const presentKeys = expectedKeys.filter(key => !!data[key]).length;
+  
+  // حساب النسبة
+  return presentKeys / expectedKeys.length;
+};
+
