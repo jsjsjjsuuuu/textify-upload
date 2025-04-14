@@ -14,6 +14,7 @@ import { useFileProcessing } from "./useFileProcessing";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData, CustomImageData } from "@/types/ImageData";
 import { formatDate } from "@/utils/dateFormatter";
+import { adaptOcrToImageProcess, adaptGeminiToFileImageProcess } from "./adapters";
 
 export const useImageProcessing = () => {
   // المكونات الأساسية
@@ -41,9 +42,13 @@ export const useImageProcessing = () => {
     createSafeObjectURL
   } = useImageState();
   
-  // استيراد معالجات OCR و Gemini واستخدام الواجهات المعدلة
-  const { processFileWithOcr } = useOcrProcessing();
+  // استيراد معالجات OCR و Gemini واستخدام المحولات لضمان توافق الأنواع
+  const { processWithOcr } = useOcrProcessing();
   const { processFileWithGemini } = useGeminiProcessing();
+  
+  // تحويل معالجات OCR و Gemini إلى الأنواع المتوافقة
+  const adaptedOcrProcess = adaptOcrToImageProcess(processWithOcr);
+  const adaptedGeminiProcess = processFileWithGemini;
   
   // استيراد قاعدة البيانات
   const { 
@@ -65,8 +70,8 @@ export const useImageProcessing = () => {
     images,
     addImage,
     updateImage,
-    processWithOcr: processFileWithOcr,
-    processWithGemini: processFileWithGemini,
+    processWithOcr: adaptedOcrProcess,
+    processWithGemini: adaptedGeminiProcess,
     saveProcessedImage: saveImageToDatabase,
     user,
     createSafeObjectURL

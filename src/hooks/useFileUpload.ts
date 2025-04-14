@@ -1,6 +1,7 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { ImageData } from "@/types/ImageData";
+import { ImageData, CustomImageData, FileImageProcessFn, ImageProcessFn } from "@/types/ImageData";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useDataFormatting } from "@/hooks/useDataFormatting";
 import { createReliableBlobUrl } from "@/lib/gemini/utils";
@@ -13,24 +14,24 @@ import { enhancePhoneNumber, formatIraqiPhoneNumber } from "@/utils/phoneNumberU
 
 // إضافة الخصائص الناقصة إلى الواجهة وتعديل تعريف isDuplicateImage ليكون غير متزامن
 export interface DuplicateDetector {
-  isDuplicateImage?: (image: ImageData, images: ImageData[]) => Promise<boolean> | boolean;
-  markImageAsProcessed?: (image: ImageData) => void;
-  isFullyProcessed?: (image: ImageData) => boolean;
-  addToProcessedCache?: (image: ImageData) => void;
+  isDuplicateImage?: (image: CustomImageData, images: CustomImageData[]) => Promise<boolean> | boolean;
+  markImageAsProcessed?: (image: CustomImageData) => void;
+  isFullyProcessed?: (image: CustomImageData) => boolean;
+  addToProcessedCache?: (image: CustomImageData) => void;
 }
 
 export interface UseFileUploadProps {
-  images?: ImageData[];
-  addImage: (image: ImageData) => void;
-  updateImage: (id: string, fields: Partial<ImageData>) => void;
+  images?: CustomImageData[];
+  addImage: (image: CustomImageData) => void;
+  updateImage: (id: string, fields: Partial<CustomImageData>) => void;
   setProcessingProgress: (progress: number) => void;
-  saveProcessedImage?: (image: ImageData) => Promise<void>;
+  saveProcessedImage?: (image: CustomImageData) => Promise<void>;
   removeDuplicates?: () => void;
   processedImage?: DuplicateDetector;
   // إضافة الخصائص المفقودة
-  processWithOcr?: (file: File, image: ImageData) => Promise<ImageData>;
+  processWithOcr?: ImageProcessFn;
   duplicateDetection?: DuplicateDetector;
-  processWithGemini?: (file: File | Blob, image: ImageData) => Promise<ImageData>;
+  processWithGemini?: FileImageProcessFn;
 }
 
 // تحسين معالجة الصور لتتم بشكل متسلسل وبتتبع أفضل
@@ -43,7 +44,7 @@ const MIN_DELAY_BETWEEN_IMAGES = 2000; // تأخير بين معالجة كل ص
 const PROCESSED_FILES_KEY = 'processedUnifiedImageFiles';
 
 export const useFileUpload = ({
-  images,
+  images = [],
   addImage,
   updateImage,
   setProcessingProgress,
@@ -211,12 +212,12 @@ export const useFileUpload = ({
       try {
         // إنشاء كائن ImageData جديد
         const previewUrl = URL.createObjectURL(file);
-        const newImage: ImageData = {
+        const newImage: CustomImageData = {
           id: uuidv4(),
           file,
           previewUrl,
           date: new Date(),
-          status: "pending" as const,
+          status: "pending",
           number: i + 1,
           user_id: user?.id,
           batch_id: `batch-${Date.now()}`,
@@ -224,16 +225,18 @@ export const useFileUpload = ({
         };
         
         // التحقق من التكرارات باستخدام وظائف اكتشاف التكرار إذا كانت متاحة
-        const isDuplicate = processedImage?.isDuplicateImage?.(newImage, images || []) || false;
-        if (isDuplicate) {
-          console.log(`تم اكتشاف تكرار للصورة: ${file.name}`);
-          URL.revokeObjectURL(previewUrl);
-          
-          // تسجيل الملف كمعالج لمنع إعادة المعالجة في المستقبل
-          markFileAsProcessed(file);
-          
-          duplicatesFound++;
-          continue;
+        if (processedImage?.isDuplicateImage) {
+          const isDuplicate = await processedImage.isDuplicateImage(newImage, images);
+          if (isDuplicate) {
+            console.log(`تم اكتشاف تكرار للصورة: ${file.name}`);
+            URL.revokeObjectURL(previewUrl);
+            
+            // تسجيل الملف كمعالج لمنع إعادة المعالجة في المستقبل
+            markFileAsProcessed(file);
+            
+            duplicatesFound++;
+            continue;
+          }
         }
         
         // إضافة الصورة إلى القائمة
@@ -251,13 +254,15 @@ export const useFileUpload = ({
           
           // استخدام Gemini لمعالجة الصورة إذا كان متاحًا
           if (processWithGemini || geminiProcessor) {
-            const processorToUse = processWithGemini || geminiProcessor;
-            const processedImage = await processorToUse(compressedFile, newImage);
-            console.log("تمت معالجة الصورة باستخدام Gemini:", processedImage.status);
+            const processorToUse = processWithGemini || geminiProcessor.processFileWithGemini;
+            
+            // تصحيح استدعاء المعالج باستخدام الملف والصورة
+            const processedImageData = await processorToUse(compressedFile, { ...newImage });
+            console.log("تمت معالجة الصورة باستخدام Gemini:", processedImageData.status);
             
             // تحديث الصورة بالنتائج
             updateImage(newImage.id, { 
-              ...processedImage,
+              ...processedImageData,
               status: "completed",
             });
             
@@ -271,17 +276,17 @@ export const useFileUpload = ({
             
             // حفظ الصورة المعالجة إذا كانت الوظيفة متاحة
             if (saveProcessedImage) {
-              await saveProcessedImage(processedImage);
+              await saveProcessedImage(processedImageData);
             }
           } 
           // استخدام OCR إذا كان Gemini غير متاح
           else if (processWithOcr) {
-            const processedImage = await processWithOcr(compressedFile, newImage);
-            console.log("تمت معالجة الصورة باستخدام OCR:", processedImage.status);
+            const processedImageData = await processWithOcr(compressedFile, { ...newImage });
+            console.log("تمت معالجة الصورة باستخدام OCR:", processedImageData.status);
             
             // تحديث الصورة بالنتائج
             updateImage(newImage.id, { 
-              ...processedImage,
+              ...processedImageData,
               status: "completed",
             });
             
@@ -295,7 +300,7 @@ export const useFileUpload = ({
             
             // حفظ الصورة المعالجة إذا كانت الوظيفة متاحة
             if (saveProcessedImage) {
-              await saveProcessedImage(processedImage);
+              await saveProcessedImage(processedImageData);
             }
           } else {
             console.warn("لم يتم توفير طريقة معالجة للصورة. سيتم تحديثها كصورة غير معالجة.");

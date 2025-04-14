@@ -3,16 +3,16 @@ import { useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useToast } from "@/hooks/use-toast";
 import { compressImage, enhanceImageForOCR } from "@/utils/imageCompression";
-import { ImageData } from "@/types/ImageData";
+import { ImageData, CustomImageData, ImageProcessFn, FileImageProcessFn } from "@/types/ImageData";
 import { User } from "@supabase/supabase-js";
 
 interface FileProcessingConfig {
-  images: ImageData[];
-  addImage: (image: ImageData) => void;
-  updateImage: (id: string, fields: Partial<ImageData>) => void;
-  processWithOcr: (image: ImageData) => Promise<string>;
-  processWithGemini: (image: ImageData) => Promise<Partial<ImageData>>;
-  saveProcessedImage?: (image: ImageData) => Promise<boolean>;
+  images: CustomImageData[];
+  addImage: (image: CustomImageData) => void;
+  updateImage: (id: string, fields: Partial<CustomImageData>) => void;
+  processWithOcr: ImageProcessFn;
+  processWithGemini: FileImageProcessFn;
+  saveProcessedImage?: (image: CustomImageData) => Promise<boolean>;
   user?: User | null;
   createSafeObjectURL: (file: File) => Promise<string>;
 }
@@ -46,7 +46,7 @@ export const useFileProcessing = ({
       const previewUrl = await createSafeObjectURL(enhancedFile);
       
       // إنشاء كائن بيانات الصورة الأولي
-      const imageData: ImageData = {
+      const imageData: CustomImageData = {
         id: uuidv4(),
         file: enhancedFile,
         date: new Date(),
@@ -71,21 +71,37 @@ export const useFileProcessing = ({
       
       try {
         // معالجة النص من الصورة باستخدام OCR
-        const extractedText = await processWithOcr(imageData);
-        updateImage(imageData.id, { extractedText });
-        
-        // استخراج البيانات باستخدام Gemini
-        const geminiData = await processWithGemini({ ...imageData, extractedText });
+        const processedImageData = await processWithOcr(enhancedFile, imageData);
         updateImage(imageData.id, { 
-          ...geminiData,
-          status: 'completed' 
+          ...processedImageData, 
+          extractedText: processedImageData.extractedText || "" 
         });
         
-        // حفظ الصورة المعالجة إذا كانت الدالة متوفرة
-        if (saveProcessedImage) {
-          await saveProcessedImage({ ...imageData, ...geminiData, extractedText });
+        // استخراج البيانات باستخدام Gemini
+        try {
+          const geminiProcessedImage = await processWithGemini(enhancedFile, {
+            ...imageData,
+            ...processedImageData
+          });
+          
+          updateImage(imageData.id, { 
+            ...geminiProcessedImage,
+            status: 'completed' 
+          });
+          
+          // حفظ الصورة المعالجة إذا كانت الدالة متوفرة
+          if (saveProcessedImage) {
+            await saveProcessedImage(geminiProcessedImage);
+          }
+        } catch (geminiError) {
+          console.error("خطأ في معالجة Gemini:", geminiError);
+          updateImage(imageData.id, { status: 'completed' });
+          
+          // حفظ نتائج OCR على الأقل
+          if (saveProcessedImage) {
+            await saveProcessedImage(processedImageData);
+          }
         }
-        
       } catch (error) {
         console.error("خطأ في معالجة الصورة:", error);
         updateImage(imageData.id, { status: 'error' });

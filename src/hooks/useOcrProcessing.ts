@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { ImageData, CustomImageData, OcrProcessFn, ImageProcessFn } from "@/types/ImageData";
+import { CustomImageData, OcrProcessFn, ImageProcessFn } from "@/types/ImageData";
 import { extractTextFromImage } from "@/lib/ocrService";
 import { parseDataFromOCRText, updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +32,7 @@ export const useOcrProcessing = () => {
   };
 
   // إضافة دالة معالجة OCR متوافقة مع واجهة ImageProcessFn
-  const processFileWithOcr: ImageProcessFn = async (file: File, image: CustomImageData): Promise<CustomImageData> => {
+  const processFileWithOcr = async (file: File, image: CustomImageData): Promise<CustomImageData> => {
     try {
       console.log("بدء معالجة OCR للملف:", file.name, "للصورة:", image.id);
       
