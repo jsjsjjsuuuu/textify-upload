@@ -1,3 +1,14 @@
+/**
+ * مكون ProcessingIndicator
+ * يعرض حالة تقدم معالجة الملفات مع تأثيرات تفاعلية
+ * 
+ * @component
+ * @param {Object} props - خصائص المكون
+ * @param {boolean} props.isProcessing - حالة المعالجة الحالية
+ * @param {number} props.processingProgress - نسبة تقدم المعالجة
+ * @param {number} props.activeUploads - عدد الملفات قيد المعالجة
+ * @param {number} props.queueLength - إجمالي عدد الملفات في قائمة الانتظار
+ */
 
 import React, { useEffect, useState } from 'react';
 import { Progress } from "@/components/ui/progress";
@@ -18,9 +29,11 @@ const ProcessingIndicator = ({
   activeUploads,
   queueLength
 }: ProcessingIndicatorProps) => {
+  // حالة إخفاء المؤشر
   const [shouldHide, setShouldHide] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   
+  // إعادة تعيين الحالة عند بدء المعالجة
   useEffect(() => {
     if (isProcessing) {
       setShouldHide(false);
@@ -28,6 +41,7 @@ const ProcessingIndicator = ({
     }
   }, [isProcessing]);
   
+  // تحديث حالة الاكتمال وإخفاء المؤشر
   useEffect(() => {
     if (processingProgress >= 100 && activeUploads === 0 && isProcessing) {
       setIsComplete(true);
@@ -38,14 +52,22 @@ const ProcessingIndicator = ({
     }
   }, [isProcessing, processingProgress, activeUploads]);
   
+  // عدم عرض المؤشر إذا لم تكن هناك معالجة جارية
   if (!isProcessing || shouldHide) return null;
+
+  // تأثيرات الحركة
+  const containerAnimation = {
+    initial: { opacity: 0, y: -20 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 }
+  };
 
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        initial={containerAnimation.initial}
+        animate={containerAnimation.animate}
+        exit={containerAnimation.exit}
         className="mb-6 backdrop-blur-lg bg-blue-50/10 dark:bg-blue-900/10 border border-blue-100/20 dark:border-blue-900/20 rounded-xl p-4 shadow-lg"
       >
         <div className="flex flex-wrap justify-between items-center gap-4">

@@ -1,4 +1,15 @@
 
+/**
+ * مكون FileUploader
+ * يوفر واجهة لتحميل الملفات مع دعم السحب والإفلات
+ * 
+ * @component
+ * @param {Object} props - خصائص المكون
+ * @param {Function} props.onFilesSelected - دالة معالجة اختيار الملفات
+ * @param {boolean} [props.isProcessing] - حالة معالجة الملفات
+ * @param {string} [props.className] - فئات CSS إضافية
+ */
+
 import { useRef, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,23 +23,37 @@ interface FileUploaderProps {
   className?: string;
 }
 
-const FileUploader = ({ onFilesSelected, isProcessing = false, className = '' }: FileUploaderProps) => {
+const FileUploader = ({ 
+  onFilesSelected, 
+  isProcessing = false, 
+  className = '' 
+}: FileUploaderProps) => {
+  // حالة السحب والإفلات
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
+  /**
+   * معالجة بداية السحب
+   */
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
   }, []);
   
+  /**
+   * معالجة نهاية السحب
+   */
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
   }, []);
   
+  /**
+   * معالجة إفلات الملفات
+   */
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -40,6 +65,9 @@ const FileUploader = ({ onFilesSelected, isProcessing = false, className = '' }:
     onFilesSelected(files);
   }, [onFilesSelected]);
   
+  /**
+   * معالجة اختيار الملفات
+   */
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !validateFiles(Array.from(files))) return;
@@ -50,6 +78,11 @@ const FileUploader = ({ onFilesSelected, isProcessing = false, className = '' }:
     }
   }, [onFilesSelected]);
   
+  /**
+   * التحقق من صحة الملفات
+   * @param {File[]} files - مصفوفة من الملفات للتحقق منها
+   * @returns {boolean} صحة الملفات
+   */
   const validateFiles = (files: File[]): boolean => {
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     const invalidFiles = files.filter(file => !validTypes.includes(file.type));
