@@ -46,34 +46,24 @@ export const useImageState = () => {
   // دمج وظيفة إخفاء الصورة لتتضمن حذفها من القائمة الحالية
   const hideImage = useCallback((id: string) => {
     console.log("بدء إخفاء الصورة:", id);
-    
-    // إضافة الصورة إلى قائمة الصور المخفية
     hideImageInStorage(id);
-    
-    // إزالة الصورة من عرض الصور الحالية
     removeImageFromCollection(id, false);
-    
     return true;
   }, [hideImageInStorage, removeImageFromCollection]);
 
   // حذف صورة من العرض (مع خيار الحذف من قاعدة البيانات)
   const deleteImage = useCallback((id: string, removeFromDatabase: boolean = false) => {
     if (!removeFromDatabase) {
-      // إضافة الصورة إلى قائمة الصور المخفية
       hideImageInStorage(id);
-      
       toast({
         title: "تمت الإزالة من العرض",
         description: "تم إخفاء الصورة من العرض الحالي، لكنها لا تزال مخزنة في السجلات",
       });
     } else {
-      // حذفها من قائمة الصور المخفية أيضًا إذا تم حذفها من قاعدة البيانات
       unhideImage(id);
     }
     
-    // حذف الصورة من العرض المحلي
     removeImageFromCollection(id, removeFromDatabase);
-    
     return true;
   }, [hideImageInStorage, toast, unhideImage, removeImageFromCollection]);
 

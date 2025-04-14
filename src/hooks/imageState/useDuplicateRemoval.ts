@@ -11,7 +11,6 @@ export const useDuplicateRemoval = (
   images: ImageData[],
   setImages: (images: ImageData[]) => void
 ) => {
-  // إزالة الصور المكررة بناءً على المعرف
   const removeDuplicates = useCallback(() => {
     const uniqueIds = new Set<string>();
     const uniqueImages: ImageData[] = [];
@@ -23,13 +22,12 @@ export const useDuplicateRemoval = (
       }
     });
     
-    // إذا كان هناك تكرارات، قم بتحديث القائمة
     if (uniqueImages.length < images.length) {
       setImages(uniqueImages);
-      return images.length - uniqueImages.length; // عدد الصور المكررة التي تمت إزالتها
+      return images.length - uniqueImages.length;
     }
     
-    return 0; // لم تتم إزالة أي صور
+    return 0;
   }, [images, setImages]);
   
   return { removeDuplicates };
