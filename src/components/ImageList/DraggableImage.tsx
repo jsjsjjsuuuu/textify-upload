@@ -1,386 +1,175 @@
 
-import { useState, useRef, useEffect } from "react";
-import { ImageData } from "@/types/ImageData";
-import ZoomControls from "./ZoomControls";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import ErrorDisplay from "./ErrorDisplay";
+import { useState, useEffect, useRef } from 'react';
+import { ImageData } from '@/types/ImageData';
+import { Loader2, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface DraggableImageProps {
   image: ImageData;
-  onImageClick: (image: ImageData) => void;
-  formatDate: (date: Date) => string;
+  onImageClick?: (image: ImageData) => void;
+  formatDate?: (date: Date) => string;
   onRetryLoad?: (imageId: string) => void;
 }
 
-const DraggableImage = ({
+/**
+ * مكون عرض صورة قابل للسحب مع معالجة أخطاء التحميل
+ */
+const DraggableImage: React.FC<DraggableImageProps> = ({
   image,
   onImageClick,
   formatDate,
   onRetryLoad
-}: DraggableImageProps) => {
-  // State for zoom and dragging
-  const [zoomLevel, setZoomLevel] = useState(1.5); // تكبير تلقائي بنسبة 50%
-  const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-  const [imgError, setImgError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(image.retryCount || 0);
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [isDataUrl, setIsDataUrl] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
-  const imageContainerRef = useRef<HTMLDivElement>(null);
+}) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string>('');
   const imageRef = useRef<HTMLImageElement>(null);
-  const { toast } = useToast();
   
-  // تحميل الصورة من التخزين أو تحويلها إلى Data URL
+  // تحميل صورة المعاينة عند تغير الصورة
   useEffect(() => {
-    console.log("تحميل الصورة:", image.id, "نوع المعاينة:", image.previewUrl?.substring(0, 20));
-    setImgError(false); // إعادة تعيين حالة الخطأ عند تغيير الصورة
-    setImageLoading(true);
-    
-    const loadImage = async () => {
-      // حالة 1: إذا كانت previewUrl تبدأ بـ data: فهي آمنة للاستخدام مباشرةً
-      if (image.previewUrl && image.previewUrl.startsWith('data:')) {
-        console.log("استخدام Data URL موجود");
-        setImageUrl(image.previewUrl);
-        setIsDataUrl(true);
-        setImageLoading(false);
-        return;
-      }
-      
-      // حالة 2: إذا كان لدينا مسار تخزين في سوبابيس، نستخدمه
-      if (image.storage_path) {
-        try {
-          console.log("الحصول على URL من سوبابيس:", image.storage_path);
-          const { data } = supabase.storage
-            .from('receipt_images')
-            .getPublicUrl(image.storage_path);
-            
-          if (data?.publicUrl) {
-            setImageUrl(data.publicUrl);
-            setIsDataUrl(false);
-            setImageLoading(false);
-          } else {
-            throw new Error("لا يوجد رابط عام متاح من سوبابيس");
-          }
-        } catch (error) {
-          console.error("خطأ في جلب URL من سوبابيس:", error);
-          // في حالة الفشل، نحاول تحويل الملف مباشرة
-          convertFileToDataUrl();
-        }
-        return;
-      }
-      
-      // حالة 3: إذا كان لدينا previewUrl ولكنه blob URL أو آخر، نحاول تحويل الملف
-      if (image.previewUrl && (image.previewUrl.startsWith('blob:') || image.previewUrl === "loading")) {
-        console.log("تحويل blob URL إلى data URL");
-        convertFileToDataUrl();
-        return;
-      }
-      
-      // حالة 4: لا يوجد previewUrl أو storage_path ولدينا الملف الأصلي، نقوم بتحويله
-      if (image.file) {
-        console.log("تحويل الملف مباشرة إلى data URL");
-        convertFileToDataUrl();
-        return;
-      }
-      
-      // حالة 5: المعاينة غير آمنة ولا يوجد ملف، نظهر رسالة خطأ
-      console.error("لا يمكن تحميل الصورة: ليس لدينا URL آمن أو ملف للتحويل");
-      setImgError(true);
-      setErrorMessage("لا يمكن تحميل الصورة: المصدر غير متاح");
-      setImageLoading(false);
-    };
-    
-    // وظيفة مساعدة لتحويل الملف إلى Data URL
-    const convertFileToDataUrl = () => {
-      if (!image.file) {
-        console.error("لا يوجد ملف للتحويل!");
-        setImgError(true);
-        setErrorMessage("الملف غير متاح للتحويل");
-        setImageLoading(false);
-        return;
-      }
-      
-      try {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const dataUrl = reader.result as string;
-          setImageUrl(dataUrl);
-          setIsDataUrl(true);
-          setImageLoading(false);
-          console.log("تم تحويل الملف إلى Data URL بنجاح");
-        };
-        reader.onerror = () => {
-          console.error("فشل في قراءة الملف");
-          setImgError(true);
-          setErrorMessage("فشل في قراءة ملف الصورة");
-          setImageLoading(false);
-        };
-        reader.readAsDataURL(image.file);
-      } catch (error) {
-        console.error("خطأ أثناء تحويل الملف:", error);
-        setImgError(true);
-        setErrorMessage("خطأ أثناء معالجة ملف الصورة");
-        setImageLoading(false);
-      }
-    };
-    
-    loadImage();
-  }, [image.id, image.previewUrl, image.storage_path, image.file]);
-
-  // Reset position when component mounts or when image changes
-  useEffect(() => {
-    setPosition({ x: 0, y: 0 });
-    setZoomLevel(1.5); // إعادة تعيين التكبير إلى 50%
-    setIsZoomed(false);
-  }, [image.id]);
-
-  // وظيفة النقر على الصورة
-  const handleImageClick = (e: React.MouseEvent) => {
-    if (!isDragging) {
-      if (!isZoomed) {
-        // تكبير الصورة عند النقر عليها
-        setIsZoomed(true);
-        setZoomLevel(prev => prev * 1.5);
-      } else {
-        // عند النقر على الصورة المكبرة، قم بالتحديد فقط
-        onImageClick(image);
-      }
+    if (!image.previewUrl) {
+      setHasError(true);
+      setIsLoading(false);
+      return;
     }
-    e.stopPropagation();
-  };
-  
-  // وظيفة النقر المزدوج على الصورة
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    // إعادة تعيين حجم الصورة عند النقر المزدوج
-    setIsZoomed(false);
-    setZoomLevel(1.5);
-    setPosition({ x: 0, y: 0 });
-    e.stopPropagation();
-    e.preventDefault();
-  };
 
-  // Zoom control handlers
-  const handleZoomIn = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setZoomLevel(prev => Math.min(prev + 0.2, 3));
-    if (!isZoomed) setIsZoomed(true);
-  };
-  
-  const handleZoomOut = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
-  };
-  
-  const handleResetZoom = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setZoomLevel(1.5); // إعادة تعيين إلى تكبير 50%
-    setPosition({ x: 0, y: 0 });
-    setIsZoomed(false);
-  };
+    setIsLoading(true);
+    setHasError(false);
+    setImageSrc(image.previewUrl);
+  }, [image.previewUrl, image.id]);
 
-  // Mouse drag handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isZoomed) {
-      setIsDragging(true);
-      setStartPos({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y
-      });
-      e.preventDefault();
-    }
-  };
-  
-  const handleMouseMove = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isDragging && isZoomed) {
-      const newX = e.clientX - startPos.x;
-      const newY = e.clientY - startPos.y;
-
-      // Calculate bounds to prevent dragging image completely out of view
-      const containerWidth = imageContainerRef.current?.clientWidth || 0;
-      const containerHeight = imageContainerRef.current?.clientHeight || 0;
-      const imageWidth = (imageRef.current?.naturalWidth || 0) * zoomLevel;
-      const imageHeight = (imageRef.current?.naturalHeight || 0) * zoomLevel;
-      const maxX = Math.max(0, (imageWidth - containerWidth) / 2);
-      const maxY = Math.max(0, (imageHeight - containerHeight) / 2);
-
-      // Bound the position
-      const boundedX = Math.min(Math.max(newX, -maxX), maxX);
-      const boundedY = Math.min(Math.max(newY, -maxY), maxY);
-
-      // Use requestAnimationFrame for smoother updates
-      requestAnimationFrame(() => {
-        setPosition({
-          x: boundedX,
-          y: boundedY
-        });
-      });
-      e.preventDefault();
-    }
-  };
-  
-  const handleMouseUp = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-  
-  const handleMouseLeave = () => {
-    setIsDragging(false);
-  };
-  
-  const handleImageError = () => {
-    console.error("فشل تحميل الصورة:", imageUrl?.substring(0, 50) + "...");
-    setImgError(true);
-    setErrorMessage("فشل في تحميل الصورة من المصدر");
-  };
-  
+  // التعامل مع نجاح تحميل الصورة
   const handleImageLoad = () => {
-    console.log("تم تحميل الصورة بنجاح:", image.id);
-    setImgError(false);
-    setErrorMessage(undefined);
+    setIsLoading(false);
+    setHasError(false);
   };
-  
-  const handleRetryImage = () => {
-    // زيادة عداد المحاولات
-    setRetryCount(prev => prev + 1);
-    
-    // إذا كان لدينا ملف الصورة الأصلي، نحاول تحويله إلى Data URL
-    if (image.file) {
-      try {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImageUrl(reader.result as string);
-          setIsDataUrl(true);
-          setImgError(false);
-          setErrorMessage(undefined);
-          
-          toast({
-            title: "إعادة تحميل",
-            description: "تم تحويل الصورة إلى Data URL بنجاح",
-            variant: "default"
-          });
-        };
-        reader.readAsDataURL(image.file);
-        return;
-      } catch (error) {
-        console.error("فشل في تحويل الملف إلى Data URL:", error);
-      }
-    }
-    
-    // استدعاء وظيفة إعادة المحاولة من الخارج إذا كانت موجودة
+
+  // التعامل مع فشل تحميل الصورة
+  const handleImageError = () => {
+    console.error('فشل في تحميل الصورة:', image.id);
+    setIsLoading(false);
+    setHasError(true);
+  };
+
+  // إعادة محاولة تحميل الصورة
+  const handleRetry = () => {
     if (onRetryLoad) {
       onRetryLoad(image.id);
+    } else {
+      // إعادة تحميل الصورة الحالية
+      setIsLoading(true);
+      setHasError(false);
+      // إضافة طابع زمني لتجاوز التخزين المؤقت للمتصفح
+      setImageSrc(`${image.previewUrl}${image.previewUrl.includes('?') ? '&' : '?'}t=${Date.now()}`);
     }
-    
-    toast({
-      title: "إعادة تحميل",
-      description: "جاري محاولة تحميل الصورة مرة أخرى...",
-      variant: "default"
-    });
   };
 
-  // تحديد حالة الصورة
-  const isLoading = imageLoading || image.status === "processing";
+  // تحديد حالة العرض بناءً على حالة معالجة الصورة
+  const getStatusClass = () => {
+    if (image.status === 'error') return 'border-red-500';
+    if (image.status === 'processing') return 'border-blue-500';
+    if (image.status === 'completed') return 'border-green-500';
+    return 'border-gray-300';
+  };
+
+  // التعامل مع حدث النقر على الصورة
+  const handleClick = () => {
+    if (onImageClick && !isLoading) {
+      onImageClick(image);
+    }
+  };
 
   return (
-    <div className="p-3 bg-white/95 dark:bg-gray-800/95 rounded-lg shadow-md border border-gray-100 dark:border-gray-700 relative overflow-hidden">
-      {/* أدوات التكبير/التصغير */}
-      <ZoomControls 
-        onZoomIn={handleZoomIn} 
-        onZoomOut={handleZoomOut} 
-        onResetZoom={handleResetZoom} 
-      />
-      
-      {/* حاوية الصورة الرئيسية */}
-      <div 
-        ref={imageContainerRef} 
-        className={`relative w-full h-[320px] overflow-hidden flex items-center justify-center rounded-md ${isZoomed ? 'cursor-move bg-gray-800 dark:bg-gray-900' : 'cursor-pointer bg-gray-100 dark:bg-gray-800'}`}
-        onClick={handleImageClick}
-        onDoubleClick={handleDoubleClick}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-      >
-        {/* حالة تحميل الصورة */}
-        {isLoading && !imgError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
-            <div className="p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-center">
-              <div className="w-10 h-10 border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent rounded-full animate-spin mx-auto"></div>
-              <p className="mt-2 text-sm font-medium">
-                {image.status === "processing" ? "جاري معالجة الصورة..." : "جاري تحميل الصورة..."}
-              </p>
+    <div 
+      className={`relative rounded-lg overflow-hidden border-2 ${getStatusClass()} bg-black min-h-[200px] shadow hover:shadow-md transition-shadow cursor-pointer`}
+      onClick={handleClick}
+    >
+      {/* عرض الصورة */}
+      <div className="w-full h-48 relative overflow-hidden bg-gray-900 flex items-center justify-center">
+        {!hasError && imageSrc ? (
+          <img
+            ref={imageRef}
+            src={imageSrc}
+            alt={`صورة ${image.number || ''}`}
+            className={`w-full h-full object-contain transition-opacity ${
+              isLoading ? 'opacity-0' : 'opacity-100'
+            }`}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-800">
+            <div className="text-gray-400 text-center p-4">
+              <p className="mb-2">تعذر تحميل الصورة</p>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRetry();
+                }}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                إعادة المحاولة
+              </Button>
             </div>
           </div>
         )}
-        
-        {/* الصورة قابلة للسحب */}
-        {!imgError && imageUrl && !imageLoading && (
-          <>
-            <img
-              ref={imageRef}
-              src={imageUrl}
-              alt={`صورة ${image.number || ''}`}
-              className={`max-w-full max-h-full transition-all duration-300 ${isZoomed ? '' : 'hover:opacity-90'}`}
-              style={{
-                transform: `translate(${position.x}px, ${position.y}px) scale(${zoomLevel})`,
-                transformOrigin: 'center',
-                transition: isDragging ? 'none' : 'transform 0.2s ease-out',
-              }}
-              onError={handleImageError}
-              onLoad={handleImageLoad}
-              draggable={false}
-            />
-            {isZoomed && (
-              <div className="absolute bottom-3 right-3 bg-black bg-opacity-70 text-white text-xs py-1 px-2 rounded-md pointer-events-none">
-                انقر مرتين للعودة
-              </div>
-            )}
-          </>
+
+        {/* مؤشر التحميل */}
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <Loader2 className="h-8 w-8 text-white animate-spin" />
+          </div>
         )}
         
-        {/* عرض خطأ الصورة مع إمكانية إعادة المحاولة */}
-        {imgError && (
-          <ErrorDisplay 
-            onRetry={handleRetryImage}
-            errorMessage={errorMessage}
-            retryCount={retryCount}
-          />
-        )}
-        
-        {/* مؤشر إذا كانت الصورة مستخدمة كـ Data URL للتشخيص */}
-        {isDataUrl && !imgError && !isLoading && (
-          <div className="absolute top-3 left-3 bg-green-500 bg-opacity-70 text-white text-xs py-1 px-2 rounded-md pointer-events-none">
-            data:URL
+        {/* عرض حالة معالجة الصورة */}
+        {image.status && (
+          <div className={`absolute bottom-2 right-2 rounded-full px-2 py-1 text-xs ${
+            image.status === 'completed' ? 'bg-green-500 text-white' :
+            image.status === 'error' ? 'bg-red-500 text-white' : 
+            image.status === 'processing' ? 'bg-blue-500 text-white' : 
+            'bg-gray-500 text-white'
+          }`}>
+            {image.status === 'completed' ? 'مكتملة' :
+             image.status === 'error' ? 'خطأ' :
+             image.status === 'processing' ? 'جاري المعالجة' : 'قيد الانتظار'}
           </div>
         )}
       </div>
-      
-      {/* معلومات الصورة في الأسفل */}
-      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between">
-        <span>
-          {image.file?.name ? `${image.file.name} (${(image.file.size / 1024).toFixed(0)} كيلوبايت)` : 'وصل'}
-        </span>
-        <span dir="ltr">{formatDate(new Date(image.date))}</span>
-      </div>
-      
-      {/* حالة الصورة */}
-      <div className={`absolute top-2 left-2 px-2 py-0.5 text-xs rounded-full 
-        ${image.status === "completed" ? "bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-200" : ""}
-        ${image.status === "pending" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200" : ""}
-        ${image.status === "error" ? "bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200" : ""}
-        ${image.status === "processing" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200" : ""}
-      `}>
-        {image.status === "completed" && "مكتملة"}
-        {image.status === "pending" && "قيد الانتظار"}
-        {image.status === "error" && "خطأ"}
-        {image.status === "processing" && "قيد المعالجة"}
+
+      {/* بيانات الصورة */}
+      <div className="p-3 bg-white dark:bg-gray-800">
+        <div className="flex justify-between items-center">
+          <div className="font-medium">
+            {image.code ? (
+              <span className="text-primary">{image.code}</span>
+            ) : (
+              <span className="text-gray-400">بدون كود</span>
+            )}
+          </div>
+          {image.date && formatDate && (
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {formatDate(image.date)}
+            </div>
+          )}
+        </div>
+
+        {/* معلومات إضافية */}
+        {(image.senderName || image.phoneNumber) && (
+          <div className="mt-1 text-sm">
+            {image.senderName && (
+              <div className="truncate text-gray-700 dark:text-gray-300">
+                {image.senderName}
+              </div>
+            )}
+            {image.phoneNumber && (
+              <div className="text-gray-600 dark:text-gray-400">
+                {image.phoneNumber}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

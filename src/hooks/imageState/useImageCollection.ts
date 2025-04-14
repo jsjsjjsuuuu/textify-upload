@@ -1,165 +1,110 @@
 
-import { useCallback, useState } from "react";
-import { ImageData } from "@/types/ImageData";
+import { useState, useCallback } from 'react';
+import { ImageData } from '@/types/ImageData';
 
+/**
+ * هوك للتعامل مع مجموعة الصور
+ * @param hiddenImageIds قائمة معرفات الصور المخفية
+ */
 export const useImageCollection = (hiddenImageIds: string[]) => {
+  // حالة الصور العامة والصور المؤقتة
   const [images, setImages] = useState<ImageData[]>([]);
   const [sessionImages, setSessionImages] = useState<ImageData[]>([]);
-
-  // إنشاء عنوان Data URL آمن بدلاً من Blob URL
-  const createSafeObjectURL = useCallback((file: File): string => {
-    // استخدام FileReader لتحويل الملف إلى Data URL بشكل مباشر
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(file);
-    }) as unknown as string;
-  }, []);
-
-  // إضافة صورة جديدة
+  
+  // إضافة صورة جديدة إلى المجموعة
   const addImage = useCallback((newImage: ImageData) => {
-    // تجاهل إضافة الصور المخفية
-    if (hiddenImageIds.includes(newImage.id)) {
-      console.log(`تجاهل إضافة صورة مخفية: ${newImage.id}`);
-      return;
-    }
+    // التحقق مما إذا كانت الصورة متوفرة بالفعل في المجموعة
+    const imageExists = (img: ImageData) => img.id === newImage.id;
     
-    // التأكد من أن لدينا عنوان معاينة آمن للصورة
-    const imageWithSafeUrl = { ...newImage };
-    if (newImage.file && (!newImage.previewUrl || newImage.previewUrl.startsWith('blob:'))) {
-      // استخدام Data URL بدلاً من Blob URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUrl = reader.result as string;
-        // تحديث الصورة بعنوان Data URL الآمن
-        setImages(prev => prev.map(img => 
-          img.id === newImage.id ? { ...img, previewUrl: dataUrl } : img
-        ));
-        
-        // تحديث الصورة في قائمة الصور المؤقتة إذا كانت موجودة هناك
-        if (newImage.sessionImage) {
-          setSessionImages(prev => prev.map(img => 
-            img.id === newImage.id ? { ...img, previewUrl: dataUrl } : img
-          ));
-        }
-      };
-      reader.readAsDataURL(newImage.file);
-      // نضع مؤقتًا عنوان فارغ حتى يكتمل تحميل Data URL
-      imageWithSafeUrl.previewUrl = "loading"; 
-    }
+    setImages(prev => {
+      // إذا كانت الصورة موجودة بالفعل، قم بتحديثها
+      if (prev.some(imageExists)) {
+        return prev.map(img => (img.id === newImage.id ? { ...img, ...newImage } : img));
+      }
+      // تجاهل الصور المخفية
+      if (hiddenImageIds.includes(newImage.id)) {
+        return prev;
+      }
+      // إضافة الصورة الجديدة في بداية المصفوفة
+      return [newImage, ...prev];
+    });
     
-    setImages(prev => [...prev, imageWithSafeUrl]);
-    
-    // إذا كانت الصورة من جلسة مؤقتة، نضيفها للصور المؤقتة أيضًا
+    // إذا كانت صورة مؤقتة، أضفها إلى قائمة الصور المؤقتة
     if (newImage.sessionImage) {
-      setSessionImages(prev => [...prev, imageWithSafeUrl]);
+      setSessionImages(prev => {
+        if (prev.some(imageExists)) {
+          return prev.map(img => (img.id === newImage.id ? { ...img, ...newImage } : img));
+        }
+        return [newImage, ...prev];
+      });
     }
   }, [hiddenImageIds]);
-
-  // تحديث بيانات صورة بناءً على المعرف
-  const updateImage = useCallback((id: string, updatedFields: Partial<ImageData>) => {
-    setImages(prev => 
-      prev.map(img => 
-        img.id === id ? { ...img, ...updatedFields } : img
-      )
-    );
+  
+  // تحديث صورة موجودة
+  const updateImage = useCallback((id: string, fields: Partial<ImageData>) => {
+    setImages(prev => prev.map(img => 
+      img.id === id ? { ...img, ...fields } : img
+    ));
+    
+    // تحديث الصورة في قائمة الصور المؤقتة إذا كانت موجودة
+    setSessionImages(prev => prev.map(img =>
+      img.id === id ? { ...img, ...fields } : img
+    ));
   }, []);
-
-  // تحديث بيانات النص
-  const handleTextChange = useCallback((id: string, field: string, value: string) => {
-    updateImage(id, { [field]: value } as any);
-  }, [updateImage]);
-
-  // حذف صورة من العرض فقط
-  const deleteImage = useCallback((id: string, removeFromDatabase: boolean = false) => {
-    // حذف الصورة من العرض المحلي
-    setImages(prev => prev.filter(img => img.id !== id));
-    setSessionImages(prev => prev.filter(img => img.id !== id));
+  
+  // حذف صورة من المجموعة
+  const deleteImage = useCallback((id: string, permanent: boolean = false) => {
+    // إذا كان الحذف دائمًا، قم بإزالة الصورة تمامًا
+    if (permanent) {
+      setImages(prev => prev.filter(img => img.id !== id));
+      setSessionImages(prev => prev.filter(img => img.id !== id));
+    } 
+    // وإلا، قم بإزالة الصورة فقط إذا كانت ليست مخفية بالفعل
+    else if (!hiddenImageIds.includes(id)) {
+      setImages(prev => prev.filter(img => img.id !== id));
+      // لا نحذف الصورة من الصور المؤقتة لأنها قد تكون مخفية فقط
+    }
     
     return true;
-  }, []);
-
+  }, [hiddenImageIds]);
+  
   // مسح جميع الصور
   const clearImages = useCallback(() => {
     setImages([]);
     setSessionImages([]);
   }, []);
-
+  
   // مسح الصور المؤقتة فقط
   const clearSessionImages = useCallback(() => {
-    setImages(prev => prev.filter(img => !img.sessionImage));
     setSessionImages([]);
+    setImages(prev => prev.filter(img => !img.sessionImage));
   }, []);
-
-  // تعيين قائمة الصور مباشرة
+  
+  // تعيين جميع الصور
   const setAllImages = useCallback((newImages: ImageData[]) => {
-    // تصفية الصور المخفية من القائمة الجديدة
+    // تصفية الصور المخفية قبل التعيين
     const filteredImages = newImages.filter(img => !hiddenImageIds.includes(img.id));
-    
-    // معالجة الصور للتأكد من أن لديها روابط معاينة آمنة
-    const processedImages = filteredImages.map(img => {
-      // إذا كان لدينا ملف ولكن الرابط غير آمن، نقوم بتحويله إلى Data URL
-      if (img.file && (!img.previewUrl || img.previewUrl.startsWith('blob:'))) {
-        // نترك previewUrl كما هو الآن، وسنقوم بتحديثه بعد قراءة الملف
-        const processedImg = { ...img, previewUrl: "loading" };
-        
-        // قراءة الملف وتحديث الصورة لاحقًا
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const dataUrl = reader.result as string;
-          setImages(current => 
-            current.map(currentImg => 
-              currentImg.id === img.id ? { ...currentImg, previewUrl: dataUrl } : currentImg
-            )
-          );
-        };
-        reader.readAsDataURL(img.file);
-        return processedImg;
-      }
-      return img;
-    });
-    
-    setImages(processedImages);
-    
-    // تحديث الصور المؤقتة أيضًا
-    const sessionOnly = processedImages.filter(img => img.sessionImage);
-    setSessionImages(sessionOnly);
+    setImages(filteredImages);
   }, [hiddenImageIds]);
-
-  // إضافة صور من قاعدة البيانات (الصور الدائمة)
+  
+  // إضافة صور من قاعدة البيانات
   const addDatabaseImages = useCallback((dbImages: ImageData[]) => {
+    // تصفية الصور المخفية قبل الإضافة
+    const filteredImages = dbImages.filter(img => !hiddenImageIds.includes(img.id));
+    
+    // تجنب إضافة صور مكررة
     setImages(prev => {
-      // استبعاد الصور الموجودة بالفعل والصور المخفية
-      const newImages = dbImages.filter(dbImg => 
-        !prev.some(existingImg => existingImg.id === dbImg.id) && 
-        !hiddenImageIds.includes(dbImg.id)
-      );
-      
-      // معالجة الصور للتأكد من أن لديها روابط معاينة آمنة
-      const processedImages = newImages.map(img => {
-        if (img.file && (!img.previewUrl || img.previewUrl.startsWith('blob:'))) {
-          // نفس المنطق السابق لتحويل الصور إلى Data URLs
-          const processedImg = { ...img, previewUrl: "loading" };
-          
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const dataUrl = reader.result as string;
-            setImages(current => 
-              current.map(currentImg => 
-                currentImg.id === img.id ? { ...currentImg, previewUrl: dataUrl } : currentImg
-              )
-            );
-          };
-          reader.readAsDataURL(img.file);
-          return processedImg;
-        }
-        return img;
-      });
-      
-      return [...prev, ...processedImages];
+      const existingIds = new Set(prev.map(img => img.id));
+      const newImages = filteredImages.filter(img => !existingIds.has(img.id));
+      return [...prev, ...newImages];
     });
   }, [hiddenImageIds]);
-
+  
+  // تعديل نص الصورة
+  const handleTextChange = useCallback((id: string, field: string, value: string) => {
+    updateImage(id, { [field]: value });
+  }, [updateImage]);
+  
   return {
     images,
     sessionImages,
@@ -170,7 +115,6 @@ export const useImageCollection = (hiddenImageIds: string[]) => {
     clearSessionImages,
     setAllImages,
     addDatabaseImages,
-    handleTextChange,
-    createSafeObjectURL
+    handleTextChange
   };
 };

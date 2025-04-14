@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -247,10 +246,13 @@ export const useFileUpload = ({
           // ضمان تعيين حالة المعالجة
           updateImage(newImage.id, { status: "processing" });
           
+          // ضغط الصورة قبل معالجتها لتحسين الأداء
+          const compressedFile = await compressImage(file);
+          
           // استخدام Gemini لمعالجة الصورة إذا كان متاحًا
           if (processWithGemini || geminiProcessor) {
             const processorToUse = processWithGemini || geminiProcessor;
-            const processedImage = await processorToUse(file, newImage);
+            const processedImage = await processorToUse(compressedFile, newImage);
             console.log("تمت معالجة الصورة باستخدام Gemini:", processedImage.status);
             
             // تحديث الصورة بالنتائج
@@ -274,7 +276,7 @@ export const useFileUpload = ({
           } 
           // استخدام OCR إذا كان Gemini غير متاح
           else if (processWithOcr) {
-            const processedImage = await processWithOcr(file, newImage);
+            const processedImage = await processWithOcr(compressedFile, newImage);
             console.log("تمت معالجة الصورة باستخدام OCR:", processedImage.status);
             
             // تحديث الصورة بالنتائج

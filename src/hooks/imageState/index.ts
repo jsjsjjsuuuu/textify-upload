@@ -2,12 +2,20 @@
 import { useCallback } from "react";
 import { useToast } from "../use-toast";
 import { ImageData } from "@/types/ImageData";
-import { useHiddenImagesStorage } from "./useLocalStorage";
+import { useHiddenImagesStorage } from "./useHiddenImagesStorage";
 import { useImageCollection } from "./useImageCollection";
 import { useDuplicateRemoval } from "./useDuplicateRemoval";
+import { useCreateSafeObjectUrl } from "./useCreateSafeObjectUrl";
 
+/**
+ * هوك إدارة حالة الصور المركزي
+ * يدمج وظائف التخزين والعرض والتعديل في واجهة موحدة
+ */
 export const useImageState = () => {
   const { toast } = useToast();
+  
+  // استخدام هوك عناوين URL الآمنة
+  const { createSafeObjectURL, revokeObjectURL } = useCreateSafeObjectUrl();
   
   // استخدام هوك التخزين المحلي للصور المخفية
   const { 
@@ -29,8 +37,7 @@ export const useImageState = () => {
     clearSessionImages, 
     setAllImages, 
     addDatabaseImages,
-    handleTextChange,
-    createSafeObjectURL // نستورد هذه الدالة من useImageCollection
+    handleTextChange
   } = useImageCollection(hiddenImageIds);
   
   // استخدام هوك إزالة التكرار
@@ -87,6 +94,7 @@ export const useImageState = () => {
     unhideImage,
     unhideAllImages,
     getHiddenImageIds,
-    createSafeObjectURL // نصدر الدالة للاستخدام الخارجي
+    createSafeObjectURL,
+    revokeObjectURL
   };
 };

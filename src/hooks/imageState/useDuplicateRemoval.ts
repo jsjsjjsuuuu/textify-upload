@@ -1,38 +1,36 @@
 
-import { useCallback } from "react";
-import { ImageData } from "@/types/ImageData";
+import { useCallback } from 'react';
+import { ImageData } from '@/types/ImageData';
 
+/**
+ * هوك لإزالة التكرارات من مجموعة الصور
+ * @param images مجموعة الصور الحالية
+ * @param setImages دالة تعيين مجموعة الصور
+ */
 export const useDuplicateRemoval = (
   images: ImageData[],
-  setAllImages: (newImages: ImageData[]) => void
+  setImages: (images: ImageData[]) => void
 ) => {
-  // إزالة التكرارات من قائمة الصور
+  // إزالة الصور المكررة بناءً على المعرف
   const removeDuplicates = useCallback(() => {
-    const uniqueImagesMap = new Map<string, ImageData>();
+    const uniqueIds = new Set<string>();
+    const uniqueImages: ImageData[] = [];
     
-    // ابتداء بالصور ذات الحالة "completed" للتأكد من الاحتفاظ بالصور المكتملة
-    const sortedImages = [...images].sort((a, b) => {
-      if (a.status === "completed" && b.status !== "completed") return -1;
-      if (a.status !== "completed" && b.status === "completed") return 1;
-      return 0;
-    });
-    
-    // استخدام معرّف الصورة كمفتاح للتخزين المؤقت
-    sortedImages.forEach(img => {
-      if (!uniqueImagesMap.has(img.id)) {
-        uniqueImagesMap.set(img.id, img);
+    images.forEach(image => {
+      if (!uniqueIds.has(image.id)) {
+        uniqueIds.add(image.id);
+        uniqueImages.push(image);
       }
     });
     
-    const uniqueImages = Array.from(uniqueImagesMap.values());
-    
+    // إذا كان هناك تكرارات، قم بتحديث القائمة
     if (uniqueImages.length < images.length) {
-      console.log(`تم إزالة ${images.length - uniqueImages.length} صورة مكررة`);
-      setAllImages(uniqueImages);
+      setImages(uniqueImages);
+      return images.length - uniqueImages.length; // عدد الصور المكررة التي تمت إزالتها
     }
-  }, [images, setAllImages]);
-
-  return {
-    removeDuplicates
-  };
+    
+    return 0; // لم تتم إزالة أي صور
+  }, [images, setImages]);
+  
+  return { removeDuplicates };
 };
