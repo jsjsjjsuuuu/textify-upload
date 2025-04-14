@@ -1,7 +1,8 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData, CustomImageData } from "@/types/ImageData";
-import { useImageState } from "@/hooks/useImageState";
+import { useImageState } from "@/hooks/imageState";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import { useImageStats } from "@/hooks/useImageStats";

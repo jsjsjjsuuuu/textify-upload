@@ -11,7 +11,7 @@ import { useToast } from "./use-toast";
 // استيراد useDuplicateDetection
 import { useDuplicateDetection } from "./useDuplicateDetection";
 import { useSavedImageProcessing } from "./useSavedImageProcessing";
-import { useImageState } from "./useImageState";
+import { useImageState } from "./imageState";
 import { useFileUpload } from "./useFileUpload";
 
 export const useImageProcessing = () => {
