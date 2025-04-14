@@ -1,4 +1,3 @@
-
 import { User } from "@supabase/supabase-js";
 // تصحيح إعادة التصدير باستخدام export type
 import type { BookmarkletItem, BookmarkletExportData } from "@/utils/bookmarklet/types";

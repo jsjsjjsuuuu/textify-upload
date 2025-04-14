@@ -1,31 +1,27 @@
-import { useState } from "react";
+import { useCallback } from "react";
 import { useFileProcessing } from "../useFileProcessing";
 import { useOcrProcessing } from "../useOcrProcessing";
 import { useGeminiProcessing } from "../useGeminiProcessing";
-import { formatDate } from "@/utils/dateFormatter";
 import { useImageState } from "../imageState";
 import { useImageDatabase } from "../useImageDatabase";
 import { useToast } from "../use-toast";
-import { useDuplicateDetection } from "../useDuplicateDetection";
-import { useEffect, useCallback } from "react";
+import { useFileHandlers } from "../useFileHandlers";
 import { useAuth } from "@/contexts/AuthContext";
-import { ImageData, CustomImageData, ImageProcessFn, FileImageProcessFn } from "@/types/ImageData";
+import type { ImageData } from "@/types/ImageData";
+import { useState } from "react";
+import { formatDate } from "@/utils/dateFormatter";
+import { useDuplicateDetection } from "../useDuplicateDetection";
+import { useEffect } from "react";
 
 export const useImageProcessing = () => {
-  // توابع المعالجة الرئيسية من الهوكس الخاصة
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // حالة التحميل
-  const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
-  
-  // استيراد حالة الصور
   const { 
     images, 
+    updateImage,
     hiddenImageIds,
     addImage, 
-    updateImage, 
     deleteImage, 
     handleTextChange,
     clearSessionImages,
@@ -34,32 +30,12 @@ export const useImageProcessing = () => {
     unhideAllImages,
     getHiddenImageIds,
     setAllImages,
-    createSafeObjectURL // استخدام الدالة المصدرة من useImageState
+    createSafeObjectURL
   } = useImageState();
-  
-  // استيراد معالجات OCR و Gemini
-  const { processWithOcr: originalOcrProcess, processFileWithOcr } = useOcrProcessing();
-  const { processWithGemini: originalGeminiProcess, processFileWithGemini } = useGeminiProcessing();
 
-  // دالات وسيطة لمواءمة الواجهات
-  const processWithOcr = useCallback((imageData: CustomImageData): Promise<string> => {
-    return originalOcrProcess(imageData);
-  }, [originalOcrProcess]);
+  const { processWithOcr, processFileWithOcr } = useOcrProcessing();
+  const { processWithGemini, processFileWithGemini } = useGeminiProcessing();
   
-  const processWithGemini = useCallback((imageData: CustomImageData): Promise<Partial<CustomImageData>> => {
-    return originalGeminiProcess(imageData);
-  }, [originalGeminiProcess]);
-  
-  // استيراد قاعدة البيانات
-  const { 
-    loadUserImages: fetchUserImages, 
-    saveImageToDatabase, 
-    handleSubmitToApi: submitToApi, 
-    deleteImageFromDatabase, 
-    runCleanupNow 
-  } = useImageDatabase(updateImage);
-  
-  // استيراد معالجة الملفات وتمرير دالة createSafeObjectURL
   const fileProcessingResult = useFileProcessing({
     images,
     addImage,
@@ -71,15 +47,12 @@ export const useImageProcessing = () => {
     createSafeObjectURL: async (file: File) => {
       return await createSafeObjectURL(file);
     },
-    // الدوال الاختيارية الأخرى
     checkDuplicateImage: undefined,
     markImageAsProcessed: undefined
   });
   
-  // استيراد كاشف التكرار (معطل)
   const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection({ enabled: false });
   
-  // استخراج متغيرات معالجة الملفات
   const { 
     isProcessing, 
     processingProgress, 
@@ -88,19 +61,20 @@ export const useImageProcessing = () => {
     queueLength,
   } = fileProcessingResult;
 
-  // تصدير واجهة الخدمة
+  const { handleSubmitToApi } = useFileHandlers(updateImage);
+
+  const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
+
   return {
-    // البيانات
     images,
     hiddenImageIds,
-    // الحالة
     isProcessing,
     processingProgress,
     isSubmitting,
     activeUploads,
     queueLength,
     isLoadingUserImages,
-    // الدوال
     handleFileChange: (files: FileList | File[]) => {
       fileUploadHandler(files);
     },
@@ -124,7 +98,6 @@ export const useImageProcessing = () => {
     loadUserImages: (callback?: (images: ImageData[]) => void) => {
       if (user) {
         fetchUserImages(user.id, (loadedImages) => {
-          // تصفية الصور المخفية قبل تمريرها
           const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
           
           if (callback) {
@@ -156,6 +129,6 @@ export const useImageProcessing = () => {
       
       return false;
     },
-    checkDuplicateImage: () => Promise.resolve(false) // تعطيل فحص التكرار
+    checkDuplicateImage: () => Promise.resolve(false)
   };
 };
