@@ -8,6 +8,8 @@ import { useImageState } from "../imageState";
 import { useImageDatabase } from "../useImageDatabase";
 import { useToast } from "../use-toast";
 import { useDuplicateDetection } from "../useDuplicateDetection";
+import { useEffect, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useImageProcessing = () => {
   // توابع المعالجة الرئيسية من الهوكس الخاصة
@@ -55,8 +57,8 @@ export const useImageProcessing = () => {
     processWithOcr,
     processWithGemini,
     saveProcessedImage: saveImageToDatabase,
-    user,
-    images // إرسال images مرتين للتوافق مع الواجهة القديمة
+    user
+    // إزالة الخاصية المكررة images
   });
   
   // استيراد كاشف التكرار (معطل)
@@ -202,7 +204,3 @@ export const useImageProcessing = () => {
     checkDuplicateImage: () => Promise.resolve(false) // تعطيل فحص التكرار
   };
 };
-
-// إضافة استيراد useAuth من المسار الصحيح - معقول أنه من سياق
-import { useEffect, useCallback } from "react";
-import { useAuth } from "@/contexts/AuthContext";

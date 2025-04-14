@@ -15,11 +15,19 @@ import { CheckCircle, AlertTriangle } from "lucide-react";
 interface ExtractedDataEditorProps {
   image: ImageData;
   onTextChange: (id: string, field: string, value: string) => void;
+  isSubmitting?: boolean; // إضافة خاصية isSubmitting لإصلاح الخطأ
+  onDelete?: (id: string) => Promise<boolean>; // جعل onDelete اختيارية
+  onSubmit?: (id: string) => Promise<boolean>; // جعل onSubmit اختيارية
+  compact?: boolean; // إضافة خاصية compact لإصلاح الخطأ
 }
 
 const ExtractedDataEditor = ({
   image,
-  onTextChange
+  onTextChange,
+  isSubmitting = false, // إعطاء قيمة افتراضية
+  onDelete,
+  onSubmit,
+  compact = false
 }: ExtractedDataEditorProps) => {
   // جعل وضع التعديل دائمًا مفعّل لتمكين التعديل المباشر عند النقر على الحقل
   const [editMode, setEditMode] = useState(true);
