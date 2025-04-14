@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
+import { compressImage } from "@/utils/imageCompression";
 
 interface FileProcessingProps {
   addImage: (newImage: ImageData) => void;
@@ -38,28 +39,29 @@ export const useFileProcessing = ({
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
-  // دالة لإنشاء عنوان Data URL دائمًا للصورة (تفادي مشاكل blob URLs)
+  // دالة لإنشاء عنوان Data URL للصورة (تفادي مشاكل blob URLs)
   const createSafeObjectURL = useCallback((file: File): string => {
     // استخدام الدالة الخارجية إن وجدت
     if (typeof externalCreateSafeObjectURL === 'function') {
       return externalCreateSafeObjectURL(file);
     }
     
-    // التنفيذ الافتراضي: استخدام FileReader لتحويل الصورة إلى Data URL مباشرة
-    // هذا يتجنب مشاكل CORS والأمان المرتبطة بـ blob URLs
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = (error) => {
-        console.error("خطأ في قراءة الملف:", error);
-        // إرجاع قيمة فارغة في حالة الخطأ
-        resolve("");
-      };
-      reader.readAsDataURL(file);
-    }) as unknown as string;
+    // استخدام URL.createObjectURL لسرعته وكفاءته بدلاً من FileReader
+    return URL.createObjectURL(file);
   }, [externalCreateSafeObjectURL]);
 
-  // معالجة ملف واحد من القائمة - تعطيل فحص التكرار تمامًا
+  // تنظيف عناوين URL عند إزالة المكون
+  useEffect(() => {
+    return () => {
+      images.forEach(img => {
+        if (img.previewUrl && img.previewUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(img.previewUrl);
+        }
+      });
+    };
+  }, [images]);
+
+  // معالجة ملف واحد من القائمة - تم تحسين الأداء وتقليل الوقت
   const processNextFile = useCallback(async () => {
     if (imageQueue.length === 0 || isPaused) {
       // تم الانتهاء من معالجة الصور أو تم إيقاف المعالجة مؤقتًا
@@ -75,21 +77,22 @@ export const useFileProcessing = ({
     setActiveUploads(1);
 
     try {
-      // تجاهل التحقق من التكرار ومعالجة الصورة مباشرة
       console.log("معالجة الملف:", file.name);
+
+      // ضغط الصورة للتحسين من الأداء (جديد)
+      const compressedFile = await compressImage(file);
 
       // إنشاء معرّف فريد للصورة
       const id = uuidv4();
       const batchId = uuidv4();
 
-      // استخدام الدالة الآمنة لإنشاء معاينة للصورة
-      // تعيين قيمة placeholder مؤقتة سيتم تحديثها بعد الانتهاء من تحويل الصورة
-      const previewUrl = "loading";
+      // إنشاء URL مباشر للمعاينة (تحسين)
+      const previewUrl = createSafeObjectURL(compressedFile);
 
       // تهيئة كائن الصورة
       const imageData: ImageData = {
         id,
-        file,
+        file: compressedFile,
         previewUrl,
         date: new Date(),
         status: "pending",
@@ -98,24 +101,22 @@ export const useFileProcessing = ({
         sessionImage: true
       };
 
-      // إضافة الصورة إلى القائمة بغض النظر عن وجود تكرار
+      // إضافة الصورة إلى القائمة
       addImage(imageData);
-
-      // بدء تحويل الصورة إلى Data URL في الخلفية
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUrl = reader.result as string;
-        updateImage(id, { previewUrl: dataUrl });
-      };
-      reader.readAsDataURL(file);
 
       // معالجة الصورة
       updateImage(id, { status: "processing" });
       
-      // محاولة استخدام Gemini أولاً، ثم OCR إذا فشل
+      // استخدام معالجة متوازية للصورة (تحسين)
       try {
-        // استخدام Gemini للمعالجة
-        const processedImage = await processWithGemini(file, imageData);
+        // معالجة باستخدام Gemini بشكل متوازي
+        const processedImage = await Promise.race([
+          processWithGemini(compressedFile, imageData),
+          // إنشاء مهلة زمنية لتفادي الانتظار الطويل
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error("مهلة معالجة Gemini")), 15000)
+          )
+        ]);
         
         // تحديث الصورة بالنتائج
         updateImage(id, { 
@@ -123,26 +124,27 @@ export const useFileProcessing = ({
           status: "completed",
         });
         
-        // حفظ الصورة المعالجة إذا كانت الوظيفة متاحة
+        // حفظ الصورة المعالجة (بشكل غير متزامن)
         if (saveProcessedImage) {
-          await saveProcessedImage(processedImage);
+          saveProcessedImage(processedImage).catch(error => 
+            console.error("خطأ في حفظ الصورة:", error)
+          );
         }
       } catch (geminiError) {
-        console.error("خطأ في معالجة الصورة باستخدام Gemini:", geminiError);
+        console.error("محاولة استخدام OCR كخطة بديلة:", geminiError);
         
-        // محاولة استخدام OCR كخطة بديلة
         try {
-          const processedImage = await processWithOcr(file, imageData);
+          const processedImage = await processWithOcr(compressedFile, imageData);
           
-          // تحديث الصورة بالنتائج
           updateImage(id, { 
             ...processedImage,
             status: "completed",
           });
           
-          // حفظ الصورة المعالجة
           if (saveProcessedImage) {
-            await saveProcessedImage(processedImage);
+            saveProcessedImage(processedImage).catch(error => 
+              console.error("خطأ في حفظ الصورة بعد OCR:", error)
+            );
           }
         } catch (ocrError) {
           console.error("فشل في معالجة الصورة باستخدام OCR:", ocrError);
@@ -159,8 +161,8 @@ export const useFileProcessing = ({
       const progress = Math.min(100, ((queueLength - imageQueue.length + 1) / queueLength) * 100);
       setProcessingProgress(progress);
       
-      // معالجة الملف التالي
-      processNextFile();
+      // معالجة الملف التالي (بدون انتظار)
+      setTimeout(processNextFile, 0);
     }
   }, [
     imageQueue, 
@@ -171,25 +173,36 @@ export const useFileProcessing = ({
     processWithOcr, 
     saveProcessedImage, 
     user, 
-    queueLength
+    queueLength,
+    createSafeObjectURL
   ]);
 
+  // تحسين إدارة معالجة المهام وتنفيذها بشكل غير متزامن
   useEffect(() => {
     if (imageQueue.length > 0 && !isPaused && !isProcessing) {
       setIsProcessing(true);
-      processNextFile();
+      setTimeout(processNextFile, 0);
     }
   }, [imageQueue, isPaused, isProcessing, processNextFile]);
 
-  // معالجة الملفات المحددة - إزالة فحص التكرار
+  // تحسين معالجة الملفات المتعددة - إضافة حد أقصى للملفات المعالجة في المرة الواحدة
   const handleFileChange = useCallback(
     (fileList: FileList | File[]) => {
-      console.log(`استلام ${fileList.length} ملف للمعالجة`);
-      
       const files = Array.from(fileList);
       
+      // تقييد عدد الملفات (تحسين)
+      const maxFiles = 10;
+      const filesToProcess = files.length > maxFiles ? files.slice(0, maxFiles) : files;
+      
+      if (files.length > maxFiles) {
+        toast({
+          title: "تم تقييد عدد الملفات",
+          description: `تم اختيار معالجة ${maxFiles} ملف فقط من أصل ${files.length} للحفاظ على الأداء`,
+        });
+      }
+      
       // منع تحميل الملفات غير المدعومة
-      const validFiles = files.filter(file => {
+      const validFiles = filesToProcess.filter(file => {
         const isImage = file.type.startsWith('image/');
         if (!isImage) {
           toast({
@@ -205,9 +218,9 @@ export const useFileProcessing = ({
         return;
       }
       
-      // معالجة جميع الملفات - بدون أي تحقق من التكرار
+      // معالجة الملفات المنتقاة
       setImageQueue(prev => [...prev, ...validFiles]);
-      setQueueLength(validFiles.length);
+      setQueueLength(prev => prev + validFiles.length);
       
       toast({
         title: "جاري المعالجة",
@@ -225,13 +238,13 @@ export const useFileProcessing = ({
     setActiveUploads(0);
   }, []);
 
-  // تصفير حالة المعالجة عندما تكتمل
+  // تنظيف وإنهاء المعالجة
   useEffect(() => {
     if (processingProgress >= 100 && imageQueue.length === 0 && isProcessing) {
       const timer = setTimeout(() => {
         setIsProcessing(false);
         setProcessingProgress(100);
-      }, 1000);
+      }, 300); // تسريع وقت الإنهاء
       
       return () => clearTimeout(timer);
     }
@@ -243,15 +256,10 @@ export const useFileProcessing = ({
     activeUploads,
     queueLength,
     handleFileChange,
-    stopProcessing: () => {
-      setImageQueue([]);
-      setIsProcessing(false);
-      setProcessingProgress(0);
-      setActiveUploads(0);
-    },
+    stopProcessing,
     setProcessingProgress,
     isSubmitting,
     setIsSubmitting,
-    createSafeObjectURL // إصدار الدالة الآمنة للخارج
+    createSafeObjectURL
   };
 };

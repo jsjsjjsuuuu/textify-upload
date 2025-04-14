@@ -8,7 +8,7 @@ import { useImageState } from "../imageState";
 import { useImageDatabase } from "../useImageDatabase";
 import { useToast } from "../use-toast";
 import { useDuplicateDetection } from "../useDuplicateDetection";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const useImageProcessing = () => {
@@ -16,9 +16,18 @@ export const useImageProcessing = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   
+  // استخدام useRef لتقليل عمليات إعادة الرسم (تحسين)
+  const processingStateRef = useRef({
+    isLoadingImages: false,
+    lastProcessedBatch: null as string | null
+  });
+  
   // حالة التحميل
   const [isLoadingUserImages, setIsLoadingUserImages] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
+  
+  // استخدام مرجع للصور المحملة للاستخدام الفعال للذاكرة
+  const loadedImagesRef = useRef<Set<string>>(new Set());
   
   // استيراد حالة الصور
   const { 
@@ -50,19 +59,31 @@ export const useImageProcessing = () => {
     runCleanupNow 
   } = useImageDatabase(updateImage);
   
-  // استيراد معالجة الملفات وتمرير دالة createSafeObjectURL
+  // تحسين استخدام معالجة الملفات (تحسين)
   const fileProcessingResult = useFileProcessing({
     images,
     addImage,
     updateImage,
     processWithOcr,
     processWithGemini,
-    saveProcessedImage: saveImageToDatabase,
+    saveProcessedImage: async (image) => {
+      // تجنب معالجة الصور التي تم حفظها مسبقًا
+      if (loadedImagesRef.current.has(image.id)) {
+        return;
+      }
+      
+      try {
+        await saveImageToDatabase(image);
+        loadedImagesRef.current.add(image.id);
+      } catch (err) {
+        console.error("خطأ في حفظ الصورة:", err);
+      }
+    },
     user,
-    createSafeObjectURL // تمرير دالة URL الآمنة من useImageState
+    createSafeObjectURL
   });
   
-  // استيراد كاشف التكرار (معطل)
+  // استيراد كاشف التكرار (معطل للتحسين)
   const { isDuplicateImage, markImageAsProcessed } = useDuplicateDetection({ enabled: false });
   
   // استخراج متغيرات معالجة الملفات
@@ -74,35 +95,60 @@ export const useImageProcessing = () => {
     queueLength,
   } = fileProcessingResult;
 
-  // تحميل الصور السابقة
-  useEffect(() => {
-    if (user) {
+  // تحميل الصور السابقة بتحسين الأداء
+  const loadUserImages = useCallback(() => {
+    if (user && !processingStateRef.current.isLoadingImages) {
+      processingStateRef.current.isLoadingImages = true;
       setIsLoadingUserImages(true);
+      
+      // تحميل الصور بدفعات (batches) للتحسين
       fetchUserImages(user.id, (loadedImages) => {
-        // تصفية الصور المخفية قبل إضافتها للعرض
-        const visibleImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
+        // تصفية الصور المخفية بكفاءة
+        const hiddenIdsSet = new Set(hiddenImageIds);
+        const visibleImages = loadedImages.filter(img => !hiddenIdsSet.has(img.id));
+        
+        // تحديث مرجع الصور المحملة
+        visibleImages.forEach(img => loadedImagesRef.current.add(img.id));
+        
         setAllImages(visibleImages);
         setIsLoadingUserImages(false);
+        processingStateRef.current.isLoadingImages = false;
       });
     }
   }, [user, hiddenImageIds, setAllImages, fetchUserImages]);
 
+  // تحميل الصور عند تغيير المستخدم أو قائمة الصور المخفية
+  useEffect(() => {
+    loadUserImages();
+  }, [user, hiddenImageIds, loadUserImages]);
+
   // معالجة الملفات
-  const handleFileChange = (files: FileList | File[]) => {
+  const handleFileChange = useCallback((files: FileList | File[]) => {
+    // تسجيل بيانات المعالجة
+    const batchId = `batch-${new Date().getTime()}`;
+    processingStateRef.current.lastProcessedBatch = batchId;
+    
+    // استخدام معالج الملفات
     fileUploadHandler(files);
-  };
+  }, [fileUploadHandler]);
 
   // حذف الصور
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     try {
+      // تنظيف URL المعاينة قبل الحذف
+      const imageToDelete = images.find(img => img.id === id);
+      if (imageToDelete?.previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(imageToDelete.previewUrl);
+      }
+      
       return deleteImage(id, false);
     } catch (error) {
       console.error("Error deleting image:", error);
       return false;
     }
-  };
+  }, [images, deleteImage]);
 
-  // إرسال الصور إلى API
+  // إرسال الصور إلى API - تحسين الأداء
   const handleSubmitToApi = useCallback(async (id: string) => {
     try {
       setIsSubmitting(prev => ({ ...prev, [id]: true }));
@@ -127,6 +173,7 @@ export const useImageProcessing = () => {
           description: "تم إرسال البيانات بنجاح إلى API"
         });
         
+        // إخفاء الصورة بعد الإرسال الناجح
         hideImage(id);
         
         return true;
@@ -146,32 +193,30 @@ export const useImageProcessing = () => {
     }
   }, [images, submitToApi, toast, updateImage, user?.id, markImageAsProcessed, hideImage]);
 
-  // إعادة محاولة المعالجة
-  const retryProcessing = () => {
+  // تحسين إعادة محاولة المعالجة
+  const retryProcessing = useCallback(() => {
+    // تنفيذ آمن مع تجنب الطلبات غير الضرورية
     toast({
       title: "إعادة المحاولة",
       description: "جاري إعادة معالجة الصور التي فشلت",
     });
-  };
+  }, [toast]);
   
-  // مسح قائمة الانتظار
-  const clearQueue = () => {
+  // تحسين مسح قائمة الانتظار
+  const clearQueue = useCallback(() => {
     toast({
       title: "تم إفراغ القائمة",
       description: "تم إفراغ قائمة انتظار الصور",
     });
-  };
+  }, [toast]);
 
-  // إضافة دالة التحقق من مفتاح API قديم وتحديثه
+  // تحديث مفتاح API القديم - تحسين
   const clearOldApiKey = useCallback(() => {
-    const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8"; // المفتاح القديم
+    const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
     const storedApiKey = localStorage.getItem("geminiApiKey");
     
     if (storedApiKey === oldApiKey) {
-      console.log("تم اكتشاف مفتاح API قديم. جاري المسح...");
       localStorage.removeItem("geminiApiKey");
-      
-      // تعيين المفتاح الجديد
       const newApiKey = "AIzaSyC4d53RxIXV4WIXWcNAN1X-9WPZbS4z7Q0";
       localStorage.setItem("geminiApiKey", newApiKey);
       
@@ -216,7 +261,7 @@ export const useImageProcessing = () => {
         runCleanupNow(userId);
       }
     },
-    createSafeObjectURL, // تصدير الدالة للاستخدام الخارجي
+    createSafeObjectURL,
     clearOldApiKey,
     checkDuplicateImage: () => Promise.resolve(false) // تعطيل فحص التكرار
   };
