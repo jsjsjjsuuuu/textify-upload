@@ -87,10 +87,10 @@ const Orders: React.FC = () => {
   }, [images, searchTerm, statusFilter]);
 
   const stats = {
-    total: filteredImages.length,
-    new: filteredImages.filter(img => !img.submitted).length,
+    total: 1044, // القيمة الثابتة الأولية
+    new: 300,    // القيمة الثابتة الأولية
     processing: filteredImages.filter(img => img.status === 'processing').length,
-    completed: filteredImages.filter(img => img.submitted).length
+    completed: 344  // القيمة الثابتة الأولية
   };
 
   const totalPages = Math.ceil(filteredImages.length / itemsPerPage);
@@ -102,11 +102,14 @@ const Orders: React.FC = () => {
   // إضافة حالة لتتبع ما إذا كان التحديث التلقائي نشطًا
   const [autoUpdate, setAutoUpdate] = useState(false);
 
-  // وظيفة لإنشاء طلب عشوائي جديد
+  // تعديل دالة إنشاء الطلب العشوائي
   const createRandomOrder = () => {
     const provinces = ['بغداد', 'البصرة', 'نينوى', 'أربيل', 'كركوك'];
     const phones = ['07701234567', '07801234567', '07901234567'];
     const prices = ['25000', '30000', '45000', '50000'];
+    const statuses = ['new', 'processing', 'completed'];
+    
+    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
     
     const newOrder: ImageData = {
       id: uuidv4(),
@@ -114,24 +117,31 @@ const Orders: React.FC = () => {
       phoneNumber: phones[Math.floor(Math.random() * phones.length)],
       province: provinces[Math.floor(Math.random() * provinces.length)],
       price: prices[Math.floor(Math.random() * prices.length)],
-      // تخزين التاريخ كـISOString ولكن ملف dateFormatter سيتعامل معه الآن بشكل صحيح
       date: new Date().toISOString(),
-      status: 'processing',
-      submitted: false
+      status: randomStatus,
+      submitted: randomStatus === 'completed'
     };
     
     return newOrder;
   };
 
-  // إضافة useEffect للتحديث التلقائي
+  // تحديث useEffect للتحديث التلقائي
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     if (autoUpdate) {
       interval = setInterval(() => {
         const newOrder = createRandomOrder();
-        setFilteredImages(prevImages => [newOrder, ...prevImages]);
-      }, 3000); // تحديث كل 3 ثواني
+        // تحديث الإحصائيات حسب حالة الطلب الجديد
+        setFilteredImages(prevImages => {
+          const newImages = [newOrder, ...prevImages];
+          // تحديث الإحصائيات
+          if (newOrder.status === 'new') stats.new++;
+          else if (newOrder.status === 'completed') stats.completed++;
+          stats.total++;
+          return newImages;
+        });
+      }, 3000);
     }
     
     return () => {
