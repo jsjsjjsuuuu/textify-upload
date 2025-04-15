@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData } from "@/types/ImageData";
@@ -90,7 +91,7 @@ export const useFileProcessing = ({
         previewUrl,
         date: new Date(),
         status: "pending",
-        user_id: user?.id,
+        userId: user?.id,
         batch_id: batchId,
         sessionImage: true
       };

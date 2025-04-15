@@ -111,8 +111,6 @@ const ImageViewer = ({
         </div>
       )}
       
-      {/* تم إزالة القسم المتعلق بالبوكماركلت */}
-      
       <ImageInfoBadges 
         number={selectedImage.number}
         date={selectedImage.date}

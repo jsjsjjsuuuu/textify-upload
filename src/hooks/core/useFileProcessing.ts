@@ -41,7 +41,7 @@ export const useFileProcessing = ({
         previewUrl,
         date: new Date(),
         status: "processing",
-        user_id: user?.id,
+        userId: user?.id,
         sessionImage: true
       };
 

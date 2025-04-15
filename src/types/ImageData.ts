@@ -36,15 +36,11 @@ export interface ImageDataBase {
   date?: Date;
   previewUrl?: string;
   number?: number;
-  extractionMethod?: string;
+  extractionMethod?: "ocr" | "gemini";
   batch_id?: string;
   storage_path?: string;
   added_at?: string;
   sessionImage?: boolean;
-  
-  // حقول البوكماركلت المحذوفة (نضيفها لإزالة الأخطاء)
-  bookmarkletStatus?: string;
-  bookmarkletMessage?: string;
   
   // السماح بإضافة حقول إضافية لمعالجة الأخطاء
   error?: string;
@@ -58,7 +54,9 @@ export interface ImageData extends ImageDataBase {
 }
 
 export interface CustomImageData extends ImageDataBase {
+  id: string; // تأكيد أن معرف الصورة إلزامي
   customData?: Record<string, any>;
+  file?: File;
 }
 
 export type ImageStatus = 
@@ -76,19 +74,20 @@ export interface ImageProcessOptions {
   skipOcr?: boolean;
   skipGemini?: boolean;
   forceReprocess?: boolean;
+  id?: string; // إضافة معرف للتوافق مع CustomImageData
 }
 
-// إضافة الأنواع المفقودة التي ظهرت في الأخطاء
+// تحديث تعريفات الوظائف لتتوافق مع الاستخدام في التطبيق
 export type ImageProcessFn = (
   file: File,
-  options?: ImageProcessOptions,
+  options?: ImageProcessOptions | CustomImageData,
   setProgress?: (progress: number) => void
 ) => Promise<Partial<ImageData>>;
 
 export type OcrProcessFn = (
-  file: File,
+  file?: File,
   image?: CustomImageData
-) => Promise<CustomImageData>;
+) => Promise<string | CustomImageData>;
 
 export type GeminiProcessFn = (
   image: CustomImageData

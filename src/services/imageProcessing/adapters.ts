@@ -8,14 +8,29 @@ import { CustomImageData, ImageProcessFn, FileImageProcessFn, OcrProcessFn, Gemi
 /**
  * تحويل دالة OcrProcessFn إلى دالة ImageProcessFn
  */
-export function adaptOcrToImageProcess(ocrFn: OcrProcessFn): ImageProcessFn {
-  return async (file: File, image: CustomImageData): Promise<CustomImageData> => {
-    const extractedText = await ocrFn({...image, file});
-    return {
-      ...image,
-      extractedText,
-      extractionMethod: "ocr"
+export function adaptOcrToImageProcess(ocrFn: (file: File, image: CustomImageData) => Promise<CustomImageData>): ImageProcessFn {
+  return async (file: File, options?: any): Promise<CustomImageData> => {
+    // إنشاء كائن CustomImageData مبسط باستخدام معرف مؤقت في حالة عدم توفر options
+    const image: CustomImageData = {
+      id: options?.id || 'temp-id',
+      ...options,
     };
+    
+    try {
+      // استدعاء دالة OCR مع الملف وكائن الصورة
+      const result = await ocrFn(file, image);
+      return {
+        ...result,
+        extractionMethod: "ocr"
+      };
+    } catch (error) {
+      console.error("خطأ في تنفيذ OCR:", error);
+      return {
+        ...image,
+        errorMessage: error instanceof Error ? error.message : "خطأ غير معروف",
+        status: "error"
+      };
+    }
   };
 }
 
@@ -27,11 +42,27 @@ export function adaptGeminiToFileImageProcess(geminiFn: GeminiProcessFn): FileIm
     // تحويل الكائن إلى File إذا كان من نوع Blob
     const file = fileOrBlob instanceof File ? fileOrBlob : new File([fileOrBlob], "image.png", { type: fileOrBlob.type });
     
-    const result = await geminiFn({...image, file});
-    return {
-      ...image,
-      ...result,
-      extractionMethod: "gemini"
-    };
+    try {
+      // إضافة الملف إلى الصورة قبل معالجته
+      const imageWithFile = { 
+        ...image,
+        file 
+      };
+
+      const result = await geminiFn(imageWithFile);
+      
+      return {
+        ...image,
+        ...result,
+        extractionMethod: "gemini"
+      };
+    } catch (error) {
+      console.error("خطأ في تنفيذ Gemini:", error);
+      return {
+        ...image,
+        errorMessage: error instanceof Error ? error.message : "خطأ غير معروف",
+        status: "error"
+      };
+    }
   };
 }

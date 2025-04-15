@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { CustomImageData, OcrProcessFn, ImageProcessFn } from "@/types/ImageData";
+import { ImageData, CustomImageData } from "@/types/ImageData";
 import { extractTextFromImage } from "@/lib/ocrService";
 import { parseDataFromOCRText, updateImageWithExtractedData } from "@/utils/imageDataParser";
 import { useToast } from "@/hooks/use-toast";
@@ -8,10 +8,14 @@ import { useToast } from "@/hooks/use-toast";
 export const useOcrProcessing = () => {
   const { toast } = useToast();
 
-  // تعريف دالة معالجة OCR المتوافقة مع الواجهة OcrProcessFn
-  const processWithOcr: OcrProcessFn = async (image: CustomImageData): Promise<string> => {
+  // تعريف دالة معالجة OCR المتوافقة مع الواجهة الجديدة
+  const processWithOcr = async (image: CustomImageData): Promise<string> => {
     try {
       console.log("بدء معالجة OCR للصورة:", image.id);
+      
+      if (!image.file) {
+        throw new Error("لا يوجد ملف مرفق بالصورة");
+      }
       
       // استدعاء خدمة OCR مع ملف الصورة
       const result = await extractTextFromImage(image.file);
@@ -31,8 +35,8 @@ export const useOcrProcessing = () => {
     }
   };
 
-  // إضافة دالة معالجة OCR متوافقة مع واجهة ImageProcessFn
-  const processFileWithOcr = async (file: File, image: CustomImageData): Promise<CustomImageData> => {
+  // إضافة دالة معالجة OCR متوافقة مع الاحتياجات الجديدة
+  const processFileWithOcr = async (file: File, image: ImageData): Promise<ImageData> => {
     try {
       console.log("بدء معالجة OCR للملف:", file.name, "للصورة:", image.id);
       
@@ -60,7 +64,7 @@ export const useOcrProcessing = () => {
         ...image,
         extractedText: "",
         status: "error",
-        error: "فشل في معالجة OCR"
+        errorMessage: "فشل في معالجة OCR"
       };
     }
   };
