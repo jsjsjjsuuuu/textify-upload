@@ -1,51 +1,70 @@
+
 import { User } from "@supabase/supabase-js";
-// تصحيح إعادة التصدير باستخدام export type
-import type { BookmarkletItem, BookmarkletExportData } from "@/utils/bookmarklet/types";
 
-// تعريف أنواع دوال معالجة الصور بشكل دقيق
-export type OcrProcessFn = (image: CustomImageData) => Promise<string>;
-export type GeminiProcessFn = (image: CustomImageData) => Promise<Partial<CustomImageData>>;
-
-// إضافة الأنواع الجديدة المطلوبة للتوافق بين المكونات المختلفة
-export type ImageProcessFn = (file: File, image: CustomImageData) => Promise<CustomImageData>;
-export type FileImageProcessFn = (file: File | Blob, image: CustomImageData) => Promise<CustomImageData>;
-export type CreateUrlFn = (file: File) => Promise<string>;
-
-// تغيير اسم الواجهة لتجنب التعارض مع ImageData المدمج
-export interface CustomImageData {
+export interface ImageDataBase {
   id: string;
-  file: File;
-  previewUrl: string;
-  extractedText?: string;
-  code?: string;
-  senderName?: string;
-  phoneNumber?: string;
-  province?: string;
-  price?: string;
-  companyName?: string;
-  date: Date;
-  status: "pending" | "processing" | "completed" | "error";
-  confidence?: number;
-  extractionMethod?: "ocr" | "gemini";
-  number?: number;
+  fileName?: string;
+  rawText?: string;
+  extractedData?: Record<string, any>;
+  createdAt?: string;
+  fileType?: string;
+  fileSize?: number;
+  errorMessage?: string;
+  status?: ImageStatus;
+  processingProgress?: number;
+  objectUrl?: string;
+  textDataUpdated?: boolean;
   submitted?: boolean;
-  user_id?: string;
-  storage_path?: string;
-  batch_id?: string;
-  added_at?: number; 
-  retryCount?: number; 
-  bookmarkletStatus?: "ready" | "pending" | "success" | "error";
-  bookmarkletMessage?: string;
-  notes1?: string;
-  recipientName?: string;
-  error?: string;
-  sessionImage?: boolean;
-  apiKeyError?: boolean;
-  userId?: string; // للتوافق مع الكود الموجود، مع أن user_id هو الاسم المفضل
+  userId?: string;
+  userEmail?: string;
+  uploadTimestamp?: number;
+  processingTime?: number;
+  sourceType?: string;
+  possiblyDuplicate?: boolean;
+  similarityScore?: number;
+  similarTo?: string;
 }
 
-// نحدد ImageData كمرادف لـ CustomImageData للحفاظ على التوافق مع الكود الموجود
-export type ImageData = CustomImageData;
+export interface ImageData extends ImageDataBase {
+  file?: File;
+  dataUrl?: string;
+}
 
-// إعادة تصدير الواجهات من ملف types.ts لضمان التوافق
-export type { BookmarkletItem, BookmarkletExportData };
+export interface CustomImageData extends ImageDataBase {
+  customData?: Record<string, any>;
+}
+
+export type ImageStatus = 
+  | "pending" 
+  | "processing" 
+  | "processed" 
+  | "error" 
+  | "extracted" 
+  | "reviewing" 
+  | "approved" 
+  | "rejected";
+
+export interface ImageProcessOptions {
+  skipOcr?: boolean;
+  skipGemini?: boolean;
+  forceReprocess?: boolean;
+}
+
+export type ImageProcessFn = (
+  file: File,
+  options?: ImageProcessOptions,
+  setProgress?: (progress: number) => void
+) => Promise<Partial<ImageData>>;
+
+export interface ImageProcessingResult {
+  rawText?: string;
+  extractedData?: Record<string, any>;
+  errorMessage?: string;
+}
+
+export interface ExtractedFieldData {
+  field: string;
+  value: string;
+  confidence?: number;
+  isManuallyEdited?: boolean;
+}

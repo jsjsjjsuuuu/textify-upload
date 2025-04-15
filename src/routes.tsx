@@ -5,7 +5,6 @@ import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 import ServicePage from './pages/PolicyPage';
 import PolicyPage from './pages/PolicyPage';
-import AutomationPage from './pages/AutomationPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
@@ -57,11 +56,6 @@ export const AppRoutes = () => {
       <Route path="/records" element={
         <ProtectedRoute>
           <Records />
-        </ProtectedRoute>
-      } />
-      <Route path="/automation/:imageId" element={
-        <ProtectedRoute>
-          <AutomationPage />
         </ProtectedRoute>
       } />
       
