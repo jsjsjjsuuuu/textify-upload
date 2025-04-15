@@ -7,6 +7,7 @@ import ImageDataForm from "./ImageDataForm";
 import ActionButtons from "./ActionButtons";
 import BatchArrow from "./BatchArrow";
 import { useEffect, useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 interface CardItemProps {
   image: ImageData;
@@ -19,6 +20,7 @@ interface CardItemProps {
   showBatchArrow?: boolean;
   isFirstInBatch?: boolean;
   isLastInBatch?: boolean;
+  compact?: boolean; // إضافة خاصية compact
 }
 
 const CardItem = ({ 
@@ -31,7 +33,8 @@ const CardItem = ({
   formatDate,
   showBatchArrow = false,
   isFirstInBatch = false,
-  isLastInBatch = false
+  isLastInBatch = false,
+  compact = false // القيمة الافتراضية
 }: CardItemProps) => {
   // التحقق من صحة رقم الهاتف (يجب أن يكون 11 رقماً)
   const isPhoneNumberValid = !image.phoneNumber || image.phoneNumber.replace(/[^\d]/g, '').length === 11;
@@ -58,38 +61,53 @@ const CardItem = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="max-w-5xl mx-auto relative"
+      className={cn(
+        "max-w-5xl mx-auto relative", 
+        compact && "text-sm" // تصغير حجم النص للعرض المصغر
+      )}
     >
       {showBatchArrow && (
         <BatchArrow isFirst={isFirstInBatch} isLast={isLastInBatch} />
       )}
       
-      <Card className="overflow-hidden bg-[#0a0f1e]/95 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow border-border/60 rounded-xl">
+      <Card className={cn(
+        "overflow-hidden bg-[#0a0f1e]/95 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow border-border/60 rounded-xl",
+        compact && "px-2 py-1" // تقليل الهوامش للعرض المصغر
+      )}>
         <CardContent className="p-0">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-0">
-            {/* صورة العنصر (55% العرض) */}
-            <div className="md:col-span-7 border-b md:border-b-0 md:border-l border-border/30">
+          <div className={cn(
+            "grid grid-cols-1 md:grid-cols-12 gap-0",
+            compact && "grid-cols-1" // تبسيط الشبكة للعرض المصغر
+          )}>
+            {/* صورة العنصر */}
+            <div className={cn(
+              "md:col-span-7 border-b md:border-b-0 md:border-l border-border/30",
+              compact && "md:col-span-12" // العرض الكامل في التصميم المصغر
+            )}>
               <DraggableImage 
                 image={image} 
                 onImageClick={onImageClick} 
-                formatDate={formatDate} 
+                formatDate={formatDate}
+                compact={compact} // تمرير خاصية compact
               />
             </div>
             
-            {/* بيانات العنصر (45% العرض) */}
-            <div className="md:col-span-5">
-              <ImageDataForm 
-                image={image} 
-                onTextChange={onTextChange} 
-              />
-            </div>
+            {/* بيانات العنصر */}
+            {!compact && (
+              <div className="md:col-span-5">
+                <ImageDataForm 
+                  image={image} 
+                  onTextChange={onTextChange} 
+                />
+              </div>
+            )}
           </div>
           
-          <div className="px-4 pb-4 border-t border-border/30 mt-2">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="w-full sm:w-auto">
-                {/* إزالة مكون AutomationButton من هنا */}
-              </div>
+          <div className={cn(
+            "px-4 pb-4 border-t border-border/30 mt-2",
+            compact && "px-2 pb-2 mt-1" // تقليل الهوامش للعرض المصغر
+          )}>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
               <ActionButtons 
                 imageId={image.id}
                 isSubmitting={isSubmitting}
@@ -99,6 +117,7 @@ const CardItem = ({
                 isAllFieldsFilled={isAllFieldsFilled}
                 onDelete={onDelete}
                 onSubmit={onSubmit}
+                compact={compact} // إضافة خاصية compact للأزرار
               />
             </div>
           </div>

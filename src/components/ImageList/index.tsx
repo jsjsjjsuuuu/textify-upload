@@ -38,12 +38,10 @@ const ImageList = ({
   
   // ترتيب المجموعات حسب التاريخ (الأحدث أولاً)
   const sortedBatchIds = Object.keys(groupedImages).sort((a, b) => {
-    // التأكد من وجود عناصر في المصفوفات قبل الوصول إليها
     if (groupedImages[a].length === 0 || groupedImages[b].length === 0) {
       return 0;
     }
     
-    // التأكد من أن كل صورة لديها حقل date
     const dateA = groupedImages[a][0].date ? groupedImages[a][0].date.getTime() : Date.now();
     const dateB = groupedImages[b][0].date ? groupedImages[b][0].date.getTime() : Date.now();
     
@@ -55,12 +53,13 @@ const ImageList = ({
       initial={{ opacity: 0, y: 20 }} 
       animate={{ opacity: 1, y: 0 }} 
       transition={{ duration: 0.3 }}
+      className="space-y-2" // تقليل المسافة بين العناصر
     >
-      <h2 className="text-2xl font-bold mb-6 flex items-center">
+      <h2 className="text-lg font-bold mb-2 flex items-center">
         معاينة الصور والنصوص المستخرجة
       </h2>
       
-      <div className="space-y-6">
+      <div className="space-y-2"> {/* تقليل المسافة بين المجموعات */}
         {sortedBatchIds.map(batchId => {
           const batchImages = groupedImages[batchId];
           const hasManyImages = batchImages.length > 1;
@@ -80,12 +79,13 @@ const ImageList = ({
                   showBatchArrow={hasManyImages}
                   isFirstInBatch={index === 0}
                   isLastInBatch={index === batchImages.length - 1}
+                  compact={true} // إضافة خاصية compact للتصميم المصغر
                 />
               ))}
               
               {/* إضافة فاصل بين المجموعات */}
               {batchId !== sortedBatchIds[sortedBatchIds.length - 1] && (
-                <div className="border-t border-gray-200 dark:border-gray-700 my-8"></div>
+                <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div> // تقليل الهامش
               )}
             </Fragment>
           );
