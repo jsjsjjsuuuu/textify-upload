@@ -3,7 +3,6 @@ import { ImageData } from "@/types/ImageData";
 import CardItem from "./CardItem";
 import { motion } from "framer-motion";
 import { Fragment } from "react";
-import { ChevronDown } from "lucide-react";
 
 interface ImageListProps {
   images: ImageData[];
@@ -43,8 +42,11 @@ const ImageList = ({
     if (groupedImages[a].length === 0 || groupedImages[b].length === 0) {
       return 0;
     }
-    const dateA = groupedImages[a][0].date.getTime();
-    const dateB = groupedImages[b][0].date.getTime();
+    
+    // التأكد من أن كل صورة لديها حقل date
+    const dateA = groupedImages[a][0].date ? groupedImages[a][0].date.getTime() : Date.now();
+    const dateB = groupedImages[b][0].date ? groupedImages[b][0].date.getTime() : Date.now();
+    
     return dateB - dateA;
   });
 

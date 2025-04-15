@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import DraggableImage from "./DraggableImage";
 import ImageDataForm from "./ImageDataForm";
 import ActionButtons from "./ActionButtons";
-import { AutomationButton } from "@/components/ExtractedData";
 import BatchArrow from "./BatchArrow";
 import { useEffect, useMemo } from "react";
 
@@ -89,7 +88,7 @@ const CardItem = ({
           <div className="px-4 pb-4 border-t border-border/30 mt-2">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="w-full sm:w-auto">
-                <AutomationButton image={image} />
+                {/* إزالة مكون AutomationButton من هنا */}
               </div>
               <ActionButtons 
                 imageId={image.id}
@@ -97,7 +96,7 @@ const CardItem = ({
                 isCompleted={image.status === "completed"}
                 isSubmitted={!!image.submitted}
                 isPhoneNumberValid={isPhoneNumberValid}
-                isAllFieldsFilled={isAllFieldsFilled} // تمرير حالة اكتمال الحقول
+                isAllFieldsFilled={isAllFieldsFilled}
                 onDelete={onDelete}
                 onSubmit={onSubmit}
               />

@@ -1,161 +1,144 @@
-
 import React from 'react';
 import { ImageData } from '@/types/ImageData';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Image, Loader } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, RefreshCw, Send, Trash, AlertOctagon } from 'lucide-react';
+import { formatBytes } from '@/utils/formatters';
 
 interface ImageCardContainerProps {
-  images: ImageData[];
-  activeImage: ImageData | null;
-  selectedImages: string[];
-  handleImageClick: (image: ImageData) => void;
-  setSelectedImages: React.Dispatch<React.SetStateAction<string[]>>;
-  isImageComplete: (image: ImageData) => boolean;
-  hasPhoneError: (image: ImageData) => boolean;
+  image: ImageData;
+  onDelete: (id: string) => void;
+  onSubmit: (id: string) => void;
+  isSubmitting: boolean;
 }
 
-const ImageCardContainer = ({
-  images,
-  activeImage,
-  selectedImages,
-  handleImageClick,
-  setSelectedImages,
-  isImageComplete,
-  hasPhoneError
-}: ImageCardContainerProps) => {
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      <AnimatePresence>
-        {images.map((image) => (
-          <motion.div
-            key={image.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className={`relative overflow-hidden rounded-lg cursor-pointer border-2 transition-all ${
-              activeImage?.id === image.id 
-                ? "border-primary dark:border-primary shadow-md" 
-                : "border-transparent dark:border-transparent"
-            } ${
-              selectedImages.includes(image.id)
-                ? "ring-2 ring-blue-500 dark:ring-blue-400"
-                : ""
-            }`}
-            onClick={() => handleImageClick(image)}
-          >
-            {/* Checkbox للتحديد المتعدد */}
-            <div 
-              className="absolute top-2 right-2 z-10 w-5 h-5 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedImages(prev => 
-                  prev.includes(image.id) 
-                    ? prev.filter(id => id !== image.id)
-                    : [...prev, image.id]
-                );
-              }}
-            >
-              {selectedImages.includes(image.id) && (
-                <div className="w-3 h-3 bg-blue-500 rounded-sm" />
-              )}
-            </div>
-            
-            {/* حالة الصورة */}
-            <StatusBadge 
-              status={image.status} 
-              isComplete={isImageComplete(image)} 
-              hasPhoneError={hasPhoneError(image)} 
-            />
-            
-            {/* صورة مصغرة */}
-            <ThumbnailImage image={image} />
-            
-            {/* معلومات الصورة */}
-            <div className="p-2 text-xs">
-              <p className="font-medium truncate">
-                {image.code || image.senderName || `صورة ${image.number || ""}`}
-              </p>
-              <p className="text-gray-500 dark:text-gray-400 truncate">
-                {image.file?.name || ""}
-              </p>
-            </div>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-// مكون فرعي لعرض حالة الصورة
-const StatusBadge = ({ 
-  status, 
-  isComplete, 
-  hasPhoneError 
-}: { 
-  status: "pending" | "processing" | "completed" | "error"; 
-  isComplete: boolean; 
-  hasPhoneError: boolean;
+const ImageCardContainer: React.FC<ImageCardContainerProps> = ({
+  image,
+  onDelete,
+  onSubmit,
+  isSubmitting
 }) => {
-  let badgeClass = '';
-  let badgeText = '';
-  
-  if (status === "completed" && isComplete) {
-    badgeClass = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-    badgeText = "مكتملة";
-  } else if (status === "pending") {
-    badgeClass = "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200";
-    badgeText = "قيد الانتظار";
-  } else if (status === "error" || hasPhoneError) {
-    badgeClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-    badgeText = hasPhoneError ? "خطأ في رقم الهاتف" : "فشل";
-  } else if (status === "processing") {
-    badgeClass = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-    badgeText = "جاري المعالجة";
-  } else if (status === "completed" && !isComplete && !hasPhoneError) {
-    badgeClass = "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-    badgeText = "غير مكتملة";
-  }
-  
-  return (
-    <div className={`absolute top-2 left-2 z-10 px-1.5 py-0.5 text-xs rounded-full ${badgeClass}`}>
-      {status === "processing" ? (
-        <span className="flex items-center">
-          <Loader className="w-3 h-3 ml-1 animate-spin" />
-          {badgeText}
-        </span>
-      ) : badgeText}
-    </div>
-  );
-};
+  const getStatusBadgeProps = (status: string | undefined) => {
+    switch (status) {
+      case 'pending':
+        return {
+          className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200',
+          label: 'قيد الانتظار'
+        };
+      case 'processing':
+        return {
+          className: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
+          label: 'جاري المعالجة'
+        };
+      case 'processed':
+      case 'completed':
+        return {
+          className: 'bg-green-100 text-green-800 hover:bg-green-200',
+          label: 'تمت المعالجة'
+        };
+      case 'error':
+        return {
+          className: 'bg-red-100 text-red-800 hover:bg-red-200',
+          label: 'خطأ'
+        };
+      default:
+        return {
+          className: 'bg-gray-100 text-gray-800 hover:bg-gray-200',
+          label: 'غير معروف'
+        };
+    }
+  };
 
-// مكون فرعي لعرض الصورة المصغرة
-const ThumbnailImage = ({ image }: { image: ImageData }) => {
+  const statusProps = getStatusBadgeProps(image.status);
+
   return (
-    <div className="h-28 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-      {image.previewUrl ? (
-        <img
-          src={image.previewUrl}
-          alt={`صورة ${image.number || ""}`}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            // في حالة فشل تحميل الصورة، استبدالها بأيقونة
-            (e.target as HTMLImageElement).style.display = "none";
-            const parent = (e.target as HTMLImageElement).parentElement;
-            if (parent) {
-              const icon = document.createElement("div");
-              icon.className = "flex items-center justify-center h-full w-full";
-              icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><path d="M2 2l20 20"></path><path d="M9 9v0"></path><path d="M6.5 5h11l2 2"></path><path d="M5.5 17.5l1 1"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>';
-              parent.appendChild(icon);
-            }
-          }}
-        />
-      ) : (
-        <div className="flex items-center justify-center h-full w-full">
-          <Image className="w-8 h-8 text-gray-400" />
+    <Card className="bg-card/90 backdrop-blur-sm">
+      <CardContent className="p-4">
+        <div className="flex flex-col space-y-2">
+          <div className="flex justify-between items-center">
+            <h3 className="font-medium text-lg">{image.fileName || 'صورة بدون اسم'}</h3>
+            <Badge className={statusProps.className}>{statusProps.label}</Badge>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="text-muted-foreground">الحجم:</span>{' '}
+              <span className="font-medium">{formatBytes(image.fileSize || 0)}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">النوع:</span>{' '}
+              <span className="font-medium">{image.fileType || 'غير معروف'}</span>
+            </div>
+          </div>
+          
+          {image.status === 'error' && (
+            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-red-700">
+              <AlertOctagon className="h-4 w-4" />
+              <span className="text-xs">{image.errorMessage || 'حدث خطأ أثناء معالجة الصورة'}</span>
+            </div>
+          )}
+          
+          {image.status === 'processing' && (
+            <div className="mt-2">
+              <div className="flex justify-between text-xs mb-1">
+                <span>جاري المعالجة...</span>
+                <span>{image.processingProgress || 0}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div 
+                  className="bg-blue-500 h-1.5 rounded-full" 
+                  style={{ width: `${image.processingProgress || 0}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </CardContent>
+      <CardFooter className="justify-between border-t bg-card/50 p-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onDelete(image.id)}
+          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+        >
+          <Trash className="h-4 w-4 mr-1" />
+          <span>حذف</span>
+        </Button>
+        
+        <div className="flex gap-2">
+          {image.status === 'error' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-blue-500 hover:text-blue-700"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              <span>إعادة المحاولة</span>
+            </Button>
+          )}
+          
+          <Button
+            variant="default"
+            size="sm"
+            disabled={image.status !== 'completed' && image.status !== 'processed' || isSubmitting}
+            onClick={() => onSubmit(image.id)}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                <span>جاري الإرسال...</span>
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-1" />
+                <span>إرسال</span>
+              </>
+            )}
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
   );
 };
 

@@ -5,7 +5,7 @@ export interface ImageDataBase {
   id: string;
   fileName?: string;
   rawText?: string;
-  extractedText?: string; // إضافة حقل النص المستخرج
+  extractedText?: string;
   extractedData?: Record<string, any>;
   createdAt?: string;
   fileType?: string;
@@ -25,7 +25,7 @@ export interface ImageDataBase {
   similarityScore?: number;
   similarTo?: string;
   
-  // إضافة الحقول المفقودة لمعالجة الأخطاء في المكونات
+  // الحقول التي تم اكتشاف حاجتنا إليها من خلال الأخطاء
   code?: string;
   senderName?: string;
   phoneNumber?: string;
@@ -37,6 +37,19 @@ export interface ImageDataBase {
   previewUrl?: string;
   number?: number;
   extractionMethod?: string;
+  batch_id?: string;
+  storage_path?: string;
+  added_at?: string;
+  sessionImage?: boolean;
+  
+  // حقول البوكماركلت المحذوفة (نضيفها لإزالة الأخطاء)
+  bookmarkletStatus?: string;
+  bookmarkletMessage?: string;
+  
+  // السماح بإضافة حقول إضافية لمعالجة الأخطاء
+  error?: string;
+  apiKeyError?: boolean;
+  file?: File;
 }
 
 export interface ImageData extends ImageDataBase {
@@ -57,7 +70,7 @@ export type ImageStatus =
   | "reviewing" 
   | "approved" 
   | "rejected"
-  | "completed"; // إضافة حالة "completed" التي تستخدمها المكونات
+  | "completed";
 
 export interface ImageProcessOptions {
   skipOcr?: boolean;
@@ -65,11 +78,26 @@ export interface ImageProcessOptions {
   forceReprocess?: boolean;
 }
 
+// إضافة الأنواع المفقودة التي ظهرت في الأخطاء
 export type ImageProcessFn = (
   file: File,
   options?: ImageProcessOptions,
   setProgress?: (progress: number) => void
 ) => Promise<Partial<ImageData>>;
+
+export type OcrProcessFn = (
+  file: File,
+  image?: CustomImageData
+) => Promise<CustomImageData>;
+
+export type GeminiProcessFn = (
+  image: CustomImageData
+) => Promise<Partial<CustomImageData>>;
+
+export type FileImageProcessFn = (
+  file: File | Blob,
+  image: CustomImageData
+) => Promise<CustomImageData>;
 
 export interface ImageProcessingResult {
   rawText?: string;

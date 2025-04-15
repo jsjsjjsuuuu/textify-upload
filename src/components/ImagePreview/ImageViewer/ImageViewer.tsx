@@ -111,30 +111,13 @@ const ImageViewer = ({
         </div>
       )}
       
-      {selectedImage.bookmarkletStatus && (
-        <div className={`absolute bottom-16 right-4 px-3 py-1 rounded-full text-xs font-medium border shadow-sm ${
-          selectedImage.bookmarkletStatus === 'ready' ? 'bg-blue-500/20 text-blue-700 border-blue-300' :
-          selectedImage.bookmarkletStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-700 border-yellow-300' :
-          selectedImage.bookmarkletStatus === 'success' ? 'bg-green-500/20 text-green-700 border-green-300' :
-          'bg-red-500/20 text-red-700 border-red-300'
-        }`}>
-          {selectedImage.bookmarkletStatus === 'ready' ? 'جاهز للإدخال' :
-           selectedImage.bookmarkletStatus === 'pending' ? 'قيد الإدخال' :
-           selectedImage.bookmarkletStatus === 'success' ? 'تم الإدخال' :
-           'فشل الإدخال'}
-          {selectedImage.bookmarkletMessage && (
-            <span className="block text-[10px] mt-0.5 opacity-80 max-w-40 truncate">
-              {selectedImage.bookmarkletMessage}
-            </span>
-          )}
-        </div>
-      )}
+      {/* تم إزالة القسم المتعلق بالبوكماركلت */}
       
       <ImageInfoBadges 
         number={selectedImage.number}
         date={selectedImage.date}
         confidence={selectedImage.confidence}
-        extractionMethod={selectedImage.extractionMethod}
+        extractionMethod={selectedImage.extractionMethod || "ocr"}
         formatDate={formatDate}
       />
     </motion.div>
