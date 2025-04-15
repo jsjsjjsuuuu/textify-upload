@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -114,6 +115,7 @@ const Orders: React.FC = () => {
       phoneNumber: phones[Math.floor(Math.random() * phones.length)],
       province: provinces[Math.floor(Math.random() * provinces.length)],
       price: prices[Math.floor(Math.random() * prices.length)],
+      // تخزين التاريخ كـISOString ولكن ملف dateFormatter سيتعامل معه الآن بشكل صحيح
       date: new Date().toISOString(),
       status: 'processing',
       submitted: false
