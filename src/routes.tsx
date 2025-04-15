@@ -12,7 +12,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AdminApproval from './pages/AdminApproval';
 import ProtectedRoute from './components/ProtectedRoute';
-import Orders from './pages/Orders';
+import Orders from './pages/Orders';  // إضافة استيراد الصفحة الجديدة
 
 /**
  * تكوين مسارات التطبيق
