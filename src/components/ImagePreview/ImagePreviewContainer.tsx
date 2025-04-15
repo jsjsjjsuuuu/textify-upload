@@ -11,6 +11,7 @@ interface ImagePreviewContainerProps {
   onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
   showOnlySession?: boolean;
+  onRetry?: (imageId: string) => void;
 }
 
 const ImagePreviewContainer = ({
@@ -20,7 +21,8 @@ const ImagePreviewContainer = ({
   onDelete,
   onSubmit,
   formatDate,
-  showOnlySession = false
+  showOnlySession = false,
+  onRetry
 }: ImagePreviewContainerProps) => {
   const { toast } = useToast();
   
@@ -44,6 +46,7 @@ const ImagePreviewContainer = ({
         onSubmit={onSubmit}
         formatDate={formatDate}
         showOnlySession={showOnlySession}
+        onRetry={onRetry}
       />
     </React.Suspense>
   );

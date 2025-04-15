@@ -10,15 +10,24 @@ interface DraggableImageProps {
   onImageClick: (image: ImageData) => void;
   formatDate: (date: Date) => string;
   compact?: boolean;
+  onRetryLoad?: (imageId: string) => void;
 }
 
 const DraggableImage: React.FC<DraggableImageProps> = ({ 
   image, 
   onImageClick, 
   formatDate,
-  compact = false 
+  compact = false,
+  onRetryLoad
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+
+  const handleRetryClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onRetryLoad && image.status === 'error') {
+      onRetryLoad(image.id);
+    }
+  };
 
   return (
     <div 
@@ -74,6 +83,21 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
           </div>
         )}
       </div>
+      
+      {/* زر إعادة المحاولة للصور التي بها خطأ */}
+      {image.status === "error" && onRetryLoad && (
+        <div 
+          className="absolute bottom-1 right-1 bg-white/90 p-1 rounded-full cursor-pointer"
+          onClick={handleRetryClick}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-destructive">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+            <path d="M21 3v5h-5"></path>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+            <path d="M8 16H3v5"></path>
+          </svg>
+        </div>
+      )}
       
       {/* تأثير التكبير عند التحويم */}
       <motion.div 
