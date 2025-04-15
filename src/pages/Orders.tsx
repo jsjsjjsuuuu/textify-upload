@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -176,27 +175,23 @@ const Orders: React.FC = () => {
           <div className="relative z-10 p-6">
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-bold text-gradient">الطلبات الجديدة</h1>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <Button 
-                  variant="outline" 
-                  size="sm" 
+                  variant="ghost" 
+                  size="icon" 
                   onClick={() => setAutoUpdate(!autoUpdate)}
                   className={cn(
-                    "bg-[#131b31] border-0",
+                    "text-muted-foreground hover:text-foreground",
                     autoUpdate && "text-green-500 hover:text-green-400"
                   )}
                 >
-                  <RefreshCw size={16} className={cn("ml-2", autoUpdate && "animate-spin")} />
-                  {autoUpdate ? "إيقاف التحديث التلقائي" : "تشغيل التحديث التلقائي"}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={loadData}
-                  className="bg-[#131b31] border-0"
-                >
-                  <RefreshCw size={16} className="ml-2" />
-                  تحديث يدوي
+                  <RefreshCw 
+                    size={20} 
+                    className={cn(
+                      "transition-all duration-300", 
+                      autoUpdate && "animate-spin"
+                    )} 
+                  />
                 </Button>
               </div>
             </div>
