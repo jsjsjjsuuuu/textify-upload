@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -14,7 +13,8 @@ import {
   Moon,
   Info,
   FileText,
-  Wand2
+  Wand2,
+  Package // إضافة أيقونة الطلبات
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,6 +94,18 @@ const AppHeader = () => {
               <div className="flex items-center">
                 <Database className="ml-1.5 w-4 h-4" />
                 السجلات
+              </div>
+            </Link>
+            <Link
+              to="/orders"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                isActive('/orders') ? "text-foreground" : "text-muted-foreground"
+              )}
+            >
+              <div className="flex items-center">
+                <Package className="ml-1.5 w-4 h-4" />
+                الطلبات
               </div>
             </Link>
             <Link
@@ -195,12 +207,12 @@ const AppHeader = () => {
             السجلات
           </Link>
           <Link
-            to="/upload"
+            to="/orders"
             className="flex items-center space-x-2 space-x-reverse text-sm font-medium"
             onClick={closeMenu}
           >
-            <UploadCloud className="ml-1.5 w-5 h-5" />
-            تحميل الصور
+            <Package className="ml-1.5 w-5 h-5" />
+            الطلبات
           </Link>
           {userProfile?.is_admin && (
             <Link
