@@ -1,4 +1,3 @@
-
 import imageCompression from "browser-image-compression";
 
 /**
@@ -91,4 +90,42 @@ export async function reduceNoise(file: File): Promise<File> {
   // سيتم تنفيذها في تحديث مستقبلي
   // حاليًا نعيد الملف كما هو
   return file;
+}
+
+/**
+ * ضغط الصورة وتحويلها إلى تمثيل Base64
+ * @param file ملف الصورة
+ * @param maxSize الحد الأقصى للبعد (عرض أو ارتفاع)
+ * @param quality جودة الصورة (high, medium, low)
+ * @returns صورة بتنسيق Base64
+ */
+export async function compressAndGenerateBase64(file: File, maxSize: number = 800, quality: 'high' | 'medium' | 'low' = 'medium'): Promise<string> {
+  try {
+    // تحويل التصنيف إلى قيمة عددية للجودة
+    const qualityValue = quality === 'high' ? 0.9 : quality === 'medium' ? 0.7 : 0.5;
+    
+    // ضغط الصورة أولاً
+    const compressedFile = await compressImage(file, { 
+      maxWidthOrHeight: maxSize,
+      initialQuality: qualityValue
+    });
+    
+    // تحويل الملف إلى Base64
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(compressedFile);
+    });
+  } catch (error) {
+    console.error("خطأ في ضغط وتحويل الصورة:", error);
+    
+    // إذا فشلت العملية، حاول تحويل الملف الأصلي إلى Base64
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 }

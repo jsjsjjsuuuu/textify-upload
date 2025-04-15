@@ -1,58 +1,41 @@
-
-import type { ImageData } from "@/types/ImageData";
+import { ImageData } from "@/types/ImageData";
 
 /**
- * التحقق من تطابق اثنين من الصور بمعايير أكثر دقة
- * @param image1 الصورة الأولى
- * @param image2 الصورة الثانية
- * @returns هل الصورتان متطابقتان
+ * دالة لمطابقة الصور بناءً على بيانات الصورة الوصفية
+ * @param a الصورة الأولى
+ * @param b الصورة الثانية
+ * @returns true إذا كانت الصورتان متطابقتين، false خلاف ذلك
  */
-export const imagesMatch = (image1: ImageData, image2: ImageData): boolean => {
-  // التحقق من وجود معرفات الصور أولاً
-  if (!image1 || !image2 || !image1.id || !image2.id) {
+export const matchImages = (a: ImageData, b: ImageData): boolean => {
+  // يجب أن يكون لديهم نفس المستخدم
+  if (a.userId !== b.userId) {
     return false;
   }
-  
-  // الحالة 1: المعرفات متطابقة
-  if (image1.id === image2.id) {
-    return true;
+
+  // يجب أن يكون لديهم نفس اسم المرسل
+  if (a.senderName !== b.senderName) {
+    return false;
   }
-  
-  // التحقق من وجود الملفات للمقارنة
-  const hasFiles = image1.file && image2.file;
-  
-  // التحقق من المستخدم
-  const sameUser = image1.user_id === image2.user_id;
-  
-  // التحقق من تطابق الخصائص الأساسية للملف
-  let sameFile = false;
-  if (hasFiles) {
-    sameFile = 
-      image1.file.name === image2.file.name &&
-      image1.file.size === image2.file.size &&
-      Math.abs(image1.file.lastModified - image2.file.lastModified) < 5000; // السماح بفارق 5 ثوانٍ
+
+  // يجب أن يكون لديهم نفس رقم الهاتف
+  if (a.phoneNumber !== b.phoneNumber) {
+    return false;
   }
-  
-  // **تحقق إضافي: فحص النص المستخرج إذا كان متوفرًا**
-  const textSimilar = !!image1.extractedText && !!image2.extractedText && 
-                      image1.extractedText.length > 10 && image2.extractedText.length > 10 && 
-                      (image1.extractedText.substring(0, 50) === image2.extractedText.substring(0, 50));
-  
-  // **تحقق إضافي: فحص تطابق الكود إذا كان متوفرًا**
-  const sameCode = !!image1.code && !!image2.code && image1.code === image2.code;
-  
-  // **تحقق إضافي: فحص تطابق رقم الهاتف إذا كان متوفرًا**
-  const samePhoneNumber = !!image1.phoneNumber && !!image2.phoneNumber && 
-                          image1.phoneNumber.replace(/[^\d]/g, '') === image2.phoneNumber.replace(/[^\d]/g, '');
-  
-  // إذا كانت الصورة الأولى مكتملة أو بها خطأ، وكذلك الصورة الثانية، والملفان متطابقان، اعتبرهما متطابقتين
-  const bothProcessed = 
-    (image1.status === "completed" || image1.status === "error") &&
-    (image2.status === "completed" || image2.status === "error");
-  
-  // اعتبار الصور متطابقة إذا كانت من نفس المستخدم ولنفس الملف
-  // أو إذا كان النص المستخرج متشابهًا جدًا أو الكود ورقم الهاتف متطابقين
-  return (sameUser && sameFile) || 
-         (sameUser && (textSimilar || (sameCode && samePhoneNumber))) ||
-         (hasFiles && sameFile && bothProcessed);
+
+  // يجب أن يكون لديهم نفس المحافظة
+  if (a.province !== b.province) {
+    return false;
+  }
+
+  // يجب أن يكون لديهم نفس السعر
+  if (a.price !== b.price) {
+    return false;
+  }
+
+  // يجب أن يكون لديهم نفس اسم الشركة
+  if (a.companyName !== b.companyName) {
+    return false;
+  }
+
+  return true;
 };

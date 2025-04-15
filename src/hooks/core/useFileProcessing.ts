@@ -41,7 +41,7 @@ export const useFileProcessing = ({
         previewUrl,
         date: new Date(),
         status: "processing",
-        userId: user?.id,
+        userId: user?.id, // استخدام userId بدلاً من user_id
         sessionImage: true
       };
 

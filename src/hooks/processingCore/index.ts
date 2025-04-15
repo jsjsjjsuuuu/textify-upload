@@ -117,6 +117,16 @@ export const useImageProcessingCore = () => {
     }
   }, [user, hiddenImageIds]);
 
+  // تعديل دالة جلب الصور ليكون لها نفس التوقيع المتوقع
+  const modifiedLoadUserImages = useCallback((userId: string, callback?: (images: ImageData[]) => void): Promise<void> => {
+    return new Promise((resolve) => {
+      loadUserImages(userId, (images) => {
+        if (callback) callback(images);
+        resolve();
+      });
+    });
+  }, [loadUserImages]);
+
   // تصدير الوظائف المتاحة
   return {
     images,
@@ -134,11 +144,7 @@ export const useImageProcessingCore = () => {
     saveImageToDatabase,
     saveProcessedImage,
     hideImage,
-    loadUserImages: (callback?: (images: ImageData[]) => void) => {
-      if (user) {
-        loadUserImagesWrapper(user.id, callback);
-      }
-    },
+    loadUserImages: modifiedLoadUserImages, // استخدام الدالة المعدلة
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,

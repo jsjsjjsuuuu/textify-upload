@@ -41,6 +41,8 @@ export interface ImageDataBase {
   storage_path?: string;
   added_at?: string;
   sessionImage?: boolean;
+  bookmarkletStatus?: string;
+  bookmarkletMessage?: string;
   
   // السماح بإضافة حقول إضافية لمعالجة الأخطاء
   error?: string;
@@ -109,4 +111,20 @@ export interface ExtractedFieldData {
   value: string;
   confidence?: number;
   isManuallyEdited?: boolean;
+}
+
+// إضافة واجهة لخيارات تحميل الملفات
+export interface FileUploadOptions {
+  images: ImageData[];
+  addImage: (image: ImageData) => void;
+  updateImage: (id: string, fields: Partial<ImageData>) => void;
+  setProcessingProgress: (progress: number) => void;
+  processWithOcr: ImageProcessFn;
+  processWithGemini: ImageProcessFn;
+  saveProcessedImage?: (image: CustomImageData) => Promise<boolean>;
+  removeDuplicates?: (images: ImageData[]) => ImageData[];
+  processedImage?: {
+    isDuplicateImage: (image: ImageData) => Promise<boolean>;
+    markImageAsProcessed: (image: ImageData) => void;
+  };
 }

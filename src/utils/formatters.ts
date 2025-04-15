@@ -43,6 +43,23 @@ export const formatFileSize = (bytes: number): string => {
 };
 
 /**
+ * تنسيق حجم الملف بوحدات مناسبة (بايت، كيلوبايت، ميجابايت)
+ * @param bytes حجم الملف بالبايت
+ * @returns النص المنسق
+ */
+export const formatBytes = (bytes: number, decimals: number = 2): string => {
+  if (bytes === 0) return '0 بايت';
+  
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['بايت', 'كيلوبايت', 'ميجابايت', 'جيجابايت', 'تيرابايت'];
+  
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
+
+/**
  * تنسيق رقم الهاتف للعرض
  * @param phone رقم الهاتف
  * @returns رقم الهاتف بتنسيق سهل القراءة

@@ -13,7 +13,7 @@ export function adaptOcrToImageProcess(ocrFn: (file: File, image: CustomImageDat
     // إنشاء كائن CustomImageData مبسط باستخدام معرف مؤقت في حالة عدم توفر options
     const image: CustomImageData = {
       id: options?.id || 'temp-id',
-      ...options,
+      ...options as CustomImageData,
     };
     
     try {
@@ -42,13 +42,14 @@ export function adaptGeminiToFileImageProcess(geminiFn: GeminiProcessFn): FileIm
     // تحويل الكائن إلى File إذا كان من نوع Blob
     const file = fileOrBlob instanceof File ? fileOrBlob : new File([fileOrBlob], "image.png", { type: fileOrBlob.type });
     
-    try {
-      // إضافة الملف إلى الصورة قبل معالجته
-      const imageWithFile = { 
-        ...image,
-        file 
-      };
+    // إنشاء نسخة من الصورة مع الملف
+    const imageWithFile: CustomImageData = { 
+      ...image,
+      file 
+    };
 
+    try {
+      // استدعاء دالة Gemini مع الصورة
       const result = await geminiFn(imageWithFile);
       
       return {

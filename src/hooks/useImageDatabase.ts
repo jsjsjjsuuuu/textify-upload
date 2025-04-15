@@ -47,7 +47,8 @@ export const useImageDatabase = (updateImageCallback?: (id: string, data: Partia
         batch_id: row.batch_id,
         storage_path: row.storage_path,
         added_at: row.created_at ? new Date(row.created_at).getTime().toString() : new Date().getTime().toString(),
-        number: (data.length - data.findIndex((d: any) => d.id === row.id)) // ترتيب الصور تنازليًا
+        number: (data.length - data.findIndex((d: any) => d.id === row.id)), // ترتيب الصور تنازليًا
+        userId: userId // تأكد من تعيين معرف المستخدم بشكل صحيح
       }));
 
       if (callback) {

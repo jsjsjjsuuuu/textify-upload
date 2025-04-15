@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useToast } from "@/hooks/use-toast";
@@ -55,7 +54,7 @@ export const useFileProcessing = ({
         previewUrl,
         status: 'processing',
         sessionImage: true,
-        user_id: user?.id,
+        userId: user?.id,
         batch_id: batchId,
         extractedText: '',
         code: '',
@@ -80,10 +79,9 @@ export const useFileProcessing = ({
         
         // استخراج البيانات باستخدام Gemini
         try {
-          const geminiProcessedImage = await processWithGemini(enhancedFile, {
-            ...imageData,
-            ...processedImageData
-          });
+          const geminiProcessedImage: CustomImageData = await processWithGemini(enhancedFile, {
+            ...imageData
+          } as CustomImageData);
           
           updateImage(imageData.id, { 
             ...geminiProcessedImage,
@@ -92,7 +90,7 @@ export const useFileProcessing = ({
           
           // حفظ الصورة المعالجة إذا كانت الدالة متوفرة
           if (saveProcessedImage) {
-            await saveProcessedImage(geminiProcessedImage);
+            await saveProcessedImage(geminiProcessedImage as CustomImageData);
           }
         } catch (geminiError) {
           console.error("خطأ في معالجة Gemini:", geminiError);

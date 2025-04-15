@@ -1,28 +1,34 @@
-
-import type { ImageData } from "@/types/ImageData";
-import CryptoJS from 'crypto-js';
+import { v4 as uuidv4 } from 'uuid';
+import { ImageData } from "@/types/ImageData";
 
 /**
- * إنشاء تجزئة لصورة استنادًا إلى بياناتها بشكل محسن
- * @param image بيانات الصورة
- * @returns سلسلة تجزئة فريدة
+ * دالة لإنشاء تجزئة فريدة للصورة بناءً على محتواها وبيانات المستخدم
+ * @param image كائن الصورة
+ * @returns تجزئة فريدة للصورة
  */
-export const createImageHash = (image: ImageData): string => {
-  // إنشاء سلسلة فريدة تتضمن المزيد من المعلومات
-  if (!image || !image.file) {
-    // إذا كانت الصورة أو الملف غير موجود، استخدم المعرف فقط
-    return `id-${image.id || 'unknown'}`;
-  }
+export async function hashImage(image: ImageData): Promise<string> {
+  // بادئة اختيارية بمعرف المستخدم لضمان عدم وجود تطابقات عبر المستخدمين
+  const prefix = image.userId ? `${image.userId}:` : '';
   
-  const uniqueIdentifiers = [
-    image.file.name,
-    image.file.size.toString(),
-    image.file.lastModified.toString(),
-    image.user_id || '',
-    image.batch_id || '',
-    image.id || '' // إضافة معرف الصورة للتجزئة أيضًا
-  ].join('|');
+  // بيانات الصورة الأساسية
+  const imageData = `${image.fileName || 'unknown'}:${image.fileSize || 0}:${image.fileType || 'unknown'}`;
   
-  // استخدام خوارزمية MD5 لإنشاء بصمة للصورة
-  return CryptoJS.MD5(uniqueIdentifiers).toString();
-};
+  // إنشاء معرف فريد مؤقت
+  const tempId = uuidv4();
+  
+  // دمج البيانات لإنشاء التجزئة
+  const combinedData = `${prefix}${imageData}:${tempId}`;
+  
+  // تحويل النص إلى بيانات ثنائية (ArrayBuffer)
+  const encoder = new TextEncoder();
+  const data = encoder.encode(combinedData);
+  
+  // استخدام Web Crypto API لإنشاء التجزئة
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  
+  // تحويل ArrayBuffer إلى سلسلة hex
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  return hashHex;
+}
