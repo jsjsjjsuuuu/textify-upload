@@ -6,7 +6,6 @@ import ExtractedDataActions from "./ExtractedDataActions";
 import RawTextViewer from "./RawTextViewer";
 import LearningNotifications from "./LearningNotifications";
 import ExtractedDataFields from "./ExtractedDataFields";
-import AutomationButton from "./AutomationButton";
 import { useDataExtraction } from "@/hooks/useDataExtraction";
 import { motion } from "framer-motion";
 import DataCompletionIndicator from "./DataCompletionIndicator";
@@ -15,16 +14,16 @@ import { CheckCircle, AlertTriangle } from "lucide-react";
 interface ExtractedDataEditorProps {
   image: ImageData;
   onTextChange: (id: string, field: string, value: string) => void;
-  isSubmitting?: boolean; // إضافة خاصية isSubmitting لإصلاح الخطأ
-  onDelete?: (id: string) => Promise<boolean>; // جعل onDelete اختيارية
-  onSubmit?: (id: string) => Promise<boolean>; // جعل onSubmit اختيارية
-  compact?: boolean; // إضافة خاصية compact لإصلاح الخطأ
+  isSubmitting?: boolean;
+  onDelete?: (id: string) => Promise<boolean>;
+  onSubmit?: (id: string) => Promise<boolean>;
+  compact?: boolean;
 }
 
 const ExtractedDataEditor = ({
   image,
   onTextChange,
-  isSubmitting = false, // إعطاء قيمة افتراضية
+  isSubmitting = false,
   onDelete,
   onSubmit,
   compact = false
@@ -144,11 +143,6 @@ const ExtractedDataEditor = ({
               hideConfidence={true} 
             />
           </motion.div>
-
-          {/* زر الأتمتة */}
-          <div className="mt-4 flex justify-center">
-            <AutomationButton image={image} />
-          </div>
 
           {/* عرض النص الخام في قسم منفصل بعد تحسين التصميم */}
           <div className="mt-4">

@@ -5,6 +5,7 @@ export interface ImageDataBase {
   id: string;
   fileName?: string;
   rawText?: string;
+  extractedText?: string; // إضافة حقل النص المستخرج
   extractedData?: Record<string, any>;
   createdAt?: string;
   fileType?: string;
@@ -23,6 +24,19 @@ export interface ImageDataBase {
   possiblyDuplicate?: boolean;
   similarityScore?: number;
   similarTo?: string;
+  
+  // إضافة الحقول المفقودة لمعالجة الأخطاء في المكونات
+  code?: string;
+  senderName?: string;
+  phoneNumber?: string;
+  province?: string;
+  price?: string;
+  companyName?: string;
+  confidence?: number;
+  date?: Date;
+  previewUrl?: string;
+  number?: number;
+  extractionMethod?: string;
 }
 
 export interface ImageData extends ImageDataBase {
@@ -42,7 +56,8 @@ export type ImageStatus =
   | "extracted" 
   | "reviewing" 
   | "approved" 
-  | "rejected";
+  | "rejected"
+  | "completed"; // إضافة حالة "completed" التي تستخدمها المكونات
 
 export interface ImageProcessOptions {
   skipOcr?: boolean;
