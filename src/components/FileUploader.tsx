@@ -1,3 +1,4 @@
+
 /**
  * مكون FileUploader
  * يوفر واجهة لتحميل الملفات مع دعم السحب والإفلات
@@ -15,7 +16,6 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { UploadCloud, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { uploadMonitor } from '@/monitoring/UploadMonitor';
 
 interface FileUploaderProps {
   onFilesSelected: (files: FileList | File[]) => void;
@@ -72,17 +72,10 @@ const FileUploader = ({
     const files = e.target.files;
     if (!files || !validateFiles(Array.from(files))) return;
     
-    const batchId = crypto.randomUUID();
-    const totalSize = Array.from(files).reduce((sum, file) => sum + file.size, 0);
-    
-    uploadMonitor.startUpload(batchId, files.length, totalSize);
-    
     try {
       onFilesSelected(files);
-      uploadMonitor.completeUpload(batchId, true);
     } catch (error) {
-      uploadMonitor.recordError(batchId, error instanceof Error ? error.message : 'خطأ غير معروف');
-      uploadMonitor.completeUpload(batchId, false);
+      console.error("خطأ في معالجة الملفات:", error);
     }
     
     if (fileInputRef.current) {
