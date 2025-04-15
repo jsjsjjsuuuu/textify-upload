@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -29,6 +28,8 @@ import { formatDate } from '@/utils/dateFormatter';
 import OrderStats from '@/components/Orders/OrderStats';
 import { Loader } from 'lucide-react';
 import { Pagination } from '@/components/ui/pagination';
+import { v4 as uuidv4 } from 'uuid';
+import { cn } from '@/lib/utils';
 
 const Orders: React.FC = () => {
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -98,6 +99,47 @@ const Orders: React.FC = () => {
     currentPage * itemsPerPage
   );
 
+  // إضافة حالة لتتبع ما إذا كان التحديث التلقائي نشطًا
+  const [autoUpdate, setAutoUpdate] = useState(false);
+
+  // وظيفة لإنشاء طلب عشوائي جديد
+  const createRandomOrder = () => {
+    const provinces = ['بغداد', 'البصرة', 'نينوى', 'أربيل', 'كركوك'];
+    const phones = ['07701234567', '07801234567', '07901234567'];
+    const prices = ['25000', '30000', '45000', '50000'];
+    
+    const newOrder: ImageData = {
+      id: uuidv4(),
+      code: Math.floor(Math.random() * 1000000).toString().padStart(6, '0'),
+      phoneNumber: phones[Math.floor(Math.random() * phones.length)],
+      province: provinces[Math.floor(Math.random() * provinces.length)],
+      price: prices[Math.floor(Math.random() * prices.length)],
+      date: new Date().toISOString(),
+      status: 'processing',
+      submitted: false
+    };
+    
+    return newOrder;
+  };
+
+  // إضافة useEffect للتحديث التلقائي
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (autoUpdate) {
+      interval = setInterval(() => {
+        const newOrder = createRandomOrder();
+        setFilteredImages(prevImages => [newOrder, ...prevImages]);
+      }, 3000); // تحديث كل 3 ثواني
+    }
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [autoUpdate]);
+
   if (isAuthLoading || isLoading) {
     return (
       <div className="flex justify-center items-center h-screen app-background">
@@ -116,6 +158,7 @@ const Orders: React.FC = () => {
     );
   }
 
+  // تحديث JSX لإضافة زر التحديث التلقائي
   return (
     <div className="min-h-screen app-background">
       <AppHeader />
@@ -131,15 +174,29 @@ const Orders: React.FC = () => {
           <div className="relative z-10 p-6">
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-bold text-gradient">الطلبات الجديدة</h1>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={loadData}
-                className="bg-[#131b31] border-0"
-              >
-                <RefreshCw size={16} className="ml-2" />
-                تحديث البيانات
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setAutoUpdate(!autoUpdate)}
+                  className={cn(
+                    "bg-[#131b31] border-0",
+                    autoUpdate && "text-green-500 hover:text-green-400"
+                  )}
+                >
+                  <RefreshCw size={16} className={cn("ml-2", autoUpdate && "animate-spin")} />
+                  {autoUpdate ? "إيقاف التحديث التلقائي" : "تشغيل التحديث التلقائي"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={loadData}
+                  className="bg-[#131b31] border-0"
+                >
+                  <RefreshCw size={16} className="ml-2" />
+                  تحديث يدوي
+                </Button>
+              </div>
             </div>
             
             <div className="flex flex-col md:flex-row gap-4 mb-6">
