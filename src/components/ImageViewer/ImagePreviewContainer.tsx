@@ -7,6 +7,7 @@ import { Trash2, Loader, Image, ZoomIn, ZoomOut, RefreshCw, Maximize2, SendHoriz
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import ExtractedDataEditor from "@/components/ExtractedData/ExtractedDataEditor";
+import StatusBadges from "./StatusBadges"; // استيراد المكون الجديد
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -16,6 +17,7 @@ interface ImagePreviewContainerProps {
   onSubmit: (id: string) => void;
   formatDate: (date: Date) => string;
   showOnlySession?: boolean;
+  onRetry?: (imageId: string) => void; // إضافة خاصية إعادة المحاولة
 }
 
 // تحديد الحد الأقصى لعدد الصور التي سيتم عرضها في كل مجموعة
@@ -28,7 +30,8 @@ const ImagePreviewContainer = ({
   onDelete,
   onSubmit,
   formatDate,
-  showOnlySession = false
+  showOnlySession = false,
+  onRetry
 }: ImagePreviewContainerProps) => {
   const [activeImage, setActiveImage] = useState<ImageData | null>(null);
   const [activeTab, setActiveTab] = useState("all");
@@ -196,6 +199,16 @@ const ImagePreviewContainer = ({
     }
   };
 
+  // حساب عدد الصور في كل حالة
+  const countByStatus = {
+    all: images.length,
+    pending: images.filter(img => img.status === "pending").length,
+    completed: images.filter(img => img.status === "completed" && isImageComplete(img)).length,
+    incomplete: images.filter(img => img.status === "completed" && !isImageComplete(img) && !hasPhoneError(img)).length,
+    error: images.filter(img => img.status === "error" || hasPhoneError(img)).length,
+    processing: images.filter(img => img.status === "processing").length
+  };
+  
   // إظهار رسالة إذا لم تكن هناك صور
   if (images.length === 0) {
     return <div className="text-center p-10 border-2 border-dashed rounded-xl border-white/10 bg-[#0a0f1e]/50">
@@ -268,37 +281,16 @@ const ImagePreviewContainer = ({
       </div>;
   };
 
-  // حساب عدد الصور في كل حالة
-  const countByStatus = {
-    all: images.length,
-    pending: images.filter(img => img.status === "pending").length,
-    completed: images.filter(img => img.status === "completed" && isImageComplete(img)).length,
-    incomplete: images.filter(img => img.status === "completed" && !isImageComplete(img) && !hasPhoneError(img)).length,
-    error: images.filter(img => img.status === "error" || hasPhoneError(img)).length,
-    processing: images.filter(img => img.status === "processing").length
-  };
-
   // تحديد المخطط الرئيسي وفقًا لوضع العرض
   return <div className="container mx-auto">
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 space-y-4 md:space-y-0">
-          <TabsList className="mb-2 md:mb-0 bg-[#0a0f1e]/80">
-            <TabsTrigger value="all">
-              الكل <span className="mr-1 text-xs bg-gray-200 dark:bg-[#161d33] px-1.5 py-0.5 rounded-full">{countByStatus.all}</span>
-            </TabsTrigger>
-            <TabsTrigger value="pending">
-              قيد الانتظار <span className="mr-1 text-xs bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.pending}</span>
-            </TabsTrigger>
-            <TabsTrigger value="completed">
-              مكتملة <span className="mr-1 text-xs bg-green-100 dark:bg-green-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.completed}</span>
-            </TabsTrigger>
-            <TabsTrigger value="incomplete">
-              غير مكتملة <span className="mr-1 text-xs bg-purple-100 dark:bg-purple-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.incomplete}</span>
-            </TabsTrigger>
-            <TabsTrigger value="error">
-              أخطاء <span className="mr-1 text-xs bg-red-100 dark:bg-red-900/50 px-1.5 py-0.5 rounded-full">{countByStatus.error}</span>
-            </TabsTrigger>
-          </TabsList>
+        {/* استخدام مكون StatusBadges الجديد */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
+          <StatusBadges 
+            counts={countByStatus} 
+            activeFilter={activeTab} 
+            onFilterChange={setActiveTab} 
+          />
         </div>
 
         <TabsContent value="all" className="mt-4">
@@ -312,7 +304,18 @@ const ImagePreviewContainer = ({
           {activeImage ? <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* عرض الصورة بحجم كبير - تعديل من 70% إلى 60% من العرض */}
               <div className="lg:col-span-7 h-[600px]">
-                <ImageViewer selectedImage={activeImage} zoomLevel={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetZoom={handleResetZoom} onZoomChange={handleZoomChange} formatDate={formatDate} isFullScreen={isFullScreen} onToggleFullScreen={toggleFullScreen} />
+                <ImageViewer 
+                  image={activeImage} 
+                  zoomLevel={zoomLevel} 
+                  onZoomIn={handleZoomIn} 
+                  onZoomOut={handleZoomOut} 
+                  onResetZoom={handleResetZoom} 
+                  onZoomChange={handleZoomChange} 
+                  formatDate={formatDate} 
+                  isFullScreen={isFullScreen} 
+                  onToggleFullScreen={toggleFullScreen} 
+                  onRetry={onRetry} 
+                />
               </div>
               
               {/* عرض البيانات - تعديل من 30% إلى 40% من العرض */}
@@ -342,22 +345,29 @@ const ImagePreviewContainer = ({
             </div>}
         </TabsContent>
         
-        {/* نفس التعديلات للتبويبات الأخرى */}
+        {/* باقي علامات التبويب مماثلة لعلامة التبويب "all" مع استخدام مكون ImageViewer بالصورة المحددة */}
         <TabsContent value="pending" className="mt-4">
-          {/* عرض الصور المصغرة أعلى الصفحة */}
           <div className="mb-6">
             {renderImagesThumbnails()}
             {renderPagination()}
           </div>
           
-          {/* عرض الصورة النشطة والبيانات بجانبها */}
           {activeImage ? <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* عرض الصورة بحجم كبير - تعديل من 70% إلى 60% من العرض */}
               <div className="lg:col-span-7 h-[600px]">
-                <ImageViewer selectedImage={activeImage} zoomLevel={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetZoom={handleResetZoom} onZoomChange={handleZoomChange} formatDate={formatDate} isFullScreen={isFullScreen} onToggleFullScreen={toggleFullScreen} />
+                <ImageViewer 
+                  image={activeImage} 
+                  zoomLevel={zoomLevel} 
+                  onZoomIn={handleZoomIn} 
+                  onZoomOut={handleZoomOut} 
+                  onResetZoom={handleResetZoom} 
+                  onZoomChange={handleZoomChange} 
+                  formatDate={formatDate} 
+                  isFullScreen={isFullScreen} 
+                  onToggleFullScreen={toggleFullScreen} 
+                  onRetry={onRetry}
+                />
               </div>
               
-              {/* عرض البيانات - تعديل من 30% إلى 40% من العرض */}
               <div className="lg:col-span-5">
                 <div className="dish-container bg-[#0a0f1e]/95 p-4 rounded-lg border border-white/5 h-full">
                   <div className="dish-glow-top"></div>
@@ -370,7 +380,6 @@ const ImagePreviewContainer = ({
                       {renderImageActions()}
                     </div>
                     
-                    {/* محتوى البيانات */}
                     <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
                       <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
                     </div>
@@ -384,22 +393,28 @@ const ImagePreviewContainer = ({
             </div>}
         </TabsContent>
         
-        {/* نفس التعديلات للتبويبات الأخرى */}
         <TabsContent value="completed" className="mt-4">
-          {/* عرض الصور المصغرة أعلى الصفحة */}
           <div className="mb-6">
             {renderImagesThumbnails()}
             {renderPagination()}
           </div>
           
-          {/* عرض الصورة النشطة والبيانات بجانبها */}
           {activeImage ? <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* عرض الصورة بحجم كبير - تعديل من 70% إلى 60% من العرض */}
               <div className="lg:col-span-7 h-[600px]">
-                <ImageViewer selectedImage={activeImage} zoomLevel={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetZoom={handleResetZoom} onZoomChange={handleZoomChange} formatDate={formatDate} isFullScreen={isFullScreen} onToggleFullScreen={toggleFullScreen} />
+                <ImageViewer 
+                  image={activeImage} 
+                  zoomLevel={zoomLevel} 
+                  onZoomIn={handleZoomIn} 
+                  onZoomOut={handleZoomOut} 
+                  onResetZoom={handleResetZoom} 
+                  onZoomChange={handleZoomChange} 
+                  formatDate={formatDate} 
+                  isFullScreen={isFullScreen} 
+                  onToggleFullScreen={toggleFullScreen} 
+                  onRetry={onRetry}
+                />
               </div>
               
-              {/* عرض البيانات - تعديل من 30% إلى 40% من العرض */}
               <div className="lg:col-span-5">
                 <div className="dish-container bg-[#0a0f1e]/95 p-4 rounded-lg border border-white/5 h-full">
                   <div className="dish-glow-top"></div>
@@ -412,7 +427,6 @@ const ImagePreviewContainer = ({
                       {renderImageActions()}
                     </div>
                     
-                    {/* محتوى البيانات */}
                     <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
                       <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
                     </div>
@@ -425,23 +439,29 @@ const ImagePreviewContainer = ({
               </p>
             </div>}
         </TabsContent>
-        
-        {/* نفس التعديلات للتبويبات الأخرى */}
+
         <TabsContent value="incomplete" className="mt-4">
-          {/* عرض الصور المصغرة أعلى الصفحة */}
           <div className="mb-6">
             {renderImagesThumbnails()}
             {renderPagination()}
           </div>
           
-          {/* عرض الصورة النشطة والبيانات بجانبها */}
           {activeImage ? <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* عرض الصورة بحجم كبير - تعديل من 70% إلى 60% من العرض */}
               <div className="lg:col-span-7 h-[600px]">
-                <ImageViewer selectedImage={activeImage} zoomLevel={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetZoom={handleResetZoom} onZoomChange={handleZoomChange} formatDate={formatDate} isFullScreen={isFullScreen} onToggleFullScreen={toggleFullScreen} />
+                <ImageViewer 
+                  image={activeImage} 
+                  zoomLevel={zoomLevel} 
+                  onZoomIn={handleZoomIn} 
+                  onZoomOut={handleZoomOut} 
+                  onResetZoom={handleResetZoom} 
+                  onZoomChange={handleZoomChange} 
+                  formatDate={formatDate} 
+                  isFullScreen={isFullScreen} 
+                  onToggleFullScreen={toggleFullScreen} 
+                  onRetry={onRetry}
+                />
               </div>
               
-              {/* عرض البيانات - تعديل من 30% إلى 40% من العرض */}
               <div className="lg:col-span-5">
                 <div className="dish-container bg-[#0a0f1e]/95 p-4 rounded-lg border border-white/5 h-full">
                   <div className="dish-glow-top"></div>
@@ -454,7 +474,6 @@ const ImagePreviewContainer = ({
                       {renderImageActions()}
                     </div>
                     
-                    {/* محتوى البيانات */}
                     <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
                       <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
                     </div>
@@ -467,23 +486,29 @@ const ImagePreviewContainer = ({
               </p>
             </div>}
         </TabsContent>
-        
-        {/* نفس التعديلات للتبويبات الأخرى */}
+
         <TabsContent value="error" className="mt-4">
-          {/* عرض الصور المصغرة أعلى الصفحة */}
           <div className="mb-6">
             {renderImagesThumbnails()}
             {renderPagination()}
           </div>
           
-          {/* عرض الصورة النشطة والبيانات بجانبها */}
           {activeImage ? <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* عرض الصورة بحجم كبير - تعديل من 70% إلى 60% من العرض */}
               <div className="lg:col-span-7 h-[600px]">
-                <ImageViewer selectedImage={activeImage} zoomLevel={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetZoom={handleResetZoom} onZoomChange={handleZoomChange} formatDate={formatDate} isFullScreen={isFullScreen} onToggleFullScreen={toggleFullScreen} />
+                <ImageViewer 
+                  image={activeImage} 
+                  zoomLevel={zoomLevel} 
+                  onZoomIn={handleZoomIn} 
+                  onZoomOut={handleZoomOut} 
+                  onResetZoom={handleResetZoom} 
+                  onZoomChange={handleZoomChange} 
+                  formatDate={formatDate} 
+                  isFullScreen={isFullScreen} 
+                  onToggleFullScreen={toggleFullScreen} 
+                  onRetry={onRetry}
+                />
               </div>
               
-              {/* عرض البيانات - تعديل من 30% إلى 40% من العرض */}
               <div className="lg:col-span-5">
                 <div className="dish-container bg-[#0a0f1e]/95 p-4 rounded-lg border border-white/5 h-full">
                   <div className="dish-glow-top"></div>
@@ -496,7 +521,6 @@ const ImagePreviewContainer = ({
                       {renderImageActions()}
                     </div>
                     
-                    {/* محتوى البيانات */}
                     <div className="space-y-4 h-[calc(600px-70px)] overflow-y-auto pr-2">
                       <ExtractedDataEditor image={activeImage} onTextChange={onTextChange} />
                     </div>
