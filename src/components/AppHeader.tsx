@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -122,7 +121,23 @@ const AppHeader = () => {
                 </div>
               </Link>
             )}
-          </nav>
+            
+          {/* إضافة رابط الأتمتة */}
+          {userProfile?.is_admin && (
+            <Link
+              to="/automation"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                isActive('/automation') ? "text-foreground" : "text-muted-foreground"
+              )}
+            >
+              <div className="flex items-center">
+                <Settings className="ml-1.5 w-4 h-4" />
+                الأتمتة
+              </div>
+            </Link>
+          )}
+        </nav>
         </div>
 
         <div className="flex items-center gap-2">
@@ -212,6 +227,18 @@ const AppHeader = () => {
               إدارة المستخدمين
             </Link>
           )}
+          
+            {/* إضافة رابط الأتمتة في القائمة المتحركة */}
+            {userProfile?.is_admin && (
+              <Link
+                to="/automation"
+                className="flex items-center space-x-2 space-x-reverse text-sm font-medium"
+                onClick={closeMenu}
+              >
+                <Settings className="ml-1.5 w-5 h-5" />
+                الأتمتة
+              </Link>
+            )}
           <Link
             to="/profile"
             className="flex items-center space-x-2 space-x-reverse text-sm font-medium"
