@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 import Index from './pages/Index';
@@ -12,7 +13,6 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AdminApproval from './pages/AdminApproval';
 import ProtectedRoute from './components/ProtectedRoute';
-import Orders from './pages/Orders';  // إضافة استيراد الصفحة الجديدة
 
 /**
  * تكوين مسارات التطبيق
@@ -33,11 +33,6 @@ export const AppRoutes = () => {
       <Route path="/" element={
         <ProtectedRoute>
           <Records />
-        </ProtectedRoute>
-      } />
-      <Route path="/orders" element={
-        <ProtectedRoute>
-          <Orders />
         </ProtectedRoute>
       } />
       <Route path="/upload" element={
