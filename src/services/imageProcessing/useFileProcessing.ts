@@ -1,5 +1,4 @@
-
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useToast } from "@/hooks/use-toast";
 import { compressImage, enhanceImageForOCR } from "@/utils/imageCompression";
@@ -14,6 +13,7 @@ interface FileProcessingConfig {
   processWithGemini: FileImageProcessFn;
   saveProcessedImage?: (image: CustomImageData) => Promise<boolean>;
   user?: User | null;
+  // تعديل نوع البيانات هنا ليقبل Promise<string>
   createSafeObjectURL: (file: File | Blob) => Promise<string>;
 }
 
@@ -79,7 +79,9 @@ export const useFileProcessing = ({
         
         // استخراج البيانات باستخدام Gemini
         try {
-          const geminiProcessedImage = await processWithGemini(enhancedFile, imageData);
+          const geminiProcessedImage: CustomImageData = await processWithGemini(enhancedFile, {
+            ...imageData
+          } as CustomImageData);
           
           updateImage(imageData.id, { 
             ...geminiProcessedImage,
@@ -88,7 +90,7 @@ export const useFileProcessing = ({
           
           // حفظ الصورة المعالجة إذا كانت الدالة متوفرة
           if (saveProcessedImage) {
-            await saveProcessedImage(geminiProcessedImage);
+            await saveProcessedImage(geminiProcessedImage as CustomImageData);
           }
         } catch (geminiError) {
           console.error("خطأ في معالجة Gemini:", geminiError);
@@ -96,7 +98,7 @@ export const useFileProcessing = ({
           
           // حفظ نتائج OCR على الأقل
           if (saveProcessedImage) {
-            await saveProcessedImage(processedImageData as CustomImageData);
+            await saveProcessedImage(processedImageData);
           }
         }
       } catch (error) {

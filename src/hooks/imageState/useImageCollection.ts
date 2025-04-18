@@ -1,141 +1,87 @@
 
-import { useState, useCallback } from "react";
-import { ImageData } from "@/types/ImageData";
-import { findDuplicateImages } from "@/utils/duplicateDetection/uniqueImageFinder";
+import { useState, useCallback } from 'react';
+import { ImageData } from '@/types/ImageData';
 
-export const useImageCollection = (hiddenImageIds: string[] = []) => {
+/**
+ * هوك للتعامل مع مجموعة الصور
+ * @param hiddenImageIds قائمة معرفات الصور المخفية
+ */
+export const useImageCollection = (hiddenImageIds: string[]) => {
+  // حالة الصور العامة والصور المؤقتة
   const [images, setImages] = useState<ImageData[]>([]);
   const [sessionImages, setSessionImages] = useState<ImageData[]>([]);
   
-  // إضافة صورة جديدة
   const addImage = useCallback((newImage: ImageData) => {
-    setImages(prevImages => {
-      // تجاهل الصور المخفية
+    const imageExists = (img: ImageData) => img.id === newImage.id;
+    
+    setImages(prev => {
+      if (prev.some(imageExists)) {
+        return prev.map(img => (img.id === newImage.id ? { ...img, ...newImage } : img));
+      }
       if (hiddenImageIds.includes(newImage.id)) {
-        return prevImages;
+        return prev;
       }
-      
-      // تأكد من عدم وجود تكرار للصورة
-      const exists = prevImages.some(img => img.id === newImage.id);
-      if (exists) {
-        return prevImages;
-      }
-      
-      // إضافة الصورة الجديدة
-      return [...prevImages, newImage];
+      return [newImage, ...prev];
     });
     
-    // إذا كانت صورة جلسة، قم بإضافتها للجلسة أيضًا
     if (newImage.sessionImage) {
       setSessionImages(prev => {
-        const exists = prev.some(img => img.id === newImage.id);
-        if (exists) return prev;
-        return [...prev, newImage];
+        if (prev.some(imageExists)) {
+          return prev.map(img => (img.id === newImage.id ? { ...img, ...newImage } : img));
+        }
+        return [newImage, ...prev];
       });
     }
+  }, [hiddenImageIds]);
+  
+  const updateImage = useCallback((id: string, fields: Partial<ImageData>) => {
+    setImages(prev => prev.map(img => 
+      img.id === id ? { ...img, ...fields } : img
+    ));
     
+    setSessionImages(prev => prev.map(img =>
+      img.id === id ? { ...img, ...fields } : img
+    ));
+  }, []);
+  
+  const deleteImage = useCallback((id: string, permanent: boolean = false) => {
+    if (permanent) {
+      setImages(prev => prev.filter(img => img.id !== id));
+      setSessionImages(prev => prev.filter(img => img.id !== id));
+    } else if (!hiddenImageIds.includes(id)) {
+      setImages(prev => prev.filter(img => img.id !== id));
+    }
     return true;
   }, [hiddenImageIds]);
   
-  // تحديث بيانات صورة موجودة
-  const updateImage = useCallback((id: string, data: Partial<ImageData>) => {
-    setImages(prevImages => {
-      return prevImages.map(img => {
-        if (img.id === id) {
-          return { ...img, ...data };
-        }
-        return img;
-      });
-    });
-    
-    // تحديث صورة الجلسة إذا كانت موجودة
-    setSessionImages(prevImages => {
-      return prevImages.map(img => {
-        if (img.id === id) {
-          return { ...img, ...data };
-        }
-        return img;
-      });
-    });
-  }, []);
-  
-  // حذف صورة
-  const deleteImage = useCallback((id: string, permanent: boolean = false) => {
-    // حذف من قائمة الصور
-    setImages(prevImages => prevImages.filter(img => img.id !== id));
-    
-    // حذف من صور الجلسة
-    setSessionImages(prevImages => prevImages.filter(img => img.id !== id));
-    
-    return true;
-  }, []);
-  
-  // مسح جميع الصور
   const clearImages = useCallback(() => {
     setImages([]);
-  }, []);
-  
-  // مسح صور الجلسة فقط
-  const clearSessionImages = useCallback(() => {
     setSessionImages([]);
-    setImages(prevImages => prevImages.filter(img => !img.sessionImage));
   }, []);
   
-  // تعيين جميع الصور
+  const clearSessionImages = useCallback(() => {
+    setImages(prev => prev.filter(img => !img.sessionImage));
+    setSessionImages([]);
+  }, []);
+  
   const setAllImages = useCallback((newImages: ImageData[]) => {
-    // تصفية الصور المخفية
-    const visibleImages = newImages.filter(img => !hiddenImageIds.includes(img.id));
-    setImages(visibleImages);
+    const filteredImages = newImages.filter(img => !hiddenImageIds.includes(img.id));
+    setImages(filteredImages);
   }, [hiddenImageIds]);
   
-  // إضافة صور من قاعدة البيانات
   const addDatabaseImages = useCallback((dbImages: ImageData[]) => {
-    // تصفية الصور المخفية
-    const visibleImages = dbImages.filter(img => !hiddenImageIds.includes(img.id));
+    const filteredImages = dbImages.filter(img => !hiddenImageIds.includes(img.id));
     
-    setImages(prevImages => {
-      // دمج الصور الحالية مع الصور من قاعدة البيانات
-      const allImages = [...prevImages];
-      
-      visibleImages.forEach(dbImg => {
-        // التحقق من عدم وجود الصورة بالفعل
-        const existingIndex = allImages.findIndex(img => img.id === dbImg.id);
-        if (existingIndex === -1) {
-          allImages.push(dbImg);
-        } else {
-          // تحديث الصورة الموجودة إذا كانت الصورة من قاعدة البيانات أحدث
-          const dbUpdateTime = dbImg.updated_at ? new Date(dbImg.updated_at).getTime() : 0;
-          const currentUpdateTime = allImages[existingIndex].updated_at ? new Date(allImages[existingIndex].updated_at).getTime() : 0;
-          
-          if (dbUpdateTime > currentUpdateTime) {
-            allImages[existingIndex] = { ...allImages[existingIndex], ...dbImg };
-          }
-        }
-      });
-      
-      return allImages;
+    setImages(prev => {
+      const existingIds = new Set(prev.map(img => img.id));
+      const newImages = filteredImages.filter(img => !existingIds.has(img.id));
+      return [...prev, ...newImages];
     });
-    
-    return true;
   }, [hiddenImageIds]);
   
-  // معالجة تغيير النص في حقول الصورة
   const handleTextChange = useCallback((id: string, field: string, value: string) => {
-    updateImage(id, { [field]: value } as Partial<ImageData>);
+    updateImage(id, { [field]: value });
   }, [updateImage]);
-  
-  // إزالة الصور المكررة
-  const removeDuplicates = useCallback(() => {
-    // استخدام وظيفة البحث عن الصور المكررة
-    const uniqueImages = findDuplicateImages(images);
-    setImages(uniqueImages);
-    
-    // أيضًا إزالة التكرارات من صور الجلسة
-    const uniqueSessionImages = findDuplicateImages(sessionImages);
-    setSessionImages(uniqueSessionImages);
-    
-    return true;
-  }, [images, sessionImages]);
   
   return {
     images,
@@ -147,7 +93,6 @@ export const useImageCollection = (hiddenImageIds: string[] = []) => {
     clearSessionImages,
     setAllImages,
     addDatabaseImages,
-    handleTextChange,
-    removeDuplicates
+    handleTextChange
   };
 };

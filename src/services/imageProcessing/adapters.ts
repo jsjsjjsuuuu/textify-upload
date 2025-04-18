@@ -24,11 +24,11 @@ export function adaptOcrToImageProcess(ocrFn: (file: File, image: CustomImageDat
         extractionMethod: "ocr"
       };
     } catch (error) {
-      console.error("خطأ في معالجة OCR:", error);
+      console.error("خطأ في تنفيذ OCR:", error);
       return {
         ...image,
-        status: "error",
-        errorMessage: error instanceof Error ? error.message : "خطأ غير معروف"
+        errorMessage: error instanceof Error ? error.message : "خطأ غير معروف",
+        status: "error"
       };
     }
   };
@@ -37,32 +37,32 @@ export function adaptOcrToImageProcess(ocrFn: (file: File, image: CustomImageDat
 /**
  * تحويل دالة GeminiProcessFn إلى دالة FileImageProcessFn
  */
-export function adaptGeminiToFileImageProcess(geminiFn: (file: File | Blob, image: CustomImageData) => Promise<CustomImageData>): FileImageProcessFn {
-  return async (file: File | Blob, image: CustomImageData, updateProgress?: (progress: number) => void): Promise<CustomImageData> => {
+export function adaptGeminiToFileImageProcess(geminiFn: GeminiProcessFn): FileImageProcessFn {
+  return async (fileOrBlob: File | Blob, image: CustomImageData): Promise<CustomImageData> => {
+    // تحويل الكائن إلى File إذا كان من نوع Blob
+    const file = fileOrBlob instanceof File ? fileOrBlob : new File([fileOrBlob], "image.png", { type: fileOrBlob.type });
+    
+    // إنشاء نسخة من الصورة مع الملف
+    const imageWithFile: CustomImageData = { 
+      ...image,
+      file 
+    };
+
     try {
-      // إذا كان هناك دالة لتحديث التقدم، استدعيها في البداية
-      if (updateProgress) {
-        updateProgress(10);
-      }
-      
-      // استدعاء دالة Gemini
-      const result = await geminiFn(file, image);
-      
-      // إذا كان هناك دالة لتحديث التقدم، استدعيها في النهاية
-      if (updateProgress) {
-        updateProgress(100);
-      }
+      // استدعاء دالة Gemini مع الصورة
+      const result = await geminiFn(imageWithFile);
       
       return {
+        ...image,
         ...result,
         extractionMethod: "gemini"
       };
     } catch (error) {
-      console.error("خطأ في معالجة Gemini:", error);
+      console.error("خطأ في تنفيذ Gemini:", error);
       return {
         ...image,
-        status: "error",
-        errorMessage: error instanceof Error ? error.message : "خطأ غير معروف"
+        errorMessage: error instanceof Error ? error.message : "خطأ غير معروف",
+        status: "error"
       };
     }
   };

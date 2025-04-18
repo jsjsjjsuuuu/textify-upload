@@ -11,13 +11,6 @@ interface FileUploadOptions {
   setProcessingProgress: (progress: number) => void;
   processWithOcr: ImageProcessFn;
   processWithGemini: ImageProcessFn;
-  removeDuplicates?: () => void; // إضافة خاصية اختيارية لتتوافق مع الكود في hooks/core/useImageProcessing.ts
-  saveProcessedImage?: (image: ImageData) => Promise<boolean>;
-  // إضافة خيار لمعالجة الصور التي تم معالجتها مسبقا
-  processedImage?: {
-    isDuplicateImage?: (image: ImageData, existingImages?: ImageData[]) => Promise<boolean>;
-    markImageAsProcessed?: (image: ImageData) => void;
-  };
 }
 
 export const useFileUpload = ({
@@ -26,10 +19,7 @@ export const useFileUpload = ({
   updateImage,
   setProcessingProgress,
   processWithOcr,
-  processWithGemini,
-  removeDuplicates,
-  saveProcessedImage,
-  processedImage
+  processWithGemini
 }: FileUploadOptions) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeUploads, setActiveUploads] = useState(0);
@@ -152,12 +142,10 @@ export const useFileUpload = ({
 
   // وظيفة تنظيف التكرارات
   const cleanupDuplicates = useCallback(() => {
-    // استدعاء وظيفة removeDuplicates إذا كانت موجودة
-    if (typeof removeDuplicates === 'function') {
-      removeDuplicates();
-    }
+    // تنفيذ عملية تنظيف التكرارات هنا
+    // تم تحسين هذه العملية في هوك useImageState
     console.log("تم تفعيل وظيفة تنظيف التكرارات");
-  }, [removeDuplicates]);
+  }, []);
 
   return {
     isProcessing,

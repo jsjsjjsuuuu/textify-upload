@@ -29,8 +29,7 @@ export const useImageState = () => {
     clearSessionImages, 
     setAllImages, 
     addDatabaseImages,
-    handleTextChange,
-    removeDuplicates
+    handleTextChange
   } = useImageCollection(hiddenImageIds);
 
   // دمج وظيفة إخفاء الصورة
@@ -57,7 +56,6 @@ export const useImageState = () => {
     unhideAllImages,
     getHiddenImageIds,
     createSafeObjectURL,
-    revokeObjectURL,
-    removeDuplicates
+    revokeObjectURL
   };
 };

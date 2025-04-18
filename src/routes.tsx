@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 import Index from './pages/Index';
@@ -11,9 +12,12 @@ import Records from './pages/Records';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AdminApproval from './pages/AdminApproval';
-import ServerAutomation from './pages/ServerAutomation';  {/* إضافة استيراد الصفحة */}
 import ProtectedRoute from './components/ProtectedRoute';
 
+/**
+ * تكوين مسارات التطبيق
+ * يمكن استيراد هذا المكون واستخدامه في App.tsx
+ */
 export const AppRoutes = () => {
   console.log("تحميل المسارات...");
   
@@ -61,13 +65,6 @@ export const AppRoutes = () => {
       
       {/* صفحة 404 والتحويلات */}
       <Route path="*" element={<NotFound />} />
-      
-      {/* إضافة مسار جديد للأتمتة */}
-      <Route path="/automation" element={
-        <ProtectedRoute>
-          <ServerAutomation />
-        </ProtectedRoute>
-      } />
     </Routes>
   );
 };

@@ -24,7 +24,6 @@ export interface ImageDataBase {
   possiblyDuplicate?: boolean;
   similarityScore?: number;
   similarTo?: string;
-  updated_at?: string; // إضافة هذه الخاصية
   
   // الحقول التي تم اكتشاف حاجتنا إليها من خلال الأخطاء
   code?: string;
@@ -88,7 +87,7 @@ export type ImageProcessFn = (
 ) => Promise<Partial<ImageData>>;
 
 export type OcrProcessFn = (
-  file: File,
+  file?: File,
   image?: CustomImageData
 ) => Promise<string | CustomImageData>;
 
@@ -98,7 +97,7 @@ export type GeminiProcessFn = (
 
 export type FileImageProcessFn = (
   file: File | Blob,
-  image?: CustomImageData
+  image: CustomImageData
 ) => Promise<CustomImageData>;
 
 export interface ImageProcessingResult {
@@ -120,10 +119,10 @@ export interface FileUploadOptions {
   addImage: (image: ImageData) => void;
   updateImage: (id: string, fields: Partial<ImageData>) => void;
   setProcessingProgress: (progress: number) => void;
-  processWithOcr: OcrProcessFn;
-  processWithGemini: GeminiProcessFn;
+  processWithOcr: ImageProcessFn;
+  processWithGemini: ImageProcessFn;
   saveProcessedImage?: (image: CustomImageData) => Promise<boolean>;
-  removeDuplicates?: () => void; // إضافة هذه الخاصية المفقودة
+  removeDuplicates?: (images: ImageData[]) => ImageData[];
   processedImage?: {
     isDuplicateImage: (image: ImageData) => Promise<boolean>;
     markImageAsProcessed: (image: ImageData) => void;

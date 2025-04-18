@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { useImageProcessing } from '@/hooks/useImageProcessingCore'; // تصحيح الاستيراد
+import { useImageProcessing } from '@/hooks/useImageProcessing';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader, Search, Filter, Download, Trash2, SortAsc, SortDesc, ListFilter, RefreshCw } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
@@ -43,7 +44,7 @@ const Records = () => {
     isSubmitting,
     unhideAllImages,
     hiddenImageIds
-  } = useImageProcessing(); // استخدام اسم الاستيراد الصحيح
+  } = useImageProcessing();
   
   const [filteredImages, setFilteredImages] = useState<ImageData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,12 +69,7 @@ const Records = () => {
   const loadData = () => {
     setIsLoading(true);
     
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-    
-    loadUserImages(user.id, (loadedImages) => {
+    loadUserImages((loadedImages) => {
       console.log(`تم تحميل ${loadedImages.length} صورة للمستخدم`);
       setIsLoading(false);
       setDataLoaded(true);

@@ -1,5 +1,4 @@
-
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ImageData, CustomImageData, ImageProcessFn } from "@/types/ImageData";
 import { useAuth } from "@/contexts/AuthContext";

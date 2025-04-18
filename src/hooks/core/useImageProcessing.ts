@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData, CustomImageData } from "@/types/ImageData";
@@ -10,7 +11,6 @@ import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
 import { useDuplicateDetection } from "@/hooks/useDuplicateDetection";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
-import { UseImageDatabaseConfig } from "@/hooks/useImageDatabase/types";
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,7 +18,6 @@ export const useImageProcessingCore = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  // استخدام useImageState المحدث مع الخصائص الإضافية
   const { 
     images, 
     sessionImages,
@@ -43,24 +42,20 @@ export const useImageProcessingCore = () => {
     setBookmarkletStats
   } = useImageStats();
   
-  // استخدام اكتشاف التكرار مع الواجهات المحدثة
+  // استخدام اكتشاف التكرار
   const duplicateDetectionTools = useDuplicateDetection({ enabled: true });
   
   // جلب وظائف معالجة الصور الجديدة المتوافقة
   const { processFileWithOcr } = useOcrProcessing();
   const { processFileWithGemini } = useGeminiProcessing();
   
-  // تحسين استخدام useSavedImageProcessing مع الميزات الإضافية
+  // تحسين استخدام useSavedImageProcessing مع توقيع الوظيفة الصحيح
   const {
     isSubmitting: isSavingToDatabase,
     setIsSubmitting: setSavingToDatabase,
     saveProcessedImage
   } = useSavedImageProcessing(updateImage, setAllImages);
   
-  const updateImageConfig: UseImageDatabaseConfig = {
-    updateImage: updateImage
-  };
-
   const { 
     isLoadingUserImages,
     loadUserImages,
@@ -69,7 +64,7 @@ export const useImageProcessingCore = () => {
     deleteImageFromDatabase,
     cleanupOldRecords,
     runCleanupNow
-  } = useImageDatabase(updateImageConfig);
+  } = useImageDatabase(updateImage);
 
   // التحقق من وجود المفتاح القديم وتحديثه إذا لزم الأمر
   useEffect(() => {
@@ -201,7 +196,7 @@ export const useImageProcessingCore = () => {
     }
   };
   
-  // استدعاء useFileUpload مع تحسين آلية التعامل مع الصور
+  // استدعاء useFileUpload مع تحسين آلية التعامل مع الصور وتمرير وظائف اكتشاف التكرار
   const { 
     isProcessing, 
     handleFileChange,
@@ -214,13 +209,14 @@ export const useImageProcessingCore = () => {
     updateImage,
     setProcessingProgress,
     saveProcessedImage,
-    removeDuplicates, // تمرير وظيفة removeDuplicates المحدثة
+    removeDuplicates,
     // تمرير وظائف معالجة الصور المحدثة
     processWithOcr: processFileWithOcr,
     processWithGemini: processFileWithGemini,
     // استخدام الأداة كما هي بدلاً من تمريرها كخاصية منفصلة
     processedImage: {
-      isDuplicateImage: duplicateDetectionTools.isDuplicateImage, // استخدام isDuplicateImage بدلاً من checkDuplicateImage
+      // تحويل وظيفة checkDuplicateImage المتزامنة إلى isDuplicateImage
+      isDuplicateImage: duplicateDetectionTools.checkDuplicateImage,
       markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
     }
   });
@@ -241,16 +237,6 @@ export const useImageProcessingCore = () => {
     }
   }, [user, hiddenImageIds]);
 
-  // تعديل دالة جلب الصور ليكون لها نفس التوقيع المتوقع
-  const modifiedLoadUserImages = useCallback((userId: string, callback?: (images: ImageData[]) => void): Promise<void> => {
-    return new Promise((resolve) => {
-      loadUserImages(userId, (images) => {
-        if (callback) callback(images);
-        resolve();
-      });
-    });
-  }, [loadUserImages]);
-
   // تصدير الوظائف المتاحة
   return {
     images,
@@ -267,41 +253,27 @@ export const useImageProcessingCore = () => {
     handleSubmitToApi,
     saveImageToDatabase,
     saveProcessedImage,
-    hideImage,
-    loadUserImages: modifiedLoadUserImages, // استخدام الدالة المعدلة
+    hideImage, // تصدير وظيفة hideImage بشكل صريح
+    loadUserImages: (callback?: (images: CustomImageData[]) => void) => {
+      if (user) {
+        loadUserImages(user.id, callback || ((loadedImages) => {
+          // تطبيق فلتر الصور المخفية هنا أيضًا
+          const filteredImages = loadedImages.filter(img => !hiddenImageIds.includes(img.id));
+          setAllImages(filteredImages);
+        }));
+      }
+    },
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,
     runCleanupNow,
     activeUploads,
     queueLength,
+    cleanupDuplicates,
+    ...duplicateDetectionTools,
+    processWithOcr: processFileWithOcr,
+    processWithGemini: processFileWithGemini,
     unhideImage,
-    unhideAllImages,
-    clearOldApiKey: () => {
-      const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8"; // المفتاح القديم
-      const storedApiKey = localStorage.getItem("geminiApiKey");
-      
-      if (storedApiKey === oldApiKey) {
-        console.log("تم اكتشاف مفتاح API قديم. جاري المسح...");
-        localStorage.removeItem("geminiApiKey");
-        
-        // تعيين المفتاح الجديد
-        const newApiKey = "AIzaSyC4d53RxIXV4WIXWcNAN1X-9WPZbS4z7Q0";
-        localStorage.setItem("geminiApiKey", newApiKey);
-        
-        toast({
-          title: "تم تحديث مفتاح API",
-          description: "تم تحديث مفتاح Gemini API بنجاح",
-        });
-        
-        return true;
-      }
-      
-      return false;
-    },
-    // استخدام التعريفات الجديدة والمحدثة
-    isDuplicateImage: duplicateDetectionTools.isDuplicateImage,
-    checkDuplicateImage: duplicateDetectionTools.isDuplicateImage,
-    markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
+    unhideAllImages
   };
 };

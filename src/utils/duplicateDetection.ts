@@ -1,7 +1,6 @@
-
 import { ImageData } from "@/types/ImageData";
-import { hashImage, getImageHash } from "./duplicateDetection/imageHasher";
-import { compareImageHashes, calculateSimilarity } from "./duplicateDetection/imageMatcher";
+import { getImageHash } from "./duplicateDetection/imageHasher";
+import { compareImageHashes } from "./duplicateDetection/imageMatcher";
 
 interface DuplicateDetectionOptions {
   enabled: boolean;
@@ -36,7 +35,7 @@ export const checkDuplicateImage = async (
   for (const baseImage of processedFiles) {
     // يجب أن تكون الصور من نفس المستخدم
     if (image.userId !== baseImage.userId) {
-      continue;
+      return false;
     }
 
     // حساب تشابه الصور
@@ -62,8 +61,8 @@ export const checkDuplicateImage = async (
 const compareImages = async (imageA: ImageData, imageB: ImageData): Promise<number> => {
   try {
     // الحصول على بصمات الصور
-    const hashA = await hashImage(imageA);
-    const hashB = await hashImage(imageB);
+    const hashA = await getImageHash(imageA);
+    const hashB = await getImageHash(imageB);
 
     // إذا فشل الحصول على البصمات، يتم إرجاع 0
     if (!hashA || !hashB) {
@@ -71,7 +70,7 @@ const compareImages = async (imageA: ImageData, imageB: ImageData): Promise<numb
     }
 
     // حساب التشابه بين البصمات
-    const similarity = calculateSimilarity(hashA, hashB);
+    const similarity = compareImageHashes(hashA, hashB);
     return similarity;
   } catch (error) {
     console.error("خطأ في مقارنة الصور:", error);
@@ -93,7 +92,7 @@ export const removeDuplicateImages = async (allFiles: ImageData[]): Promise<Imag
     const userFiles = allFiles.filter(file => file.userId === image.userId);
 
     // الحصول على بصمة الصورة
-    const hash = await hashImage(image);
+    const hash = await getImageHash(image);
 
     // إذا لم يتم العثور على بصمة، يتم تجاهل الصورة
     if (!hash) {
