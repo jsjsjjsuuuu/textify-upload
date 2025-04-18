@@ -1,72 +1,39 @@
 
-import type { ImageData } from "@/types/ImageData";
-import { createImageHash } from "./imageHasher";
+import { ImageData } from "@/types/ImageData";
 
 /**
- * إيجاد الصور المكررة في قائمة الصور مع تحسين الأداء
- * @param images قائمة الصور للتحقق
- * @returns قائمة من الصور الفريدة (بعد إزالة التكرارات)
+ * إيجاد الصور المتشابهة وإبقاء الأحدث منها
+ * @param images قائمة الصور للمعالجة
+ * @returns قائمة بالصور الفريدة (بعد إزالة التكرارات)
  */
-export const findDuplicateImages = (images: ImageData[]): ImageData[] => {
-  if (!images || images.length === 0) {
-    return [];
+export function findDuplicateImages(images: ImageData[]): ImageData[] {
+  // نسخ الصور لعدم تعديل المصفوفة الأصلية
+  const imagesCopy = [...images];
+  
+  // إذا كان لدينا عدد قليل من الصور، ارجع المصفوفة كما هي
+  if (imagesCopy.length <= 1) {
+    return imagesCopy;
   }
   
-  const uniqueImagesMap = new Map<string, ImageData>();
-  const idMap = new Map<string, boolean>();
+  // مصفوفة تخزين للصور الفريدة
+  const uniqueImages: ImageData[] = [];
+  // مجموعة للاحتفاظ بمعرفات الصور التي تمت معالجتها بالفعل
+  const processedIds = new Set<string>();
   
-  // ابتداء بالصور ذات الحالة "completed" للتأكد من الاحتفاظ بالصور المكتملة
-  const sortedImages = [...images].sort((a, b) => {
-    if (a.status === "completed" && b.status !== "completed") return -1;
-    if (a.status !== "completed" && b.status === "completed") return 1;
-    return 0;
+  // فرز الصور حسب تاريخ الإضافة (الأحدث أولاً)
+  imagesCopy.sort((a, b) => {
+    const timeA = a.uploadTimestamp || 0;
+    const timeB = b.uploadTimestamp || 0;
+    return timeB - timeA;
   });
   
-  // استخدام معرّف الصورة كمفتاح للتخزين المؤقت
-  sortedImages.forEach(img => {
-    // تجاهل الصور التي ليس لها معرف
-    if (!img || !img.id) return;
-    
-    // تسجيل معرف الصورة
-    idMap.set(img.id, true);
-    
-    // إنشاء مفتاح فريد أكثر دقة
-    let key: string;
-    
-    if (img.file) {
-      key = createImageHash(img);
-    } else {
-      // للصور بدون ملف، استخدم معرف الصورة وأي معلومات أخرى متوفرة
-      key = `id-${img.id}-${img.code || ''}-${img.phoneNumber || ''}`;
+  // للتبسيط، نحتفظ بالصور الفريدة فقط بناءً على المعرف
+  for (const image of imagesCopy) {
+    if (!processedIds.has(image.id)) {
+      uniqueImages.push(image);
+      processedIds.add(image.id);
     }
-    
-    // إذا لم يكن هناك صورة بهذا المفتاح، أو إذا كانت الصورة الحالية أحدث
-    // أو إذا كانت الصورة الحالية مكتملة والصورة الموجودة غير مكتملة
-    const existingImage = uniqueImagesMap.get(key);
-    
-    // المقارنة حسب الأولوية:
-    // 1. الحالة: مكتملة > في الانتظار > خطأ > معالجة
-    // 2. البيانات: يوجد بيانات > لا يوجد بيانات
-    // 3. الوقت: الأحدث > الأقدم
-    
-    const currentIsNewer = img.added_at && existingImage?.added_at && img.added_at > existingImage.added_at;
-    
-    const currentIsComplete = img.status === "completed" && existingImage?.status !== "completed";
-    
-    const currentHasMoreData = 
-      !!img.extractedText && 
-      !!img.code && 
-      !!img.senderName && 
-      !!img.phoneNumber && 
-      (!existingImage?.extractedText || !existingImage?.code || !existingImage?.senderName || !existingImage?.phoneNumber);
-    
-    const shouldReplace = !existingImage || currentIsComplete || currentHasMoreData || (currentIsNewer && existingImage.status !== "completed");
-    
-    if (shouldReplace) {
-      uniqueImagesMap.set(key, img);
-    }
-  });
+  }
   
-  // تحويل الخريطة إلى مصفوفة
-  return Array.from(uniqueImagesMap.values());
-};
+  return uniqueImages;
+}

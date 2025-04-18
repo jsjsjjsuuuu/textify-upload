@@ -1,4 +1,3 @@
-
 /**
  * خدمة معالجة الصور
  * خدمة مركزية للتعامل مع معالجة الصور وتخزينها وإدارتها
@@ -15,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ImageData, CustomImageData } from "@/types/ImageData";
 import { formatDate } from "@/utils/dateFormatter";
 import { adaptOcrToImageProcess, adaptGeminiToFileImageProcess } from "./adapters";
+// استيراد واجهة UseImageDatabaseConfig
+import { UseImageDatabaseConfig } from "@/hooks/useImageDatabase/types";
 
 export const useImageProcessing = () => {
   // المكونات الأساسية
@@ -204,6 +205,36 @@ export const useImageProcessing = () => {
     
     return false;
   }, [toast]);
+
+  // تكوين واجهة التحديث المطلوبة
+const updateImageConfig: UseImageDatabaseConfig = {
+  updateImage: updateImage
+};
+
+// استخدام هوك قاعدة بيانات الصور مع واجهة التحديث المطلوبة
+const { 
+  isLoadingUserImages,
+  loadUserImages: fetchUserImages, 
+  saveImageToDatabase, 
+  handleSubmitToApi: submitToApi, 
+  deleteImageFromDatabase, 
+  runCleanupNow 
+} = useImageDatabase(updateImageConfig);
+
+// إنشاء واجهة معالجة مناسبة تتلاءم مع الأنواع المطلوبة
+const adaptedOcrProcess: FileImageProcessFn = async (file: File | Blob, image?: CustomImageData) => {
+  if (!image) {
+    throw new Error("يجب توفير كائن الصورة");
+  }
+  // استدعاء المعالج الأصلي
+  const result = await processWithOcr(file as File, image);
+  // إذا كان النتيجة سلسلة نصية، نعيد مع إضافة النص المستخرج
+  if (typeof result === 'string') {
+    return { ...image, extractedText: result };
+  }
+  // وإلا نعيد النتيجة كما هي
+  return result;
+};
 
   // تصدير واجهة الخدمة
   return {

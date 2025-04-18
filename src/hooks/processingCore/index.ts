@@ -13,6 +13,7 @@ import { useFormValidation } from "./useFormValidation";
 import { useImageSubmission } from "./useImageSubmission";
 import { useImageDeletion } from "./useImageDeletion";
 import { useUserImages } from "./useUserImages";
+import { UseImageDatabaseConfig } from "@/hooks/useImageDatabase/types";
 import type { ImageData } from "@/types/ImageData"; // استيراد النوع بشكل صريح
 
 export const useImageProcessingCore = () => {
@@ -54,6 +55,11 @@ export const useImageProcessingCore = () => {
   const { processFileWithGemini } = useGeminiProcessing();
   const { processFileWithOcr } = useOcrProcessing();
   
+  // إنشاء كائن التكوين للـ useImageDatabase
+  const updateImageConfig: UseImageDatabaseConfig = {
+    updateImage: updateImage
+  };
+  
   // استخدام هوك حفظ الصور المعالجة
   const {
     isSubmitting: isSavingToDatabase,
@@ -70,7 +76,7 @@ export const useImageProcessingCore = () => {
     deleteImageFromDatabase,
     cleanupOldRecords,
     runCleanupNow
-  } = useImageDatabase(updateImage);
+  } = useImageDatabase(updateImageConfig);
 
   // استخدام هوك التحقق من صحة النماذج
   const { validateRequiredFields } = useFormValidation();
@@ -120,9 +126,9 @@ export const useImageProcessingCore = () => {
   // تعديل دالة جلب الصور ليكون لها نفس التوقيع المتوقع
   const modifiedLoadUserImages = useCallback((userId: string, callback?: (images: ImageData[]) => void): Promise<void> => {
     return new Promise((resolve) => {
-      loadUserImages(userId, (images) => {
+      loadUserImages(userId, (images: ImageData[]) => {
         if (callback) callback(images);
-        resolve();
+        resolve(); // فقط نقوم بإرجاع void وليس البيانات
       });
     });
   }, [loadUserImages]);

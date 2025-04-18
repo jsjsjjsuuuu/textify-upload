@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData, CustomImageData } from "@/types/ImageData";
@@ -11,6 +10,7 @@ import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
 import { useDuplicateDetection } from "@/hooks/useDuplicateDetection";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
+import { UseImageDatabaseConfig } from "@/hooks/useImageDatabase/types";
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,6 +57,10 @@ export const useImageProcessingCore = () => {
     saveProcessedImage
   } = useSavedImageProcessing(updateImage, setAllImages);
   
+  const updateImageConfig: UseImageDatabaseConfig = {
+    updateImage: updateImage
+  };
+
   const { 
     isLoadingUserImages,
     loadUserImages,
@@ -65,7 +69,7 @@ export const useImageProcessingCore = () => {
     deleteImageFromDatabase,
     cleanupOldRecords,
     runCleanupNow
-  } = useImageDatabase(updateImage);
+  } = useImageDatabase(updateImageConfig);
 
   // التحقق من وجود المفتاح القديم وتحديثه إذا لزم الأمر
   useEffect(() => {
