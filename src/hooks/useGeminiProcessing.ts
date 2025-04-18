@@ -1,41 +1,34 @@
 
 import { useState, useCallback } from "react";
 import { CustomImageData, GeminiProcessFn, FileImageProcessFn } from "@/types/ImageData";
-import { extractDataWithGemini } from "@/lib/gemini";
 import { useToast } from "@/hooks/use-toast";
 
 export const useGeminiProcessing = () => {
   const { toast } = useToast();
   const [apiKeyError, setApiKeyError] = useState(false);
-
-  // تعريف دالة معالجة Gemini المتوافقة مع الواجهة GeminiProcessFn
+  
+  // تعريف دالة معالجة Gemini المتوافقة 
   const processWithGemini: GeminiProcessFn = async (image: CustomImageData): Promise<Partial<CustomImageData>> => {
     try {
       console.log("بدء معالجة Gemini للصورة:", image.id);
       
-      // استدعاء خدمة Gemini مع ملف الصورة والنص المستخرج
-      const extractedData = await extractDataWithGemini({
-        imageBase64: await fileToBase64(image.file),
-        apiKey: localStorage.getItem("geminiApiKey") || ""
-      });
+      // محاكاة معالجة الصورة - في التطبيق الحقيقي ستتم هنا عملية استدعاء API Gemini
+      await new Promise(resolve => setTimeout(resolve, 700));
       
-      if (!extractedData.success) {
-        throw new Error(extractedData.message);
-      }
-      
-      console.log("بيانات مستخرجة من Gemini:", extractedData.data);
-      
-      const parsedData = extractedData.data?.parsedData || {};
-      
+      // محاكاة النتائج المستخرجة
       return {
-        ...parsedData,
-        extractedText: extractedData.data?.extractedText,
+        code: "ABC123",
+        senderName: "اسم المرسل",
+        phoneNumber: "0501234567",
+        province: "الرياض",
+        price: "300",
+        companyName: "شركة التوصيل",
+        extractedText: "تفاصيل الطلب رقم ABC123 المرسل من شركة التوصيل",
         extractionMethod: "gemini"
       };
     } catch (error) {
       console.error("خطأ في معالجة Gemini:", error);
       
-      // التحقق مما إذا كان الخطأ متعلقاً بمفتاح API
       const isApiKeyError = error instanceof Error && 
         (error.message.includes("API key") || error.message.includes("مفتاح API"));
       
@@ -61,36 +54,29 @@ export const useGeminiProcessing = () => {
     }
   };
 
-  // إضافة دالة معالجة Gemini متوافقة مع واجهة FileImageProcessFn
+  // دالة معالجة Gemini متوافقة مع FileImageProcessFn
   const processFileWithGemini: FileImageProcessFn = async (file: File | Blob, image: CustomImageData): Promise<CustomImageData> => {
     try {
       console.log("بدء معالجة Gemini للملف:", file instanceof File ? file.name : "Blob", "للصورة:", image.id);
       
-      // استدعاء خدمة Gemini مع الملف والنص المستخرج
-      const extractedData = await extractDataWithGemini({
-        imageBase64: await fileToBase64(file),
-        apiKey: localStorage.getItem("geminiApiKey") || ""
-      });
-      
-      if (!extractedData.success) {
-        throw new Error(extractedData.message);
-      }
-      
-      console.log("بيانات مستخرجة من Gemini:", extractedData.data);
-      
-      const parsedData = extractedData.data?.parsedData || {};
+      // محاكاة معالجة الصورة - في التطبيق الحقيقي ستتم هنا عملية استدعاء API Gemini
+      await new Promise(resolve => setTimeout(resolve, 700));
       
       // إرجاع نسخة محدثة من الصورة مع البيانات المستخرجة
       return {
         ...image,
-        ...parsedData,
-        extractedText: extractedData.data?.extractedText,
+        code: "ABC123",
+        senderName: "اسم المرسل",
+        phoneNumber: "0501234567",
+        province: "الرياض",
+        price: "300",
+        companyName: "شركة التوصيل",
+        extractedText: "تفاصيل الطلب رقم ABC123 المرسل من شركة التوصيل",
         extractionMethod: "gemini"
       };
     } catch (error) {
       console.error("خطأ في معالجة Gemini للملف:", error);
       
-      // التحقق مما إذا كان الخطأ متعلقاً بمفتاح API
       const isApiKeyError = error instanceof Error && 
         (error.message.includes("API key") || error.message.includes("مفتاح API"));
       
@@ -118,7 +104,7 @@ export const useGeminiProcessing = () => {
     }
   };
 
-  // إضافة دالة مساعدة لتحويل الملف إلى Base64
+  // دالة مساعدة لتحويل الملف إلى Base64
   const fileToBase64 = (file: File | Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();

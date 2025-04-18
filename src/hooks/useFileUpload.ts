@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { ImageData, ImageProcessFn } from '@/types/ImageData';
 import { v4 as uuidv4 } from 'uuid';
-import { useToast } from './use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface FileUploadOptions {
   images: ImageData[];
@@ -11,6 +11,7 @@ interface FileUploadOptions {
   setProcessingProgress: (progress: number) => void;
   processWithOcr: ImageProcessFn;
   processWithGemini: ImageProcessFn;
+  saveProcessedImage?: (image: ImageData) => Promise<boolean>;
 }
 
 export const useFileUpload = ({
@@ -19,7 +20,8 @@ export const useFileUpload = ({
   updateImage,
   setProcessingProgress,
   processWithOcr,
-  processWithGemini
+  processWithGemini,
+  saveProcessedImage
 }: FileUploadOptions) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeUploads, setActiveUploads] = useState(0);
@@ -126,6 +128,14 @@ export const useFileUpload = ({
         processingTime: Date.now() - (images.find(img => img.id === id)?.uploadTimestamp || Date.now())
       });
       
+      // إذا كانت دالة حفظ الصورة المعالجة متوفرة، قم بحفظها
+      if (saveProcessedImage) {
+        const updatedImage = images.find(img => img.id === id);
+        if (updatedImage) {
+          await saveProcessedImage(updatedImage);
+        }
+      }
+      
       console.log(`اكتملت معالجة الملف: ${file.name}`);
     } catch (error) {
       console.error(`خطأ أثناء معالجة الملف: ${file.name}`, error);
@@ -138,12 +148,11 @@ export const useFileUpload = ({
     
     // معالجة الملف التالي
     processNextFile();
-  }, [images, addImage, updateImage, processWithOcr, processWithGemini, toast]);
+  }, [images, addImage, updateImage, processWithOcr, processWithGemini, toast, saveProcessedImage]);
 
   // وظيفة تنظيف التكرارات
   const cleanupDuplicates = useCallback(() => {
     // تنفيذ عملية تنظيف التكرارات هنا
-    // تم تحسين هذه العملية في هوك useImageState
     console.log("تم تفعيل وظيفة تنظيف التكرارات");
   }, []);
 
