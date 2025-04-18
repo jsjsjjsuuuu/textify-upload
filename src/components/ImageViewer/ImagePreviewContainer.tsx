@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageViewer } from "@/components/ImagePreview";
-import { Trash2, Loader, Image, ZoomIn, ZoomOut, RefreshCw, Maximize2, SendHorizontal } from "lucide-react";
+import { Trash2, Image as ImageIcon, ZoomIn, ZoomOut, RefreshCw, Maximize2, SendHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import ExtractedDataEditor from "@/components/ExtractedData/ExtractedDataEditor";
@@ -217,33 +217,36 @@ const ImagePreviewContainer = ({
       </div>;
   }
 
-  // عرض قائمة الصور المصغرة
-  const renderImagesThumbnails = () => <div className="grid grid-cols-5 gap-2">
-      {paginatedImages().map(image => <motion.div key={image.id} initial={{
-      opacity: 0,
-      scale: 0.95
-    }} animate={{
-      opacity: 1,
-      scale: 1
-    }} transition={{
-      duration: 0.2
-    }} className={`relative overflow-hidden rounded-md cursor-pointer border-2 transition-all ${activeImage?.id === image.id ? "border-primary dark:border-primary shadow-md" : "border-transparent dark:border-transparent"}`} onClick={() => handleImageClick(image)}>
-          <div className={`absolute top-0 left-0 w-full h-1
-            ${image.status === "completed" && isImageComplete(image) ? "bg-green-500" : ""}
-            ${image.status === "pending" ? "bg-amber-500" : ""}
-            ${image.status === "error" || hasPhoneError(image) ? "bg-red-500" : ""}
-            ${image.status === "processing" ? "bg-blue-500" : ""}
-            ${image.status === "completed" && !isImageComplete(image) && !hasPhoneError(image) ? "bg-purple-500" : ""}
-          `}></div>
-          
-          {/* صورة مصغرة */}
-          <div className="h-16 overflow-hidden flex items-center justify-center bg-[#0a0f1e]/80">
-            {image.previewUrl ? <img src={image.previewUrl} alt={`صورة ${image.number || ""}`} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full w-full">
-                <Image className="w-5 h-5 text-gray-400" />
-              </div>}
-          </div>
-        </motion.div>)}
-    </div>;
+  // تحديث طريقة عرض الصور المصغرة
+  const renderImagesThumbnails = () => (
+    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
+      {paginatedImages().map(image => (
+        <motion.div
+          key={image.id}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2 }}
+          className={`relative overflow-hidden rounded-md cursor-pointer border-2 transition-all
+            ${activeImage?.id === image.id ? "border-primary dark:border-primary shadow-md" : "border-transparent dark:border-transparent"}
+          `}
+          onClick={() => handleImageClick(image)}
+        >
+          <ImageViewer
+            image={image}
+            zoomLevel={1}
+            onZoomIn={() => {}}
+            onZoomOut={() => {}}
+            onResetZoom={() => {}}
+            onZoomChange={() => {}}
+            formatDate={formatDate}
+            onDelete={onDelete}
+            onRetry={onRetry}
+            compact={true}
+          />
+        </motion.div>
+      ))}
+    </div>
+  );
 
   // وظيفة التنقل بين الصفحات
   const renderPagination = () => {
