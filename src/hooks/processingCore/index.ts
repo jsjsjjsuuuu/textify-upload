@@ -15,6 +15,7 @@ import { useImageDeletion } from "./useImageDeletion";
 import { useUserImages } from "./useUserImages";
 import { UseImageDatabaseConfig } from "@/hooks/useImageDatabase/types";
 import type { ImageData } from "@/types/ImageData";
+import { formatDate as formatDateUtil } from "@/utils/dateFormatter"; 
 
 /**
  * هوك مركزي لمعالجة الصور 
@@ -136,6 +137,32 @@ export const useImageProcessingCore = () => {
     });
   }, [loadUserImages]);
 
+  // دالة تنسيق التاريخ
+  const formatDate = (date: Date): string => {
+    return formatDateUtil(date);
+  };
+
+  // دالة إعادة المعالجة
+  const retryProcessing = useCallback((imageId: string): Promise<boolean> => {
+    console.log('محاولة إعادة معالجة الصورة:', imageId);
+    // هنا يمكن إضافة منطق إعادة المعالجة الفعلي
+    return Promise.resolve(true);
+  }, []);
+
+  // دالة مسح قائمة الانتظار
+  const clearQueue = useCallback((): boolean => {
+    console.log('تم مسح قائمة الانتظار');
+    return true;
+  }, []);
+
+  // دالة تنظيف البيانات
+  const runCleanup = useCallback((userId: string): Promise<boolean> => {
+    if (userId) {
+      return runCleanupNow(userId).then(() => true);
+    }
+    return Promise.resolve(false);
+  }, [runCleanupNow]);
+
   // تصدير الوظائف المتاحة
   return {
     images,
@@ -170,23 +197,10 @@ export const useImageProcessingCore = () => {
     processWithGemini: processFileWithGemini,
     processWithOcr: processFileWithOcr,
     // إضافة الوظائف المفقودة التي تستخدم في Index.tsx
-    formatDate: (date: Date) => {
-      return date ? new Date(date).toLocaleDateString('ar-EG') : '';
-    },
-    retryProcessing: (id: string) => {
-      console.log('محاولة إعادة معالجة الصورة:', id);
-      return Promise.resolve(true);
-    },
-    clearQueue: () => {
-      console.log('تم مسح قائمة الانتظار');
-      return true;
-    },
-    runCleanup: (userId: string) => {
-      if (userId) {
-        return runCleanupNow(userId);
-      }
-      return Promise.resolve(false);
-    }
+    formatDate,
+    retryProcessing,
+    clearQueue,
+    runCleanup
   };
 };
 

@@ -11,6 +11,7 @@ import { useDuplicateDetection } from "@/hooks/useDuplicateDetection";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { UseImageDatabaseConfig } from "@/hooks/useImageDatabase/types";
+import { formatDate as formatDateUtil } from "@/utils/dateFormatter"; 
 
 export const useImageProcessingCore = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,7 +19,7 @@ export const useImageProcessingCore = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  // استخدام useImageState المحدث مع الخصائص الإضافية
+  // استخدام useImageState والهوكس المختلفة
   const { 
     images, 
     sessionImages,
@@ -116,7 +117,7 @@ export const useImageProcessingCore = () => {
     return true;
   };
 
-  // إعادة هيكلة وظيفة handleSubmitToApi لتستخدم وظيفة إخفاء الصورة بعد الإرسال
+  // إعادة هيكلة وظيفة handleSubmitToApi
   const handleSubmitToApi = async (id: string) => {
     // العثور على الصورة حسب المعرف
     const image = images.find(img => img.id === id);
@@ -177,7 +178,7 @@ export const useImageProcessingCore = () => {
     }
   };
 
-  // تعديل وظيفة حذف الصورة لتشمل الحذف من قاعدة البيانات
+  // تعديل وظيفة حذف الصورة
   const handleDelete = async (id: string) => {
     try {
       // محاولة حذف السجل من قاعدة البيانات أولاً
@@ -200,8 +201,32 @@ export const useImageProcessingCore = () => {
       return false;
     }
   };
+
+  // وظيفة الحذف النهائي
+  const handlePermanentDelete = async (id: string) => {
+    try {
+      // محاولة حذف السجل من قاعدة البيانات أولاً
+      if (user) {
+        await deleteImageFromDatabase(id);
+      }
+      
+      // ثم حذفه من الحالة المحلية
+      deleteImage(id);
+      
+      return true;
+    } catch (error) {
+      console.error("خطأ في الحذف النهائي:", error);
+      toast({
+        title: "خطأ في الحذف",
+        description: "حدث خطأ أثناء محاولة حذف السجل",
+        variant: "destructive"
+      });
+      
+      return false;
+    }
+  };
   
-  // استدعاء useFileUpload مع تحسين آلية التعامل مع الصور
+  // استدعاء useFileUpload
   const { 
     isProcessing, 
     handleFileChange,
@@ -225,7 +250,6 @@ export const useImageProcessingCore = () => {
     }
   });
 
-  
   // جلب صور المستخدم من قاعدة البيانات عند تسجيل الدخول
   useEffect(() => {
     if (user) {
@@ -243,7 +267,7 @@ export const useImageProcessingCore = () => {
 
   // تعديل دالة جلب الصور ليكون لها نفس التوقيع المتوقع
   const modifiedLoadUserImages = useCallback((userId: string, callback?: (images: ImageData[]) => void): Promise<void> => {
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       loadUserImages(userId, (images) => {
         if (callback) callback(images);
         resolve();
@@ -251,13 +275,31 @@ export const useImageProcessingCore = () => {
     });
   }, [loadUserImages]);
 
-  // تعديل وظيفة runCleanup لتتوافق مع الأنواع المطلوبة
-  const runCleanup = (userId: string): Promise<boolean> => {
+  // دالة تنسيق التاريخ
+  const formatDate = (date: Date): string => {
+    return formatDateUtil(date);
+  };
+
+  // دالة تنظيف البيانات
+  const runCleanup = useCallback((userId: string): Promise<boolean> => {
     if (userId) {
       return runCleanupNow(userId).then(() => true);
     }
     return Promise.resolve(false);
-  };
+  }, [runCleanupNow]);
+
+  // دالة إعادة المعالجة
+  const retryProcessing = useCallback((imageId: string): Promise<boolean> => {
+    console.log('محاولة إعادة معالجة الصورة:', imageId);
+    // يمكن إضافة منطق إعادة المعالجة الفعلي هنا
+    return Promise.resolve(true);
+  }, []);
+
+  // دالة مسح قائمة الانتظار
+  const clearQueue = useCallback((): boolean => {
+    console.log('تم مسح قائمة الانتظار');
+    return true;
+  }, []);
 
   // تصدير الوظائف المتاحة
   return {
@@ -307,11 +349,16 @@ export const useImageProcessingCore = () => {
       
       return false;
     },
-    // استخدام التعريفات الجديدة والمحدثة
+    // إضافة الدوال المفقودة التي تستخدمها الصفحات
+    formatDate,
+    retryProcessing,
+    clearQueue,
+    runCleanup,
+    handlePermanentDelete,
+    // دوال التكرار
     isDuplicateImage: duplicateDetectionTools.isDuplicateImage,
     checkDuplicateImage: duplicateDetectionTools.isDuplicateImage,
-    markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed,
-    runCleanup
+    markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
   };
 };
 

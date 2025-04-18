@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useImageProcessingCore } from '@/hooks/useImageProcessingCore'; // تحديث الاستيراد للهوك
+import { useImageProcessing } from '@/hooks/useImageProcessingCore'; // تصحيح الاستيراد
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader, Search, Filter, Download, Trash2, SortAsc, SortDesc, ListFilter, RefreshCw } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
@@ -43,7 +43,7 @@ const Records = () => {
     isSubmitting,
     unhideAllImages,
     hiddenImageIds
-  } = useImageProcessingCore(); // استخدام اسم الاستيراد الصحيح
+  } = useImageProcessing(); // استخدام اسم الاستيراد الصحيح
   
   const [filteredImages, setFilteredImages] = useState<ImageData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
