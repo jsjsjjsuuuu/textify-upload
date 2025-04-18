@@ -40,6 +40,12 @@ export const useOcrProcessing = () => {
     try {
       console.log("بدء معالجة OCR للملف:", file.name, "للصورة:", image.id);
       
+      // نتأكد أن file هو من نوع File - حل مشكلة Type 'Blob' is not assignable to type 'File'
+      // صريح أنه File فقط، وليس Blob
+      if (!(file instanceof File)) {
+        throw new Error("الملف المعطى ليس من نوع File");
+      }
+      
       // استدعاء خدمة OCR مع ملف الصورة
       const result = await extractTextFromImage(file);
       console.log("نتيجة OCR:", result);

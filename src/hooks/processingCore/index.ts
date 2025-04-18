@@ -18,7 +18,7 @@ import type { ImageData } from "@/types/ImageData"; // استيراد النوع
 export const useImageProcessingCore = () => {
   const { user } = useAuth();
   
-  // استدعاء هوكات حالة الصورة
+  // استخدام useImageState المحدث مع الخصائص الإضافية
   const { 
     images, 
     sessionImages,
@@ -51,8 +51,8 @@ export const useImageProcessingCore = () => {
   const duplicateDetectionTools = useDuplicateDetection({ enabled: false });
   
   // استخدام هوك معالجة الصور
-  const { processWithGemini } = useGeminiProcessing();
-  const { processWithOcr } = useOcrProcessing();
+  const { processFileWithGemini } = useGeminiProcessing();
+  const { processFileWithOcr } = useOcrProcessing();
   
   // استخدام هوك حفظ الصور المعالجة
   const {
@@ -82,8 +82,8 @@ export const useImageProcessingCore = () => {
     hideImage,
     submitToApi,
     validateRequiredFields,
-    // تعطيل وظيفة تسجيل الصور كمعالجة
-    markImageAsProcessed: () => {}
+    // استخدام markImageAsProcessed من duplicateDetectionTools
+    markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
   });
 
   // استخدام هوك حذف الصور
@@ -155,11 +155,11 @@ export const useImageProcessingCore = () => {
     unhideAllImages,
     clearOldApiKey,
     handlePermanentDelete,
-    // تعديل الدوال لتعطيل فحص التكرارات
-    isDuplicateImage: () => Promise.resolve(false),
-    checkDuplicateImage: () => Promise.resolve(false),
-    markImageAsProcessed: () => {},
-    processWithGemini,
-    processWithOcr
+    // استخدام iisduplicate بدلا من checkDuplicate
+    isDuplicateImage: duplicateDetectionTools.isDuplicateImage,
+    checkDuplicateImage: duplicateDetectionTools.isDuplicateImage,
+    markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed,
+    processWithGemini: processFileWithGemini,
+    processWithOcr: processFileWithOcr
   };
 };

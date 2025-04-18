@@ -1,55 +1,47 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 
-const HIDDEN_IMAGES_KEY = 'hiddenImageIds';
+const HIDDEN_IMAGES_KEY = "hiddenImages";
 
-/**
- * هوك للتعامل مع تخزين معرفات الصور المخفية في التخزين المحلي
- */
 export const useHiddenImagesStorage = () => {
-  const [hiddenImageIds, setHiddenImageIds] = useState<string[]>([]);
-  
+  // استخدام localStorage لتخزين معرفات الصور المخفية
+  const [hiddenImageIds, setHiddenImageIds] = useState<string[]>(() => {
+    // جلب الصور المخفية من التخزين المحلي عند بدء التشغيل
+    const savedHiddenImages = localStorage.getItem(HIDDEN_IMAGES_KEY);
+    return savedHiddenImages ? JSON.parse(savedHiddenImages) : [];
+  });
+
+  // حفظ التغييرات في التخزين المحلي
   useEffect(() => {
-    try {
-      const storedIds = localStorage.getItem(HIDDEN_IMAGES_KEY);
-      if (storedIds) {
-        setHiddenImageIds(JSON.parse(storedIds));
-      }
-    } catch (error) {
-      console.error('خطأ في تحميل معرفات الصور المخفية:', error);
-      localStorage.removeItem(HIDDEN_IMAGES_KEY);
-      setHiddenImageIds([]);
-    }
-  }, []);
-  
-  useEffect(() => {
-    try {
-      localStorage.setItem(HIDDEN_IMAGES_KEY, JSON.stringify(hiddenImageIds));
-    } catch (error) {
-      console.error('خطأ في حفظ معرفات الصور المخفية:', error);
-    }
+    localStorage.setItem(HIDDEN_IMAGES_KEY, JSON.stringify(hiddenImageIds));
   }, [hiddenImageIds]);
-  
+
+  // إخفاء صورة
   const hideImage = useCallback((id: string) => {
-    console.log("إخفاء الصورة في التخزين المحلي:", id);
     setHiddenImageIds(prev => {
-      if (prev.includes(id)) return prev;
-      return [...prev, id];
+      // التأكد من عدم تكرار المعرف
+      if (!prev.includes(id)) {
+        return [...prev, id];
+      }
+      return prev;
     });
   }, []);
-  
+
+  // إظهار صورة
   const unhideImage = useCallback((id: string) => {
-    setHiddenImageIds(prev => prev.filter(imgId => imgId !== id));
+    setHiddenImageIds(prev => prev.filter(imageId => imageId !== id));
   }, []);
-  
+
+  // إظهار جميع الصور
   const unhideAllImages = useCallback(() => {
     setHiddenImageIds([]);
   }, []);
-  
+
+  // الحصول على قائمة المعرفات المخفية
   const getHiddenImageIds = useCallback(() => {
-    return [...hiddenImageIds];
+    return hiddenImageIds;
   }, [hiddenImageIds]);
-  
+
   return {
     hiddenImageIds,
     hideImage,
