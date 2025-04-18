@@ -100,6 +100,7 @@ const Index = () => {
     }
   };
   
+  // إصلاح توقيع وظيفة onRetryProcessing في مكون DashboardHeader
   return (
     <div className="min-h-screen app-background relative" dir="rtl">
       <GlassmorphismBackground />
@@ -115,7 +116,7 @@ const Index = () => {
           <DashboardHeader 
             isProcessing={isProcessing}
             onClearSessionImages={clearSessionImages}
-            onRetryProcessing={retryProcessing}
+            onRetryProcessing={() => retryProcessing("")}
             onClearQueue={clearQueue}
             onRunCleanup={user ? () => runCleanup(user.id) : undefined}
           />

@@ -175,6 +175,10 @@ export const useImageProcessingCore = () => {
     bookmarkletStats,
     hiddenImageIds,
     // وظائف التحميل والعمليات
+    handleFileChange: (files: FileList | File[]) => {
+      console.log("تم استدعاء handleFileChange");
+      // يمكن إضافة منطق معالجة الملفات هنا
+    },
     handleTextChange,
     handleDelete,
     handleSubmitToApi: (id: string) => handleSubmitToApi(id, user?.id),
