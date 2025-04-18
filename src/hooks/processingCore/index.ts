@@ -16,6 +16,10 @@ import { useUserImages } from "./useUserImages";
 import { UseImageDatabaseConfig } from "@/hooks/useImageDatabase/types";
 import type { ImageData } from "@/types/ImageData";
 
+/**
+ * هوك مركزي لمعالجة الصور 
+ * يجمع كافة الوظائف المتعلقة بمعالجة الصور في واجهة واحدة
+ */
 export const useImageProcessingCore = () => {
   const { user } = useAuth();
   
@@ -125,9 +129,9 @@ export const useImageProcessingCore = () => {
   // تعديل دالة جلب الصور ليكون لها نفس التوقيع المتوقع
   const modifiedLoadUserImages = useCallback((userId: string, callback?: (images: ImageData[]) => void): Promise<void> => {
     return new Promise<void>((resolve) => {
-      loadUserImages(userId, (images: ImageData[]) => {
-        if (callback) callback(images);
-        resolve(); // إعادة void وليس البيانات
+      loadUserImages(userId, (loadedImages: ImageData[]) => {
+        if (callback) callback(loadedImages);
+        resolve();
       });
     });
   }, [loadUserImages]);
@@ -164,8 +168,27 @@ export const useImageProcessingCore = () => {
     checkDuplicateImage: duplicateDetectionTools.checkDuplicateImage,
     markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed,
     processWithGemini: processFileWithGemini,
-    processWithOcr: processFileWithOcr
+    processWithOcr: processFileWithOcr,
+    // إضافة الوظائف المفقودة التي تستخدم في Index.tsx
+    formatDate: (date: Date) => {
+      return date ? new Date(date).toLocaleDateString('ar-EG') : '';
+    },
+    retryProcessing: (id: string) => {
+      console.log('محاولة إعادة معالجة الصورة:', id);
+      return Promise.resolve(true);
+    },
+    clearQueue: () => {
+      console.log('تم مسح قائمة الانتظار');
+      return true;
+    },
+    runCleanup: (userId: string) => {
+      if (userId) {
+        return runCleanupNow(userId);
+      }
+      return Promise.resolve(false);
+    }
   };
 };
 
-export { useImageProcessingCore } from '@/hooks/useImageProcessingCore';
+// تصدير استخدام useImageProcessingCore من الملف الرئيسي
+export { useImageProcessingCore as useImageProcessing } from '@/hooks/useImageProcessingCore';

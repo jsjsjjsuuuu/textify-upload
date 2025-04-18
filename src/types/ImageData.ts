@@ -88,7 +88,7 @@ export type ImageProcessFn = (
 ) => Promise<Partial<ImageData>>;
 
 export type OcrProcessFn = (
-  file?: File,
+  file: File,
   image?: CustomImageData
 ) => Promise<string | CustomImageData>;
 
@@ -120,8 +120,8 @@ export interface FileUploadOptions {
   addImage: (image: ImageData) => void;
   updateImage: (id: string, fields: Partial<ImageData>) => void;
   setProcessingProgress: (progress: number) => void;
-  processWithOcr: ImageProcessFn;
-  processWithGemini: ImageProcessFn;
+  processWithOcr: OcrProcessFn;
+  processWithGemini: GeminiProcessFn;
   saveProcessedImage?: (image: CustomImageData) => Promise<boolean>;
   removeDuplicates?: () => void; // إضافة هذه الخاصية المفقودة
   processedImage?: {

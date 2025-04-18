@@ -24,3 +24,9 @@ export const createImageHash = (image: ImageData): string => {
  * الحصول على هاش صورة (غطاء لوظيفة createImageHash)
  */
 export const getImageHash = createImageHash;
+
+/**
+ * تشفير صورة (غطاء لوظيفة createImageHash)
+ */
+export const hashImage = createImageHash;
+

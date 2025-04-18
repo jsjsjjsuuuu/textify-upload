@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { useImageProcessing } from '@/hooks/useImageProcessing';
+import { useImageProcessing } from '@/hooks/useImageProcessingCore';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader, Search, Filter, Download, Trash2, SortAsc, SortDesc, ListFilter, RefreshCw } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
@@ -69,7 +69,12 @@ const Records = () => {
   const loadData = () => {
     setIsLoading(true);
     
-    loadUserImages((loadedImages) => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+    
+    loadUserImages(user.id, (loadedImages) => {
       console.log(`تم تحميل ${loadedImages.length} صورة للمستخدم`);
       setIsLoading(false);
       setDataLoaded(true);

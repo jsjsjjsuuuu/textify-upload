@@ -1,7 +1,7 @@
 
 import { ImageData } from "@/types/ImageData";
-import { hashImage } from "./duplicateDetection/imageHasher";
-import { compareImageHashes } from "./duplicateDetection/imageMatcher";
+import { hashImage, getImageHash } from "./duplicateDetection/imageHasher";
+import { compareImageHashes, calculateSimilarity } from "./duplicateDetection/imageMatcher";
 
 interface DuplicateDetectionOptions {
   enabled: boolean;
@@ -71,7 +71,7 @@ const compareImages = async (imageA: ImageData, imageB: ImageData): Promise<numb
     }
 
     // حساب التشابه بين البصمات
-    const similarity = compareImageHashes(hashA, hashB);
+    const similarity = calculateSimilarity(hashA, hashB);
     return similarity;
   } catch (error) {
     console.error("خطأ في مقارنة الصور:", error);

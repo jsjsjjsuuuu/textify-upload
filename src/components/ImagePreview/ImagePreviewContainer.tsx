@@ -2,6 +2,7 @@
 import React from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
+import { ImageViewer } from "./ImageViewer";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -33,22 +34,19 @@ const ImagePreviewContainer = ({
     );
   }, []);
 
-  // إرجاع المكون الرئيسي من المسار الصحيح
-  const ViewerContainer = React.lazy(() => import("../ImageViewer/ImagePreviewContainer"));
-  
+  // إذا كانت الصور فارغة، عرض رسالة بديلة
+  if (!images || images.length === 0) {
+    return <div>لا توجد صور للعرض</div>;
+  }
+
+  // استخدام المكون الجديد، مع تمرير صورة واحدة فقط (الأولى)
   return (
-    <React.Suspense fallback={<div>جاري التحميل...</div>}>
-      <ViewerContainer 
-        images={images}
-        isSubmitting={isSubmitting}
-        onTextChange={onTextChange}
-        onDelete={onDelete}
-        onSubmit={onSubmit}
-        formatDate={formatDate}
-        showOnlySession={showOnlySession}
-        onRetry={onRetry}
-      />
-    </React.Suspense>
+    <ImageViewer
+      image={images[0]}
+      onClose={() => {}}
+      hasNext={images.length > 1}
+      hasPrev={false}
+    />
   );
 };
 
