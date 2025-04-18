@@ -7,5 +7,5 @@ import ZoomControls from "./ZoomControls";
 
 export { ImageViewer, DraggableImage, ImageErrorDisplay, ImageInfoBadges, ZoomControls };
 
-// تصدير النوع ImageViewerProps
+// تصدير واجهة ImageViewerProps بشكل صحيح
 export type { ImageViewerProps } from "./ImageViewer";

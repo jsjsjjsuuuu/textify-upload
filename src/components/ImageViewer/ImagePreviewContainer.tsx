@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageViewer } from "@/components/ImagePreview";
-import { Trash2, Image as ImageIcon, ZoomIn, ZoomOut, RefreshCw, Maximize2, SendHorizontal } from "lucide-react";
+import { Trash2, Image as ImageIcon, ZoomIn, ZoomOut, RefreshCw, Maximize2, SendHorizontal, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import ExtractedDataEditor from "@/components/ExtractedData/ExtractedDataEditor";
@@ -278,11 +278,11 @@ const ImagePreviewContainer = ({
         </Button>
         
         {activeImage.status === "completed" && isImageComplete(activeImage) && !activeImage.submitted && !hasPhoneError(activeImage) && <Button size="sm" variant="default" onClick={handleSubmit} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 text-white">
-            {isSubmitting ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <SendHorizontal className="mr-2 h-4 w-4" />}
-            إرسال
-          </Button>}
-      </div>;
-  };
+          {isSubmitting ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <SendHorizontal className="mr-2 h-4 w-4" />}
+          إرسال
+        </Button>}
+    </div>;
+};
 
   // تحديد المخطط الرئيسي وفقًا لوضع العرض
   return <div className="container mx-auto">
