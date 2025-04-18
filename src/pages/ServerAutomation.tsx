@@ -1,30 +1,18 @@
 
 import React from 'react';
-import SimpleAutomationSection from '@/components/SimpleAutomationSection';
-import RealExecutionToggle from '@/components/ServerSettings/RealExecutionToggle';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const ServerAutomation = () => {
   return (
     <div className="container mx-auto py-8">
-      <div className="space-y-8">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>إعدادات الأتمتة</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-2">
-            <RealExecutionToggle />
-          </CardContent>
-        </Card>
+      <div className="bg-white rounded-lg shadow p-6">
+        <h1 className="text-2xl font-bold mb-4">إعدادات الأتمتة</h1>
+        <p className="text-gray-500 mb-6">هذه الصفحة غير متوفرة حاليًا.</p>
         
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>إنشاء أتمتة جديدة</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-2">
-            <SimpleAutomationSection />
-          </CardContent>
-        </Card>
+        <div className="w-full h-64 flex items-center justify-center">
+          <p className="text-muted-foreground text-center">
+            تم إيقاف ميزة الأتمتة مؤقتًا. سيتم إعادة تفعيلها في تحديث قادم.
+          </p>
+        </div>
       </div>
     </div>
   );

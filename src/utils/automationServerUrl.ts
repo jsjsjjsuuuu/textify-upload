@@ -1,130 +1,226 @@
 
 /**
- * وظائف للتعامل مع عنوان URL لخادم الأتمتة
+ * عنوان خادم الأتمتة واستراتيجية الاتصال
  */
 
-// قائمة عناوين IP المسموح بها من خادم Render
+// تعريف عناوين IP المسموح بها
 export const RENDER_ALLOWED_IPS = [
-  '44.226.145.213',
-  '54.187.200.255',
-  '34.213.214.55',
-  '35.164.95.156',
-  '44.230.95.183',
-  '44.229.200.200',
-  // عناوين IP إضافية للتناوب
-  '44.242.143.234',
-  '54.244.142.219',
-  '44.241.75.25',
-  '44.236.246.209',
-  '52.27.36.56'
+  "render.com",
+  "onrender.com",
+  "api.render.com"
 ];
 
 // حالة الاتصال الأخيرة
 interface ConnectionStatus {
   isConnected: boolean;
-  lastChecked: number;
+  lastCheck: number;
   retryCount: number;
-  message?: string;
 }
 
-// الحالة الافتراضية للاتصال
-const lastConnectionStatus: ConnectionStatus = {
+// تخزين حالة الاتصال
+let lastConnectionStatus: ConnectionStatus = {
   isConnected: false,
-  lastChecked: 0,
+  lastCheck: 0,
   retryCount: 0
 };
 
-// الحصول على عنوان URL الافتراضي للخادم
-const DEFAULT_SERVER_URL = 'https://automation-server-api.onrender.com';
+// تعيين عنوان الخادم بناءً على البيئة
+export const automationServerUrl = import.meta.env.VITE_AUTOMATION_SERVER_URL || 
+                                  "https://textify-upload.onrender.com";
 
-/**
- * الحصول على عنوان URL لخادم الأتمتة من التخزين المحلي أو استخدام القيمة الافتراضية
- */
+// استرجاع عنوان الخادم
 export const getAutomationServerUrl = (): string => {
-  return localStorage.getItem('automation_server_url') || DEFAULT_SERVER_URL;
+  return automationServerUrl;
 };
 
-/**
- * تعيين عنوان URL لخادم الأتمتة في التخزين المحلي
- */
+// تعيين عنوان الخادم
 export const setAutomationServerUrl = (url: string): void => {
-  if (!url) {
-    localStorage.removeItem('automation_server_url');
-    return;
+  // نحن نستخدم دائمًا عنوان Render الرسمي فقط
+  console.log(`تم طلب تعيين عنوان الخادم إلى: ${url}`);
+  console.log("ملاحظة: نحن نستخدم عنوان Render الرسمي فقط");
+};
+
+// إعادة تعيين عنوان الخادم إلى القيمة الافتراضية
+export const resetAutomationServerUrl = (): string => {
+  console.log("تم إعادة تعيين عنوان الخادم إلى القيمة الافتراضية");
+  return automationServerUrl;
+};
+
+// التحقق من صحة عنوان URL
+export const isValidServerUrl = (url: string): boolean => {
+  try {
+    new URL(url);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+// الحصول على عنوان IP التالي للتناوب
+export const getNextIp = (): string => {
+  const index = Math.floor(Math.random() * RENDER_ALLOWED_IPS.length);
+  return RENDER_ALLOWED_IPS[index];
+};
+
+// تحديث حالة الاتصال
+export const updateConnectionStatus = (isConnected: boolean): void => {
+  lastConnectionStatus = {
+    isConnected,
+    lastCheck: Date.now(),
+    retryCount: isConnected ? 0 : lastConnectionStatus.retryCount + 1
+  };
+};
+
+// الحصول على حالة الاتصال الأخيرة
+export const getLastConnectionStatus = (): ConnectionStatus => {
+  return lastConnectionStatus;
+};
+
+// التحقق مما إذا كان الخادم متصلاً
+export const isConnected = async (showToast: boolean = false): Promise<boolean> => {
+  const result = await checkConnection();
+  return result.isConnected;
+};
+
+// إنشاء رؤوس HTTP أساسية
+export const createBaseHeaders = (ipAddress: string = ''): Record<string, string> => {
+  return {
+    'Content-Type': 'application/json',
+    'X-Client-Id': 'web-client',
+    'X-Client-Version': '1.0.0',
+    'X-Request-Time': Date.now().toString(),
+    'X-IP-Preference': ipAddress
+  };
+};
+
+// إنشاء إشارة مهلة زمنية
+export const createTimeoutSignal = (timeout: number = 30000): AbortSignal => {
+  return AbortSignal.timeout(timeout);
+};
+
+// التحقق من مدة مهلة الاتصال
+export const getConnectionTimeout = (): number => {
+  return 30000; // 30 ثانية
+};
+
+// إنشاء خيارات الجلب
+export const createFetchOptions = (method: string = 'GET', body?: any, timeout: number = 30000): RequestInit => {
+  return {
+    method,
+    headers: createBaseHeaders(),
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(timeout),
+    mode: 'cors',
+    credentials: 'omit',
+    cache: 'no-cache'
+  };
+};
+
+// الجلب مع إعادة المحاولة
+export const fetchWithRetry = async (url: string, options: RequestInit, maxRetries: number = 3): Promise<Response> => {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok) {
+        return response;
+      }
+      lastError = new Error(`استجابة غير ناجحة: ${response.status} ${response.statusText}`);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('حدث خطأ غير معروف');
+      console.error(`فشلت المحاولة ${attempt + 1}/${maxRetries}:`, lastError);
+      if (attempt < maxRetries - 1) {
+        // انتظار قبل إعادة المحاولة
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  }
+  throw lastError || new Error('فشلت جميع محاولات الجلب');
+};
+
+// الطباعة للتشخيص
+console.log(`⚡️ الاتصال بخادم الأتمتة على: ${automationServerUrl}, isProduction: ${import.meta.env.PROD}`);
+
+// تحديد ما إذا كنا في بيئة معاينة
+export const isPreviewEnvironment = (): boolean => {
+  // تعديل المنطق ليعود false دائمًا في البيئة الحالية للتمكن من الاختبار الفعلي
+  const inPreviewMode = false;
+  
+  // طباعة للتشخيص
+  if (inPreviewMode) {
+    console.log('⚡️ تعمل في وضع المعاينة، سيتم محاكاة الأتمتة دون اتصال بخادم فعلي');
+  } else {
+    console.log('⚡️ تم تعيين استخدام خادم Render الرسمي فقط');
   }
   
-  // تأكد من أن العنوان صحيح (بدون شرطة مائلة في النهاية)
-  const formattedUrl = url.endsWith('/') ? url.slice(0, -1) : url;
-  localStorage.setItem('automation_server_url', formattedUrl);
+  return inPreviewMode;
 };
 
-/**
- * التحقق مما إذا كان الخادم يعمل في بيئة المعاينة
- */
-export const isPreviewEnvironment = (): boolean => {
-  return window.location.hostname.includes('preview') || 
-         window.location.hostname.includes('localhost');
-};
-
-/**
- * فحص الاتصال بالخادم واختبار الحالة
- */
-export const checkConnection = async (): Promise<ConnectionStatus> => {
+// التحقق من اتصال الخادم
+export const checkConnection = async (): Promise<{ isConnected: boolean, details?: any, message?: string }> => {
   try {
-    const serverUrl = getAutomationServerUrl();
-    if (!serverUrl) {
-      throw new Error("لم يتم تعيين عنوان URL لخادم الأتمتة");
+    // إذا كنا في بيئة معاينة، نفترض أن الاتصال ناجح دائمًا
+    if (isPreviewEnvironment()) {
+      return { 
+        isConnected: true,
+        details: {
+          message: "محاكاة اتصال ناجح في بيئة المعاينة",
+          time: new Date().toISOString()
+        },
+        message: "محاكاة اتصال ناجح في بيئة المعاينة"
+      };
     }
-
-    // إرسال طلب فحص الحالة
-    const response = await fetch(`${serverUrl}/api/ping`, {
+    
+    console.log("محاولة اتصال سريع:", `${automationServerUrl}/api/ping`);
+    
+    // محاولة الاتصال بالخادم مع تجنب التخزين المؤقت
+    const response = await fetch(`${automationServerUrl}/api/ping`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'X-Render-Client-IP': RENDER_ALLOWED_IPS[0]
+        'Cache-Control': 'no-cache, no-store',
+        'Pragma': 'no-cache',
+        'x-request-time': Date.now().toString()
       }
     });
-
-    // التحقق من نجاح الطلب
+    
+    // إذا كانت الاستجابة ناجحة
     if (response.ok) {
-      const result = await response.json();
-      
-      // تحديث حالة الاتصال الأخيرة
-      lastConnectionStatus.isConnected = true;
-      lastConnectionStatus.lastChecked = Date.now();
-      lastConnectionStatus.retryCount = 0;
-      lastConnectionStatus.message = "تم الاتصال بنجاح";
-      
-      return { ...lastConnectionStatus };
+      // محاولة تحليل البيانات
+      try {
+        const data = await response.json();
+        console.log("Ping response successful:", data);
+        return { 
+          isConnected: true, 
+          details: data,
+          message: data.message || "تم الاتصال بالخادم بنجاح"
+        };
+      } catch (parseError) {
+        // إذا تعذر تحليل البيانات، نفترض أن الاتصال ناجح طالما أن الرد 200
+        return { 
+          isConnected: true,
+          message: "تم الاتصال بالخادم بنجاح (بدون تفاصيل)"
+        };
+      }
     } else {
-      // فشل الاستجابة
-      const errorMessage = `فشل الاتصال: ${response.status} ${response.statusText}`;
-      
-      // تحديث حالة الاتصال الأخيرة
-      lastConnectionStatus.isConnected = false;
-      lastConnectionStatus.lastChecked = Date.now();
-      lastConnectionStatus.retryCount += 1;
-      lastConnectionStatus.message = errorMessage;
-      
-      return { ...lastConnectionStatus };
+      // إذا كان هناك خطأ في الاستجابة
+      console.error("Ping failed:", response.status, response.statusText);
+      return { 
+        isConnected: false,
+        details: {
+          status: response.status,
+          statusText: response.statusText
+        },
+        message: `فشل الاتصال: ${response.status} ${response.statusText}`
+      };
     }
   } catch (error) {
-    // خطأ في الاتصال
-    const errorMessage = error instanceof Error ? error.message : "خطأ غير معروف في الاتصال";
-    
-    // تحديث حالة الاتصال الأخيرة
-    lastConnectionStatus.isConnected = false;
-    lastConnectionStatus.lastChecked = Date.now();
-    lastConnectionStatus.retryCount += 1;
-    lastConnectionStatus.message = errorMessage;
-    
-    return { ...lastConnectionStatus };
+    // في حالة حدوث خطأ في الاتصال
+    console.error("Connection check error:", error);
+    return { 
+      isConnected: false,
+      details: { error: error instanceof Error ? error.message : "خطأ غير معروف" },
+      message: error instanceof Error ? error.message : "حدث خطأ غير معروف أثناء الاتصال"
+    };
   }
-};
-
-/**
- * الحصول على حالة الاتصال الأخيرة دون إرسال طلب جديد
- */
-export const getLastConnectionStatus = (): ConnectionStatus => {
-  return { ...lastConnectionStatus };
 };

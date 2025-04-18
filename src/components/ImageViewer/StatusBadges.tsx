@@ -1,15 +1,7 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  BadgeCheck, 
-  AlertCircle, 
-  Clock, 
-  Circle, 
-  CheckCircle, 
-  AlertTriangle
-} from 'lucide-react';
+import { motion } from "framer-motion";
+import { CheckCircle, AlertTriangle, Clock, XCircle, Activity, LayoutGrid } from "lucide-react";
 
 interface StatusBadgesProps {
   counts: {
@@ -21,80 +13,91 @@ interface StatusBadgesProps {
     processing: number;
   };
   activeFilter: string;
-  onFilterChange: (value: string) => void;
+  onFilterChange: (filter: string) => void;
 }
 
 const StatusBadges: React.FC<StatusBadgesProps> = ({ 
   counts, 
-  activeFilter, 
-  onFilterChange 
+  activeFilter,
+  onFilterChange
 }) => {
+  // تعريف الأيقونات والألوان لكل حالة
+  const badges = [
+    {
+      id: "all",
+      label: "الكل",
+      count: counts.all,
+      icon: <LayoutGrid className="h-4 w-4" />,
+      className: "bg-white text-gray-800 border-gray-200 hover:border-gray-300",
+    },
+    {
+      id: "pending",
+      label: "قيد الانتظار",
+      count: counts.pending,
+      icon: <Clock className="h-4 w-4" />,
+      className: "bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-300",
+    },
+    {
+      id: "processing",
+      label: "قيد المعالجة",
+      count: counts.processing,
+      icon: <Activity className="h-4 w-4" />,
+      className: "bg-blue-50 text-blue-700 border-blue-200 hover:border-blue-300",
+    },
+    {
+      id: "completed",
+      label: "مكتملة",
+      count: counts.completed,
+      icon: <CheckCircle className="h-4 w-4" />,
+      className: "bg-green-50 text-green-700 border-green-200 hover:border-green-300",
+    },
+    {
+      id: "incomplete",
+      label: "غير مكتملة",
+      count: counts.incomplete,
+      icon: <XCircle className="h-4 w-4" />,
+      className: "bg-purple-50 text-purple-700 border-purple-200 hover:border-purple-300",
+    },
+    {
+      id: "error",
+      label: "أخطاء",
+      count: counts.error,
+      icon: <AlertTriangle className="h-4 w-4" />,
+      className: "bg-red-50 text-red-700 border-red-200 hover:border-red-300",
+    }
+  ];
+
   return (
-    <TabsList className="flex flex-wrap gap-2 p-1">
-      <TabsTrigger
-        value="all"
-        onClick={() => onFilterChange('all')}
-        className={`flex items-center ${activeFilter === 'all' ? 'bg-primary text-primary-foreground' : ''}`}
-      >
-        <Circle className="mr-1 h-4 w-4" />
-        الكل <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs">{counts.all}</span>
-      </TabsTrigger>
-      
-      {counts.pending > 0 && (
-        <TabsTrigger
-          value="pending"
-          onClick={() => onFilterChange('pending')}
-          className={`flex items-center ${activeFilter === 'pending' ? 'bg-primary text-primary-foreground' : ''}`}
+    <div className="flex flex-wrap gap-2 justify-end" dir="rtl">
+      {badges.map(badge => (
+        <motion.button
+          key={badge.id}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onFilterChange(badge.id)}
+          className={`
+            flex items-center gap-2 px-3 py-1.5 rounded-full
+            border-2 transition-colors
+            ${badge.className}
+            ${activeFilter === badge.id ? 'ring-2 ring-offset-2 ring-brand-brown/20' : ''}
+          `}
         >
-          <Clock className="mr-1 h-4 w-4 text-yellow-500" />
-          قيد الانتظار <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs">{counts.pending}</span>
-        </TabsTrigger>
-      )}
-      
-      {counts.processing > 0 && (
-        <TabsTrigger
-          value="processing"
-          onClick={() => onFilterChange('processing')}
-          className={`flex items-center ${activeFilter === 'processing' ? 'bg-primary text-primary-foreground' : ''}`}
-        >
-          <Clock className="mr-1 h-4 w-4 animate-spin text-blue-500" />
-          قيد المعالجة <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs">{counts.processing}</span>
-        </TabsTrigger>
-      )}
-      
-      {counts.completed > 0 && (
-        <TabsTrigger
-          value="completed"
-          onClick={() => onFilterChange('completed')}
-          className={`flex items-center ${activeFilter === 'completed' ? 'bg-primary text-primary-foreground' : ''}`}
-        >
-          <CheckCircle className="mr-1 h-4 w-4 text-green-500" />
-          مكتمل <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs">{counts.completed}</span>
-        </TabsTrigger>
-      )}
-      
-      {counts.incomplete > 0 && (
-        <TabsTrigger
-          value="incomplete"
-          onClick={() => onFilterChange('incomplete')}
-          className={`flex items-center ${activeFilter === 'incomplete' ? 'bg-primary text-primary-foreground' : ''}`}
-        >
-          <AlertTriangle className="mr-1 h-4 w-4 text-orange-500" />
-          غير مكتمل <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs">{counts.incomplete}</span>
-        </TabsTrigger>
-      )}
-      
-      {counts.error > 0 && (
-        <TabsTrigger
-          value="error"
-          onClick={() => onFilterChange('error')}
-          className={`flex items-center ${activeFilter === 'error' ? 'bg-primary text-primary-foreground' : ''}`}
-        >
-          <AlertCircle className="mr-1 h-4 w-4 text-red-500" />
-          أخطاء <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs">{counts.error}</span>
-        </TabsTrigger>
-      )}
-    </TabsList>
+          {badge.icon}
+          <span className="text-sm font-medium whitespace-nowrap">
+            {badge.label}
+          </span>
+          <span className={`
+            inline-flex items-center justify-center 
+            h-5 w-5 text-xs font-semibold rounded-full
+            ${activeFilter === badge.id 
+              ? 'bg-white/20 text-current' 
+              : 'bg-white text-current'}
+          `}>
+            {badge.count}
+          </span>
+        </motion.button>
+      ))}
+    </div>
   );
 };
 

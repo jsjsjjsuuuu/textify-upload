@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ImageData } from '@/types/ImageData';
 
-export interface ImageViewerProps {
+interface ImageViewerProps {
   image: ImageData;
   zoomLevel: number;
   onZoomIn: () => void;
