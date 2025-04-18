@@ -2,7 +2,7 @@
 import React from "react";
 import { ImageData } from "@/types/ImageData";
 import { useToast } from "@/hooks/use-toast";
-import { ImageViewer } from "./ImageViewer";
+import ImageViewer from "../ImageViewer/ImagePreviewContainer";
 
 interface ImagePreviewContainerProps {
   images: ImageData[];
@@ -39,11 +39,10 @@ const ImagePreviewContainer = ({
     return <div>لا توجد صور للعرض</div>;
   }
 
-  // استخدام المكون الجديد، مع تمرير صورة واحدة فقط (الأولى)
+  // استخدام المكون الجديد، وتمرير الخصائص المناسبة
   return (
     <ImageViewer
       image={images[0]}
-      onClose={() => {}}
       hasNext={images.length > 1}
       hasPrev={false}
     />

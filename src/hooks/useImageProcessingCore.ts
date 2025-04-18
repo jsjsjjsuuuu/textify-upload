@@ -13,6 +13,8 @@ import { useOcrProcessing } from "@/hooks/useOcrProcessing";
 import { UseImageDatabaseConfig } from "@/hooks/useImageDatabase/types";
 
 export const useImageProcessingCore = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -42,7 +44,7 @@ export const useImageProcessingCore = () => {
   } = useImageStats();
   
   // استخدام اكتشاف التكرار مع الواجهات المحدثة
-  const duplicateDetectionTools = useDuplicateDetection({ enabled: false });
+  const duplicateDetectionTools = useDuplicateDetection({ enabled: true });
   
   // جلب وظائف معالجة الصور الجديدة المتوافقة
   const { processFileWithOcr } = useOcrProcessing();
@@ -69,7 +71,7 @@ export const useImageProcessingCore = () => {
     runCleanupNow
   } = useImageDatabase(updateImageConfig);
 
-  // التحقق من المفتاح القديم وتحديثه
+  // التحقق من وجود المفتاح القديم وتحديثه إذا لزم الأمر
   useEffect(() => {
     const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8"; // المفتاح القديم
     const storedApiKey = localStorage.getItem("geminiApiKey");
@@ -114,7 +116,7 @@ export const useImageProcessingCore = () => {
     return true;
   };
 
-  // وظيفة إرسال الصورة إلى API
+  // إعادة هيكلة وظيفة handleSubmitToApi لتستخدم وظيفة إخفاء الصورة بعد الإرسال
   const handleSubmitToApi = async (id: string) => {
     // العثور على الصورة حسب المعرف
     const image = images.find(img => img.id === id);
@@ -133,12 +135,56 @@ export const useImageProcessingCore = () => {
       return false;
     }
     
-    return true;
+    setIsSubmitting(true);
+    try {
+      console.log("جاري إرسال البيانات للصورة:", id);
+      // محاولة إرسال البيانات إلى API وحفظها في قاعدة البيانات
+      const success = await submitToApi(id, image, user?.id);
+      
+      if (success) {
+        console.log("تم إرسال البيانات بنجاح للصورة:", id);
+        
+        // تحديث الصورة محلياً
+        updateImage(id, { submitted: true, status: "completed" });
+        
+        // تسجيل الصورة كمعالجة لتجنب إعادة المعالجة
+        duplicateDetectionTools.markImageAsProcessed(image);
+        
+        toast({
+          title: "تم الإرسال",
+          description: "تم إرسال البيانات وحفظها بنجاح",
+        });
+        
+        // تأكد من وجود وظيفة hideImage قبل استدعائها
+        console.log("جاري إخفاء الصورة بعد الإرسال الناجح:", id);
+        hideImage(id); // استدعاء مباشر لوظيفة hideImage
+        
+        return true;
+      } else {
+        console.error("فشل في إرسال البيانات للصورة:", id);
+        return false;
+      }
+    } catch (error) {
+      console.error("خطأ في إرسال البيانات:", error);
+      toast({
+        title: "خطأ في الإرسال",
+        description: "حدث خطأ أثناء محاولة إرسال البيانات",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // وظيفة حذف الصورة
+  // تعديل وظيفة حذف الصورة لتشمل الحذف من قاعدة البيانات
   const handleDelete = async (id: string) => {
     try {
+      // محاولة حذف السجل من قاعدة البيانات أولاً
+      if (user) {
+        await deleteImageFromDatabase(id);
+      }
+      
       // ثم حذفه من الحالة المحلية
       deleteImage(id);
       
@@ -155,7 +201,7 @@ export const useImageProcessingCore = () => {
     }
   };
   
-  // استدعاء useFileUpload
+  // استدعاء useFileUpload مع تحسين آلية التعامل مع الصور
   const { 
     isProcessing, 
     handleFileChange,
@@ -169,8 +215,10 @@ export const useImageProcessingCore = () => {
     setProcessingProgress,
     saveProcessedImage,
     removeDuplicates,
+    // تمرير وظائف معالجة الصور المحدثة
     processWithOcr: processFileWithOcr,
     processWithGemini: processFileWithGemini,
+    // استخدام الأداة كما هي بدلاً من تمريرها كخاصية منفصلة
     processedImage: {
       isDuplicateImage: duplicateDetectionTools.isDuplicateImage,
       markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
@@ -195,50 +243,18 @@ export const useImageProcessingCore = () => {
 
   // تعديل دالة جلب الصور ليكون لها نفس التوقيع المتوقع
   const modifiedLoadUserImages = useCallback((userId: string, callback?: (images: ImageData[]) => void): Promise<void> => {
-    return new Promise<void>((resolve) => {
-      loadUserImages(userId, (images: ImageData[]) => {
+    return new Promise((resolve) => {
+      loadUserImages(userId, (images) => {
         if (callback) callback(images);
         resolve();
       });
     });
   }, [loadUserImages]);
 
-  // وظيفة للتنسيق الصحيح للتاريخ
-  const formatDate = (date: Date): string => {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('ar-EG');
-  };
-
-  // وظيفة إعادة معالجة الصور
-  const retryProcessing = (id: string): Promise<boolean> => {
-    console.log('محاولة إعادة معالجة الصورة:', id);
-    return Promise.resolve(true);
-  };
-
-  // وظيفة لمسح قائمة الانتظار
-  const clearQueue = (): boolean => {
-    console.log('تم مسح قائمة الانتظار');
-    return true;
-  };
-
-  // وظيفة للحذف النهائي من قاعدة البيانات
-  const handlePermanentDelete = async (id: string): Promise<boolean> => {
-    try {
-      if (user) {
-        await deleteImageFromDatabase(id);
-      }
-      deleteImage(id);
-      return true;
-    } catch (error) {
-      console.error('خطأ في الحذف النهائي:', error);
-      return false;
-    }
-  };
-
-  // وظيفة تنظيف السجلات القديمة
+  // تعديل وظيفة runCleanup لتتوافق مع الأنواع المطلوبة
   const runCleanup = (userId: string): Promise<boolean> => {
     if (userId) {
-      return runCleanupNow(userId);
+      return runCleanupNow(userId).then(() => true);
     }
     return Promise.resolve(false);
   };
@@ -249,7 +265,7 @@ export const useImageProcessingCore = () => {
     sessionImages,
     isProcessing,
     processingProgress,
-    isSubmitting: false,
+    isSubmitting,
     isLoadingUserImages,
     bookmarkletStats,
     hiddenImageIds,
@@ -291,13 +307,12 @@ export const useImageProcessingCore = () => {
       
       return false;
     },
+    // استخدام التعريفات الجديدة والمحدثة
     isDuplicateImage: duplicateDetectionTools.isDuplicateImage,
     checkDuplicateImage: duplicateDetectionTools.isDuplicateImage,
     markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed,
-    formatDate,
-    retryProcessing,
-    clearQueue,
-    runCleanup,
-    handlePermanentDelete
+    runCleanup
   };
 };
+
+export { useImageProcessingCore as useImageProcessing };

@@ -190,5 +190,5 @@ export const useImageProcessingCore = () => {
   };
 };
 
-// تصدير استخدام useImageProcessingCore من الملف الرئيسي
-export { useImageProcessingCore as useImageProcessing } from '@/hooks/useImageProcessingCore';
+// تصدير استخدام هوك معالجة الصور تحت اسم جديد
+export { useImageProcessingCore as useImageProcessing };

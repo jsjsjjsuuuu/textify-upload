@@ -6,9 +6,9 @@ import { Slider } from "@/components/ui/slider";
 import { ImageData } from '@/types/ImageData';
 import { cn } from '@/lib/utils';
 
-interface ImageViewerProps {
+export interface ImageViewerProps {
   image: ImageData;
-  onClose: () => void;
+  onClose?: () => void;  // جعل هذه الخاصية اختيارية
   nextImage?: () => void;
   prevImage?: () => void;
   hasNext?: boolean;
@@ -17,7 +17,7 @@ interface ImageViewerProps {
 
 const ImageViewer = ({ 
   image,
-  onClose,
+  onClose = () => {}, // إضافة قيمة افتراضية
   nextImage,
   prevImage,
   hasNext,

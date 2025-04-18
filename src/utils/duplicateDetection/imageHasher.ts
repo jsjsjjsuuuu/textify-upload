@@ -29,4 +29,3 @@ export const getImageHash = createImageHash;
  * تشفير صورة (غطاء لوظيفة createImageHash)
  */
 export const hashImage = createImageHash;
-

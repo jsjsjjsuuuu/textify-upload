@@ -36,7 +36,7 @@ export const checkDuplicateImage = async (
   for (const baseImage of processedFiles) {
     // يجب أن تكون الصور من نفس المستخدم
     if (image.userId !== baseImage.userId) {
-      return false;
+      continue;
     }
 
     // حساب تشابه الصور
