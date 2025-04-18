@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useImageState } from "@/hooks/imageState";
 import { useAuth } from "@/contexts/AuthContext";
@@ -127,7 +128,6 @@ export const useImageProcessingCore = () => {
   }, [user, hiddenImageIds, loadUserImages, setAllImages, cleanupOldRecords]);
 
   // تعديل دالة جلب الصور ليكون لها نفس التوقيع المتوقع
-  // تغيير نوع البيانات المرجعة إلى Promise<void>
   const modifiedLoadUserImages = useCallback((userId: string, callback?: (images: ImageData[]) => void): Promise<void> => {
     return new Promise<void>((resolve) => {
       loadUserImages(userId, (loadedImages: ImageData[]) => {
@@ -170,7 +170,7 @@ export const useImageProcessingCore = () => {
     isProcessing: false, // سيتم تحديثها من useFileUpload
     processingProgress,
     isSubmitting,
-    isLoadingUserImages: isLoadingImages,
+    isLoadingUserImages,
     bookmarkletStats,
     hiddenImageIds,
     // وظائف التحميل والعمليات
