@@ -1,41 +1,48 @@
-import { ImageData } from "@/types/ImageData";
 
 /**
- * دالة لمطابقة الصور بناءً على بيانات الصورة الوصفية
- * @param a الصورة الأولى
- * @param b الصورة الثانية
- * @returns true إذا كانت الصورتان متطابقتين، false خلاف ذلك
+ * مقارنة تجزئات الصور لتحديد التشابه
+ * @param hash1 التجزئة الأولى
+ * @param hash2 التجزئة الثانية
+ * @returns قيمة التشابه بين 0 و 1
  */
-export const matchImages = (a: ImageData, b: ImageData): boolean => {
-  // يجب أن يكون لديهم نفس المستخدم
-  if (a.userId !== b.userId) {
-    return false;
+export function compareImageHashes(hash1: string, hash2: string): number {
+  if (hash1 === hash2) {
+    return 1; // تطابق تام
   }
+  
+  // حساب مسافة ليفنشتاين المعيارية
+  const distance = levenshteinDistance(hash1, hash2);
+  const maxLength = Math.max(hash1.length, hash2.length);
+  
+  // تحويل المسافة إلى قيمة تشابه (1 = تطابق تام، 0 = لا تشابه)
+  return 1 - (distance / maxLength);
+}
 
-  // يجب أن يكون لديهم نفس اسم المرسل
-  if (a.senderName !== b.senderName) {
-    return false;
+/**
+ * حساب مسافة ليفنشتاين بين سلسلتين
+ */
+function levenshteinDistance(str1: string, str2: string): number {
+  const track = Array(str2.length + 1).fill(null).map(() =>
+    Array(str1.length + 1).fill(null));
+  
+  for (let i = 0; i <= str1.length; i += 1) {
+    track[0][i] = i;
   }
-
-  // يجب أن يكون لديهم نفس رقم الهاتف
-  if (a.phoneNumber !== b.phoneNumber) {
-    return false;
+  
+  for (let j = 0; j <= str2.length; j += 1) {
+    track[j][0] = j;
   }
-
-  // يجب أن يكون لديهم نفس المحافظة
-  if (a.province !== b.province) {
-    return false;
+  
+  for (let j = 1; j <= str2.length; j += 1) {
+    for (let i = 1; i <= str1.length; i += 1) {
+      const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      track[j][i] = Math.min(
+        track[j][i - 1] + 1, // حذف
+        track[j - 1][i] + 1, // إضافة
+        track[j - 1][i - 1] + indicator, // استبدال
+      );
+    }
   }
-
-  // يجب أن يكون لديهم نفس السعر
-  if (a.price !== b.price) {
-    return false;
-  }
-
-  // يجب أن يكون لديهم نفس اسم الشركة
-  if (a.companyName !== b.companyName) {
-    return false;
-  }
-
-  return true;
-};
+  
+  return track[str2.length][str1.length];
+}

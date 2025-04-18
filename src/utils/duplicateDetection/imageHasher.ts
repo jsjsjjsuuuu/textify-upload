@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { ImageData } from "@/types/ImageData";
 
@@ -32,3 +33,13 @@ export async function hashImage(image: ImageData): Promise<string> {
   
   return hashHex;
 }
+
+// تعريفات بديلة للوظائف المستخدمة في الملفات الأخرى
+export const getImageHash = hashImage;
+export const createImageHash = (image: ImageData): string => {
+  // نسخة مبسطة للاستخدام المباشر (غير متزامنة)
+  const prefix = image.userId ? `${image.userId}:` : '';
+  const imageData = `${image.fileName || 'unknown'}:${image.fileSize || 0}:${image.fileType || 'unknown'}`;
+  const tempId = uuidv4();
+  return `${prefix}${imageData}:${tempId}`;
+};

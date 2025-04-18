@@ -1,5 +1,6 @@
+
 import { ImageData } from "@/types/ImageData";
-import { getImageHash } from "./duplicateDetection/imageHasher";
+import { hashImage } from "./duplicateDetection/imageHasher";
 import { compareImageHashes } from "./duplicateDetection/imageMatcher";
 
 interface DuplicateDetectionOptions {
@@ -61,8 +62,8 @@ export const checkDuplicateImage = async (
 const compareImages = async (imageA: ImageData, imageB: ImageData): Promise<number> => {
   try {
     // الحصول على بصمات الصور
-    const hashA = await getImageHash(imageA);
-    const hashB = await getImageHash(imageB);
+    const hashA = await hashImage(imageA);
+    const hashB = await hashImage(imageB);
 
     // إذا فشل الحصول على البصمات، يتم إرجاع 0
     if (!hashA || !hashB) {
@@ -92,7 +93,7 @@ export const removeDuplicateImages = async (allFiles: ImageData[]): Promise<Imag
     const userFiles = allFiles.filter(file => file.userId === image.userId);
 
     // الحصول على بصمة الصورة
-    const hash = await getImageHash(image);
+    const hash = await hashImage(image);
 
     // إذا لم يتم العثور على بصمة، يتم تجاهل الصورة
     if (!hash) {

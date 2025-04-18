@@ -1,9 +1,10 @@
+
 import { ImageData } from "@/types/ImageData";
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageViewer } from "@/components/ImagePreview";
-import { Trash2, Image as ImageIcon, ZoomIn, ZoomOut, RefreshCw, Maximize2, SendHorizontal } from "lucide-react";
+import { Trash2, Image as ImageIcon, ZoomIn, ZoomOut, RefreshCw, Maximize2, SendHorizontal, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import ExtractedDataEditor from "@/components/ExtractedData/ExtractedDataEditor";
