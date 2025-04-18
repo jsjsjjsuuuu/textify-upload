@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { useImageState } from "../imageState";
+import { useImageState } from "@/hooks/imageState";
 import { useAuth } from "@/contexts/AuthContext";
 import { useImageStats } from "@/hooks/useImageStats";
 import { useImageDatabase } from "@/hooks/useImageDatabase";
@@ -14,7 +14,7 @@ import { useImageSubmission } from "./useImageSubmission";
 import { useImageDeletion } from "./useImageDeletion";
 import { useUserImages } from "./useUserImages";
 import { UseImageDatabaseConfig } from "@/hooks/useImageDatabase/types";
-import type { ImageData } from "@/types/ImageData"; // استيراد النوع بشكل صريح
+import type { ImageData } from "@/types/ImageData";
 
 export const useImageProcessingCore = () => {
   const { user } = useAuth();
@@ -40,7 +40,7 @@ export const useImageProcessingCore = () => {
   // استخدام هوك إدارة مفاتيح API
   const { clearOldApiKey } = useApiKeyManagement();
   
-  // استدعام احصائيات الصور
+  // استخدام إحصائيات الصور
   const {
     processingProgress,
     setProcessingProgress,
@@ -88,7 +88,6 @@ export const useImageProcessingCore = () => {
     hideImage,
     submitToApi,
     validateRequiredFields,
-    // استخدام markImageAsProcessed من duplicateDetectionTools
     markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
   });
 
@@ -121,14 +120,14 @@ export const useImageProcessingCore = () => {
       // تنظيف السجلات القديمة عند بدء التطبيق
       cleanupOldRecords(user.id);
     }
-  }, [user, hiddenImageIds]);
+  }, [user, hiddenImageIds, loadUserImages, setAllImages, cleanupOldRecords]);
 
   // تعديل دالة جلب الصور ليكون لها نفس التوقيع المتوقع
   const modifiedLoadUserImages = useCallback((userId: string, callback?: (images: ImageData[]) => void): Promise<void> => {
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       loadUserImages(userId, (images: ImageData[]) => {
         if (callback) callback(images);
-        resolve(); // فقط نقوم بإرجاع void وليس البيانات
+        resolve(); // إعادة void وليس البيانات
       });
     });
   }, [loadUserImages]);
@@ -150,7 +149,7 @@ export const useImageProcessingCore = () => {
     saveImageToDatabase,
     saveProcessedImage,
     hideImage,
-    loadUserImages: modifiedLoadUserImages, // استخدام الدالة المعدلة
+    loadUserImages: modifiedLoadUserImages,
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,
@@ -161,11 +160,12 @@ export const useImageProcessingCore = () => {
     unhideAllImages,
     clearOldApiKey,
     handlePermanentDelete,
-    // استخدام iisduplicate بدلا من checkDuplicate
     isDuplicateImage: duplicateDetectionTools.isDuplicateImage,
-    checkDuplicateImage: duplicateDetectionTools.isDuplicateImage,
+    checkDuplicateImage: duplicateDetectionTools.checkDuplicateImage,
     markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed,
     processWithGemini: processFileWithGemini,
     processWithOcr: processFileWithOcr
   };
 };
+
+export { useImageProcessingCore } from '@/hooks/useImageProcessingCore';

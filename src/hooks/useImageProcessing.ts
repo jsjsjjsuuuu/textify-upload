@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData, CustomImageData } from "@/types/ImageData";
-import { useImageState } from "../imageState";
+import { useImageState } from "@/hooks/imageState";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import { useImageStats } from "@/hooks/useImageStats";
@@ -214,13 +214,13 @@ export const useImageProcessingCore = () => {
     updateImage,
     setProcessingProgress,
     saveProcessedImage,
-    removeDuplicates, // تمرير وظيفة removeDuplicates المحدثة
+    removeDuplicates,
     // تمرير وظائف معالجة الصور المحدثة
     processWithOcr: processFileWithOcr,
     processWithGemini: processFileWithGemini,
     // استخدام الأداة كما هي بدلاً من تمريرها كخاصية منفصلة
     processedImage: {
-      isDuplicateImage: duplicateDetectionTools.isDuplicateImage, // استخدام isDuplicateImage بدلاً من checkDuplicateImage
+      isDuplicateImage: duplicateDetectionTools.isDuplicateImage,
       markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
     }
   });
@@ -268,7 +268,7 @@ export const useImageProcessingCore = () => {
     saveImageToDatabase,
     saveProcessedImage,
     hideImage,
-    loadUserImages: modifiedLoadUserImages, // استخدام الدالة المعدلة
+    loadUserImages: modifiedLoadUserImages,
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,
@@ -305,3 +305,5 @@ export const useImageProcessingCore = () => {
     markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
   };
 };
+
+export { useImageProcessingCore as useImageProcessing };

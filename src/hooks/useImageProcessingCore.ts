@@ -1,5 +1,9 @@
+
 import { useState, useEffect, useCallback } from "react";
-import { useImageState } from "../imageState";
+import { useToast } from "@/hooks/use-toast";
+import { ImageData, CustomImageData } from "@/types/ImageData";
+import { useImageState } from "@/hooks/imageState";
+import { useFileUpload } from "@/hooks/useFileUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import { useImageStats } from "@/hooks/useImageStats";
 import { useImageDatabase } from "@/hooks/useImageDatabase";
@@ -7,13 +11,12 @@ import { useSavedImageProcessing } from "@/hooks/useSavedImageProcessing";
 import { useDuplicateDetection } from "@/hooks/useDuplicateDetection";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
-import { useApiKeyManagement } from "./useApiKeyManagement";
-import { useFormValidation } from "./useFormValidation";
-import { useImageSubmission } from "./useImageSubmission";
-import { useImageDeletion } from "./useImageDeletion";
-import { useUserImages } from "./useUserImages";
+import { useApiKeyManagement } from "@/hooks/processingCore/useApiKeyManagement";
+import { useFormValidation } from "@/hooks/processingCore/useFormValidation";
+import { useImageSubmission } from "@/hooks/processingCore/useImageSubmission";
+import { useImageDeletion } from "@/hooks/processingCore/useImageDeletion";
+import { useUserImages } from "@/hooks/processingCore/useUserImages";
 import { UseImageDatabaseConfig } from "@/hooks/useImageDatabase/types";
-import type { ImageData } from "@/types/ImageData"; // استيراد النوع بشكل صريح
 
 export const useImageProcessingCore = () => {
   const { user } = useAuth();
@@ -87,7 +90,6 @@ export const useImageProcessingCore = () => {
     hideImage,
     submitToApi,
     validateRequiredFields,
-    // استخدام markImageAsProcessed من duplicateDetectionTools
     markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed
   });
 
@@ -120,14 +122,14 @@ export const useImageProcessingCore = () => {
       // تنظيف السجلات القديمة عند بدء التطبيق
       cleanupOldRecords(user.id);
     }
-  }, [user, hiddenImageIds]);
+  }, [user, hiddenImageIds, loadUserImages, setAllImages, cleanupOldRecords]);
 
   // تعديل دالة جلب الصور ليكون لها نفس التوقيع المتوقع
   const modifiedLoadUserImages = useCallback((userId: string, callback?: (images: ImageData[]) => void): Promise<void> => {
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       loadUserImages(userId, (images: ImageData[]) => {
         if (callback) callback(images);
-        resolve(); // فقط نقوم بإرجاع void وليس البيانات
+        resolve();
       });
     });
   }, [loadUserImages]);
@@ -136,33 +138,31 @@ export const useImageProcessingCore = () => {
   return {
     images,
     sessionImages,
-    isProcessing: false, // سيتم تحديثها من useFileUpload
+    isProcessing: false,
     processingProgress,
     isSubmitting,
     isLoadingUserImages: isLoadingImages,
     bookmarkletStats,
     hiddenImageIds,
-    // وظائف التحميل والعمليات
     handleTextChange,
     handleDelete,
     handleSubmitToApi: (id: string) => handleSubmitToApi(id, user?.id),
     saveImageToDatabase,
     saveProcessedImage,
     hideImage,
-    loadUserImages: modifiedLoadUserImages, // استخدام الدالة المعدلة
+    loadUserImages: modifiedLoadUserImages,
     clearSessionImages,
     removeDuplicates,
     validateRequiredFields,
     runCleanupNow,
-    activeUploads: 0, // سيتم تحديثها من useFileUpload
-    queueLength: 0, // سيتم تحديثها من useFileUpload
+    activeUploads: 0,
+    queueLength: 0,
     unhideImage,
     unhideAllImages,
     clearOldApiKey,
     handlePermanentDelete,
-    // استخدام iisduplicate بدلا من checkDuplicate
     isDuplicateImage: duplicateDetectionTools.isDuplicateImage,
-    checkDuplicateImage: duplicateDetectionTools.checkDuplicateImage,
+    checkDuplicateImage: duplicateDetectionTools.isDuplicateImage,
     markImageAsProcessed: duplicateDetectionTools.markImageAsProcessed,
     processWithGemini: processFileWithGemini,
     processWithOcr: processFileWithOcr

@@ -1,264 +1,87 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, AlertCircle, RefreshCw, Settings, ExternalLink, Wifi } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Loader2, Check, XCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { 
   checkConnection, 
   RENDER_ALLOWED_IPS, 
-  getLastConnectionStatus, 
-  isPreviewEnvironment,
-  getAutomationServerUrl  
-} from "@/utils/automationServerUrl";
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { toast } from "sonner";
+  getLastConnectionStatus,
+  isPreviewEnvironment
+} from '@/utils/automationServerUrl';
 
-interface ConnectionTestButtonProps {
-  onConnectionResult?: (isConnected: boolean) => void;
-  className?: string;
-  showFullText?: boolean;
-  onOpenSettings?: () => void;
-}
-
-const ConnectionTestButton: React.FC<ConnectionTestButtonProps> = ({ 
-  onConnectionResult,
-  className,
-  showFullText = true,
-  onOpenSettings
-}) => {
-  const [isTesting, setIsTesting] = useState(false);
-  const [errorDetails, setErrorDetails] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const { toast: hookToast } = useToast();
+const ConnectionTestButton = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState({ isConnected: false, message: 'لم يتم الاختبار بعد' });
+  const { toast } = useToast();
   
-  const testConnection = async () => {
-    setIsTesting(true);
-    setErrorDetails(null);
+  // للتحقق من حالة آخر اتصال عند التحميل
+  useEffect(() => {
+    const lastStatus = getLastConnectionStatus();
+    if (lastStatus.timestamp > 0) {
+      setStatus({ isConnected: lastStatus.isConnected, message: lastStatus.message });
+    }
+  }, []);
+  
+  const runConnectionTest = async () => {
+    setIsLoading(true);
     
     try {
-      // في بيئة المعاينة، محاكاة نجاح الاتصال
-      if (isPreviewEnvironment()) {
-        toast.success("متصل بخادم Render في بيئة المعاينة", {
-          description: "تم محاكاة الاتصال بنجاح. (ملاحظة: هذه محاكاة في بيئة المعاينة)",
-          duration: 5000
-        });
-        
-        onConnectionResult?.(true);
-        setIsTesting(false);
-        return;
-      }
-      
-      // إظهار رسالة أثناء الاختبار
-      const currentServerUrl = getAutomationServerUrl();
-      toast("جاري اختبار الاتصال", {
-        description: `يتم التحقق من الاتصال بخادم Render على: ${currentServerUrl}`,
-        duration: 5000,
-      });
-      
-      // محاولة الاتصال
       const result = await checkConnection();
+      setStatus(result);
       
-      if (result.isConnected) {
-        toast.success("متصل بخادم Render", {
-          description: "تم الاتصال بخادم Render بنجاح.",
-          duration: 5000
-        });
-        
-        // إعادة تعيين عداد المحاولات
-        setRetryCount(0);
-      } else {
-        setErrorDetails(result.message);
-        setRetryCount(prev => prev + 1);
-        
-        // تحسين رسالة الخطأ بناءً على عدد المحاولات
-        const failMsg = retryCount > 2 
-          ? "استمرار فشل الاتصال. يرجى التحقق من إعدادات الخادم وتجربة استخدام عنوان IP مختلف."
-          : result.message || "تعذر الاتصال بخادم Render. تأكد من أن الخادم يعمل وأن عنوان URL صحيح.";
-          
-        toast.error("فشل الاتصال", {
-          description: failMsg,
-          duration: 10000,
-          action: {
-            label: "إعدادات الخادم",
-            onClick: onOpenSettings
-          }
-        });
-      }
-      
-      onConnectionResult?.(result.isConnected);
-    } catch (error) {
-      // تحسين رسالة الخطأ لتوفير المزيد من المعلومات
-      const errorMessage = error instanceof Error ? error.message : "حدث خطأ أثناء الاتصال بخادم Render";
-      
-      // تخزين تفاصيل الخطأ لعرضها في البوبوفر
-      setErrorDetails(errorMessage);
-      setRetryCount(prev => prev + 1);
-      
-      // تخصيص رسائل الخطأ لتسهيل فهمها
-      let detailedError = errorMessage;
-      
-      if (errorMessage.includes("Failed to fetch")) {
-        detailedError = "تعذر الوصول إلى خادم Render. قد يكون الخادم غير متاح أو هناك مشكلة في الشبكة. حاول التحقق من الإعدادات والاتصال بالإنترنت.";
-      } else if (errorMessage.includes("aborted")) {
-        detailedError = "انتهت مهلة الاتصال. قد تكون سرعة الاتصال بالإنترنت بطيئة أو الخادم غير مستجيب.";
-      }
-      
-      toast.error("خطأ في الاتصال", {
-        description: detailedError,
-        duration: 10000,
-        action: {
-          label: "إعدادات الخادم",
-          onClick: onOpenSettings
-        }
+      toast({
+        title: result.isConnected ? 'تم الاتصال بنجاح' : 'فشل الاتصال',
+        description: result.message,
+        variant: result.isConnected ? 'default' : 'destructive'
       });
+    } catch (error) {
+      setStatus({ isConnected: false, message: error instanceof Error ? error.message : 'خطأ غير معروف' });
       
-      onConnectionResult?.(false);
+      toast({
+        title: 'خطأ في الاتصال',
+        description: error instanceof Error ? error.message : 'حدث خطأ أثناء محاولة الاتصال',
+        variant: 'destructive'
+      });
     } finally {
-      setIsTesting(false);
+      setIsLoading(false);
     }
   };
   
-  useEffect(() => {
-    // التحقق من الاتصال تلقائيًا عند تحميل المكون
-    testConnection();
-    
-    // لا نحتاج إلى فحص الاتصال بشكل متكرر في بيئة المعاينة
-    if (isPreviewEnvironment()) {
-      return;
-    }
-    
-    // فحص الاتصال كل 30 ثانية
-    const intervalId = setInterval(() => {
-      const status = getLastConnectionStatus();
-      
-      // إذا فشل الاتصال أكثر من 10 مرات، زيادة الفاصل الزمني لتقليل طلبات الشبكة
-      if (status.retryCount > 10) {
-        clearInterval(intervalId);
-        
-        // إعادة تعيين الفاصل الزمني إلى دقيقة واحدة بدلاً من 30 ثانية
-        const longerIntervalId = setInterval(() => {
-          testConnection();
-        }, 60000);
-        
-        return () => {
-          clearInterval(longerIntervalId);
-        };
-      }
-      
-      testConnection();
-    }, 30000);
-    
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, []);
-  
-  // عرض عدد المحاولات فقط إذا كان هناك أكثر من محاولة فاشلة
-  const showRetryCount = retryCount > 0 && errorDetails;
-  
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          onClick={testConnection}
-          disabled={isTesting}
-          variant="outline"
-          className={className}
-          size={showFullText ? "default" : "icon"}
-        >
-          {isTesting ? (
-            <>
-              <RefreshCw className={`${showFullText ? 'mr-2' : ''} h-4 w-4 animate-spin`} />
-              {showFullText && "جاري الاختبار..."}
-            </>
-          ) : (
-            <>
-              <RefreshCw className={`${showFullText ? 'mr-2' : ''} h-4 w-4`} />
-              {showFullText && "اختبار اتصال Render"}
-            </>
-          )}
-        </Button>
-      </PopoverTrigger>
-      {errorDetails && (
-        <PopoverContent className="w-96">
-          <div className="space-y-4">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-              <div>
-                <h4 className="font-medium">خطأ في الاتصال بخادم Render</h4>
-                <p className="text-sm text-muted-foreground">{errorDetails}</p>
-                {showRetryCount && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    عدد المحاولات: {retryCount}
-                  </p>
-                )}
-              </div>
-            </div>
-            
-            <div className="border-t pt-3 space-y-2">
-              <h5 className="text-sm font-medium">الحلول المقترحة:</h5>
-              <ul className="text-xs space-y-1 list-disc list-inside">
-                <li>تأكد من أن خادم Render يعمل ويمكن الوصول إليه من الإنترنت</li>
-                <li>تحقق من إعدادات URL الخادم في صفحة إعدادات الخادم</li>
-                <li>تأكد من أن نقاط النهاية /api/ping و /api/health موجودة في الخادم</li>
-                <li>تفعيل خيار إعادة الاتصال التلقائي</li>
-                <li>جرب تبديل عنوان IP المستخدم للاتصال</li>
-              </ul>
-              
-              <div className="flex items-center gap-2 mt-4">
-                <Button 
-                  size="sm" 
-                  variant="default" 
-                  onClick={testConnection} 
-                  disabled={isTesting}
-                  className="w-full"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  إعادة المحاولة
-                </Button>
-                
-                {onOpenSettings && (
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={onOpenSettings} 
-                    className="w-full"
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    إعدادات الخادم
-                  </Button>
-                )}
-              </div>
-              
-              <div className="mt-2 text-xs text-muted-foreground">
-                <p className="mb-2">
-                  <Wifi className="h-3 w-3 inline mr-1" />
-                  <span>عناوين IP المستخدمة للاتصال:</span>
-                </p>
-                <div className="grid grid-cols-2 gap-1">
-                  {RENDER_ALLOWED_IPS.map((ip, idx) => (
-                    <code key={idx} className="text-[10px] px-1 bg-slate-100 rounded">{ip}</code>
-                  ))}
-                </div>
-                <a 
-                  href="https://docs.render.com/network" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="flex items-center hover:underline mt-2"
-                >
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  مستندات Render لإعدادات الشبكة
-                </a>
-              </div>
-            </div>
+    <div className="flex flex-col space-y-2">
+      <Button
+        variant="outline"
+        onClick={runConnectionTest}
+        disabled={isLoading}
+        className="w-full"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> جاري اختبار الاتصال...
+          </>
+        ) : (
+          <>اختبار الاتصال</>
+        )}
+      </Button>
+      
+      <div className="text-sm flex items-center">
+        <span className="mr-2">الحالة:</span>
+        {status.isConnected ? (
+          <div className="flex items-center text-green-500">
+            <Check className="h-4 w-4 mr-1" />
+            <span>متصل</span>
           </div>
-        </PopoverContent>
-      )}
-    </Popover>
+        ) : (
+          <div className="flex items-center text-red-500">
+            <XCircle className="h-4 w-4 mr-1" />
+            <span>غير متصل</span>
+          </div>
+        )}
+      </div>
+      
+      <p className="text-xs text-muted-foreground">{status.message}</p>
+    </div>
   );
 };
 

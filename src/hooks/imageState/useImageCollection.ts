@@ -104,11 +104,10 @@ export const useImageCollection = (hiddenImageIds: string[] = []) => {
           allImages.push(dbImg);
         } else {
           // تحديث الصورة الموجودة إذا كانت الصورة من قاعدة البيانات أحدث
-          // استخدم التحقق الآمن من updated_at كتوزيع عامل مؤقت
-          const dbUpdateTime = dbImg['updated_at'] as unknown as string;
-          const currentUpdateTime = allImages[existingIndex]['updated_at'] as unknown as string;
+          const dbUpdateTime = dbImg.updated_at ? new Date(dbImg.updated_at).getTime() : 0;
+          const currentUpdateTime = allImages[existingIndex].updated_at ? new Date(allImages[existingIndex].updated_at).getTime() : 0;
           
-          if (dbUpdateTime && (!currentUpdateTime || dbUpdateTime > currentUpdateTime)) {
+          if (dbUpdateTime > currentUpdateTime) {
             allImages[existingIndex] = { ...allImages[existingIndex], ...dbImg };
           }
         }

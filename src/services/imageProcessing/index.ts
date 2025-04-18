@@ -1,3 +1,4 @@
+
 /**
  * خدمة معالجة الصور
  * خدمة مركزية للتعامل مع معالجة الصور وتخزينها وإدارتها
@@ -13,8 +14,6 @@ import { useFileProcessing } from "./useFileProcessing";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData, CustomImageData } from "@/types/ImageData";
 import { formatDate } from "@/utils/dateFormatter";
-import { adaptOcrToImageProcess, adaptGeminiToFileImageProcess } from "./adapters";
-// استيراد واجهة UseImageDatabaseConfig
 import { UseImageDatabaseConfig } from "@/hooks/useImageDatabase/types";
 
 export const useImageProcessing = () => {
@@ -43,22 +42,23 @@ export const useImageProcessing = () => {
     createSafeObjectURL
   } = useImageState();
   
-  // استيراد معالجات OCR و Gemini واستخدام المحولات لضمان توافق الأنواع
-  const { processWithOcr } = useOcrProcessing();
+  // استيراد معالجات OCR و Gemini
+  const { processFileWithOcr } = useOcrProcessing();
   const { processFileWithGemini } = useGeminiProcessing();
   
-  // تحويل معالجات OCR و Gemini إلى الأنواع المتوافقة
-  const adaptedOcrProcess = adaptOcrToImageProcess(processWithOcr);
-  const adaptedGeminiProcess = processFileWithGemini;
+  // تكوين واجهة التحديث المطلوبة
+  const updateImageConfig: UseImageDatabaseConfig = {
+    updateImage: updateImage
+  };
   
-  // استيراد قاعدة البيانات
+  // استخدام هوك قاعدة بيانات الصور مع واجهة التحديث المطلوبة
   const { 
     loadUserImages: fetchUserImages, 
     saveImageToDatabase, 
     handleSubmitToApi: submitToApi, 
     deleteImageFromDatabase, 
     runCleanupNow 
-  } = useImageDatabase(updateImage);
+  } = useImageDatabase(updateImageConfig);
   
   // استخدام هوك معالجة الملفات
   const {
@@ -71,8 +71,8 @@ export const useImageProcessing = () => {
     images,
     addImage,
     updateImage,
-    processWithOcr: adaptedOcrProcess,
-    processWithGemini: adaptedGeminiProcess,
+    processWithOcr: processFileWithOcr,
+    processWithGemini: processFileWithGemini,
     saveProcessedImage: saveImageToDatabase,
     user,
     createSafeObjectURL
@@ -205,36 +205,6 @@ export const useImageProcessing = () => {
     
     return false;
   }, [toast]);
-
-  // تكوين واجهة التحديث المطلوبة
-const updateImageConfig: UseImageDatabaseConfig = {
-  updateImage: updateImage
-};
-
-// استخدام هوك قاعدة بيانات الصور مع واجهة التحديث المطلوبة
-const { 
-  isLoadingUserImages,
-  loadUserImages: fetchUserImages, 
-  saveImageToDatabase, 
-  handleSubmitToApi: submitToApi, 
-  deleteImageFromDatabase, 
-  runCleanupNow 
-} = useImageDatabase(updateImageConfig);
-
-// إنشاء واجهة معالجة مناسبة تتلاءم مع الأنواع المطلوبة
-const adaptedOcrProcess: FileImageProcessFn = async (file: File | Blob, image?: CustomImageData) => {
-  if (!image) {
-    throw new Error("يجب توفير كائن الصورة");
-  }
-  // استدعاء المعالج الأصلي
-  const result = await processWithOcr(file as File, image);
-  // إذا كان النتيجة سلسلة نصية، نعيد مع إضافة النص المستخرج
-  if (typeof result === 'string') {
-    return { ...image, extractedText: result };
-  }
-  // وإلا نعيد النتيجة كما هي
-  return result;
-};
 
   // تصدير واجهة الخدمة
   return {
