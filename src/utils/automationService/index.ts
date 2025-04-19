@@ -76,4 +76,5 @@ export const AutomationService = {
   }
 };
 
+// تصدير الكائن مباشرة كتصدير افتراضي
 export default AutomationService;

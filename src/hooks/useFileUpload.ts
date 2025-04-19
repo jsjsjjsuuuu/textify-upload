@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useRef } from 'react';
-import { ImageData, ImageProcessFn } from '@/types/ImageData';
+import { ImageData } from '@/types/ImageData';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from './use-toast';
 
@@ -8,18 +8,19 @@ interface FileUploadOptions {
   images: ImageData[];
   addImage: (image: ImageData) => void;
   updateImage: (id: string, data: Partial<ImageData>) => void;
-  setProcessingProgress: (progress: number) => void;
-  processWithOcr: ImageProcessFn;
-  processWithGemini: ImageProcessFn;
+  processWithOcr: (file: File, image: Partial<ImageData>, updateProgress?: (progress: number) => void) => Promise<ImageData>;
+  processWithGemini: (file: File, image: Partial<ImageData>, updateProgress?: (progress: number) => void) => Promise<ImageData>;
+  setProcessingProgress?: (progress: number) => void;
+  createSafeObjectURL?: (file: File | Blob) => Promise<string>;
 }
 
 export const useFileUpload = ({
   images,
   addImage,
   updateImage,
-  setProcessingProgress,
   processWithOcr,
-  processWithGemini
+  processWithGemini,
+  setProcessingProgress
 }: FileUploadOptions) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeUploads, setActiveUploads] = useState(0);
@@ -55,6 +56,9 @@ export const useFileUpload = ({
       setIsProcessing(false);
       processingRef.current = false;
       setProgress(100);
+      if (setProcessingProgress) {
+        setProcessingProgress(100);
+      }
       return;
     }
     
@@ -83,10 +87,12 @@ export const useFileUpload = ({
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
-        objectUrl,
+        previewUrl: objectUrl,
         status: "pending",
         processingProgress: 0,
-        uploadTimestamp: Date.now()
+        uploadTimestamp: Date.now(),
+        number: images.length + 1,
+        date: new Date()
       });
 
       // تحديث التقدم
@@ -96,35 +102,60 @@ export const useFileUpload = ({
         // حساب التقدم الإجمالي للمعالجة
         const totalProgress = (
           ((images.length - uploadQueue.current.length - 1) * 100 + progress) / 
-          (images.length - uploadQueue.current.length)
+          Math.max(1, images.length - uploadQueue.current.length)
         );
         
-        setProgress(Math.min(Math.round(totalProgress), 99));
+        const calculatedProgress = Math.min(Math.round(totalProgress), 99);
+        setProgress(calculatedProgress);
+        if (setProcessingProgress) {
+          setProcessingProgress(calculatedProgress);
+        }
       };
 
       // تنفيذ معالجة OCR
       updateImage(id, { status: "processing", processingProgress: 10 });
       console.log("بدء معالجة OCR...");
-      const ocrResult = await processWithOcr(file, {}, updateProgress);
-      
-      // تحديث بيانات الصورة بنتائج OCR
-      updateImage(id, { 
-        ...ocrResult,
-        processingProgress: 60,
-        status: "extracted"
-      });
-      
-      // تنفيذ معالجة Gemini
-      console.log("بدء معالجة Gemini...");
-      const geminiResult = await processWithGemini(file, {}, updateProgress);
-      
-      // تحديث بيانات الصورة بنتائج Gemini
-      updateImage(id, { 
-        ...geminiResult,
-        processingProgress: 100,
-        status: "processed",
-        processingTime: Date.now() - (images.find(img => img.id === id)?.uploadTimestamp || Date.now())
-      });
+      try {
+        const imageForProcessing = { id, previewUrl: objectUrl };
+        const ocrResult = await processWithOcr(file, imageForProcessing, updateProgress);
+        
+        // تحديث بيانات الصورة بنتائج OCR
+        updateImage(id, { 
+          ...ocrResult,
+          processingProgress: 60,
+          status: "extracted"
+        });
+        
+        // تنفيذ معالجة Gemini
+        console.log("بدء معالجة Gemini...");
+        try {
+          const geminiResult = await processWithGemini(file, {
+            ...imageForProcessing,
+            ...ocrResult
+          }, updateProgress);
+          
+          // تحديث بيانات الصورة بنتائج Gemini
+          updateImage(id, { 
+            ...geminiResult,
+            processingProgress: 100,
+            status: "completed",
+            processingTime: Date.now() - (images.find(img => img.id === id)?.uploadTimestamp || Date.now())
+          });
+          
+        } catch (geminiError) {
+          console.error("خطأ في معالجة Gemini:", geminiError);
+          updateImage(id, { 
+            processingProgress: 100,
+            status: "completed"
+          });
+        }
+      } catch (ocrError) {
+        console.error("خطأ في معالجة OCR:", ocrError);
+        updateImage(id, {
+          status: "error",
+          processingProgress: 100,
+        });
+      }
       
       console.log(`اكتملت معالجة الملف: ${file.name}`);
     } catch (error) {
@@ -138,12 +169,11 @@ export const useFileUpload = ({
     
     // معالجة الملف التالي
     processNextFile();
-  }, [images, addImage, updateImage, processWithOcr, processWithGemini, toast]);
+  }, [images, addImage, updateImage, processWithOcr, processWithGemini, toast, setProcessingProgress]);
 
   // وظيفة تنظيف التكرارات
   const cleanupDuplicates = useCallback(() => {
     // تنفيذ عملية تنظيف التكرارات هنا
-    // تم تحسين هذه العملية في هوك useImageState
     console.log("تم تفعيل وظيفة تنظيف التكرارات");
   }, []);
 
@@ -156,3 +186,5 @@ export const useFileUpload = ({
     cleanupDuplicates
   };
 };
+
+export default useFileUpload;

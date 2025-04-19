@@ -17,7 +17,17 @@ export const useCreateSafeObjectUrl = () => {
       return url;
     } catch (error) {
       console.error("خطأ في إنشاء عنوان URL للملف:", error);
-      throw error;
+      
+      // محاولة أخيرة لإنشاء URL باستخدام createObjectURL
+      try {
+        console.log("محاولة أخيرة باستخدام URL.createObjectURL");
+        const objectUrl = URL.createObjectURL(file);
+        console.log("تم إنشاء عنوان URL باستخدام الطريقة البديلة");
+        return objectUrl;
+      } catch (fallbackError) {
+        console.error("فشلت جميع المحاولات:", fallbackError);
+        throw error;
+      }
     }
   }, []);
 

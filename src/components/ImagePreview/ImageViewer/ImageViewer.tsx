@@ -4,6 +4,7 @@ import { Trash2, ZoomIn, ZoomOut, RefreshCw, Maximize2, MinusCircle } from 'luci
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ImageData } from '@/types/ImageData';
+import ImageErrorDisplay from './ImageErrorDisplay';
 
 export interface ImageViewerProps {
   image: ImageData;
@@ -44,6 +45,13 @@ export const ImageViewer = ({
     setImageError(false);
     console.log("تحديث صورة في العارض:", image.id);
   }, [image.id, image.previewUrl]);
+
+  // التحقق إذا كان لدينا URL صالح للعرض
+  const hasValidUrl = image.previewUrl && (
+    image.previewUrl.startsWith('data:') || 
+    image.previewUrl.startsWith('blob:') || 
+    image.previewUrl.startsWith('http')
+  );
 
   // التعامل مع تحميل الصورة
   const handleImageLoad = () => {
@@ -86,7 +94,7 @@ export const ImageViewer = ({
       compact ? "h-24" : "h-full"
     )}>
       {/* عرض الصورة */}
-      {image.previewUrl && (
+      {hasValidUrl ? (
         <div className="relative w-full h-full flex items-center justify-center">
           {!imageLoaded && !imageError && (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -95,25 +103,18 @@ export const ImageViewer = ({
           )}
           
           {imageError && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500">
-              <MinusCircle className="h-12 w-12 mb-2" />
-              <p className="text-sm">خطأ في تحميل الصورة</p>
-              {onRetry && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleRetry}
-                  className="mt-2"
-                >
-                  <RefreshCw className="mr-1 h-4 w-4" />
-                  إعادة المحاولة
-                </Button>
-              )}
-            </div>
+            <ImageErrorDisplay 
+              onRetry={onRetry ? () => {
+                setRetryCount(prev => prev + 1);
+                setImageError(false);
+                setImageLoaded(false);
+                onRetry(image.id);
+              } : undefined} 
+            />
           )}
           
           <img
-            src={image.previewUrl ? `${image.previewUrl}${retryCount > 0 ? `?v=${retryCount}` : ''}` : ''}
+            src={hasValidUrl ? `${image.previewUrl}${retryCount > 0 ? `?v=${retryCount}` : ''}` : ''}
             alt={`صورة ${image.number || ""}`}
             className={cn(
               "w-full h-full object-contain transition-transform duration-300",
@@ -190,10 +191,15 @@ export const ImageViewer = ({
             )}
           </div>
         </div>
+      ) : (
+        <ImageErrorDisplay 
+          errorMessage="لا يوجد مصدر للصورة"
+          onRetry={onRetry ? () => onRetry(image.id) : undefined}
+        />
       )}
       
       {/* معلومات الصورة */}
-      {!compact && image.previewUrl && (
+      {!compact && hasValidUrl && (
         <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/60 text-white text-xs">
           {image.date && <span>{formatDate(image.date)}</span>}
           {image.number && <span className="mr-2">#{image.number}</span>}

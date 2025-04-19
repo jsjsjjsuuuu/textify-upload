@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 
 interface ImageErrorDisplayProps {
   onRetry?: () => void;
+  errorMessage?: string;
 }
 
-const ImageErrorDisplay = ({ onRetry }: ImageErrorDisplayProps) => {
+const ImageErrorDisplay = ({ onRetry, errorMessage }: ImageErrorDisplayProps) => {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-4">
       <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center animate-pulse">
@@ -17,7 +18,7 @@ const ImageErrorDisplay = ({ onRetry }: ImageErrorDisplayProps) => {
         تعذر تحميل الصورة
       </h3>
       <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
-        حدث خطأ أثناء تحميل الصورة. قد يكون الملف تالفًا أو غير متاح.
+        {errorMessage || "حدث خطأ أثناء تحميل الصورة. قد يكون الملف تالفًا أو غير متاح."}
       </p>
       
       {onRetry && (

@@ -26,8 +26,8 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
   const [imageError, setImageError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
+  // إعادة تعيين حالة الصورة عند تغيير مصدر الصورة
   useEffect(() => {
-    // إعادة تعيين حالة الصورة عند تغيير الصورة
     setImageLoaded(false);
     setImageError(false);
     console.log("تحديث صورة:", image.id, "URL:", image.previewUrl?.substring(0, 50));
@@ -55,6 +55,13 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
     setImageError(true);
     setImageLoaded(false);
   };
+
+  // للتحقق إذا كان لدينا URL صالح للعرض
+  const hasValidUrl = image.previewUrl && (
+    image.previewUrl.startsWith('data:') || 
+    image.previewUrl.startsWith('blob:') || 
+    image.previewUrl.startsWith('http')
+  );
 
   return (
     <div 
@@ -93,9 +100,9 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
       )}
       
       {/* عرض الصورة */}
-      {image.previewUrl && (
+      {hasValidUrl && (
         <img 
-          src={image.previewUrl ? `${image.previewUrl}${retryCount > 0 ? `?v=${retryCount}` : ''}` : ''}
+          src={`${image.previewUrl}${retryCount > 0 ? `?v=${retryCount}` : ''}`}
           alt="صورة محملة" 
           className={cn(
             "w-full h-full object-contain transition-opacity duration-300", 
@@ -115,7 +122,7 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
         "absolute top-1 left-1 bg-brand-brown text-white px-2 py-1 rounded-full",
         compact ? "text-xs" : "text-xs"
       )}>
-        صورة {image.number}
+        صورة {image.number || '#'}
       </div>
       
       {/* حالة المعالجة */}

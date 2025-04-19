@@ -20,8 +20,16 @@ export const createSafeObjectURL = async (file: File | Blob): Promise<string> =>
       // استخدام FileReader لتحويل الملف إلى Data URL
       const reader = new FileReader();
       
+      // تعيين مهلة زمنية للقراءة لمنع التجميد
+      const timeout = setTimeout(() => {
+        console.error('انتهت مهلة القراءة');
+        reader.abort();
+        reject(new Error('انتهت مهلة قراءة الملف'));
+      }, 30000); // 30 ثانية كحد أقصى
+      
       // تعيين معالج حدث نجاح التحميل
       reader.onloadend = () => {
+        clearTimeout(timeout);
         if (typeof reader.result === 'string') {
           // تأكد من أن النتيجة هي string وليست ArrayBuffer
           console.log("تم تحويل الملف إلى Data URL بنجاح");
@@ -34,16 +42,42 @@ export const createSafeObjectURL = async (file: File | Blob): Promise<string> =>
       
       // تعيين معالج حدث الخطأ
       reader.onerror = (error) => {
+        clearTimeout(timeout);
         console.error('خطأ في قراءة الملف:', error);
-        reject(error);
+        
+        // محاولة استخدام URL.createObjectURL كخطة بديلة
+        try {
+          console.log("محاولة استخدام URL.createObjectURL كخطة بديلة");
+          const blobUrl = URL.createObjectURL(file);
+          resolve(blobUrl);
+        } catch (fallbackError) {
+          console.error('فشلت الخطة البديلة:', fallbackError);
+          reject(error);
+        }
+      };
+      
+      // تعيين معالج حدث الإلغاء
+      reader.onabort = () => {
+        clearTimeout(timeout);
+        console.error('تم إلغاء قراءة الملف');
+        reject(new Error('تم إلغاء قراءة الملف'));
       };
       
       // بدء قراءة الملف كـ Data URL
-      console.log("جاري قراءة الملف كـ Data URL...");
+      console.log("جاري قراءة الملف كـ Data URL...", file.type, file.size);
       reader.readAsDataURL(file);
     } catch (error) {
       console.error('خطأ في تحويل الملف:', error);
-      reject(error);
+      
+      // محاولة استخدام URL.createObjectURL كخطة بديلة
+      try {
+        console.log("محاولة استخدام URL.createObjectURL بعد خطأ");
+        const blobUrl = URL.createObjectURL(file);
+        resolve(blobUrl);
+      } catch (fallbackError) {
+        console.error('فشلت جميع المحاولات:', fallbackError);
+        reject(error);
+      }
     }
   });
 };
