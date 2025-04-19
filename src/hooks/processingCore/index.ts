@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useImageState } from "../imageState";
 import { useAuth } from "@/contexts/AuthContext";

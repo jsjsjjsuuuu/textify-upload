@@ -1,4 +1,3 @@
-
 // خدمة التشغيل الآلي - AutomationService
 
 export interface AutomationConfig {
@@ -76,5 +75,6 @@ export const AutomationService = {
   }
 };
 
-// تصدير الواجهة
+export { AutomationService };
+export type { AutomationConfig, AutomationTask };
 export default AutomationService;
