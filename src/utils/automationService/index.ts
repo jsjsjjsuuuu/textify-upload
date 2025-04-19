@@ -22,12 +22,12 @@ export const AutomationService = {
   isEnabled: false,
   config: {
     enabled: false,
-    interval: 5000, // 5 ثوانٍ
+    interval: 5000,
     maxRetries: 3,
     taskTypes: ['image_processing', 'data_extraction', 'api_submission']
   } as AutomationConfig,
   
-  // تهيئة خدمة التشغيل الآلي
+  // تهيئة الخدمة
   initialize: (config?: Partial<AutomationConfig>) => {
     AutomationService.config = {
       ...AutomationService.config,
@@ -45,22 +45,22 @@ export const AutomationService = {
     return AutomationService.isEnabled;
   },
   
-  // الحصول على حالة التفعيل الحالية
+  // الحصول على الحالة
   getStatus: () => {
     return {
       isEnabled: AutomationService.isEnabled,
-      config: AutomationService.config
+      config: AutomationService.config,
+      lastExecutionAt: new Date(),
+      nextExecutionAt: new Date(Date.now() + AutomationService.config.interval)
     };
   },
   
-  // إضافة مهمة جديدة للتنفيذ الآلي
+  // إضافة مهمة للمعالجة
   addTask: (taskType: string, data: any): AutomationTask => {
-    // التحقق من دعم نوع المهمة
     if (!AutomationService.config.taskTypes.includes(taskType)) {
       throw new Error(`نوع المهمة غير مدعوم: ${taskType}`);
     }
     
-    // إنشاء مهمة جديدة
     const task: AutomationTask = {
       id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: taskType,
@@ -71,10 +71,9 @@ export const AutomationService = {
       data
     };
     
-    console.log(`تمت إضافة مهمة جديدة من النوع "${taskType}" بالمعرف: ${task.id}`);
+    console.log(`تمت إضافة مهمة جديدة: ${taskType}`, task.id);
     return task;
   }
 };
 
-// تصدير الكائن مباشرة كتصدير افتراضي
 export default AutomationService;
