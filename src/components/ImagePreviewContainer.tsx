@@ -79,8 +79,6 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
             >
               <Grid className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             </button>
-            
-            {/* يمكن إضافة أدوات إضافية هنا */}
           </div>
           
           <StatusBadges

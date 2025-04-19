@@ -1,11 +1,8 @@
 
 import ImageViewer from "./ImageViewer";
 import DraggableImage from "./DraggableImage";
-import ImageErrorDisplay from "./ImageErrorDisplay";
-import ImageInfoBadges from "./ImageInfoBadges";
-import ZoomControls from "./ZoomControls";
 
-export { ImageViewer, DraggableImage, ImageErrorDisplay, ImageInfoBadges, ZoomControls };
+export { ImageViewer, DraggableImage };
 
 // تصدير النوع ImageViewerProps
 export type { ImageViewerProps } from "./ImageViewer";

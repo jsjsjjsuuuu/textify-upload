@@ -1,19 +1,19 @@
+
 import { useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useToast } from "@/hooks/use-toast";
 import { compressImage, enhanceImageForOCR } from "@/utils/imageCompression";
-import { ImageData, CustomImageData, ImageProcessFn, FileImageProcessFn } from "@/types/ImageData";
+import { ImageData, CustomImageData, ImageProcessFn } from "@/types/ImageData";
 import { User } from "@supabase/supabase-js";
 
 interface FileProcessingConfig {
   images: CustomImageData[];
   addImage: (image: CustomImageData) => void;
   updateImage: (id: string, fields: Partial<CustomImageData>) => void;
-  processWithOcr: ImageProcessFn;
-  processWithGemini: FileImageProcessFn;
+  processWithOcr: (file: File, image: CustomImageData) => Promise<CustomImageData>;
+  processWithGemini: (file: File, image: CustomImageData) => Promise<CustomImageData>;
   saveProcessedImage?: (image: CustomImageData) => Promise<boolean>;
   user?: User | null;
-  // تعديل نوع البيانات هنا ليقبل Promise<string>
   createSafeObjectURL: (file: File | Blob) => Promise<string>;
 }
 
@@ -79,9 +79,9 @@ export const useFileProcessing = ({
         
         // استخراج البيانات باستخدام Gemini
         try {
-          const geminiProcessedImage: CustomImageData = await processWithGemini(enhancedFile, {
+          const geminiProcessedImage = await processWithGemini(enhancedFile, {
             ...imageData
-          } as CustomImageData);
+          });
           
           updateImage(imageData.id, { 
             ...geminiProcessedImage,
@@ -90,7 +90,7 @@ export const useFileProcessing = ({
           
           // حفظ الصورة المعالجة إذا كانت الدالة متوفرة
           if (saveProcessedImage) {
-            await saveProcessedImage(geminiProcessedImage as CustomImageData);
+            await saveProcessedImage(geminiProcessedImage);
           }
         } catch (geminiError) {
           console.error("خطأ في معالجة Gemini:", geminiError);

@@ -1,9 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ImageData } from "@/types/ImageData";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { ZoomIn } from "lucide-react";
+import { ZoomIn, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface DraggableImageProps {
   image: ImageData;
@@ -21,12 +22,35 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
   onRetryLoad
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+  }, [image.id, image.previewUrl]);
 
   const handleRetryClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onRetryLoad && image.status === 'error') {
+    setRetryCount(prev => prev + 1);
+    setImageError(false);
+    setImageLoaded(false);
+    if (onRetryLoad) {
       onRetryLoad(image.id);
     }
+  };
+
+  const handleImageLoad = () => {
+    console.log("تم تحميل الصورة المصغرة بنجاح:", image.id);
+    setImageLoaded(true);
+    setImageError(false);
+  };
+
+  const handleImageError = () => {
+    console.error("خطأ في تحميل الصورة المصغرة:", image.id, "من URL:", image.previewUrl);
+    setImageError(true);
+    setImageLoaded(false);
   };
 
   return (
@@ -39,15 +63,47 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => onImageClick(image)}
     >
-      <img 
-        src={image.previewUrl} 
-        alt="صورة محملة" 
-        className={cn(
-          "w-full h-full object-contain", 
-          compact && "object-cover"
-        )}
-        style={{ mixBlendMode: 'multiply' }} 
-      />
+      {/* عرض حالة تحميل الصورة */}
+      {!imageLoaded && !imageError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      )}
+      
+      {/* عرض خطأ الصورة */}
+      {imageError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 bg-gray-100 dark:bg-gray-800">
+          <AlertTriangle className="h-8 w-8 mb-2" />
+          <p className="text-xs">خطأ في الصورة</p>
+          {onRetryLoad && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRetryClick}
+              className="mt-2 text-xs"
+            >
+              إعادة المحاولة
+            </Button>
+          )}
+        </div>
+      )}
+      
+      {/* عرض الصورة */}
+      {image.previewUrl && (
+        <img 
+          src={image.previewUrl ? `${image.previewUrl}?v=${retryCount}` : ''}
+          alt="صورة محملة" 
+          className={cn(
+            "w-full h-full object-contain transition-opacity duration-300", 
+            compact && "object-cover",
+            !imageLoaded && "opacity-0",
+            imageLoaded && "opacity-100"
+          )}
+          style={{ mixBlendMode: 'multiply' }} 
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+        />
+      )}
       
       {/* معلومات الصورة */}
       <div className={cn(
@@ -74,18 +130,23 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
       )}>
         {image.status === "completed" && (
           <div className="bg-green-500 text-white p-1 rounded-full">
-            {/* رمز اكتمال */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
           </div>
         )}
         {image.status === "error" && (
           <div className="bg-destructive text-white p-1 rounded-full">
-            {/* رمز الخطأ */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18" />
+              <path d="M6 6l12 12" />
+            </svg>
           </div>
         )}
       </div>
       
       {/* زر إعادة المحاولة للصور التي بها خطأ */}
-      {image.status === "error" && onRetryLoad && (
+      {(image.status === "error" || imageError) && onRetryLoad && (
         <div 
           className="absolute bottom-1 right-1 bg-white/90 p-1 rounded-full cursor-pointer"
           onClick={handleRetryClick}
