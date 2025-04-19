@@ -7,8 +7,8 @@ interface ImagePreviewContainerProps {
   images: ImageData[];
   isSubmitting?: boolean;
   onTextChange: (id: string, field: string, value: string) => void;
-  onDelete: (id: string) => void;
-  onSubmit: (id: string) => void;
+  onDelete: (id: string) => Promise<boolean>;
+  onSubmit: (id: string) => Promise<boolean>;
   formatDate: (date: Date) => string;
   showOnlySession?: boolean;
   onRetry?: (imageId: string) => void;
@@ -26,6 +26,34 @@ const ImagePreviewContainer = ({
 }: ImagePreviewContainerProps) => {
   const { toast } = useToast();
   
+  // إنشاء دالة لاستدعاء الحذف بشكل متوافق مع التوقيع المتوقع
+  const handleDelete = async (id: string): Promise<boolean> => {
+    try {
+      return await onDelete(id);
+    } catch (error) {
+      console.error("خطأ في حذف الصورة:", error);
+      toast({
+        title: "خطأ في الحذف",
+        description: "فشلت عملية حذف الصورة"
+      });
+      return false;
+    }
+  };
+
+  // إنشاء دالة لاستدعاء الإرسال بشكل متوافق مع التوقيع المتوقع
+  const handleSubmit = async (id: string): Promise<boolean> => {
+    try {
+      return await onSubmit(id);
+    } catch (error) {
+      console.error("خطأ في إرسال الصورة:", error);
+      toast({
+        title: "خطأ في الإرسال",
+        description: "فشلت عملية إرسال الصورة"
+      });
+      return false;
+    }
+  };
+
   // توجيه المستخدم إلى استخدام المكون من المسار الجديد
   React.useEffect(() => {
     console.warn(
@@ -42,8 +70,8 @@ const ImagePreviewContainer = ({
         images={images}
         isSubmitting={isSubmitting}
         onTextChange={onTextChange}
-        onDelete={onDelete}
-        onSubmit={onSubmit}
+        onDelete={handleDelete}
+        onSubmit={handleSubmit}
         formatDate={formatDate}
         showOnlySession={showOnlySession}
         onRetry={onRetry}

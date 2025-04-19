@@ -10,8 +10,8 @@ interface ImageActionsProps {
   isSubmitting: boolean;
   isSubmitted: boolean;
   isCompleted: boolean;
-  onDelete: (id: string) => void;
-  onSubmit: (id: string) => void;
+  onDelete: (id: string) => Promise<boolean>;
+  onSubmit: (id: string) => Promise<boolean>;
 }
 
 const ImageActions = ({
@@ -25,13 +25,24 @@ const ImageActions = ({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { toast } = useToast();
 
-  const handleDeleteClick = () => {
+  const handleDeleteClick = async () => {
     if (confirmDelete) {
-      onDelete(imageId);
-      toast({
-        title: "تم الحذف",
-        description: "تم حذف الصورة بنجاح"
-      });
+      try {
+        const success = await onDelete(imageId);
+        if (success) {
+          toast({
+            title: "تم الحذف",
+            description: "تم حذف الصورة بنجاح"
+          });
+        }
+      } catch (error) {
+        console.error("خطأ في حذف الصورة:", error);
+        toast({
+          title: "خطأ في الحذف",
+          description: "حدث خطأ أثناء محاولة حذف الصورة",
+          variant: "destructive"
+        });
+      }
     } else {
       setConfirmDelete(true);
       // إعادة تعيين حالة التأكيد بعد 3 ثوانٍ
@@ -39,12 +50,21 @@ const ImageActions = ({
     }
   };
 
-  const handleSubmitClick = () => {
-    onSubmit(imageId);
-    if (!isSubmitted) {
+  const handleSubmitClick = async () => {
+    try {
+      const success = await onSubmit(imageId);
+      if (success && !isSubmitted) {
+        toast({
+          title: "تم الإرسال",
+          description: "تم إرسال البيانات بنجاح"
+        });
+      }
+    } catch (error) {
+      console.error("خطأ في إرسال الصورة:", error);
       toast({
-        title: "جاري الإرسال",
-        description: "جاري إرسال البيانات إلى الخادم"
+        title: "خطأ في الإرسال",
+        description: "حدث خطأ أثناء محاولة إرسال الصورة",
+        variant: "destructive"
       });
     }
   };

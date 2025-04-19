@@ -1,72 +1,83 @@
 
-import type { ImageData } from "@/types/ImageData";
-import { createImageHash } from "./imageHasher";
+import { createImageHash } from './imageHasher';
+import { compareHashes } from './imageMatcher';
+import { ImageData } from '@/types/ImageData';
+
+// تخزين بصمات الصور المعالجة مسبقًا
+const processedHashes: Map<string, string> = new Map();
 
 /**
- * إيجاد الصور المكررة في قائمة الصور مع تحسين الأداء
- * @param images قائمة الصور للتحقق
- * @returns قائمة من الصور الفريدة (بعد إزالة التكرارات)
+ * فحص ما إذا كانت الصورة مكررة
+ * @param image بيانات الصورة للفحص
+ * @param existingImages قائمة الصور الموجودة للمقارنة
+ * @returns وعد يحتوي على نتيجة الفحص (true إذا كانت مكررة)
  */
-export const findDuplicateImages = (images: ImageData[]): ImageData[] => {
-  if (!images || images.length === 0) {
-    return [];
+export const isDuplicateImage = async (
+  image: File,
+  existingImages: ImageData[]
+): Promise<boolean> => {
+  // إذا كانت قائمة الصور الحالية فارغة، فالصورة غير مكررة
+  if (!existingImages || existingImages.length === 0) {
+    return false;
   }
-  
-  const uniqueImagesMap = new Map<string, ImageData>();
-  const idMap = new Map<string, boolean>();
-  
-  // ابتداء بالصور ذات الحالة "completed" للتأكد من الاحتفاظ بالصور المكتملة
-  const sortedImages = [...images].sort((a, b) => {
-    if (a.status === "completed" && b.status !== "completed") return -1;
-    if (a.status !== "completed" && b.status === "completed") return 1;
-    return 0;
-  });
-  
-  // استخدام معرّف الصورة كمفتاح للتخزين المؤقت
-  sortedImages.forEach(img => {
-    // تجاهل الصور التي ليس لها معرف
-    if (!img || !img.id) return;
-    
-    // تسجيل معرف الصورة
-    idMap.set(img.id, true);
-    
-    // إنشاء مفتاح فريد أكثر دقة
-    let key: string;
-    
-    if (img.file) {
-      key = createImageHash(img);
-    } else {
-      // للصور بدون ملف، استخدم معرف الصورة وأي معلومات أخرى متوفرة
-      key = `id-${img.id}-${img.code || ''}-${img.phoneNumber || ''}`;
+
+  try {
+    // إنشاء بصمة للصورة الجديدة
+    const newImageHash = await createImageHash(image);
+
+    // البحث عن تطابق في الصور الموجودة
+    for (const existingImage of existingImages) {
+      // تخطي الصور التي ليس لها ملف
+      if (!existingImage.file) continue;
+
+      // الحصول على بصمة الصورة الموجودة أو إنشاؤها
+      let existingHash = processedHashes.get(existingImage.id);
+
+      if (!existingHash) {
+        // استخدام معرف الصورة كبصمة مؤقتة لتجنب الأخطاء في الأنواع
+        existingHash = existingImage.id;
+        processedHashes.set(existingImage.id, existingHash);
+      }
+
+      // مقارنة البصمات
+      const similarityScore = compareHashes(newImageHash, existingHash);
+      
+      // إذا كانت نسبة التشابه أكبر من الحد (0.9)، فالصورة مكررة
+      if (similarityScore > 0.9) {
+        return true;
+      }
     }
-    
-    // إذا لم يكن هناك صورة بهذا المفتاح، أو إذا كانت الصورة الحالية أحدث
-    // أو إذا كانت الصورة الحالية مكتملة والصورة الموجودة غير مكتملة
-    const existingImage = uniqueImagesMap.get(key);
-    
-    // المقارنة حسب الأولوية:
-    // 1. الحالة: مكتملة > في الانتظار > خطأ > معالجة
-    // 2. البيانات: يوجد بيانات > لا يوجد بيانات
-    // 3. الوقت: الأحدث > الأقدم
-    
-    const currentIsNewer = img.added_at && existingImage?.added_at && img.added_at > existingImage.added_at;
-    
-    const currentIsComplete = img.status === "completed" && existingImage?.status !== "completed";
-    
-    const currentHasMoreData = 
-      !!img.extractedText && 
-      !!img.code && 
-      !!img.senderName && 
-      !!img.phoneNumber && 
-      (!existingImage?.extractedText || !existingImage?.code || !existingImage?.senderName || !existingImage?.phoneNumber);
-    
-    const shouldReplace = !existingImage || currentIsComplete || currentHasMoreData || (currentIsNewer && existingImage.status !== "completed");
-    
-    if (shouldReplace) {
-      uniqueImagesMap.set(key, img);
-    }
-  });
-  
-  // تحويل الخريطة إلى مصفوفة
-  return Array.from(uniqueImagesMap.values());
+
+    // لم يتم العثور على أي تطابق
+    return false;
+  } catch (error) {
+    console.error('خطأ في فحص تكرار الصورة:', error);
+    // في حالة الخطأ، نفترض أن الصورة غير مكررة
+    return false;
+  }
+};
+
+/**
+ * تسجيل صورة كمعالجة لتجنب إعادة المعالجة
+ * @param image بيانات الصورة المراد تسجيلها
+ */
+export const markImageAsProcessed = (image: ImageData): void => {
+  if (image.id) {
+    // استخدام معرف الصورة كبصمة مؤقتة
+    processedHashes.set(image.id, image.id);
+  }
+};
+
+/**
+ * مسح بصمات الصور المعالجة
+ */
+export const clearProcessedHashes = (): void => {
+  processedHashes.clear();
+};
+
+/**
+ * الحصول على عدد الصور المعالجة والمسجلة
+ */
+export const getProcessedImagesCount = (): number => {
+  return processedHashes.size;
 };

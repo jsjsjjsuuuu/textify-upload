@@ -10,6 +10,7 @@ import { useDataExtraction } from "@/hooks/useDataExtraction";
 import { motion } from "framer-motion";
 import DataCompletionIndicator from "./DataCompletionIndicator";
 import { CheckCircle, AlertTriangle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ExtractedDataEditorProps {
   image: ImageData;
@@ -28,6 +29,8 @@ const ExtractedDataEditor = ({
   onSubmit,
   compact = false
 }: ExtractedDataEditorProps) => {
+  const { toast } = useToast();
+  
   // جعل وضع التعديل دائمًا مفعّل لتمكين التعديل المباشر عند النقر على الحقل
   const [editMode, setEditMode] = useState(true);
   
@@ -42,6 +45,28 @@ const ExtractedDataEditor = ({
     handleAutoExtract,
     handleTempChange
   } = useDataExtraction(image, onTextChange, editMode, setEditMode);
+
+  // معالج حدث الحذف
+  const handleDelete = async () => {
+    if (onDelete) {
+      try {
+        const success = await onDelete(image.id);
+        if (success) {
+          toast({
+            title: "تم الحذف",
+            description: "تم حذف الصورة بنجاح"
+          });
+        }
+      } catch (error) {
+        console.error("خطأ في حذف الصورة:", error);
+        toast({
+          title: "خطأ في الحذف",
+          description: "حدث خطأ أثناء محاولة حذف الصورة",
+          variant: "destructive"
+        });
+      }
+    }
+  };
 
   // تحديث البيانات المؤقتة عند تغيير الصورة
   useEffect(() => {
@@ -119,7 +144,8 @@ const ExtractedDataEditor = ({
               onCancel={handleCancel} 
               onCopyText={handleCopyText} 
               onAutoExtract={handleAutoExtract} 
-              hasExtractedText={!!image.extractedText} 
+              hasExtractedText={!!image.extractedText}
+              onDelete={onDelete ? handleDelete : undefined}
             />
           </div>
 

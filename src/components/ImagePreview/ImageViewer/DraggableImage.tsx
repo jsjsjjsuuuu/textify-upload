@@ -1,176 +1,212 @@
 
-import React, { useState, useEffect } from 'react';
-import { ImageData } from "@/types/ImageData";
-import { cn } from "@/lib/utils";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ZoomIn, AlertTriangle } from "lucide-react";
+import { ImageData } from "@/types/ImageData";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Loader, AlertTriangle, Search, RotateCcw, Trash } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface DraggableImageProps {
   image: ImageData;
-  onImageClick: (image: ImageData) => void;
+  onImageClick?: (image: ImageData) => void;
   formatDate: (date: Date) => string;
-  compact?: boolean;
   onRetryLoad?: (imageId: string) => void;
+  onDelete?: (imageId: string) => Promise<boolean>;
 }
 
-const DraggableImage: React.FC<DraggableImageProps> = ({ 
-  image, 
-  onImageClick, 
+const DraggableImage: React.FC<DraggableImageProps> = ({
+  image,
+  onImageClick,
   formatDate,
-  compact = false,
-  onRetryLoad
+  onRetryLoad,
+  onDelete
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasError, setHasError] = useState<boolean>(false);
+  const [isZoomed, setIsZoomed] = useState<boolean>(false);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    setImageLoaded(false);
-    setImageError(false);
-  }, [image.id, image.previewUrl]);
+  // التعامل مع تحميل الصورة
+  const handleImageLoad = () => {
+    setIsLoading(false);
+    setHasError(false);
+  };
 
-  const handleRetryClick = (e: React.MouseEvent) => {
+  // التعامل مع خطأ تحميل الصورة
+  const handleImageError = () => {
+    setIsLoading(false);
+    setHasError(true);
+  };
+
+  // إعادة تحميل الصورة
+  const handleRetry = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setRetryCount(prev => prev + 1);
-    setImageError(false);
-    setImageLoaded(false);
-    if (onRetryLoad) {
+    if (onRetryLoad && image.id) {
+      setIsLoading(true);
+      setHasError(false);
       onRetryLoad(image.id);
     }
   };
 
-  const handleImageLoad = () => {
-    console.log("تم تحميل الصورة المصغرة بنجاح:", image.id);
-    setImageLoaded(true);
-    setImageError(false);
+  // تكبير/تصغير الصورة
+  const toggleZoom = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsZoomed(!isZoomed);
   };
 
-  const handleImageError = () => {
-    console.error("خطأ في تحميل الصورة المصغرة:", image.id, "من URL:", image.previewUrl);
-    setImageError(true);
-    setImageLoaded(false);
+  // حذف الصورة
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      try {
+        const success = await onDelete(image.id);
+        if (success) {
+          toast({
+            title: "تم الحذف بنجاح",
+            description: "تم حذف الصورة بنجاح",
+          });
+        }
+      } catch (error) {
+        console.error("خطأ في حذف الصورة:", error);
+        toast({
+          title: "خطأ في الحذف",
+          description: "حدث خطأ أثناء محاولة حذف الصورة",
+          variant: "destructive",
+        });
+      }
+    }
   };
+
+  // تنسيق حالة الصورة
+  const getStatusDetails = () => {
+    switch (image.status) {
+      case "pending":
+        return {
+          label: "قيد الانتظار",
+          color: "bg-amber-500",
+          textColor: "text-white",
+        };
+      case "processing":
+        return {
+          label: "قيد المعالجة",
+          color: "bg-blue-500",
+          textColor: "text-white",
+        };
+      case "completed":
+        return {
+          label: "مكتملة",
+          color: "bg-green-500",
+          textColor: "text-white",
+        };
+      case "error":
+        return {
+          label: "خطأ",
+          color: "bg-red-500",
+          textColor: "text-white",
+        };
+      default:
+        return {
+          label: "غير معروفة",
+          color: "bg-gray-500",
+          textColor: "text-white",
+        };
+    }
+  };
+
+  const statusDetails = getStatusDetails();
 
   return (
-    <div 
-      className={cn(
-        "relative w-full overflow-hidden cursor-pointer group",
-        compact ? "h-24" : "h-[200px]"
-      )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={() => onImageClick(image)}
+    <div
+      className="relative group cursor-pointer overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-all duration-200"
+      onClick={() => onImageClick && onImageClick(image)}
     >
-      {/* عرض حالة تحميل الصورة */}
-      {!imageLoaded && !imageError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      )}
-      
-      {/* عرض خطأ الصورة */}
-      {imageError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 bg-gray-100 dark:bg-gray-800">
-          <AlertTriangle className="h-8 w-8 mb-2" />
-          <p className="text-xs">خطأ في الصورة</p>
-          {onRetryLoad && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRetryClick}
-              className="mt-2 text-xs"
+      {/* شريط الحالة */}
+      <div
+        className={`absolute top-0 left-0 w-full px-3 py-1 ${statusDetails.color} ${statusDetails.textColor} text-xs font-medium flex justify-between items-center z-10`}
+      >
+        <span>{statusDetails.label}</span>
+        <span>{image.date ? formatDate(new Date(image.date)) : ""}</span>
+      </div>
+
+      {/* حاوية الصورة */}
+      <div className="w-full aspect-square relative flex items-center justify-center bg-gray-100 dark:bg-gray-900 overflow-hidden">
+        {/* الصورة */}
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+            <Loader className="h-10 w-10 text-gray-400 animate-spin" />
+          </div>
+        )}
+
+        {hasError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 p-4">
+            <AlertTriangle className="h-10 w-10 text-red-500 mb-2" />
+            <p className="text-red-500 text-sm text-center">
+              فشل في تحميل الصورة
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={handleRetry}
             >
+              <RotateCcw className="h-4 w-4 mr-1" />
               إعادة المحاولة
+            </Button>
+          </div>
+        )}
+
+        {image.previewUrl && (
+          <motion.img
+            src={image.previewUrl}
+            alt={`صورة ${image.id}`}
+            className={cn(
+              "object-contain w-full h-full transition-all duration-300",
+              isZoomed ? "scale-150" : "scale-100",
+              isLoading || hasError ? "opacity-0" : "opacity-100"
+            )}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onImageClick) onImageClick(image);
+            }}
+            layout="position"
+            layoutId={`image-${image.id}`}
+          />
+        )}
+
+        {/* أزرار الإجراءات */}
+        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="rounded-full bg-white/80 hover:bg-white text-gray-800 shadow-sm h-8 w-8"
+            onClick={toggleZoom}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+          
+          {onDelete && (
+            <Button
+              variant="destructive"
+              size="icon"
+              className="rounded-full h-8 w-8"
+              onClick={handleDelete}
+            >
+              <Trash className="h-4 w-4" />
             </Button>
           )}
         </div>
-      )}
-      
-      {/* عرض الصورة */}
-      {image.previewUrl && (
-        <img 
-          src={image.previewUrl ? `${image.previewUrl}?v=${retryCount}` : ''}
-          alt="صورة محملة" 
-          className={cn(
-            "w-full h-full object-contain transition-opacity duration-300", 
-            compact && "object-cover",
-            !imageLoaded && "opacity-0",
-            imageLoaded && "opacity-100"
-          )}
-          style={{ mixBlendMode: 'multiply' }} 
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-        />
-      )}
-      
+      </div>
+
       {/* معلومات الصورة */}
-      <div className={cn(
-        "absolute top-1 left-1 bg-brand-brown text-white px-2 py-1 rounded-full",
-        compact ? "text-xs" : "text-xs"
-      )}>
-        صورة {image.number}
+      <div className="p-3">
+        <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+          <span>رقم: {image.number || "-"}</span>
+          <span dir="ltr">{image.id?.substring(0, 8) || "-"}</span>
+        </div>
       </div>
-      
-      {/* حالة المعالجة */}
-      {image.status === "processing" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
-          <span className={cn(
-            "text-xs", 
-            compact && "text-[10px]"
-          )}>جاري المعالجة...</span>
-        </div>
-      )}
-      
-      {/* أيقونات الحالة */}
-      <div className={cn(
-        "absolute top-1 right-1",
-        compact && "scale-75"
-      )}>
-        {image.status === "completed" && (
-          <div className="bg-green-500 text-white p-1 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
-          </div>
-        )}
-        {image.status === "error" && (
-          <div className="bg-destructive text-white p-1 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6L6 18" />
-              <path d="M6 6l12 12" />
-            </svg>
-          </div>
-        )}
-      </div>
-      
-      {/* زر إعادة المحاولة للصور التي بها خطأ */}
-      {(image.status === "error" || imageError) && onRetryLoad && (
-        <div 
-          className="absolute bottom-1 right-1 bg-white/90 p-1 rounded-full cursor-pointer"
-          onClick={handleRetryClick}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-destructive">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-            <path d="M21 3v5h-5"></path>
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-            <path d="M8 16H3v5"></path>
-          </svg>
-        </div>
-      )}
-      
-      {/* تأثير التكبير عند التحويم */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isHovered ? 1 : 0 }}
-        transition={{ duration: 0.2 }}
-        className="absolute inset-0 bg-black/20 flex items-center justify-center"
-      >
-        <div className="bg-white/90 p-2 rounded-full">
-          <ZoomIn size={compact ? 16 : 24} className="text-brand-brown" />
-        </div>
-      </motion.div>
     </div>
   );
 };

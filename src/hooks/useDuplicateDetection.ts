@@ -1,56 +1,55 @@
 
 import { useState, useCallback } from 'react';
 import { ImageData } from '@/types/ImageData';
+import { isDuplicateImage, markImageAsProcessed } from '@/utils/duplicateDetection/uniqueImageFinder';
 
-interface UseDuplicateDetectionOptions {
+interface DuplicateDetectionOptions {
   enabled?: boolean;
+  threshold?: number;
 }
 
-export const useDuplicateDetection = (options: UseDuplicateDetectionOptions = {}) => {
-  // تغيير القيمة الافتراضية إلى false لتعطيل فحص التكرار بشكل كامل
-  const { enabled = false } = options;
-  
-  // استخدام مجموعة لتخزين توقيعات الصور المعالجة للكشف السريع
-  const [processedImageSignatures, setProcessedImageSignatures] = useState<Set<string>>(new Set());
+export const useDuplicateDetection = (options: DuplicateDetectionOptions = {}) => {
+  const { enabled = true, threshold = 0.9 } = options;
+  const [duplicateCount, setDuplicateCount] = useState<number>(0);
 
-  // إضافة صورة إلى قائمة الصور المعالجة - لا تفعل شيئاً إذا كان التعطيل مفعل
-  const markImageAsProcessed = useCallback((image: ImageData) => {
-    console.log("تم تعطيل تسجيل الصورة كمعالجة:", image.id);
-    // لا تفعل شيئاً عندما يكون فحص التكرار معطل
-    return;
-  }, []);
+  // فحص ما إذا كانت الصورة مكررة
+  const checkDuplicateImage = useCallback(
+    async (file: File, images: ImageData[]): Promise<boolean> => {
+      // إذا كانت الميزة معطلة، دائمًا إرجاع false (ليست مكررة)
+      if (!enabled) return false;
 
-  // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا - دائماً تعيد false حتى لو كانت مكررة
-  const checkDuplicateImage = useCallback(async (image: ImageData, images: ImageData[]): Promise<boolean> => {
-    console.log("تم تعطيل فحص التكرار للصورة:", image.id);
-    // دائمًا نُرجع false لتجاوز فحص التكرار
-    return false;
-  }, []);
+      try {
+        // فحص التكرار باستخدام الأداة الموجودة
+        const isDuplicate = await isDuplicateImage(file, images);
+        
+        // إذا كانت مكررة، زيادة العداد
+        if (isDuplicate) {
+          setDuplicateCount((prev) => prev + 1);
+        }
+        
+        return isDuplicate;
+      } catch (error) {
+        console.error("خطأ في فحص تكرار الصورة:", error);
+        return false;
+      }
+    },
+    [enabled]
+  );
 
-  // التحقق مما إذا كانت الصورة قد تمت معالجتها مسبقًا بشكل متزامن - دائماً تعيد false
-  const isDuplicateImage = useCallback((image: ImageData, images: ImageData[]): boolean => {
-    console.log("تم تعطيل فحص التكرار المتزامن للصورة:", image.id);
-    // دائمًا نُرجع false لتجاوز فحص التكرار
-    return false;
-  }, []);
-
-  // إضافة صورة إلى الذاكرة المؤقتة للصور المعالجة - لا تفعل شيئاً
-  const addToProcessedCache = useCallback((image: ImageData) => {
-    console.log("تم تعطيل إضافة الصورة للذاكرة المؤقتة:", image.id);
-    // لا تفعل شيئاً عندما يكون فحص التكرار معطل
-    return;
-  }, []);
-
-  // التحقق من اكتمال معالجة الصورة - استخدام الوظيفة الموجودة
-  const isProcessed = useCallback((image: ImageData): boolean => {
-    return image.status === "completed" || image.status === "error";
-  }, []);
+  // تسجيل صورة كمعالجة لتجنب إعادة معالجتها
+  const markAsProcessed = useCallback((image: ImageData): void => {
+    if (enabled && image) {
+      markImageAsProcessed(image);
+    }
+  }, [enabled]);
 
   return {
+    duplicateCount,
     checkDuplicateImage,
-    isDuplicateImage,
-    markImageAsProcessed,
-    addToProcessedCache,
-    isFullyProcessed: isProcessed
+    markImageAsProcessed: markAsProcessed,
+    // إضافة وظيفة مشابهة للتوافق مع الأكواد الأخرى
+    isDuplicateImage: checkDuplicateImage
   };
 };
+
+export default useDuplicateDetection;
