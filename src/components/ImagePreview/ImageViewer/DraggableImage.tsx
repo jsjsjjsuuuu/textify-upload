@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ImageData } from "@/types/ImageData";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -24,22 +24,31 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+  }, [image.id, image.previewUrl]);
 
   const handleRetryClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setRetryCount(prev => prev + 1);
+    setImageError(false);
+    setImageLoaded(false);
     if (onRetryLoad) {
-      setImageError(false);
-      setImageLoaded(false);
       onRetryLoad(image.id);
     }
   };
 
   const handleImageLoad = () => {
+    console.log("تم تحميل الصورة المصغرة بنجاح:", image.id);
     setImageLoaded(true);
     setImageError(false);
   };
 
   const handleImageError = () => {
+    console.error("خطأ في تحميل الصورة المصغرة:", image.id, "من URL:", image.previewUrl);
     setImageError(true);
     setImageLoaded(false);
   };
@@ -82,10 +91,10 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
       {/* عرض الصورة */}
       {image.previewUrl && (
         <img 
-          src={image.previewUrl} 
+          src={image.previewUrl ? `${image.previewUrl}?v=${retryCount}` : ''}
           alt="صورة محملة" 
           className={cn(
-            "w-full h-full object-contain transition-opacity", 
+            "w-full h-full object-contain transition-opacity duration-300", 
             compact && "object-cover",
             !imageLoaded && "opacity-0",
             imageLoaded && "opacity-100"

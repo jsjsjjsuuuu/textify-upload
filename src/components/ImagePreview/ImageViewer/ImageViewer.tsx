@@ -36,6 +36,7 @@ export const ImageViewer = ({
   // استخدام state لتتبع حالة تحميل الصورة
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   // إعادة ضبط حالة الصورة عندما تتغير الصورة
   useEffect(() => {
@@ -52,7 +53,7 @@ export const ImageViewer = ({
 
   // التعامل مع خطأ الصورة
   const handleImageError = () => {
-    console.error("خطأ في تحميل الصورة:", image.id);
+    console.error("خطأ في تحميل الصورة:", image.id, "من URL:", image.previewUrl);
     setImageError(true);
     setImageLoaded(false);
   };
@@ -60,6 +61,9 @@ export const ImageViewer = ({
   // التعامل مع إعادة التحميل
   const handleRetry = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setRetryCount(prev => prev + 1);
+    setImageError(false);
+    setImageLoaded(false);
     if (onRetry) {
       onRetry(image.id);
     }
@@ -97,10 +101,10 @@ export const ImageViewer = ({
           )}
           
           <img
-            src={image.previewUrl}
+            src={image.previewUrl ? `${image.previewUrl}?v=${retryCount}` : ''}
             alt={`صورة ${image.number || ""}`}
             className={cn(
-              "w-full h-full object-contain transition-transform",
+              "w-full h-full object-contain transition-transform duration-300",
               compact ? "hover:scale-105" : "",
               !imageLoaded && "opacity-0",
               imageLoaded && "opacity-100"
@@ -150,7 +154,7 @@ export const ImageViewer = ({
               </Button>
             )}
             
-            {image.status === 'error' && onRetry && (
+            {(image.status === 'error' || imageError) && onRetry && (
               <Button
                 variant="ghost"
                 size="icon"
