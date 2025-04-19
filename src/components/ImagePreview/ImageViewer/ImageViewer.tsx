@@ -42,18 +42,19 @@ export const ImageViewer = ({
   useEffect(() => {
     setImageLoaded(false);
     setImageError(false);
+    console.log("تحديث صورة في العارض:", image.id);
   }, [image.id, image.previewUrl]);
 
   // التعامل مع تحميل الصورة
   const handleImageLoad = () => {
-    console.log("تم تحميل الصورة بنجاح:", image.id);
+    console.log("تم تحميل الصورة بنجاح في العارض:", image.id);
     setImageLoaded(true);
     setImageError(false);
   };
 
   // التعامل مع خطأ الصورة
   const handleImageError = () => {
-    console.error("خطأ في تحميل الصورة:", image.id, "من URL:", image.previewUrl);
+    console.error("خطأ في تحميل الصورة في العارض:", image.id, "URL:", image.previewUrl?.substring(0, 50));
     setImageError(true);
     setImageLoaded(false);
   };
@@ -64,19 +65,29 @@ export const ImageViewer = ({
     setRetryCount(prev => prev + 1);
     setImageError(false);
     setImageLoaded(false);
+    console.log("محاولة إعادة تحميل الصورة في العارض:", image.id);
     if (onRetry) {
       onRetry(image.id);
     }
   };
 
+  // التعامل مع الحذف
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log("طلب حذف الصورة:", image.id);
+    if (onDelete) {
+      onDelete(image.id);
+    }
+  };
+
   return (
     <div className={cn(
-      "relative group bg-black/20 rounded-lg overflow-hidden",
+      "relative group bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden",
       compact ? "h-24" : "h-full"
     )}>
       {/* عرض الصورة */}
       {image.previewUrl && (
-        <div className="relative w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+        <div className="relative w-full h-full flex items-center justify-center">
           {!imageLoaded && !imageError && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -94,6 +105,7 @@ export const ImageViewer = ({
                   onClick={handleRetry}
                   className="mt-2"
                 >
+                  <RefreshCw className="mr-1 h-4 w-4" />
                   إعادة المحاولة
                 </Button>
               )}
@@ -101,7 +113,7 @@ export const ImageViewer = ({
           )}
           
           <img
-            src={image.previewUrl ? `${image.previewUrl}?v=${retryCount}` : ''}
+            src={image.previewUrl ? `${image.previewUrl}${retryCount > 0 ? `?v=${retryCount}` : ''}` : ''}
             alt={`صورة ${image.number || ""}`}
             className={cn(
               "w-full h-full object-contain transition-transform duration-300",
@@ -112,6 +124,7 @@ export const ImageViewer = ({
             style={{ transform: `scale(${zoomLevel})` }}
             onLoad={handleImageLoad}
             onError={handleImageError}
+            loading="lazy"
           />
           
           {/* أزرار التحكم */}
@@ -144,10 +157,7 @@ export const ImageViewer = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(image.id);
-                }}
+                onClick={handleDelete}
                 className="text-red-500 hover:bg-red-500/20"
               >
                 <Trash2 className="h-4 w-4" />

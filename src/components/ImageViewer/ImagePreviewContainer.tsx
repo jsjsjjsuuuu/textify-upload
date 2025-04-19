@@ -3,7 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { ImageData } from "@/types/ImageData";
 import StatusBadges from '@/components/ImageViewer/StatusBadges';
 import { ExtractedDataEditor } from "@/components/ExtractedData";
-import DraggableImage from '@/components/ImagePreview/ImageViewer/DraggableImage';
+import DraggableImage from '@/components/ImageList/DraggableImage';
 import { Grid, Loader } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +63,7 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
 
   // اختيار صورة
   const handleImageClick = useCallback((image: ImageData) => {
+    console.log("تم النقر على الصورة:", image.id);
     setSelectedImage(prev => prev?.id === image.id ? null : image);
   }, []);
 
@@ -70,6 +71,29 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
   const toggleLayoutMode = () => {
     setLayoutMode(prev => prev === 'grid' ? 'list' : 'grid');
   };
+
+  // معالج إعادة تحميل الصورة
+  const handleImageRetry = useCallback((imageId: string) => {
+    console.log("طلب إعادة تحميل الصورة:", imageId);
+    if (onRetry) {
+      onRetry(imageId);
+    }
+  }, [onRetry]);
+
+  // معالج حذف الصورة
+  const handleDeleteImage = useCallback(async (imageId: string) => {
+    console.log("طلب حذف الصورة:", imageId);
+    try {
+      const result = await onDelete(imageId);
+      if (result && selectedImage?.id === imageId) {
+        setSelectedImage(null);
+      }
+      return result;
+    } catch (error) {
+      console.error("خطأ أثناء حذف الصورة:", error);
+      return false;
+    }
+  }, [onDelete, selectedImage]);
 
   return (
     <div className="relative min-h-[400px] rounded-lg bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm">
@@ -103,12 +127,12 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
                 بيانات الصورة المحددة
               </h3>
               <div className="grid md:grid-cols-2 gap-6">
-                <div>
+                <div className="relative">
                   <DraggableImage 
                     image={selectedImage} 
                     onImageClick={() => setSelectedImage(null)}
                     formatDate={formatDate}
-                    onRetryLoad={onRetry}
+                    onRetryLoad={handleImageRetry}
                   />
                 </div>
                 <div>
@@ -116,7 +140,7 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
                     image={selectedImage}
                     onTextChange={onTextChange}
                     isSubmitting={isSubmitting}
-                    onDelete={onDelete}
+                    onDelete={handleDeleteImage}
                     onSubmit={onSubmit}
                   />
                 </div>
@@ -142,7 +166,7 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
                     image={image} 
                     onImageClick={handleImageClick}
                     formatDate={formatDate}
-                    onRetryLoad={onRetry}
+                    onRetryLoad={handleImageRetry}
                   />
                 </div>
                 
@@ -152,7 +176,7 @@ const ImagePreviewContainer: React.FC<ImagePreviewContainerProps> = ({
                       image={image}
                       onTextChange={onTextChange}
                       isSubmitting={isSubmitting}
-                      onDelete={onDelete}
+                      onDelete={handleDeleteImage}
                       onSubmit={onSubmit}
                       compact={true}
                     />

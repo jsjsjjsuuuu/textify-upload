@@ -1,3 +1,4 @@
+
 // خدمة التشغيل الآلي - AutomationService
 
 export interface AutomationConfig {
@@ -75,6 +76,4 @@ export const AutomationService = {
   }
 };
 
-export { AutomationService };
-export type { AutomationConfig, AutomationTask };
 export default AutomationService;

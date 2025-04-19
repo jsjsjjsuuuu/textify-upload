@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData } from "@/types/ImageData";
@@ -8,6 +9,7 @@ import { useImageStats } from "@/hooks/useImageStats";
 import { useImageDatabase } from "@/hooks/useImageDatabase";
 import { useGeminiProcessing } from "@/hooks/useGeminiProcessing";
 import { useOcrProcessing } from "@/hooks/useOcrProcessing";
+import { createSafeObjectURL } from "@/utils/createSafeObjectUrl";
 
 export const useImageProcessing = () => {
   const { user } = useAuth();
@@ -30,17 +32,40 @@ export const useImageProcessing = () => {
     hideImage 
   } = useImageState();
   
-  const { processFileWithOcr } = useOcrProcessing();
-  const { processFileWithGemini } = useGeminiProcessing();
+  const { processWithOcr } = useOcrProcessing();
+  const { processWithGemini } = useGeminiProcessing();
   
   const fileUploadResult = useFileUpload({
     images,
     addImage,
     updateImage,
-    processWithOcr: processFileWithOcr,
-    processWithGemini: processFileWithGemini,
-    user
+    processWithOcr: processWithOcr,
+    processWithGemini: processWithGemini,
+    createSafeObjectURL
   });
+
+  // دالة لإعادة تحميل صورة محددة
+  const retryProcessing = useCallback((imageId: string) => {
+    console.log("محاولة إعادة معالجة الصورة:", imageId);
+    const image = images.find(img => img.id === imageId);
+    if (image && image.file) {
+      // إعادة معالجة الصورة
+      updateImage(imageId, { status: 'processing' });
+      processWithOcr(image.file, image)
+        .then(processedImage => {
+          updateImage(imageId, { 
+            ...processedImage,
+            status: 'completed'
+          });
+        })
+        .catch(error => {
+          console.error("خطأ في إعادة معالجة الصورة:", error);
+          updateImage(imageId, { status: 'error' });
+        });
+    } else {
+      console.error("تعذر العثور على الصورة أو ملف الصورة مفقود:", imageId);
+    }
+  }, [images, updateImage, processWithOcr]);
 
   return {
     images,
@@ -56,17 +81,17 @@ export const useImageProcessing = () => {
     handleDelete: deleteImage,
     handleSubmitToApi: () => {},
     saveImageToDatabase: () => {},
-    formatDate: () => "",
+    formatDate: (date: Date) => date.toLocaleDateString(),
     hideImage,
     unhideImage,
     unhideAllImages,
     getHiddenImageIds: () => [],
     clearSessionImages,
-    retryProcessing: () => {},
+    retryProcessing,
     clearQueue: () => {},
     runCleanup: () => {},
     loadUserImages: () => {},
-    setImages: () => {},
+    setImages: setAllImages,
     clearOldApiKey: () => false,
     checkDuplicateImage: () => Promise.resolve(false)
   };

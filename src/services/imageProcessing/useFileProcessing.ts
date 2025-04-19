@@ -3,7 +3,7 @@ import { useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useToast } from "@/hooks/use-toast";
 import { compressImage, enhanceImageForOCR } from "@/utils/imageCompression";
-import { ImageData, CustomImageData, ImageProcessFn } from "@/types/ImageData";
+import { ImageData, CustomImageData } from "@/types/ImageData";
 import { User } from "@supabase/supabase-js";
 
 interface FileProcessingConfig {
@@ -12,7 +12,6 @@ interface FileProcessingConfig {
   updateImage: (id: string, fields: Partial<CustomImageData>) => void;
   processWithOcr: (file: File, image: CustomImageData) => Promise<CustomImageData>;
   processWithGemini: (file: File, image: CustomImageData) => Promise<CustomImageData>;
-  saveProcessedImage?: (image: CustomImageData) => Promise<boolean>;
   user?: User | null;
   createSafeObjectURL: (file: File | Blob) => Promise<string>;
 }
@@ -23,7 +22,6 @@ export const useFileProcessing = ({
   updateImage,
   processWithOcr,
   processWithGemini,
-  saveProcessedImage,
   user,
   createSafeObjectURL
 }: FileProcessingConfig) => {
@@ -80,7 +78,8 @@ export const useFileProcessing = ({
         // استخراج البيانات باستخدام Gemini
         try {
           const geminiProcessedImage = await processWithGemini(enhancedFile, {
-            ...imageData
+            ...imageData,
+            ...processedImageData
           });
           
           updateImage(imageData.id, { 
@@ -88,18 +87,9 @@ export const useFileProcessing = ({
             status: 'completed' 
           });
           
-          // حفظ الصورة المعالجة إذا كانت الدالة متوفرة
-          if (saveProcessedImage) {
-            await saveProcessedImage(geminiProcessedImage);
-          }
         } catch (geminiError) {
           console.error("خطأ في معالجة Gemini:", geminiError);
           updateImage(imageData.id, { status: 'completed' });
-          
-          // حفظ نتائج OCR على الأقل
-          if (saveProcessedImage) {
-            await saveProcessedImage(processedImageData);
-          }
         }
       } catch (error) {
         console.error("خطأ في معالجة الصورة:", error);
@@ -116,7 +106,7 @@ export const useFileProcessing = ({
     } finally {
       setActiveUploads(prev => prev - 1);
     }
-  }, [images, addImage, updateImage, processWithOcr, processWithGemini, saveProcessedImage, user, createSafeObjectURL, toast]);
+  }, [images, addImage, updateImage, processWithOcr, processWithGemini, user, createSafeObjectURL, toast]);
 
   // معالجة مجموعة من الملفات
   const handleFileChange = useCallback(async (files: FileList | File[]) => {

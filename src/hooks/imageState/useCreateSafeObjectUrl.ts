@@ -1,48 +1,28 @@
 
+import { useCallback } from "react";
+import { createSafeObjectURL, blobUrlToDataUrl } from "@/utils/createSafeObjectUrl";
+
 export const useCreateSafeObjectUrl = () => {
-  const createSafeObjectURL = async (file: File | Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      try {
-        // التأكد من أن الملف موجود قبل إنشاء عنوان URL
-        if (!file) {
-          console.error("خطأ: الملف غير موجود أو غير صالح");
-          reject(new Error("الملف غير موجود"));
-          return;
-        }
-        
-        // إنشاء عنوان URL للملف باستخدام URL.createObjectURL
-        const url = URL.createObjectURL(file);
-        console.log("تم إنشاء عنوان URL للصورة بنجاح:", url);
-        
-        // إنشاء عنصر صورة للتحقق من صحة URL
-        const img = new Image();
-        img.onload = () => {
-          resolve(url);
-        };
-        img.onerror = () => {
-          console.error("تعذر تحميل الصورة من عنوان URL المنشأ");
-          URL.revokeObjectURL(url); // إلغاء URL في حالة الخطأ
-          reject(new Error("تعذر تحميل الصورة"));
-        };
-        img.src = url;
-        
-        // وضع حد زمني للتحميل
-        setTimeout(() => {
-          if (!img.complete) {
-            URL.revokeObjectURL(url);
-            console.error("انتهت مهلة تحميل الصورة");
-            reject(new Error("انتهت مهلة تحميل الصورة"));
-          }
-        }, 10000); // 10 ثواني
-      } catch (error) {
-        console.error("خطأ في إنشاء عنوان URL للملف:", error);
-        reject(error);
+  // استخدام وظيفة createSafeObjectURL المحسنة من المرفقات
+  const createSafeObjectURLWrapper = useCallback(async (file: File | Blob): Promise<string> => {
+    try {
+      if (!file) {
+        console.error("خطأ: الملف غير موجود أو غير صالح");
+        throw new Error("الملف غير موجود");
       }
-    });
-  };
+      
+      console.log("جاري إنشاء عنوان URL آمن للصورة...");
+      const url = await createSafeObjectURL(file);
+      console.log("تم إنشاء عنوان URL بنجاح:", url.substring(0, 50) + "...");
+      return url;
+    } catch (error) {
+      console.error("خطأ في إنشاء عنوان URL للملف:", error);
+      throw error;
+    }
+  }, []);
 
   // دالة لإلغاء عنوان URL لمنع تسرب الذاكرة
-  const revokeObjectURL = (url: string): void => {
+  const revokeObjectURL = useCallback((url: string): void => {
     if (url && url.startsWith('blob:')) {
       try {
         URL.revokeObjectURL(url);
@@ -51,12 +31,28 @@ export const useCreateSafeObjectUrl = () => {
         console.error("خطأ في إلغاء عنوان URL للصورة:", error);
       }
     } else {
-      console.log("عنوان URL غير صالح للإلغاء:", url);
+      console.log("عنوان URL غير قابل للإلغاء (ليس blob URL):", url.substring(0, 30));
     }
-  };
+  }, []);
+
+  // دالة لتحويل Blob URL إلى Data URL
+  const convertBlobToDataUrl = useCallback(async (blobUrl: string): Promise<string> => {
+    try {
+      console.log("جاري تحويل blob URL إلى data URL...");
+      const dataUrl = await blobUrlToDataUrl(blobUrl);
+      console.log("تم التحويل بنجاح");
+      return dataUrl;
+    } catch (error) {
+      console.error("خطأ في تحويل blob URL إلى data URL:", error);
+      throw error;
+    }
+  }, []);
 
   return {
-    createSafeObjectURL,
-    revokeObjectURL
+    createSafeObjectURL: createSafeObjectURLWrapper,
+    revokeObjectURL,
+    convertBlobToDataUrl
   };
 };
+
+export default useCreateSafeObjectUrl;

@@ -1,3 +1,4 @@
+
 /**
  * وظائف للتعامل مع الصور وإنشاء عناوين URL آمنة
  */
@@ -9,26 +10,41 @@
  */
 export const createSafeObjectURL = async (file: File | Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
-    // استخدام FileReader لتحويل الملف إلى Data URL
-    const reader = new FileReader();
-    
-    // تعيين معالج حدث نجاح التحميل
-    reader.onloadend = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-      } else {
-        reject(new Error('فشل في تحويل الصورة إلى Data URL'));
-      }
-    };
-    
-    // تعيين معالج حدث الخطأ
-    reader.onerror = (error) => {
-      console.error('خطأ في قراءة الصورة:', error);
+    if (!file) {
+      console.error('خطأ: الملف غير موجود');
+      reject(new Error('الملف غير موجود'));
+      return;
+    }
+
+    try {
+      // استخدام FileReader لتحويل الملف إلى Data URL
+      const reader = new FileReader();
+      
+      // تعيين معالج حدث نجاح التحميل
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          // تأكد من أن النتيجة هي string وليست ArrayBuffer
+          console.log("تم تحويل الملف إلى Data URL بنجاح");
+          resolve(reader.result);
+        } else {
+          console.error("النتيجة ليست Data URL");
+          reject(new Error('فشل في تحويل الملف إلى Data URL'));
+        }
+      };
+      
+      // تعيين معالج حدث الخطأ
+      reader.onerror = (error) => {
+        console.error('خطأ في قراءة الملف:', error);
+        reject(error);
+      };
+      
+      // بدء قراءة الملف كـ Data URL
+      console.log("جاري قراءة الملف كـ Data URL...");
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('خطأ في تحويل الملف:', error);
       reject(error);
-    };
-    
-    // بدء قراءة الملف كـ Data URL
-    reader.readAsDataURL(file);
+    }
   });
 };
 
@@ -38,8 +54,20 @@ export const createSafeObjectURL = async (file: File | Blob): Promise<string> =>
  */
 export const blobUrlToDataUrl = async (blobUrl: string): Promise<string> => {
   try {
+    // التحقق من صحة URL
+    if (!blobUrl || !blobUrl.startsWith('blob:')) {
+      console.error('عنوان URL غير صالح:', blobUrl);
+      throw new Error('عنوان URL غير صالح');
+    }
+
     // جلب البيانات من blob URL
+    console.log("جاري جلب البيانات من blob URL...");
     const response = await fetch(blobUrl);
+    
+    if (!response.ok) {
+      throw new Error(`فشل في جلب البيانات: ${response.status} ${response.statusText}`);
+    }
+    
     const blob = await response.blob();
     
     // تحويل blob إلى Data URL
@@ -54,7 +82,42 @@ export const blobUrlToDataUrl = async (blobUrl: string): Promise<string> => {
  * دالة للتحقق مما إذا كان عنوان URL عبارة عن عنوان Data URL
  */
 export const isDataUrl = (url: string): boolean => {
-  return url.startsWith('data:');
+  return url && typeof url === 'string' && url.startsWith('data:');
+};
+
+/**
+ * إنشاء عنوان URL مؤقت من ملف مع التأكد من إلغائه عند عدم الحاجة إليه
+ * @param file ملف الصورة أو blob
+ * @returns وعد يحتوي على عنوان URL للصورة
+ */
+export const createTemporaryObjectURL = (file: File | Blob): string => {
+  if (!file) {
+    throw new Error('الملف غير موجود');
+  }
+  
+  try {
+    const url = URL.createObjectURL(file);
+    console.log("تم إنشاء عنوان URL مؤقت:", url);
+    return url;
+  } catch (error) {
+    console.error('خطأ في إنشاء عنوان URL مؤقت:', error);
+    throw error;
+  }
+};
+
+/**
+ * إلغاء عنوان URL مؤقت لتحرير الذاكرة
+ * @param url عنوان URL المؤقت
+ */
+export const revokeObjectURL = (url: string): void => {
+  if (url && url.startsWith('blob:')) {
+    try {
+      URL.revokeObjectURL(url);
+      console.log("تم إلغاء عنوان URL مؤقت");
+    } catch (error) {
+      console.error('خطأ في إلغاء عنوان URL مؤقت:', error);
+    }
+  }
 };
 
 export default createSafeObjectURL;

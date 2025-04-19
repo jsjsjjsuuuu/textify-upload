@@ -14,7 +14,7 @@ import { useFileProcessing } from "./useFileProcessing";
 import { useToast } from "@/hooks/use-toast";
 import { ImageData, CustomImageData } from "@/types/ImageData";
 import { formatDate } from "@/utils/dateFormatter";
-import { adaptOcrToImageProcess, adaptGeminiToFileImageProcess } from "./adapters";
+import { createSafeObjectURL } from "@/utils/createSafeObjectUrl";
 
 export const useImageProcessing = () => {
   // المكونات الأساسية
@@ -38,17 +38,12 @@ export const useImageProcessing = () => {
     unhideImage,
     unhideAllImages,
     getHiddenImageIds,
-    setAllImages,
-    createSafeObjectURL
+    setAllImages
   } = useImageState();
   
-  // استيراد معالجات OCR و Gemini واستخدام المحولات لضمان توافق الأنواع
+  // استيراد معالجات OCR و Gemini
   const { processWithOcr } = useOcrProcessing();
   const { processFileWithGemini } = useGeminiProcessing();
-  
-  // تحويل معالجات OCR و Gemini إلى الأنواع المتوافقة
-  const adaptedOcrProcess = adaptOcrToImageProcess(processWithOcr);
-  const adaptedGeminiProcess = processFileWithGemini;
   
   // استيراد قاعدة البيانات
   const { 
@@ -59,7 +54,7 @@ export const useImageProcessing = () => {
     runCleanupNow 
   } = useImageDatabase(updateImage);
   
-  // استخدام هوك معالجة الملفات
+  // استخدام هوك معالجة الملفات مع النسخة المحسّنة من createSafeObjectURL
   const {
     isProcessing,
     processingProgress,
@@ -70,9 +65,8 @@ export const useImageProcessing = () => {
     images,
     addImage,
     updateImage,
-    processWithOcr: adaptedOcrProcess,
-    processWithGemini: adaptedGeminiProcess,
-    saveProcessedImage: saveImageToDatabase,
+    processWithOcr,
+    processWithGemini: processFileWithGemini,
     user,
     createSafeObjectURL
   });
@@ -95,12 +89,76 @@ export const useImageProcessing = () => {
     fileUploadHandler(files);
   };
 
+  // دالة إعادة معالجة الصور
+  const retryProcessing = useCallback(async (imageId: string) => {
+    console.log("جاري محاولة إعادة معالجة الصورة:", imageId);
+    const image = images.find(img => img.id === imageId);
+    
+    if (!image) {
+      console.error("لم يتم العثور على الصورة:", imageId);
+      return;
+    }
+    
+    try {
+      // تحديث حالة الصورة
+      updateImage(imageId, { status: 'processing' });
+      
+      if (image.file) {
+        // إذا كان الملف متاحاً، أعد إنشاء عنوان URL للمعاينة
+        const previewUrl = await createSafeObjectURL(image.file);
+        updateImage(imageId, { previewUrl });
+        
+        // إعادة معالجة الصورة بـ OCR
+        const processedWithOcr = await processWithOcr(image.file, image as CustomImageData);
+        
+        // تحديث بيانات الصورة
+        updateImage(imageId, { 
+          ...processedWithOcr, 
+          status: 'completed' 
+        });
+        
+        toast({
+          title: "تمت إعادة المعالجة",
+          description: "تمت إعادة معالجة الصورة بنجاح"
+        });
+      } else {
+        // إذا كان الملف غير متاح، حاول تحديث المعاينة فقط
+        console.log("ملف الصورة غير متاح، محاولة تحديث المعاينة فقط");
+        
+        // إعادة تعيين previewUrl لإجبار الصورة على إعادة التحميل
+        if (image.previewUrl) {
+          const timestamp = Date.now();
+          const refreshedUrl = image.previewUrl.includes('?') 
+            ? `${image.previewUrl.split('?')[0]}?v=${timestamp}` 
+            : `${image.previewUrl}?v=${timestamp}`;
+          
+          updateImage(imageId, { previewUrl: refreshedUrl, status: 'completed' });
+        }
+        
+        toast({
+          title: "تم التحديث",
+          description: "تم تحديث عرض الصورة"
+        });
+      }
+    } catch (error) {
+      console.error("خطأ في إعادة معالجة الصورة:", error);
+      updateImage(imageId, { status: 'error' });
+      
+      toast({
+        title: "خطأ في المعالجة",
+        description: "حدث خطأ أثناء إعادة معالجة الصورة",
+        variant: "destructive"
+      });
+    }
+  }, [images, updateImage, processWithOcr, toast]);
+
   // حذف الصور
   const handleDelete = async (id: string) => {
     try {
+      console.log("طلب حذف الصورة:", id);
       return deleteImage(id, false);
     } catch (error) {
-      console.error("Error deleting image:", error);
+      console.error("خطأ في حذف الصورة:", error);
       return false;
     }
   };
@@ -108,6 +166,7 @@ export const useImageProcessing = () => {
   // إضافة دالة الحذف النهائي من قاعدة البيانات
   const handlePermanentDelete = async (id: string) => {
     try {
+      console.log("طلب الحذف النهائي للصورة:", id);
       if (user) {
         // الحذف من قاعدة البيانات
         await deleteImageFromDatabase(id);
@@ -128,6 +187,7 @@ export const useImageProcessing = () => {
   // إرسال الصور إلى API
   const handleSubmitToApi = useCallback(async (id: string) => {
     try {
+      console.log("طلب إرسال الصورة:", id);
       setIsSubmitting(prev => ({ ...prev, [id]: true }));
       
       const image = images.find(img => img.id === id);
@@ -150,7 +210,7 @@ export const useImageProcessing = () => {
       
       return result;
     } catch (error) {
-      console.error("Error submitting image:", error);
+      console.error("خطأ في إرسال الصورة:", error);
       toast({
         title: "خطأ في الإرسال",
         description: "حدث خطأ أثناء إرسال البيانات",
@@ -181,9 +241,9 @@ export const useImageProcessing = () => {
     }
   }, [user, fetchUserImages, hiddenImageIds, setAllImages]);
 
-  // إضافة دالة التحقق من مفتاح API قديم وتحديثه
+  // دالة التحقق من مفتاح API قديم وتحديثه
   const clearOldApiKey = useCallback(() => {
-    const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8"; // المفتاح القديم
+    const oldApiKey = "AIzaSyCwxG0KOfzG0HTHj7qbwjyNGtmPLhBAno8";
     const storedApiKey = localStorage.getItem("geminiApiKey");
     
     if (storedApiKey === oldApiKey) {
@@ -230,13 +290,10 @@ export const useImageProcessing = () => {
     unhideAllImages,
     getHiddenImageIds,
     clearSessionImages,
+    retryProcessing,
     loadUserImages,
-    runCleanup: (userId: string) => {
-      if (userId) {
-        runCleanupNow(userId);
-      }
-    },
+    runCleanup: runCleanupNow,
     clearOldApiKey,
-    checkDuplicateImage: () => Promise.resolve(false) // وظيفة وهمية لتعطيل فحص التكرار
+    checkDuplicateImage: () => Promise.resolve(false)
   };
 };

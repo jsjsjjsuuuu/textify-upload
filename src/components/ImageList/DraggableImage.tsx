@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { ImageData } from "@/types/ImageData";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { ZoomIn, AlertTriangle } from "lucide-react";
+import { ZoomIn, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface DraggableImageProps {
@@ -27,8 +27,10 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    // إعادة تعيين حالة الصورة عند تغيير الصورة
     setImageLoaded(false);
     setImageError(false);
+    console.log("تحديث صورة:", image.id, "URL:", image.previewUrl?.substring(0, 50));
   }, [image.id, image.previewUrl]);
 
   const handleRetryClick = (e: React.MouseEvent) => {
@@ -36,19 +38,20 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
     setRetryCount(prev => prev + 1);
     setImageError(false);
     setImageLoaded(false);
+    console.log("محاولة إعادة تحميل الصورة:", image.id);
     if (onRetryLoad) {
       onRetryLoad(image.id);
     }
   };
 
   const handleImageLoad = () => {
-    console.log("تم تحميل الصورة المصغرة بنجاح:", image.id);
+    console.log("تم تحميل الصورة بنجاح:", image.id);
     setImageLoaded(true);
     setImageError(false);
   };
 
   const handleImageError = () => {
-    console.error("خطأ في تحميل الصورة المصغرة:", image.id, "من URL:", image.previewUrl);
+    console.error("خطأ في تحميل الصورة:", image.id, "URL:", image.previewUrl?.substring(0, 50));
     setImageError(true);
     setImageLoaded(false);
   };
@@ -56,7 +59,7 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
   return (
     <div 
       className={cn(
-        "relative w-full overflow-hidden cursor-pointer group",
+        "relative w-full overflow-hidden cursor-pointer group border border-gray-200 dark:border-gray-700 rounded-lg",
         compact ? "h-24" : "h-[200px]"
       )}
       onMouseEnter={() => setIsHovered(true)}
@@ -82,6 +85,7 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
               onClick={handleRetryClick}
               className="mt-2 text-xs"
             >
+              <RefreshCw className="mr-1 h-3 w-3" />
               إعادة المحاولة
             </Button>
           )}
@@ -91,7 +95,7 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
       {/* عرض الصورة */}
       {image.previewUrl && (
         <img 
-          src={image.previewUrl ? `${image.previewUrl}?v=${retryCount}` : ''}
+          src={image.previewUrl ? `${image.previewUrl}${retryCount > 0 ? `?v=${retryCount}` : ''}` : ''}
           alt="صورة محملة" 
           className={cn(
             "w-full h-full object-contain transition-opacity duration-300", 
@@ -102,6 +106,7 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
           style={{ mixBlendMode: 'multiply' }} 
           onLoad={handleImageLoad}
           onError={handleImageError}
+          loading="lazy"
         />
       )}
       
@@ -151,12 +156,7 @@ const DraggableImage: React.FC<DraggableImageProps> = ({
           className="absolute bottom-1 right-1 bg-white/90 p-1 rounded-full cursor-pointer"
           onClick={handleRetryClick}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-destructive">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-            <path d="M21 3v5h-5"></path>
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-            <path d="M8 16H3v5"></path>
-          </svg>
+          <RefreshCw className="h-4 w-4 text-destructive" />
         </div>
       )}
       
