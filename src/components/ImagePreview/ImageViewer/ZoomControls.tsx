@@ -25,28 +25,37 @@ const ZoomControls = ({
       className
     )}>
       <Button 
-        onClick={onZoomIn}
+        onClick={(e) => {
+          e.stopPropagation();
+          onZoomIn();
+        }}
         variant="secondary"
         size="icon"
-        className="w-8 h-8"
+        className="w-8 h-8 bg-gray-800 hover:bg-gray-700"
       >
         <ZoomIn className="h-4 w-4" />
       </Button>
       
       <Button 
-        onClick={onZoomOut}
+        onClick={(e) => {
+          e.stopPropagation();
+          onZoomOut();
+        }}
         variant="secondary"
         size="icon"
-        className="w-8 h-8"
+        className="w-8 h-8 bg-gray-800 hover:bg-gray-700"
       >
         <ZoomOut className="h-4 w-4" />
       </Button>
       
       <Button 
-        onClick={onResetZoom}
+        onClick={(e) => {
+          e.stopPropagation();
+          onResetZoom();
+        }}
         variant="secondary"
         size="icon"
-        className="w-8 h-8"
+        className="w-8 h-8 bg-gray-800 hover:bg-gray-700"
       >
         <RotateCcw className="h-4 w-4" />
       </Button>
@@ -59,4 +68,3 @@ const ZoomControls = ({
 };
 
 export default ZoomControls;
-
