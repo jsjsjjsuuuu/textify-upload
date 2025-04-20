@@ -21,7 +21,7 @@ const ZoomControls = ({
 }: ZoomControlsProps) => {
   return (
     <div className={cn(
-      "flex items-center gap-2 bg-gray-900/80 p-2 rounded-lg",
+      "flex items-center gap-2 bg-gray-900/80 p-2 rounded-lg shadow-xl",
       className
     )}>
       <Button 
@@ -60,7 +60,7 @@ const ZoomControls = ({
         <RotateCcw className="h-4 w-4" />
       </Button>
       
-      <span className="text-white text-sm">
+      <span className="text-white text-sm font-medium">
         {Math.round(zoomLevel * 100)}%
       </span>
     </div>

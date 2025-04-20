@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Trash2, RefreshCw, Maximize2 } from 'lucide-react';
+import { Trash2, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ImageData } from '@/types/ImageData';
@@ -84,6 +85,13 @@ export const ImageViewer = ({
     setCurrentZoom(1);
   };
 
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(image.id);
+    }
+  };
+
   const ImageContent = () => (
     <div className={cn(
       "relative group bg-gray-900/95 rounded-lg overflow-hidden",
@@ -134,17 +142,14 @@ export const ImageViewer = ({
             {/* أزرار التحكم */}
             <div className={cn(
               "absolute top-4 right-4 flex gap-2 transition-opacity duration-300",
-              showControls ? "opacity-100" : "opacity-0"
+              showControls || !compact ? "opacity-100" : "opacity-0"
             )}>
               {onDelete && (
                 <Button
                   variant="destructive"
                   size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(image.id);
-                  }}
-                  className="bg-red-500/90 hover:bg-red-600"
+                  onClick={handleDeleteClick}
+                  className="bg-red-500/90 hover:bg-red-600 shadow-lg"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -154,7 +159,7 @@ export const ImageViewer = ({
                 variant="secondary"
                 size="icon"
                 onClick={() => setIsModalOpen(true)}
-                className="bg-gray-800/90 hover:bg-gray-700"
+                className="bg-gray-800/90 hover:bg-gray-700 shadow-lg"
               >
                 <Maximize2 className="h-4 w-4" />
               </Button>
@@ -163,7 +168,7 @@ export const ImageViewer = ({
             {/* عناصر التحكم في التكبير */}
             <div className={cn(
               "absolute bottom-4 right-4 transition-opacity duration-300",
-              showControls ? "opacity-100" : "opacity-0"
+              showControls || !compact ? "opacity-100" : "opacity-0"
             )}>
               <ZoomControls
                 onZoomIn={handleZoomIn}
@@ -195,7 +200,7 @@ export const ImageViewer = ({
     <>
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogTrigger asChild>
-          <div className="cursor-pointer">
+          <div className="cursor-pointer w-full h-full">
             <ImageContent />
           </div>
         </DialogTrigger>

@@ -45,4 +45,3 @@ const ImageErrorDisplay = ({ onRetry, errorMessage, retryCount = 0 }: ImageError
 };
 
 export default ImageErrorDisplay;
-
