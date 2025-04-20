@@ -2,47 +2,56 @@
 import React from 'react';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { cn } from '@/lib/utils';
 
 interface ZoomControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetZoom: () => void;
   zoomLevel: number;
+  className?: string;
 }
 
 const ZoomControls = ({
   onZoomIn,
   onZoomOut,
   onResetZoom,
-  zoomLevel
+  zoomLevel,
+  className
 }: ZoomControlsProps) => {
   return (
-    <div className="absolute top-3 left-3 z-50 flex gap-2">
+    <div className={cn(
+      "flex items-center gap-2 bg-gray-900/80 p-2 rounded-lg",
+      className
+    )}>
       <Button 
         onClick={onZoomIn}
         variant="secondary"
         size="icon"
-        className="w-9 h-9 bg-gray-900/80 hover:bg-gray-800"
+        className="w-8 h-8"
       >
-        <ZoomIn className="h-5 w-5" />
+        <ZoomIn className="h-4 w-4" />
       </Button>
+      
       <Button 
         onClick={onZoomOut}
         variant="secondary"
         size="icon"
-        className="w-9 h-9 bg-gray-900/80 hover:bg-gray-800"
+        className="w-8 h-8"
       >
-        <ZoomOut className="h-5 w-5" />
+        <ZoomOut className="h-4 w-4" />
       </Button>
+      
       <Button 
         onClick={onResetZoom}
         variant="secondary"
         size="icon"
-        className="w-9 h-9 bg-gray-900/80 hover:bg-gray-800"
+        className="w-8 h-8"
       >
-        <RotateCcw className="h-5 w-5" />
+        <RotateCcw className="h-4 w-4" />
       </Button>
-      <span className="px-2 py-1 bg-black/70 rounded-full text-white text-sm">
+      
+      <span className="text-white text-sm">
         {Math.round(zoomLevel * 100)}%
       </span>
     </div>
@@ -50,3 +59,4 @@ const ZoomControls = ({
 };
 
 export default ZoomControls;
+

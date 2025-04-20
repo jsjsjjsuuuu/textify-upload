@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Trash2, RefreshCw } from 'lucide-react';
+import { Trash2, RefreshCw, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ImageData } from '@/types/ImageData';
@@ -51,18 +52,6 @@ export const ImageViewer = ({
     image.previewUrl.startsWith('http')
   );
 
-  const handleZoomIn = () => {
-    setCurrentZoom(prev => Math.min(prev * 1.2, 3));
-  };
-
-  const handleZoomOut = () => {
-    setCurrentZoom(prev => Math.max(prev / 1.2, 0.5));
-  };
-
-  const handleResetZoom = () => {
-    setCurrentZoom(1);
-  };
-
   const handleImageLoad = () => {
     console.log("تم تحميل الصورة بنجاح في العارض:", image.id);
     setImageLoaded(true);
@@ -70,34 +59,15 @@ export const ImageViewer = ({
   };
 
   const handleImageError = () => {
-    console.error("خطأ في تحميل الصورة في العارض:", image.id, "URL:", image.previewUrl?.substring(0, 50));
+    console.error("خطأ في تحميل الصورة في العارض:", image.id);
     setImageError(true);
     setImageLoaded(false);
-  };
-
-  const handleRetry = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setRetryCount(prev => prev + 1);
-    setImageError(false);
-    setImageLoaded(false);
-    console.log("محاولة إعادة تحميل الصورة في العارض:", image.id);
-    if (onRetry) {
-      onRetry(image.id);
-    }
-  };
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log("طلب حذف الصورة:", image.id);
-    if (onDelete) {
-      onDelete(image.id);
-    }
   };
 
   return (
     <div className={cn(
       "relative group bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden",
-      compact ? "h-24" : "h-full"
+      compact ? "h-24" : "h-[600px] w-full"
     )}>
       {hasValidUrl ? (
         <div className="relative w-full h-full flex items-center justify-center">
@@ -138,16 +108,37 @@ export const ImageViewer = ({
             />
             
             {!compact && (
-              <ZoomControls 
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onResetZoom={handleResetZoom}
-                zoomLevel={currentZoom}
-              />
+              <div className="absolute bottom-4 right-4 z-50 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button 
+                  variant="secondary"
+                  size="icon"
+                  className="bg-gray-900/80 hover:bg-gray-800 w-10 h-10"
+                  onClick={onZoomIn}
+                >
+                  <ZoomIn className="h-5 w-5" />
+                </Button>
+                <Button 
+                  variant="secondary"
+                  size="icon"
+                  className="bg-gray-900/80 hover:bg-gray-800 w-10 h-10"
+                  onClick={onZoomOut}
+                >
+                  <ZoomOut className="h-5 w-5" />
+                </Button>
+                {onToggleFullScreen && (
+                  <Button 
+                    variant="secondary"
+                    size="icon"
+                    className="bg-gray-900/80 hover:bg-gray-800 w-10 h-10"
+                    onClick={onToggleFullScreen}
+                  >
+                    <Maximize2 className="h-5 w-5" />
+                  </Button>
+                )}
+              </div>
             )}
           </div>
           
-          {/* أزرار التحكم */}
           <div className={cn(
             "absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity",
             "flex items-center justify-center gap-2"
@@ -156,7 +147,7 @@ export const ImageViewer = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleDelete}
+                onClick={() => onDelete(image.id)}
                 className="text-red-500 hover:bg-red-500/20"
               >
                 <Trash2 className="h-4 w-4" />
@@ -167,7 +158,7 @@ export const ImageViewer = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleRetry}
+                onClick={() => onRetry(image.id)}
                 className="text-yellow-500 hover:bg-yellow-500/20"
               >
                 <RefreshCw className="h-4 w-4" />
@@ -182,7 +173,6 @@ export const ImageViewer = ({
         />
       )}
       
-      {/* معلومات الصورة */}
       {!compact && hasValidUrl && (
         <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/60 text-white text-xs">
           {image.date && <span>{formatDate(image.date)}</span>}
@@ -194,3 +184,4 @@ export const ImageViewer = ({
 };
 
 export default ImageViewer;
+
